@@ -1,9 +1,10 @@
 ---
-description: |
-
 layout: docs
-page_title: Azure Resource Manager
-...
+sidebar_current: docs-builders-azure
+page_title: Azure - Builders
+description: |-
+  Packer supports building VHDs in Azure Resource manager.
+---
 
 # Azure Resource Manager Builder
 
@@ -25,89 +26,89 @@ builder.
 
 ### Required:
 
--   `client_id` (string) The Active Directory service principal associated with your builder.
+- `client_id` (string) The Active Directory service principal associated with your builder.
 
--   `client_secret` (string) The password or secret for your service principal.
+- `client_secret` (string) The password or secret for your service principal.
 
--   `resource_group_name` (string) Resource group under which the final artifact will be stored.
+- `resource_group_name` (string) Resource group under which the final artifact will be stored.
 
--   `storage_account` (string) Storage account under which the final artifact will be stored.
+- `storage_account` (string) Storage account under which the final artifact will be stored.
 
--   `subscription_id` (string) Subscription under which the build will be performed. **The service principal specified in `client_id` must have full access to this subscription.**
+- `subscription_id` (string) Subscription under which the build will be performed. **The service principal specified in `client_id` must have full access to this subscription.**
 
--   `capture_container_name` (string) Destination container name. Essentially the "directory" where your VHD will be organized in Azure.  The captured VHD's URL will be https://<storage_account>.blob.core.windows.net/system/Microsoft.Compute/Images/<capture_container_name>/<capture_name_prefix>.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.vhd.
+- `capture_container_name` (string) Destination container name. Essentially the "directory" where your VHD will be organized in Azure.  The captured VHD's URL will be https://<storage_account>.blob.core.windows.net/system/Microsoft.Compute/Images/<capture_container_name>/<capture_name_prefix>.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.vhd.
 
--   `capture_name_prefix` (string) VHD prefix. The final artifacts will be named `PREFIX-osDisk.UUID` and `PREFIX-vmTemplate.UUID`.
+- `capture_name_prefix` (string) VHD prefix. The final artifacts will be named `PREFIX-osDisk.UUID` and `PREFIX-vmTemplate.UUID`.
 
--   `image_publisher` (string) PublisherName for your base image. See [documentation](https://azure.microsoft.com/en-us/documentation/articles/resource-groups-vm-searching/) for details.
+- `image_publisher` (string) PublisherName for your base image. See [documentation](https://azure.microsoft.com/en-us/documentation/articles/resource-groups-vm-searching/) for details.
 
     CLI example `azure vm image list-publishers -l westus`
 
--   `image_offer` (string) Offer for your base image. See [documentation](https://azure.microsoft.com/en-us/documentation/articles/resource-groups-vm-searching/) for details.
+- `image_offer` (string) Offer for your base image. See [documentation](https://azure.microsoft.com/en-us/documentation/articles/resource-groups-vm-searching/) for details.
 
     CLI example `azure vm image list-offers -l westus -p Canonical`
 
--   `image_sku` (string) SKU for your base image. See [documentation](https://azure.microsoft.com/en-us/documentation/articles/resource-groups-vm-searching/) for details.
+- `image_sku` (string) SKU for your base image. See [documentation](https://azure.microsoft.com/en-us/documentation/articles/resource-groups-vm-searching/) for details.
 
     CLI example `azure vm image list-skus -l westus -p Canonical -o UbuntuServer`
 
--   `location` (string) Azure datacenter in which your VM will build.
+- `location` (string) Azure datacenter in which your VM will build.
 
     CLI example `azure location list`
 
 ### Optional:
 
--   `azure_tags` (object of name/value strings) - the user can define up to 15 tags.  Tag names cannot exceed 512 
+- `azure_tags` (object of name/value strings) - the user can define up to 15 tags.  Tag names cannot exceed 512
     characters, and tag values cannot exceed 256 characters.  Tags are applied to every resource deployed by a Packer
     build, i.e. Resource Group, VM, NIC, VNET, Public IP, KeyVault, etc.
 
--   `cloud_environment_name` (string) One of `Public`, `China`, `Germany`, or
+- `cloud_environment_name` (string) One of `Public`, `China`, `Germany`, or
     `USGovernment`. Defaults to `Public`. Long forms such as
     `USGovernmentCloud` and `AzureUSGovernmentCloud` are also supported.
 
--   `image_version` (string) Specify a specific version of an OS to boot from. Defaults to `latest`.  There may be a
+- `image_version` (string) Specify a specific version of an OS to boot from. Defaults to `latest`.  There may be a
      difference in versions available across regions due to image synchronization latency.  To ensure a consistent
      version across regions set this value to one that is available in all regions where you are deploying.
 
     CLI example `azure vm image list -l westus -p Canonical -o UbuntuServer -k 16.04.0-LTS`
 
--   `image_url` (string) Specify a custom VHD to use.  If this value is set, do not set image_publisher, image_offer,
+- `image_url` (string) Specify a custom VHD to use.  If this value is set, do not set image_publisher, image_offer,
      image_sku, or image_version.
-     
--   `temp_compute_name` (string) temporary name assigned to the VM.  If this value is not set, a random value will be assigned.  Knowing the resource group and VM name allows one to execute commands to update the VM during a Packer build, e.g. attach a resource disk to the VM.
 
--   `temp_resource_group_name` (string) temporary name assigned to the resource group.  If this value is not set, a random value will be assigned.
+- `temp_compute_name` (string) temporary name assigned to the VM.  If this value is not set, a random value will be assigned.  Knowing the resource group and VM name allows one to execute commands to update the VM during a Packer build, e.g. attach a resource disk to the VM.
 
--   `tenant_id` (string) The account identifier with which your `client_id` and `subscription_id` are associated. If not
+- `temp_resource_group_name` (string) temporary name assigned to the resource group.  If this value is not set, a random value will be assigned.
+
+- `tenant_id` (string) The account identifier with which your `client_id` and `subscription_id` are associated. If not
      specified, `tenant_id` will be looked up using `subscription_id`.
 
--   `object_id` (string) Specify an OAuth Object ID to protect WinRM certificates
+- `object_id` (string) Specify an OAuth Object ID to protect WinRM certificates
     created at runtime.  This variable is required when creating images based on
     Windows; this variable is not used by non-Windows builds.  See `Windows`
     behavior for `os_type`, below.
 
--   `os_type` (string) If either `Linux` or `Windows` is specified Packer will
+- `os_type` (string) If either `Linux` or `Windows` is specified Packer will
     automatically configure authentication credentials for the provisioned machine. For
     `Linux` this configures an SSH authorized key. For `Windows` this
     configures a WinRM certificate.
-    
--   `os_disk_size_gb` (int32) Specify the size of the OS disk in GB (gigabytes).  Values of zero or less than zero are 
+
+- `os_disk_size_gb` (int32) Specify the size of the OS disk in GB (gigabytes).  Values of zero or less than zero are
     ignored.
 
--   `virtual_network_name` (string) Use a pre-existing virtual network for the VM.  This option enables private
+- `virtual_network_name` (string) Use a pre-existing virtual network for the VM.  This option enables private
     communication with the VM, no public IP address is **used** or **provisioned**.  This value should only be set if
     Packer is executed from a host on the same subnet / virtual network.
 
--   `virtual_network_resource_group_name` (string) If virtual_network_name is set, this value **may** also be set.  If
+- `virtual_network_resource_group_name` (string) If virtual_network_name is set, this value **may** also be set.  If
     virtual_network_name is set, and this value is not set the builder attempts to determine the resource group
     containing the virtual network.  If the resource group cannot be found, or it cannot be disambiguated, this value
     should be set.
 
--   `virtual_network_subnet_name` (string) If virtual_network_name is set, this value **may** also be set.  If
+- `virtual_network_subnet_name` (string) If virtual_network_name is set, this value **may** also be set.  If
      virtual_network_name is set, and this value is not set the builder attempts to determine the subnet to use with
      the virtual network.  If the subnet cannot be found, or it cannot be disambiguated, this value should be set.
 
--   `vm_size` (string) Size of the VM used for building. This can be changed
+- `vm_size` (string) Size of the VM used for building. This can be changed
     when you deploy a VM from your VHD. See
     [pricing](https://azure.microsoft.com/en-us/pricing/details/virtual-machines/) information. Defaults to `Standard_A1`.
 
@@ -118,7 +119,7 @@ builder.
 
 Here is a basic example for Azure.
 
-``` {.javascript}
+```json
 {
     "type": "azure-arm",
 
@@ -136,7 +137,7 @@ Here is a basic example for Azure.
     "image_publisher": "Canonical",
     "image_offer": "UbuntuServer",
     "image_sku": "14.04.4-LTS",
-    
+
     "azure_tags": {
       "dept": "engineering"
     },
@@ -156,31 +157,37 @@ Please refer to the Azure [examples](https://github.com/mitchellh/packer/tree/ma
 
 The following provisioner snippet shows how to sysprep a Windows VM.  Deprovision should be the last operation executed by a build.
 
-``` {.javascript}
-    "provisioners": [
-        {
-            "type": "powershell",
-            "inline": [
-                "if( Test-Path $Env:SystemRoot\\windows\\system32\\Sysprep\\unattend.xml ){ rm $Env:SystemRoot\\windows\\system32\\Sysprep\\unattend.xml -Force}",
-                "& $Env:SystemRoot\\System32\\Sysprep\\Sysprep.exe /oobe /generalize /shutdown /quiet"
-            ]
-        }
-    ]
+```json
+{
+  "provisioners": [
+    {
+      "type": "powershell",
+      "inline": [
+        "if( Test-Path $Env:SystemRoot\\windows\\system32\\Sysprep\\unattend.xml ){ rm $Env:SystemRoot\\windows\\system32\\Sysprep\\unattend.xml -Force}",
+        "& $Env:SystemRoot\\System32\\Sysprep\\Sysprep.exe /oobe /generalize /shutdown /quiet"
+      ]
+    }
+  ]
+}
 ```
 
 ### Linux
 
 The following provisioner snippet shows how to deprovision a Linux VM.  Deprovision should be the last operation executed by a build.
 
-``` {.javascript}
- "provisioners": [{
-    "execute_command": "chmod +x {{ .Path }}; {{ .Vars }} sudo -E sh '{{ .Path }}'",
-    "inline": [
-      "/usr/sbin/waagent -force -deprovision+user && export HISTSIZE=0 && sync"
-    ],
-    "inline_shebang": "/bin/sh -x",
-    "type": "shell"
-  }]
+```json
+{
+ "provisioners": [
+   {
+     "execute_command": "chmod +x {{ .Path }}; {{ .Vars }} sudo -E sh '{{ .Path }}'",
+     "inline": [
+       "/usr/sbin/waagent -force -deprovision+user && export HISTSIZE=0 && sync"
+     ],
+     "inline_shebang": "/bin/sh -x",
+     "type": "shell"
+   }
+ ]
+}
 ```
 
 To learn more about the Linux deprovision process please see WALinuxAgent's [README](https://github.com/Azure/WALinuxAgent/blob/master/README.md).
@@ -205,7 +212,7 @@ The Azure builder attempts to pick default values that provide for a just works 
 
 ## Implementation
 
-\~&gt; **Warning!** This is an advanced topic. You do not need to understand the implementation to use the Azure
+~> **Warning!** This is an advanced topic. You do not need to understand the implementation to use the Azure
 builder.
 
 The Azure builder uses ARM
