@@ -1,10 +1,8 @@
-package arm
+package common
 
 import (
 	"bytes"
 	"text/template"
-
-	packertpl "github.com/hashicorp/packer/common/template"
 )
 
 func isValidByteValue(b byte) bool {
@@ -23,9 +21,6 @@ func isValidByteValue(b byte) bool {
 // Clean up image name by replacing invalid characters with "-"
 // Names are not allowed to end in '.', '-', or  '_' and are trimmed.
 func templateCleanImageName(s string) string {
-	if ok, _ := assertManagedImageName(s, ""); ok {
-		return s
-	}
 	b := []byte(s)
 	newb := make([]byte, len(b))
 	for i := range newb {
@@ -42,5 +37,4 @@ func templateCleanImageName(s string) string {
 
 var TemplateFuncs = template.FuncMap{
 	"clean_resource_name": templateCleanImageName,
-	"clean_image_name":    packertpl.DeprecatedTemplateFunc("clean_image_name", "clean_resource_name", templateCleanImageName),
 }
