@@ -1,10 +1,12 @@
 ---
-description: |
-    The azure-chroot Packer builder is able to create Azure Managed Images leveraging
-    a VM in Azure.
+description: >
+  The azure-chroot Packer builder is able to create Azure Managed Images
+  leveraging
+
+  a VM in Azure.
 layout: docs
-page_title: 'Azure chroot - Builders'
-sidebar_current: 'docs-builders-azure-chroot'
+page_title: Azure chroot - Builders
+sidebar_title: chroot
 ---
 
 # Azure Builder (chroot)
@@ -22,26 +24,27 @@ content and enables some capabilities that are not possible with the
 `azure-arm` builder.
 
 > **This is an advanced builder** If you're just getting started with Packer,
-it is recommend to start with the [azure-arm builder](/docs/builders/azure-arm.html),
-which is much easier to use.
+> it is recommend to start with the [azure-arm builder](/docs/builders/azure-arm),
+> which is much easier to use.
 
 ## How Does it Work?
 
 This builder works by creating a new MD from either an existing source or from
-scratch and attaching it to the (already existing) Azure  VM where Packer is
+scratch and attaching it to the (already existing) Azure VM where Packer is
 running. Once attached, a [chroot](https://en.wikipedia.org/wiki/Chroot) is set
-up and made available to the [provisioners](/docs/provisioners/index.html).
+up and made available to the [provisioners](/docs/provisioners).
 After provisioning, the MD is detached, snapshotted and a MD image is created.
 
 Using this process, minutes can be shaved off the image creation process
 because Packer does not need to launch a VM instance.
 
 There are some restrictions however:
-* The host system must be a similar system (generally the same OS version,
+
+- The host system must be a similar system (generally the same OS version,
   kernel versions, etc.) as the image being built.
-* If the source is a  managed disk, it must be made available in the same
+- If the source is a managed disk, it must be made available in the same
   region as the host system.
-* The host system SKU has to allow for all of the specified disks to be
+- The host system SKU has to allow for all of the specified disks to be
   attached.
 
 ## Configuration Reference
@@ -51,20 +54,23 @@ with authentication parameters, then go over the Azure chroot builder specific
 options.
 
 ### Authentication options
+
 None of the authentication options are required, but depending on which
 ones are specified a different authentication method may be used. See the
-[shared Azure builders documentation](/docs/builders/azure.html) for more
+[shared Azure builders documentation](/docs/builders/azure) for more
 information.
 
-<%= partial "partials/builder/azure/common/client/_Config-not-required.html" %>
+@include 'builder/azure/common/client/Config-not-required.mdx'
 
 ### Azure chroot builder specific options
 
 #### Required:
-<%= partial "partials/builder/azure/chroot/_Config-required.html" %>
+
+@include 'builder/azure/chroot/Config-required.mdx'
 
 #### Optional:
-<%= partial "partials/builder/azure/chroot/_Config-not-required.html" %>
+
+@include 'builder/azure/chroot/Config-not-required.mdx'
 
 ## Chroot Mounts
 
@@ -72,11 +78,11 @@ The `chroot_mounts` configuration can be used to mount specific devices within
 the chroot. By default, the following additional mounts are added into the
 chroot by Packer:
 
--   `/proc` (proc)
--   `/sys` (sysfs)
--   `/dev` (bind to real `/dev`)
--   `/dev/pts` (devpts)
--   `/proc/sys/fs/binfmt_misc` (binfmt\_misc)
+- `/proc` (proc)
+- `/sys` (sysfs)
+- `/dev` (bind to real `/dev`)
+- `/dev/pts` (devpts)
+- `/proc/sys/fs/binfmt_misc` (binfmt_misc)
 
 These default mounts are usually good enough for anyone and are sane defaults.
 However, if you want to change or add the mount points, you may using the
@@ -95,65 +101,71 @@ mounts `/prod` and `/dev`:
 `chroot_mounts` is a list of a 3-tuples of strings. The three components of the
 3-tuple, in order, are:
 
--   The filesystem type. If this is "bind", then Packer will properly bind the
-    filesystem to another mount point.
+- The filesystem type. If this is "bind", then Packer will properly bind the
+  filesystem to another mount point.
 
--   The source device.
+- The source device.
 
--   The mount directory.
+- The mount directory.
 
 ## Additional template function
 
 Because this builder runs on an Azure VM, there is an additional template function
 available called `vm`, which returns the following VM metadata:
 
--   name
--   subscription_id
--   resource_group
--   location
--   resource_id
+- name
+- subscription_id
+- resource_group
+- location
+- resource_id
 
 This function can be used in the configuration templates, for example, use
-```
+
+```text
 "{{ vm `subscription_id` }}"
 ```
+
 to fill in the subscription ID of the VM in any of the configuration options.
 
 ## Examples
+
 Here are some examples using this builder.
 This builder requires privileged actions, such as mounting disks, running
 `chroot` and other admin commands. Usually it needs to be run with root
 permissions, for example:
 
-```
+```shell
 sudo -E packer build example.json
 ```
 
 ### Using a VM with a Managed Identity
+
 On a VM with a system-assigned managed identity that has the contributor role
 on its own resource group, the following config can be used to create an
 updated Debian image:
 
 ```json
 {
-  "builders": [{
-    "type": "azure-chroot",
+  "builders": [
+    {
+      "type": "azure-chroot",
 
-    "image_resource_id": "/subscriptions/{{vm `subscription_id`}}/resourceGroups/{{vm `resource_group`}}/providers/Microsoft.Compute/images/MyDebianOSImage-{{timestamp}}",
-    "source": "credativ:Debian:9:latest"
-  }],
-  "provisioners": [{
-    "inline": [
-      "apt-get update",
-      "apt-get upgrade -y"
-    ],
-    "inline_shebang": "/bin/sh -x",
-    "type": "shell"
-  }]
+      "image_resource_id": "/subscriptions/{{vm `subscription_id`}}/resourceGroups/{{vm `resource_group`}}/providers/Microsoft.Compute/images/MyDebianOSImage-{{timestamp}}",
+      "source": "credativ:Debian:9:latest"
+    }
+  ],
+  "provisioners": [
+    {
+      "inline": ["apt-get update", "apt-get upgrade -y"],
+      "inline_shebang": "/bin/sh -x",
+      "type": "shell"
+    }
+  ]
 }
 ```
 
 ### Using a Service Principal
+
 Here is an example that creates a Debian image with updated packages. Specify
 all environment variables (`ARM_CLIENT_ID`, `ARM_CLIENT_SECRET`,
 `ARM_SUBSCRIPTION_ID`) to use a service principal.
@@ -170,24 +182,25 @@ subscription where the resulting image will be created.
     "subscription_id": "{{env `ARM_SUBSCRIPTION_ID`}}",
     "resource_group": "{{env `ARM_IMAGE_RESOURCEGROUP_ID`}}"
   },
-  "builders": [{
-    "type": "azure-chroot",
+  "builders": [
+    {
+      "type": "azure-chroot",
 
-    "client_id": "{{user `client_id`}}",
-    "client_secret": "{{user `client_secret`}}",
-    "subscription_id": "{{user `subscription_id`}}",
+      "client_id": "{{user `client_id`}}",
+      "client_secret": "{{user `client_secret`}}",
+      "subscription_id": "{{user `subscription_id`}}",
 
-    "image_resource_id": "/subscriptions/{{user `subscription_id`}}/resourceGroups/{{user `resource_group`}}/providers/Microsoft.Compute/images/MyDebianOSImage-{{timestamp}}",
+      "image_resource_id": "/subscriptions/{{user `subscription_id`}}/resourceGroups/{{user `resource_group`}}/providers/Microsoft.Compute/images/MyDebianOSImage-{{timestamp}}",
 
-    "source": "credativ:Debian:9:latest"
-  }],
-  "provisioners": [{
-    "inline": [
-      "apt-get update",
-      "apt-get upgrade -y"
-    ],
-    "inline_shebang": "/bin/sh -x",
-    "type": "shell"
-  }]
+      "source": "credativ:Debian:9:latest"
+    }
+  ],
+  "provisioners": [
+    {
+      "inline": ["apt-get update", "apt-get upgrade -y"],
+      "inline_shebang": "/bin/sh -x",
+      "type": "shell"
+    }
+  ]
 }
 ```

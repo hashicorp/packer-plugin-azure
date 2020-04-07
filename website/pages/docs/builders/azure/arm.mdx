@@ -1,8 +1,8 @@
 ---
-description: 'Packer supports building VHDs in Azure Resource manager.'
+description: Packer supports building VHDs in Azure Resource manager.
 layout: docs
-page_title: 'Azure arm - Builders'
-sidebar_current: 'docs-builders-azure-arm'
+page_title: Azure arm - Builders
+sidebar_title: ARM
 ---
 
 # Azure Resource Manager Builder
@@ -11,13 +11,13 @@ Type: `azure-arm`
 
 Packer supports building VHDs and Managed Images in [Azure Resource
 Manager](https://azure.microsoft.com/en-us/documentation/articles/resource-group-overview/).
-Azure provides new users a [$200 credit for the first 30
+Azure provides new users a [`$200` credit for the first 30
 days](https://azure.microsoft.com/en-us/free/); after which you will incur
 costs for VMs built and stored using Packer.
 
 Azure uses a combination of OAuth and Active Directory to authorize requests to
 the ARM API. Learn how to [authorize access to
-ARM](/docs/builders/azure.html#authentication-for-azure).
+ARM](/docs/builders/azure#authentication-for-azure).
 
 The documentation below references command output from the [Azure
 CLI](https://azure.microsoft.com/en-us/documentation/articles/xplat-cli-install/).
@@ -26,43 +26,45 @@ CLI](https://azure.microsoft.com/en-us/documentation/articles/xplat-cli-install/
 
 There are many configuration options available for the builder. We'll start
 with authentication parameters, then go over the Azure ARM builder specific
-options.  In addition to the options listed here, a [communicator](/docs/templates/communicator.html) can be configured for this builder.
+options. In addition to the options listed here, a [communicator](/docs/templates/communicator) can be configured for this builder.
 
 ### Authentication options
-<%= partial "partials/builder/azure/common/client/_Config" %>
+
+@include 'builder/azure/common/client/Config.mdx'
 
 #### Managed Identity
-If you're running packer on an Azure VM with a [managed identity](/docs/builders/azure.html#azure-managed-identity) you don't need to specify any additional configuration options. As Packer will attempt to use the Managed Identity and subscription of the VM that Packer is running on.
+
+If you're running packer on an Azure VM with a [managed identity](/docs/builders/azure#azure-managed-identity) you don't need to specify any additional configuration options. As Packer will attempt to use the Managed Identity and subscription of the VM that Packer is running on.
 
 #### Interactive User Authentication
+
 To use interactive user authentication, you should specify `subscription_id` only.
 Packer will use cached credentials or redirect you to a website to log in.
 
 #### Service Principal
-To use a [service principal](/docs/builders/azure.html#azure-active-directory-service-principal)
+
+To use a [service principal](/docs/builders/azure#azure-active-directory-service-principal)
 you should specify `subscription_id`, `client_id` and one of `client_secret`,
 `client_cert_path` or `client_jwt`.
 
--   `subscription_id` (string) - Subscription under which the build will be
-    performed. **The service principal specified in `client_id` must have full
-    access to this subscription, unless build\_resource\_group\_name option is
-    specified in which case it needs to have owner access to the existing
-    resource group specified in build\_resource\_group\_name parameter.**
+- `subscription_id` (string) - Subscription under which the build will be
+  performed. **The service principal specified in `client_id` must have full
+  access to this subscription, unless build_resource_group_name option is
+  specified in which case it needs to have owner access to the existing
+  resource group specified in build_resource_group_name parameter.**
 
--   `client_id` (string) - The Active Directory service principal associated with
-    your builder.
+- `client_id` (string) - The Active Directory service principal associated with
+  your builder.
 
--   `client_secret` (string) - The password or secret for your service principal.
+- `client_secret` (string) - The password or secret for your service principal.
 
--   `client_cert_path` (string) - The location of a PEM file containing a
-    certificate and private key for service principal.
+- `client_cert_path` (string) - The location of a PEM file containing a
+  certificate and private key for service principal.
 
--   `client_jwt` (string) - The bearer JWT assertion signed using a certificate
-    associated with your service principal principal. See [Azure Active
-    Directory docs](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-certificate-credentials)
-    for more information.
-
-
+- `client_jwt` (string) - The bearer JWT assertion signed using a certificate
+  associated with your service principal principal. See [Azure Active
+  Directory docs](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-certificate-credentials)
+  for more information.
 
 ### Azure ARM builder specific options
 
@@ -72,39 +74,39 @@ a managed image you **must** start with a managed image.
 
 ### Required:
 
-<%= partial "partials/builder/azure/arm/Config-required" %>
+@include 'builder/azure/arm/Config-required.mdx'
 
 When creating a VHD the following additional options are required:
 
--   `capture_container_name` (string) - Destination container name. Essentially
-    the "directory" where your VHD will be organized in Azure. The captured
-    VHD's URL will be
-    `https://<storage_account>.blob.core.windows.net/system/Microsoft.Compute/Images/<capture_container_name>/<capture_name_prefix>.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.vhd`.
+- `capture_container_name` (string) - Destination container name. Essentially
+  the "directory" where your VHD will be organized in Azure. The captured
+  VHD's URL will be
+  `https://<storage_account>.blob.core.windows.net/system/Microsoft.Compute/Images/<capture_container_name>/<capture_name_prefix>.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.vhd`.
 
--   `capture_name_prefix` (string) - VHD prefix. The final artifacts will be
-    named `PREFIX-osDisk.UUID` and `PREFIX-vmTemplate.UUID`.
+- `capture_name_prefix` (string) - VHD prefix. The final artifacts will be
+  named `PREFIX-osDisk.UUID` and `PREFIX-vmTemplate.UUID`.
 
--   `resource_group_name` (string) - Resource group under which the final
-    artifact will be stored.
+- `resource_group_name` (string) - Resource group under which the final
+  artifact will be stored.
 
--   `storage_account` (string) - Storage account under which the final artifact
-    will be stored.
+- `storage_account` (string) - Storage account under which the final artifact
+  will be stored.
 
 When creating a managed image the following additional options are required:
 
--   `managed_image_name` (string) - Specify the managed image name where the
-    result of the Packer build will be saved. The image name must not exist
-    ahead of time, and will not be overwritten. If this value is set, the value
-    `managed_image_resource_group_name` must also be set. See
-    [documentation](https://docs.microsoft.com/en-us/azure/storage/storage-managed-disks-overview#images)
-    to learn more about managed images.
+- `managed_image_name` (string) - Specify the managed image name where the
+  result of the Packer build will be saved. The image name must not exist
+  ahead of time, and will not be overwritten. If this value is set, the value
+  `managed_image_resource_group_name` must also be set. See
+  [documentation](https://docs.microsoft.com/en-us/azure/storage/storage-managed-disks-overview#images)
+  to learn more about managed images.
 
--   `managed_image_resource_group_name` (string) - Specify the managed image
-    resource group name where the result of the Packer build will be saved. The
-    resource group must already exist. If this value is set, the value
-    `managed_image_name` must also be set. See
-    [documentation](https://docs.microsoft.com/en-us/azure/storage/storage-managed-disks-overview#images)
-    to learn more about managed images.
+- `managed_image_resource_group_name` (string) - Specify the managed image
+  resource group name where the result of the Packer build will be saved. The
+  resource group must already exist. If this value is set, the value
+  `managed_image_name` must also be set. See
+  [documentation](https://docs.microsoft.com/en-us/azure/storage/storage-managed-disks-overview#images)
+  to learn more about managed images.
 
 #### Shared Image Gallery
 
@@ -141,29 +143,29 @@ artifacts.
 
 To have packer create a resource group you **must** provide:
 
--   `location` (string) Azure datacenter in which your VM will build.
+- `location` (string) Azure datacenter in which your VM will build.
 
-    CLI example `az account list-locations`
+  CLI example `az account list-locations`
 
 and optionally:
 
--   `temp_resource_group_name` (string) name assigned to the temporary resource
-    group created during the build. If this value is not set, a random value
-    will be assigned. This resource group is deleted at the end of the build.
+- `temp_resource_group_name` (string) name assigned to the temporary resource
+  group created during the build. If this value is not set, a random value
+  will be assigned. This resource group is deleted at the end of the build.
 
 To use an existing resource group you **must** provide:
 
--   `build_resource_group_name` (string) - Specify an existing resource group
-    to run the build in.
+- `build_resource_group_name` (string) - Specify an existing resource group
+  to run the build in.
 
 Providing `temp_resource_group_name` or `location` in combination with
 `build_resource_group_name` is not allowed.
 
 ### Optional:
 
-<%= partial "partials/builder/azure/arm/Config-not-required" %>
-<%= partial "partials/builder/azure/common/client/_Config-not-required" %>
+@include 'builder/azure/arm/Config-not-required.mdx'
 
+@include 'builder/azure/common/client/Config-not-required.mdx'
 
 ## Basic Example
 
@@ -171,29 +173,29 @@ Here is a basic example for Azure.
 
 ```json
 {
-    "type": "azure-arm",
+  "type": "azure-arm",
 
-    "client_id": "fe354398-d7sf-4dc9-87fd-c432cd8a7e09",
-    "client_secret": "keepitsecret&#*$",
-    "resource_group_name": "packerdemo",
-    "storage_account": "virtualmachines",
-    "subscription_id": "44cae533-4247-4093-42cf-897ded6e7823",
-    "tenant_id": "de39842a-caba-497e-a798-7896aea43218",
+  "client_id": "fe354398-d7sf-4dc9-87fd-c432cd8a7e09",
+  "client_secret": "keepitsecret&#*$",
+  "resource_group_name": "packerdemo",
+  "storage_account": "virtualmachines",
+  "subscription_id": "44cae533-4247-4093-42cf-897ded6e7823",
+  "tenant_id": "de39842a-caba-497e-a798-7896aea43218",
 
-    "capture_container_name": "images",
-    "capture_name_prefix": "packer",
+  "capture_container_name": "images",
+  "capture_name_prefix": "packer",
 
-    "os_type": "Linux",
-    "image_publisher": "Canonical",
-    "image_offer": "UbuntuServer",
-    "image_sku": "14.04.4-LTS",
+  "os_type": "Linux",
+  "image_publisher": "Canonical",
+  "image_offer": "UbuntuServer",
+  "image_sku": "14.04.4-LTS",
 
-    "azure_tags": {
-      "dept": "engineering"
-    },
+  "azure_tags": {
+    "dept": "engineering"
+  },
 
-    "location": "West US",
-    "vm_size": "Standard_A2"
+  "location": "West US",
+  "vm_size": "Standard_A2"
 }
 ```
 
@@ -218,18 +220,18 @@ here](https://technet.microsoft.com/en-us/library/hh824815.aspx)
 
 ```json
 {
-    "provisioners": [
+  "provisioners": [
     {
-        "type": "powershell",
-        "inline": [
-            " # NOTE: the following *3* lines are only needed if the you have installed the Guest Agent.",
-            "  while ((Get-Service RdAgent).Status -ne 'Running') { Start-Sleep -s 5 }",
-            "  while ((Get-Service WindowsAzureTelemetryService).Status -ne 'Running') { Start-Sleep -s 5 }",
-            "  while ((Get-Service WindowsAzureGuestAgent).Status -ne 'Running') { Start-Sleep -s 5 }",
+      "type": "powershell",
+      "inline": [
+        " # NOTE: the following *3* lines are only needed if the you have installed the Guest Agent.",
+        "  while ((Get-Service RdAgent).Status -ne 'Running') { Start-Sleep -s 5 }",
+        "  while ((Get-Service WindowsAzureTelemetryService).Status -ne 'Running') { Start-Sleep -s 5 }",
+        "  while ((Get-Service WindowsAzureGuestAgent).Status -ne 'Running') { Start-Sleep -s 5 }",
 
-            "& $env:SystemRoot\\System32\\Sysprep\\Sysprep.exe /oobe /generalize /quiet /quit /mode:vm",
-            "while($true) { $imageState = Get-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Setup\\State | Select ImageState; if($imageState.ImageState -ne 'IMAGE_STATE_GENERALIZE_RESEAL_TO_OOBE') { Write-Output $imageState.ImageState; Start-Sleep -s 10  } else { break } }"
-        ]
+        "& $env:SystemRoot\\System32\\Sysprep\\Sysprep.exe /oobe /generalize /quiet /quit /mode:vm",
+        "while($true) { $imageState = Get-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Setup\\State | Select ImageState; if($imageState.ImageState -ne 'IMAGE_STATE_GENERALIZE_RESEAL_TO_OOBE') { Write-Output $imageState.ImageState; Start-Sleep -s 10  } else { break } }"
+      ]
     }
   ]
 }
@@ -254,30 +256,30 @@ Deprovision should be the last operation executed by a build.
 
 ```json
 {
- "provisioners": [
-   {
-     "execute_command": "chmod +x {{ .Path }}; {{ .Vars }} sudo -E sh '{{ .Path }}'",
-     "inline": [
-       "/usr/sbin/waagent -force -deprovision+user && export HISTSIZE=0 && sync"
-     ],
-     "inline_shebang": "/bin/sh -x",
-     "type": "shell"
-   }
- ]
+  "provisioners": [
+    {
+      "execute_command": "chmod +x {{ .Path }}; {{ .Vars }} sudo -E sh '{{ .Path }}'",
+      "inline": [
+        "/usr/sbin/waagent -force -deprovision+user && export HISTSIZE=0 && sync"
+      ],
+      "inline_shebang": "/bin/sh -x",
+      "type": "shell"
+    }
+  ]
 }
 ```
 
 To learn more about the Linux deprovision process please see WALinuxAgent's
 [README](https://github.com/Azure/WALinuxAgent/blob/master/README.md).
 
-#### skip\_clean
+#### skip_clean
 
 Customers have reported issues with the deprovision process where the builder
 hangs. The error message is similar to the following.
 
     Build 'azure-arm' errored: Retryable error: Error removing temporary script at /tmp/script_9899.sh: ssh: handshake failed: EOF
 
-One solution is to set skip\_clean to true in the provisioner. This prevents
+One solution is to set skip_clean to true in the provisioner. This prevents
 Packer from cleaning up any helper scripts uploaded to the VM during the build.
 
 ## Defaults
@@ -285,21 +287,21 @@ Packer from cleaning up any helper scripts uploaded to the VM during the build.
 The Azure builder attempts to pick default values that provide for a just works
 experience. These values can be changed by the user to more suitable values.
 
--   The default user name is packer not root as in other builders. Most distros
-    on Azure do not allow root to SSH to a VM hence the need for a non-root
-    default user. Set the ssh\_username option to override the default value.
--   The default VM size is Standard\_A1. Set the vm\_size option to override
-    the default value.
--   The default image version is latest. Set the image\_version option to
-    override the default value.
--   By default a temporary resource group will be created and destroyed as part
-    of the build. If you do not have permissions to do so, use
-    `build_resource_group_name` to specify an existing resource group to run
-    the build in.
+- The default user name is packer not root as in other builders. Most distros
+  on Azure do not allow root to SSH to a VM hence the need for a non-root
+  default user. Set the ssh_username option to override the default value.
+- The default VM size is Standard_A1. Set the vm_size option to override
+  the default value.
+- The default image version is latest. Set the image_version option to
+  override the default value.
+- By default a temporary resource group will be created and destroyed as part
+  of the build. If you do not have permissions to do so, use
+  `build_resource_group_name` to specify an existing resource group to run
+  the build in.
 
 ## Implementation
 
-\~&gt; **Warning!** This is an advanced topic. You do not need to understand
+~> **Warning!** This is an advanced topic. You do not need to understand
 the implementation to use the Azure builder.
 
 The Azure builder uses ARM
@@ -338,27 +340,27 @@ templated with place holders for names, passwords, SSH keys, certificates, etc.
 
 The Azure builder creates the following random values at runtime.
 
--   Administrator Password: a random 32-character value using the *password
-    alphabet*.
--   Certificate: a 2,048-bit certificate used to secure WinRM communication.
-    The certificate is valid for 24-hours, which starts roughly at invocation
-    time.
--   Certificate Password: a random 32-character value using the *password
-    alphabet* used to protect the private key of the certificate.
--   Compute Name: a random 15-character name prefixed with pkrvm; the name of
-    the VM.
--   Deployment Name: a random 15-character name prefixed with pkfdp; the name
-    of the deployment.
--   KeyVault Name: a random 15-character name prefixed with pkrkv.
--   NIC Name: a random 15-character name prefixed with pkrni.
--   Public IP Name: a random 15-character name prefixed with pkrip.
--   OS Disk Name: a random 15-character name prefixed with pkros.
--   Resource Group Name: a random 33-character name prefixed with
-    packer-Resource-Group-.
--   Subnet Name: a random 15-character name prefixed with pkrsn.
--   SSH Key Pair: a 2,048-bit asymmetric key pair; can be overridden by the
-    user.
--   Virtual Network Name: a random 15-character name prefixed with pkrvn.
+- Administrator Password: a random 32-character value using the _password
+  alphabet_.
+- Certificate: a 2,048-bit certificate used to secure WinRM communication.
+  The certificate is valid for 24-hours, which starts roughly at invocation
+  time.
+- Certificate Password: a random 32-character value using the _password
+  alphabet_ used to protect the private key of the certificate.
+- Compute Name: a random 15-character name prefixed with pkrvm; the name of
+  the VM.
+- Deployment Name: a random 15-character name prefixed with pkfdp; the name
+  of the deployment.
+- KeyVault Name: a random 15-character name prefixed with pkrkv.
+- NIC Name: a random 15-character name prefixed with pkrni.
+- Public IP Name: a random 15-character name prefixed with pkrip.
+- OS Disk Name: a random 15-character name prefixed with pkros.
+- Resource Group Name: a random 33-character name prefixed with
+  packer-Resource-Group-.
+- Subnet Name: a random 15-character name prefixed with pkrsn.
+- SSH Key Pair: a 2,048-bit asymmetric key pair; can be overridden by the
+  user.
+- Virtual Network Name: a random 15-character name prefixed with pkrvn.
 
 The default alphabet used for random values is
 **0123456789bcdfghjklmnpqrstvwxyz**. The alphabet was reduced (no vowels) to
