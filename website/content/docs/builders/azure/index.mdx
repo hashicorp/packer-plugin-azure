@@ -111,6 +111,7 @@ This method will skip all other options provided and only use the credentials th
 Works with both normal user (`az login`) as well as service principal (`az login --service-principal --username APP_ID --password PASSWORD --tenant TENANT_ID`).
 
 To enable az cli authentication, use the following:
+
 - `"use_azure_cli_auth": true`
 
 This mode will use the `tenant_id` and `subscription_id` from the current active az session which can be found by running: `az account show`
