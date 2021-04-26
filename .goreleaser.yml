@@ -36,7 +36,7 @@ builds:
     flags:
       - -trimpath #removes all file system paths from the compiled executable
     ldflags:
-      - '-s -w -X main.version={{.Version}} -X main.VersionPrerelease= '
+      - -s -w -X github.com/hashicorp/{{ .ProjectName }}/.version={{.Version}} -X github.com/hashicorp/{{ .ProjectName }}/version.VersionPrerelease=
     goos:
       - freebsd
       - windows

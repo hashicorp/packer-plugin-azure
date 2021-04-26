@@ -11,7 +11,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-12-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-12-01/compute/computeapi"
 	"github.com/Azure/go-autorest/autorest"
-	version "github.com/hashicorp/packer-plugin-azure/builder/azure/version"
+	version "github.com/hashicorp/packer-plugin-azure/version"
 )
 
 type AzureClientSet interface {

@@ -57,10 +57,7 @@ func TestAzureErrorSimpleShouldFormat(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyString(t, azureErrorResponse.Error())
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyString(t, azureErrorResponse.Error())
 }
 
 func TestAzureErrorNestedShouldFormat(t *testing.T) {
@@ -70,8 +67,5 @@ func TestAzureErrorNestedShouldFormat(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyString(t, azureErrorResponse.Error())
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyString(t, azureErrorResponse.Error())
 }

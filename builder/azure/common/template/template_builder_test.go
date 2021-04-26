@@ -30,10 +30,7 @@ func TestBuildLinux00(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONBytes(t, []byte(*doc))
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
 }
 
 // Ensure that a user can specify a custom VHD when building a Linux template.
@@ -58,10 +55,7 @@ func TestBuildLinux01(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONBytes(t, []byte(*doc))
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
 }
 
 // Ensure that a user can specify an existing Virtual Network
@@ -94,10 +88,7 @@ func TestBuildLinux02(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONBytes(t, []byte(*doc))
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
 }
 
 // Ensure that a Windows template is configured as expected.
@@ -124,10 +115,7 @@ func TestBuildWindows00(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONBytes(t, []byte(*doc))
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
 }
 
 // Windows build with additional disk for an managed build
@@ -157,10 +145,7 @@ func TestBuildWindows01(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONBytes(t, []byte(*doc))
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
 }
 
 // Windows build with additional disk for an unmanaged build
@@ -185,10 +170,7 @@ func TestBuildWindows02(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONBytes(t, []byte(*doc))
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
 }
 
 // Shared Image Gallery Build
@@ -214,10 +196,7 @@ func TestSharedImageGallery00(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONBytes(t, []byte(*doc))
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
 }
 
 // Linux build with Network Security Group
@@ -247,10 +226,7 @@ func TestNetworkSecurityGroup00(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONBytes(t, []byte(*doc))
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
 }
 
 // Linux with user assigned managed identity configured
@@ -277,7 +253,5 @@ func TestSetIdentity00(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = approvaltests.VerifyJSONBytes(t, []byte(*doc)); err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
 }

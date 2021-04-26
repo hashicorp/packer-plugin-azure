@@ -117,10 +117,7 @@ func TestVirtualMachineDeployment03(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
 // Ensure the VM template is correct when using a custom image.
@@ -148,10 +145,7 @@ func TestVirtualMachineDeployment04(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
 func TestVirtualMachineDeployment05(t *testing.T) {
@@ -181,10 +175,7 @@ func TestVirtualMachineDeployment05(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
 // Verify that tags are properly applied to every resource
@@ -217,10 +208,7 @@ func TestVirtualMachineDeployment06(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
 // Verify that custom data are properly inserted
@@ -263,10 +251,7 @@ growpart:
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
 // Ensure the VM template is correct when building from a custom managed image.
@@ -293,10 +278,7 @@ func TestVirtualMachineDeployment08(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
 // Ensure the VM template is correct when building from a platform managed image.
@@ -325,10 +307,7 @@ func TestVirtualMachineDeployment09(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
 // Ensure the VM template is correct when building with PublicIp and connect to Private Network
@@ -363,10 +342,7 @@ func TestVirtualMachineDeployment10(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
 // Ensure the VM template is correct when building with additional unmanaged disks
@@ -400,10 +376,7 @@ func TestVirtualMachineDeployment11(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
 // Ensure the VM template is correct when building with additional managed disks
@@ -435,10 +408,7 @@ func TestVirtualMachineDeployment12(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
 // Ensure the VM template is correct when building with list of allowed IP addresses
@@ -470,10 +440,7 @@ func TestVirtualMachineDeployment13(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
 // Ensure the VM template is correct when building with bootdiagnostics
@@ -501,10 +468,7 @@ func TestVirtualMachineDeployment14(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
 // Ensure the link values are not set, and the concrete values are set.
@@ -604,10 +568,7 @@ func TestKeyVaultDeployment03(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
 func TestPlanInfo01(t *testing.T) {
@@ -626,10 +587,7 @@ func TestPlanInfo01(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
 func TestPlanInfo02(t *testing.T) {
@@ -652,8 +610,5 @@ func TestPlanInfo02(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
-	if err != nil {
-		t.Fatal(err)
-	}
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }

@@ -1,5 +1,4 @@
 # Scaffolding Plugins
-
 <!--
   Include a short overview about the plugin.
 
@@ -25,9 +24,9 @@ Then, run [`packer init`](https://www.packer.io/docs/commands/init).
 ```hcl
 packer {
   required_plugins {
-    name = {
+    azure = {
       version = ">= 0.0.1"
-      source  = "github.com/hashicorp/name"
+      source  = "github.com/hashicorp/azure"
     }
   }
 }
@@ -35,7 +34,7 @@ packer {
 
 #### Manual installation
 
-You can find pre-built binary releases of the plugin [here](https://github.com/hashicorp/packer-plugin-name/releases).
+You can find pre-built binary releases of the plugin [here](https://github.com/hashicorp/packer-plugin-azure/releases).
 Once you have downloaded the latest archive corresponding to your target OS,
 uncompress it to retrieve the plugin binary file corresponding to your platform.
 To install the plugin, please follow the Packer documentation on
@@ -46,7 +45,7 @@ To install the plugin, please follow the Packer documentation on
 
 If you prefer to build the plugin from its source code, clone the GitHub
 repository locally and run the command `go build` from the root
-directory. Upon successful compilation, a `packer-plugin-name` plugin
+directory. Upon successful compilation, a `packer-plugin-azure` plugin
 binary file can be found in the root directory.
 To install the compiled plugin, please follow the official Packer documentation
 on [installing a plugin](https://www.packer.io/docs/extending/plugins/#installing-plugins).
@@ -54,25 +53,17 @@ on [installing a plugin](https://www.packer.io/docs/extending/plugins/#installin
 
 ## Plugin Contents
 
-The Scaffolding plugin is intended as a starting point for creating Packer plugins, containing:
+Packer can create Azure virtual machine images through variety of ways depending on the strategy that you want to use for building the images.
 
 ### Builders
 
-- [builder](/docs/builders/builder-name.mdx) - The scaffolding builder is used to create endless Packer
-  plugins using a consistent plugin structure.
+- [azure-arm](builders/arm.mdx) - The Azure ARM builder supports building Virtual Hard Disks (VHDs) and
+  Managed Images in Azure Resource Manager.
+- [azure-chroot](builders/chroot.mdx) - The Azure chroot builder supports building a managed disk image without
+  launching a new Azure VM for every build, but instead use an already-running Azure VM.
+- [azure-dtl] - The Azure DevTest Labs builder builds custom images and upload them to DevTest Lab image repository automatically.
 
 ### Provisioners
 
-- [provisioner](/docs/provisioners/provisioner-name.mdx) - The scaffolding provisioner is used to provisioner
-  Packer builds.
-
-### Post-processors
-
-- [post-processor](/docs/post-processors/postprocessor-name.mdx) - The scaffolding post-processor is used to
-  export scaffolding builds.
-
-### Data Sources
-
-- [data source](/docs/datasources/datasource-name.mdx) - The scaffolding data source is used to
-  export scaffolding data.
+- [azure-dtlartifact] - The Azure DevTest Labs provisioner allows can be used to apply an artifact to a VM - See [Add an artifact to a VM](https://docs.microsoft.com/en-us/azure/devtest-labs/add-artifact-vm)
 

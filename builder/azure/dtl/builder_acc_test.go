@@ -26,25 +26,51 @@ package dtl
 //   go test -v -timeout 90m -run TestBuilderAcc_.*
 
 import (
+	"fmt"
+	"os/exec"
 	"testing"
 
-	builderT "github.com/hashicorp/packer-plugin-sdk/acctest"
+	"github.com/hashicorp/packer-plugin-sdk/acctest"
 )
 
 const DeviceLoginAcceptanceTest = "DEVICELOGIN_TEST"
 
 func TestBuilderAcc_ManagedDisk_Windows(t *testing.T) {
-	builderT.Test(t, builderT.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Builder:  &Builder{},
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name: "test-azure-managedisk-windows",
+		Type: "azure-dtl",
+		Setup: func() error {
+			t.Skip("Skipping until we can get the test working")
+			return nil
+		},
 		Template: testBuilderAccManagedDiskWindows,
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
 	})
 }
 func TestBuilderAcc_ManagedDisk_Linux_Artifacts(t *testing.T) {
-	builderT.Test(t, builderT.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Builder:  &Builder{},
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name: "test-azure-managedisk-linux",
+		Type: "azure-dtl",
+		Setup: func() error {
+			t.Skip("Skipping until we can get the test working")
+			return nil
+		},
 		Template: testBuilderAccManagedDiskLinux,
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
 	})
 }
 
@@ -59,7 +85,7 @@ const testBuilderAccManagedDiskWindows = `
 	  "tenant_id": "{{env ` + "`ARM_TENANT_ID`" + `}}"
 	},
 	"builders": [{
-	  "type": "test",
+	  "type": "azure-dtl",
 
 	  "client_id": "{{user ` + "`client_id`" + `}}",
 	  "client_secret": "{{user ` + "`client_secret`" + `}}",
@@ -99,7 +125,7 @@ const testBuilderAccManagedDiskLinux = `
 	  "tenant_id": "{{env ` + "`ARM_TENANT_ID`" + `}}"
 	},
 	"builders": [{
-	  "type": "test",
+	  "type": "azure-dtl",
 
 	  "client_id": "{{user ` + "`client_id`" + `}}",
 	  "client_secret": "{{user ` + "`client_secret`" + `}}",

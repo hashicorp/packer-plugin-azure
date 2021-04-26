@@ -25,38 +25,63 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
-	builderT "github.com/hashicorp/packer-plugin-sdk/acctest"
+	"github.com/hashicorp/packer-plugin-sdk/acctest"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
 const DeviceLoginAcceptanceTest = "DEVICELOGIN_TEST"
 
 func TestBuilderAcc_ManagedDisk_Windows(t *testing.T) {
-	builderT.Test(t, builderT.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Builder:  &Builder{},
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-azure-managedisk-windows",
+		Type:     "azure-arm",
 		Template: testBuilderAccManagedDiskWindows,
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
 	})
 }
 
 func TestBuilderAcc_ManagedDisk_Windows_Build_Resource_Group(t *testing.T) {
-	builderT.Test(t, builderT.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Builder:  &Builder{},
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-azure-managedisk-windows-build-resource-group",
+		Type:     "azure-arm",
 		Template: testBuilderAccManagedDiskWindowsBuildResourceGroup,
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
 	})
 }
 
 func TestBuilderAcc_ManagedDisk_Windows_Build_Resource_Group_Additional_Disk(t *testing.T) {
-	builderT.Test(t, builderT.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Builder:  &Builder{},
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-azure-managedisk-windows-build-resource-group-additional-disk",
+		Type:     "azure-arm",
 		Template: testBuilderAccManagedDiskWindowsBuildResourceGroupAdditionalDisk,
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
 	})
 }
 
@@ -67,18 +92,34 @@ func TestBuilderAcc_ManagedDisk_Windows_DeviceLogin(t *testing.T) {
 			DeviceLoginAcceptanceTest))
 		return
 	}
-	builderT.Test(t, builderT.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Builder:  &Builder{},
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-azure-managedisk-windows-devicelogin",
+		Type:     "azure-arm",
 		Template: testBuilderAccManagedDiskWindowsDeviceLogin,
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
 	})
 }
 
 func TestBuilderAcc_ManagedDisk_Linux(t *testing.T) {
-	builderT.Test(t, builderT.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Builder:  &Builder{},
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-azure-managedisk-linux",
+		Type:     "azure-arm",
 		Template: testBuilderAccManagedDiskLinux,
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
 	})
 }
 
@@ -89,10 +130,18 @@ func TestBuilderAcc_ManagedDisk_Linux_DeviceLogin(t *testing.T) {
 			DeviceLoginAcceptanceTest))
 		return
 	}
-	builderT.Test(t, builderT.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Builder:  &Builder{},
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-azure-managedisk-linux-device-login",
+		Type:     "azure-arm",
 		Template: testBuilderAccManagedDiskLinuxDeviceLogin,
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
 	})
 }
 
@@ -102,36 +151,60 @@ func TestBuilderAcc_ManagedDisk_Linux_AzureCLI(t *testing.T) {
 		return
 	}
 
-	var b Builder
-	builderT.Test(t, builderT.TestCase{
-		PreCheck: func() { testAuthPreCheck(t) },
-		Builder:  &b,
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-azure-managedisk-linux-azurecli",
+		Type:     "azure-arm",
 		Template: testBuilderAccManagedDiskLinuxAzureCLI,
-		Check: func([]packersdk.Artifact) error {
-			checkTemporaryGroupDeleted(t, &b)
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
 			return nil
 		},
+		//Check: func([]packersdk.Artifact) error {
+		//checkTemporaryGroupDeleted(t, &b)
+		//return nil
+		//},
 	})
 }
 
 func TestBuilderAcc_Blob_Windows(t *testing.T) {
-	builderT.Test(t, builderT.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Builder:  &Builder{},
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-azure-blob-windows",
+		Type:     "azure-arm",
 		Template: testBuilderAccBlobWindows,
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
 	})
 }
 
 func TestBuilderAcc_Blob_Linux(t *testing.T) {
-	var b Builder
-	builderT.Test(t, builderT.TestCase{
-		PreCheck: func() { testAuthPreCheck(t) },
-		Builder:  &b,
+	b := Builder{}
+	b.Prepare()
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-azure-blob-linux",
+		Type:     "azure-arm",
 		Template: testBuilderAccBlobLinux,
-		Check: func([]packersdk.Artifact) error {
-			checkUnmanagedVHDDeleted(t, &b)
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
 			return nil
 		},
+		//Check: func([]packersdk.Artifact) error {
+		//checkUnmanagedVHDDeleted(t, &b)
+		//return nil
+		//},
 	})
 }
 
@@ -233,7 +306,7 @@ const testBuilderAccManagedDiskWindows = `
 	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}"
 	},
 	"builders": [{
-	  "type": "test",
+	  "type": "azure-arm",
 
 	  "client_id": "{{user ` + "`client_id`" + `}}",
 	  "client_secret": "{{user ` + "`client_secret`" + `}}",
@@ -268,7 +341,7 @@ const testBuilderAccManagedDiskWindowsBuildResourceGroup = `
 	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}"
 	},
 	"builders": [{
-	  "type": "test",
+	  "type": "azure-arm",
 
 	  "client_id": "{{user ` + "`client_id`" + `}}",
 	  "client_secret": "{{user ` + "`client_secret`" + `}}",
@@ -303,7 +376,7 @@ const testBuilderAccManagedDiskWindowsBuildResourceGroupAdditionalDisk = `
 	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}"
 	},
 	"builders": [{
-	  "type": "test",
+	  "type": "azure-arm",
 
 	  "client_id": "{{user ` + "`client_id`" + `}}",
 	  "client_secret": "{{user ` + "`client_secret`" + `}}",
@@ -337,7 +410,7 @@ const testBuilderAccManagedDiskWindowsDeviceLogin = `
 	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}"
 	},
 	"builders": [{
-	  "type": "test",
+	  "type": "azure-arm",
 
 	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
 
@@ -369,7 +442,7 @@ const testBuilderAccManagedDiskLinux = `
 	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}"
 	},
 	"builders": [{
-	  "type": "test",
+	  "type": "azure-arm",
 
 	  "client_id": "{{user ` + "`client_id`" + `}}",
 	  "client_secret": "{{user ` + "`client_secret`" + `}}",
@@ -399,7 +472,7 @@ const testBuilderAccManagedDiskLinuxDeviceLogin = `
 	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}"
 	},
 	"builders": [{
-	  "type": "test",
+	  "type": "azure-arm",
 
 	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
 
@@ -427,7 +500,7 @@ const testBuilderAccBlobWindows = `
 	  "storage_account": "{{env ` + "`ARM_STORAGE_ACCOUNT`" + `}}"
 	},
 	"builders": [{
-	  "type": "test",
+	  "type": "azure-arm",
 
 	  "client_id": "{{user ` + "`client_id`" + `}}",
 	  "client_secret": "{{user ` + "`client_secret`" + `}}",
@@ -435,7 +508,7 @@ const testBuilderAccBlobWindows = `
 
 	  "storage_account": "{{user ` + "`storage_account`" + `}}",
 	  "resource_group_name": "packer-acceptance-test",
-	  "capture_container_name": "test",
+	  "capture_container_name": "azure-arm",
 	  "capture_name_prefix": "testBuilderAccBlobWin",
 
 	  "os_type": "Windows",
@@ -464,7 +537,7 @@ const testBuilderAccBlobLinux = `
 	  "storage_account": "{{env ` + "`ARM_STORAGE_ACCOUNT`" + `}}"
 	},
 	"builders": [{
-	  "type": "test",
+	  "type": "azure-arm",
 
 	  "client_id": "{{user ` + "`client_id`" + `}}",
 	  "client_secret": "{{user ` + "`client_secret`" + `}}",
@@ -489,7 +562,7 @@ const testBuilderAccBlobLinux = `
 const testBuilderAccManagedDiskLinuxAzureCLI = `
 {
 	"builders": [{
-	  "type": "test",
+	  "type": "azure-arm",
 
 	  "use_azure_cli_auth": true,
 
