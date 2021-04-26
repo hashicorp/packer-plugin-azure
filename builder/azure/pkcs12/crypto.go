@@ -14,7 +14,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/hashicorp/packer/builder/azure/pkcs12/rc2"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/pkcs12/rc2"
 )
 
 const (

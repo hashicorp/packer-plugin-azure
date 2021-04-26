@@ -19,9 +19,9 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/multistep/commonsteps"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
-	packerAzureCommon "github.com/hashicorp/packer/builder/azure/common"
-	"github.com/hashicorp/packer/builder/azure/common/constants"
-	"github.com/hashicorp/packer/builder/azure/common/lin"
+	packerAzureCommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/lin"
 )
 
 type Builder struct {

@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/hashicorp/packer/builder/azure/common/constants"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"

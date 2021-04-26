@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/hashicorp/packer/builder/azure/common/client"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 )
 
 // CreateVMMetadataTemplateFunc returns a template function that retrieves VM metadata. VM metadata is retrieved only once and reused for all executions of the function.

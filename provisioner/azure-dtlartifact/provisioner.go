@@ -9,8 +9,8 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/devtestlabs/mgmt/2018-09-15/dtl"
 	"github.com/hashicorp/hcl/v2/hcldec"
-	"github.com/hashicorp/packer/builder/azure/common/client"
-	dtlBuilder "github.com/hashicorp/packer/builder/azure/dtl"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
+	dtlBuilder "github.com/hashicorp/packer-plugin-azure/builder/azure/dtl"
 
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 

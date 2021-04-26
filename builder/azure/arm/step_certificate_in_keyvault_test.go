@@ -7,8 +7,8 @@ import (
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
-	azcommon "github.com/hashicorp/packer/builder/azure/common"
-	"github.com/hashicorp/packer/builder/azure/common/constants"
+	azcommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 )
 
 func TestNewStepCertificateInKeyVault(t *testing.T) {

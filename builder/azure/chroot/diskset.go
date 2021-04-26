@@ -1,6 +1,6 @@
 package chroot
 
-import "github.com/hashicorp/packer/builder/azure/common/client"
+import "github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 
 // Diskset represents all of the disks or snapshots associated with an image.
 // It maps lun to resource ids. The OS disk is stored with lun=-1.

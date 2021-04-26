@@ -8,8 +8,8 @@ import (
 
 	"fmt"
 
-	"github.com/hashicorp/packer/builder/azure/common/constants"
-	"github.com/hashicorp/packer/builder/azure/common/template"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/template"
 )
 
 type templateFactoryFunc func(*Config) (*resources.Deployment, error)

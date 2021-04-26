@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/packer/builder/azure/common/constants"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 )
 
 // List of configuration parameters that are required by the DTL builder.

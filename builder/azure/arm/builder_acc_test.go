@@ -30,8 +30,8 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
+	builderT "github.com/hashicorp/packer-plugin-sdk/acctest"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
-	builderT "github.com/hashicorp/packer/acctest"
 )
 
 const DeviceLoginAcceptanceTest = "DEVICELOGIN_TEST"
@@ -496,7 +496,7 @@ const testBuilderAccManagedDiskLinuxAzureCLI = `
 	  "managed_image_resource_group_name": "packer-acceptance-test",
 	  "managed_image_name": "testBuilderAccManagedDiskLinuxAzureCLI-{{timestamp}}",
 	  "temp_resource_group_name": "packer-acceptance-test-managed-cli",
-	  
+
 	  "os_type": "Linux",
 	  "image_publisher": "Canonical",
 	  "image_offer": "UbuntuServer",

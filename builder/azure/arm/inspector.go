@@ -10,7 +10,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/hashicorp/packer/builder/azure/common/logutil"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/logutil"
 )
 
 func chop(data []byte, maxlen int64) string {

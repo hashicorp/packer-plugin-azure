@@ -15,7 +15,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/hashicorp/packer/builder/azure/pkcs12"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/pkcs12"
 )
 
 func NewCertOAuthTokenProvider(env azure.Environment, clientID, clientCertPath, tenantID string, certExpireTimeout time.Duration) (oAuthTokenProvider, error) {

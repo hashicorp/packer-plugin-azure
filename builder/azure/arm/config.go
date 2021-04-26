@@ -29,10 +29,10 @@ import (
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
-	azcommon "github.com/hashicorp/packer/builder/azure/common"
-	"github.com/hashicorp/packer/builder/azure/common/client"
-	"github.com/hashicorp/packer/builder/azure/common/constants"
-	"github.com/hashicorp/packer/builder/azure/pkcs12"
+	azcommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/pkcs12"
 
 	"golang.org/x/crypto/ssh"
 )

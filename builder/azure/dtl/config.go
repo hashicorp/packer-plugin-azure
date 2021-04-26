@@ -20,15 +20,15 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/masterzen/winrm"
 
-	"github.com/hashicorp/packer/builder/azure/common/client"
-	"github.com/hashicorp/packer/builder/azure/common/constants"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 
 	"github.com/hashicorp/packer-plugin-sdk/common"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
-	"github.com/hashicorp/packer/builder/azure/pkcs12"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/pkcs12"
 
 	"golang.org/x/crypto/ssh"
 )

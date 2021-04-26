@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
-	"github.com/hashicorp/packer/builder/azure/common/constants"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 )
 
 func TestStepSnapshotOSDiskShouldFailIfSnapshotFails(t *testing.T) {

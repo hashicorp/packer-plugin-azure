@@ -1,6 +1,6 @@
 package chroot
 
-import "github.com/hashicorp/packer/builder/azure/common/client"
+import "github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 
 func withMetadataStub(f func()) {
 	mdc := client.DefaultMetadataClient

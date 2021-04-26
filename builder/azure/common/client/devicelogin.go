@@ -16,7 +16,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/hashicorp/packer-plugin-sdk/useragent"
-	version "github.com/hashicorp/packer/builder/azure/version"
+	version "github.com/hashicorp/packer-plugin-azure/builder/azure/version"
 )
 
 var (

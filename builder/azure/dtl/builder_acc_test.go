@@ -28,7 +28,7 @@ package dtl
 import (
 	"testing"
 
-	builderT "github.com/hashicorp/packer/acctest"
+	builderT "github.com/hashicorp/packer-plugin-sdk/acctest"
 )
 
 const DeviceLoginAcceptanceTest = "DEVICELOGIN_TEST"

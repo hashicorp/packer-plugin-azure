@@ -20,8 +20,8 @@ import (
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/hashicorp/packer-plugin-sdk/useragent"
-	"github.com/hashicorp/packer/builder/azure/common"
-	"github.com/hashicorp/packer/builder/azure/version"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/version"
 )
 
 const (

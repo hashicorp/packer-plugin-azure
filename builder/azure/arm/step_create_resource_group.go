@@ -8,7 +8,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
-	"github.com/hashicorp/packer/builder/azure/common/constants"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 )
 
 type StepCreateResourceGroup struct {
