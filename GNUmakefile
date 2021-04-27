@@ -1,4 +1,4 @@
-NAME=scaffolding
+NAME=azure
 BINARY=packer-plugin-${NAME}
 
 COUNT?=1
