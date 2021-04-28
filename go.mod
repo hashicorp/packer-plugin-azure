@@ -19,7 +19,7 @@ require (
 	github.com/hashicorp/packer-plugin-sdk v0.2.0
 	github.com/masterzen/winrm v0.0.0-20201030141608-56ca5c5f2380
 	github.com/mitchellh/mapstructure v1.4.0
-	github.com/mitchellh/reflectwalk v1.0.0
+	github.com/mitchellh/reflectwalk v1.0.1
 	github.com/stretchr/testify v1.7.0
 	github.com/zclconf/go-cty v1.8.2
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
