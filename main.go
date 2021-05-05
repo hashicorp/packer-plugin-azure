@@ -15,10 +15,10 @@ import (
 
 func main() {
 	pps := plugin.NewSet()
-	pps.RegisterBuilder("azure-arm", new(azurearm.Builder))
-	pps.RegisterBuilder("azure-chroot", new(azurechroot.Builder))
-	pps.RegisterBuilder("azure-dtl", new(azuredtl.Builder))
-	pps.RegisterProvisioner("azure-dtlartifact", new(azuredtlartifact.Provisioner))
+	pps.RegisterBuilder("arm", new(azurearm.Builder))
+	pps.RegisterBuilder("chroot", new(azurechroot.Builder))
+	pps.RegisterBuilder("dtl", new(azuredtl.Builder))
+	pps.RegisterProvisioner("dtlartifact", new(azuredtlartifact.Provisioner))
 	pps.SetVersion(version.AzurePluginVersion)
 	err := pps.Run()
 	if err != nil {
