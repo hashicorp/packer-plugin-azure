@@ -15,13 +15,13 @@ import (
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/hashicorp/hcl/v2/hcldec"
+	packerAzureCommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/lin"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/multistep/commonsteps"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
-	packerAzureCommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
-	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
-	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/lin"
 )
 
 type Builder struct {
