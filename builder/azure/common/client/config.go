@@ -3,7 +3,9 @@
 package client
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -11,6 +13,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/hashicorp/go-azure-helpers/authentication"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
@@ -28,6 +31,13 @@ type Config struct {
 	// USGovernmentCloud and AzureUSGovernmentCloud are also supported.
 	CloudEnvironmentName string `mapstructure:"cloud_environment_name" required:"false"`
 	cloudEnvironment     *azure.Environment
+	// The Hostname of the Azure Metadata Service
+	// (for example management.azure.com), used to obtain the Cloud Environment
+	// when using a Custom Azure Environment. This can also be sourced from the
+	// ARM_METADATA_HOST Environment Variable.
+	// Note: CloudEnvironmentName must be set to the requested environment
+	// name in the list of available environments held in the metadata_host.
+	MetadataHost string `mapstructure:"metadata_host" required:"false"`
 
 	// Authentication fields
 
@@ -77,10 +87,13 @@ const (
 
 const DefaultCloudEnvironmentName = "Public"
 
+// CloudEnvironmentName is deprecated in favor of MetadataHost. This is retained
+// for now to preserve backward compatability, but should eventually be removed.
 func (c *Config) SetDefaultValues() error {
 	if c.CloudEnvironmentName == "" {
 		c.CloudEnvironmentName = DefaultCloudEnvironmentName
 	}
+
 	return c.setCloudEnvironment()
 }
 
@@ -89,37 +102,56 @@ func (c *Config) CloudEnvironment() *azure.Environment {
 }
 
 func (c *Config) setCloudEnvironment() error {
-	lookup := map[string]string{
-		"CHINA":           "AzureChinaCloud",
-		"CHINACLOUD":      "AzureChinaCloud",
-		"AZURECHINACLOUD": "AzureChinaCloud",
-
-		"GERMAN":           "AzureGermanCloud",
-		"GERMANCLOUD":      "AzureGermanCloud",
-		"AZUREGERMANCLOUD": "AzureGermanCloud",
-
-		"GERMANY":           "AzureGermanCloud",
-		"GERMANYCLOUD":      "AzureGermanCloud",
-		"AZUREGERMANYCLOUD": "AzureGermanCloud",
-
-		"PUBLIC":           "AzurePublicCloud",
-		"PUBLICCLOUD":      "AzurePublicCloud",
-		"AZUREPUBLICCLOUD": "AzurePublicCloud",
-
-		"USGOVERNMENT":           "AzureUSGovernmentCloud",
-		"USGOVERNMENTCLOUD":      "AzureUSGovernmentCloud",
-		"AZUREUSGOVERNMENTCLOUD": "AzureUSGovernmentCloud",
+	// First, try using the metadata host to look up the cloud.
+	if c.MetadataHost == "" {
+		if v := os.Getenv("ARM_METADATA_URL"); v != "" {
+			c.MetadataHost = v
+		}
 	}
 
-	name := strings.ToUpper(c.CloudEnvironmentName)
-	envName, ok := lookup[name]
-	if !ok {
-		return fmt.Errorf("There is no cloud environment matching the name '%s'!", c.CloudEnvironmentName)
+	env, err := authentication.AzureEnvironmentByNameFromEndpoint(context.TODO(), c.MetadataHost, c.CloudEnvironmentName)
+	c.cloudEnvironment = env
+
+	if err != nil {
+		// fall back to old method of normalizing and looking up cloud names.
+		log.Printf(fmt.Sprintf("Error looking up environment using metadata host: %s. \n"+
+			"Falling back to hardcoded mechanism...", err.Error()))
+		lookup := map[string]string{
+			"CHINA":           "AzureChinaCloud",
+			"CHINACLOUD":      "AzureChinaCloud",
+			"AZURECHINACLOUD": "AzureChinaCloud",
+
+			"GERMAN":           "AzureGermanCloud",
+			"GERMANCLOUD":      "AzureGermanCloud",
+			"AZUREGERMANCLOUD": "AzureGermanCloud",
+
+			"GERMANY":           "AzureGermanCloud",
+			"GERMANYCLOUD":      "AzureGermanCloud",
+			"AZUREGERMANYCLOUD": "AzureGermanCloud",
+
+			"PUBLIC":           "AzurePublicCloud",
+			"PUBLICCLOUD":      "AzurePublicCloud",
+			"AZUREPUBLICCLOUD": "AzurePublicCloud",
+
+			"USGOVERNMENT":           "AzureUSGovernmentCloud",
+			"USGOVERNMENTCLOUD":      "AzureUSGovernmentCloud",
+			"AZUREUSGOVERNMENTCLOUD": "AzureUSGovernmentCloud",
+		}
+
+		name := strings.ToUpper(c.CloudEnvironmentName)
+		envName, ok := lookup[name]
+		if !ok {
+			return fmt.Errorf("There is no cloud environment matching the name '%s'!", c.CloudEnvironmentName)
+		}
+
+		env, err := azure.EnvironmentFromName(envName)
+		if err != nil {
+			return err
+		}
+		c.cloudEnvironment = &env
 	}
 
-	env, err := azure.EnvironmentFromName(envName)
-	c.cloudEnvironment = &env
-	return err
+	return nil
 }
 
 //nolint:ineffassign //this triggers a false positive because errs is passed by reference

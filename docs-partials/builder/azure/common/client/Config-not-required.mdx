@@ -4,6 +4,13 @@
   USGovernment. Defaults to Public. Long forms such as
   USGovernmentCloud and AzureUSGovernmentCloud are also supported.
 
+- `metadata_host` (string) - The Hostname of the Azure Metadata Service
+  (for example management.azure.com), used to obtain the Cloud Environment
+  when using a Custom Azure Environment. This can also be sourced from the
+  ARM_METADATA_HOST Environment Variable.
+  Note: CloudEnvironmentName must be set to the requested environment
+  name in the list of available environments held in the metadata_host.
+
 - `client_id` (string) - The application ID of the AAD Service Principal.
   Requires either `client_secret`, `client_cert_path` or `client_jwt` to be set as well.
 
