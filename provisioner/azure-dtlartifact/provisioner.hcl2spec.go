@@ -46,6 +46,7 @@ type FlatConfig struct {
 	PackerUserVars          map[string]string      `mapstructure:"packer_user_variables" cty:"packer_user_variables" hcl:"packer_user_variables"`
 	PackerSensitiveVars     []string               `mapstructure:"packer_sensitive_variables" cty:"packer_sensitive_variables" hcl:"packer_sensitive_variables"`
 	CloudEnvironmentName    *string                `mapstructure:"cloud_environment_name" required:"false" cty:"cloud_environment_name" hcl:"cloud_environment_name"`
+	MetadataHost            *string                `mapstructure:"metadata_host" required:"false" cty:"metadata_host" hcl:"metadata_host"`
 	ClientID                *string                `mapstructure:"client_id" cty:"client_id" hcl:"client_id"`
 	ClientSecret            *string                `mapstructure:"client_secret" cty:"client_secret" hcl:"client_secret"`
 	ClientCertPath          *string                `mapstructure:"client_cert_path" cty:"client_cert_path" hcl:"client_cert_path"`
@@ -85,6 +86,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"packer_user_variables":      &hcldec.AttrSpec{Name: "packer_user_variables", Type: cty.Map(cty.String), Required: false},
 		"packer_sensitive_variables": &hcldec.AttrSpec{Name: "packer_sensitive_variables", Type: cty.List(cty.String), Required: false},
 		"cloud_environment_name":     &hcldec.AttrSpec{Name: "cloud_environment_name", Type: cty.String, Required: false},
+		"metadata_host":              &hcldec.AttrSpec{Name: "metadata_host", Type: cty.String, Required: false},
 		"client_id":                  &hcldec.AttrSpec{Name: "client_id", Type: cty.String, Required: false},
 		"client_secret":              &hcldec.AttrSpec{Name: "client_secret", Type: cty.String, Required: false},
 		"client_cert_path":           &hcldec.AttrSpec{Name: "client_cert_path", Type: cty.String, Required: false},
