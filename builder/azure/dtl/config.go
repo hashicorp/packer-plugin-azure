@@ -38,6 +38,8 @@ const (
 	DefaultUserName                          = "packer"
 	DefaultPrivateVirtualNetworkWithPublicIp = false
 	DefaultVMSize                            = "Standard_A1"
+	DefaultSharedGalleryTimeout              = 60 * time.Minute
+	DefaultCustomImageCaptureTimeout         = 30 * time.Minute
 )
 
 const (
@@ -141,6 +143,14 @@ type Config struct {
 	// its default of "60m" (valid time units include `s` for seconds, `m` for
 	// minutes, and `h` for hours.)
 	SharedGalleryTimeout time.Duration `mapstructure:"shared_image_gallery_timeout"`
+
+	// How long to wait for an image to be captured before timing out
+	// If your Packer build is failing on the Capture Image step with the
+	// error `Original Error: context deadline exceeded`, but the image is
+	// present when you check your custom image repository, then you probably
+	// need to increase this timeout from its default of "30m" (valid time units
+	// include `s` for seconds, `m` for minutes, and `h` for hours.)
+	CustomImageCaptureTimeout time.Duration `mapstructure:"custom_image_capture_timeout"`
 
 	// PublisherName for your base image. See
 	// [documentation](https://docs.microsoft.com/en-us/cli/azure/vm/image)
@@ -275,8 +285,9 @@ type Config struct {
 	LabSubnetName         string `mapstructure:"lab_subnet_name"`
 	LabResourceGroupName  string `mapstructure:"lab_resource_group_name"`
 
-	DtlArtifacts []DtlArtifact `mapstructure:"dtl_artifacts"`
-	VMName       string        `mapstructure:"vm_name"`
+	DtlArtifacts     []DtlArtifact `mapstructure:"dtl_artifacts"`
+	VMName           string        `mapstructure:"vm_name"`
+	DisallowPublicIP bool          `mapstructure:"disallow_public_ip" required:"false"`
 
 	// Runtime Values
 	UserName                string
@@ -539,6 +550,14 @@ func provideDefaultValues(c *Config) {
 
 	if c.ImagePublisher != "" && c.ImageVersion == "" {
 		c.ImageVersion = DefaultImageVersion
+	}
+
+	if c.SharedGalleryTimeout == 0 {
+		c.SharedGalleryTimeout = DefaultSharedGalleryTimeout
+	}
+
+	if c.CustomImageCaptureTimeout == 0 {
+		c.CustomImageCaptureTimeout = DefaultCustomImageCaptureTimeout
 	}
 }
 
