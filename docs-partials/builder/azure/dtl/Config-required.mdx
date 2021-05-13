@@ -1,0 +1,20 @@
+<!-- Code generated from the comments of the Config struct in builder/azure/dtl/config.go; DO NOT EDIT MANUALLY -->
+
+- `managed_image_resource_group_name` (string) - Specify the managed image resource group name where the result of the
+  Packer build will be saved. The resource group must already exist. If
+  this value is set, the value managed_image_name must also be set. See
+  documentation to learn more about managed images.
+
+- `managed_image_name` (string) - Specify the managed image name where the result of the Packer build will
+  be saved. The image name must not exist ahead of time, and will not be
+  overwritten. If this value is set, the value
+  managed_image_resource_group_name must also be set. See documentation to
+  learn more about managed images.
+
+- `lab_name` (string) - Name of the existing lab where the virtual machine will be created.
+
+- `lab_subnet_name` (string) - Name of the subnet being used in the lab, if not the default.
+
+- `lab_resource_group_name` (string) - Name of the resource group where the lab exist.
+
+<!-- End of code generated from the comments of the Config struct in builder/azure/dtl/config.go; -->

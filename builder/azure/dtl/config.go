@@ -77,6 +77,10 @@ type SharedImageGalleryDestination struct {
 	SigDestinationReplicationRegions []string `mapstructure:"replication_regions"`
 }
 
+/*
+An existing artifact that can be added to the virtual machine being provisioned.
+At a minimum the `artifact_name` attribute must be set.
+*/
 type DtlArtifact struct {
 	ArtifactName   string              `mapstructure:"artifact_name"`
 	RepositoryName string              `mapstructure:"repository_name"`
@@ -105,34 +109,12 @@ type Config struct {
 	// as the source for this build. *VHD targets are incompatible with this
 	// build type* - the target must be a *Managed Image*.
 	//
-	// ```json
-	// "shared_image_gallery": {
-	//     "subscription": "00000000-0000-0000-0000-00000000000",
-	//     "resource_group": "ResourceGroup",
-	//     "gallery_name": "GalleryName",
-	//     "image_name": "ImageName",
-	//     "image_version": "1.0.0"
-	// }
-	// "managed_image_name": "TargetImageName",
-	// "managed_image_resource_group_name": "TargetResourceGroup"
-	// ```
 	SharedGallery SharedImageGallery `mapstructure:"shared_image_gallery"`
 
 	// The name of the Shared Image Gallery under which the managed image will be published as Shared Gallery Image version.
 	//
 	// Following is an example.
 	//
-	// ```json
-	// "shared_image_gallery_destination": {
-	//     "resource_group": "ResourceGroup",
-	//     "gallery_name": "GalleryName",
-	//     "image_name": "ImageName",
-	//     "image_version": "1.0.0",
-	//     "replication_regions": ["regionA", "regionB", "regionC"]
-	// }
-	// "managed_image_name": "TargetImageName",
-	// "managed_image_resource_group_name": "TargetResourceGroup"
-	// ```
 	SharedGalleryDestination SharedImageGalleryDestination `mapstructure:"shared_image_gallery_destination"`
 
 	// How long to wait for an image to be published to the shared image
@@ -213,13 +195,13 @@ type Config struct {
 	// Packer build will be saved. The resource group must already exist. If
 	// this value is set, the value managed_image_name must also be set. See
 	// documentation to learn more about managed images.
-	ManagedImageResourceGroupName string `mapstructure:"managed_image_resource_group_name"`
+	ManagedImageResourceGroupName string `mapstructure:"managed_image_resource_group_name" required:"true"`
 	// Specify the managed image name where the result of the Packer build will
 	// be saved. The image name must not exist ahead of time, and will not be
 	// overwritten. If this value is set, the value
 	// managed_image_resource_group_name must also be set. See documentation to
 	// learn more about managed images.
-	ManagedImageName string `mapstructure:"managed_image_name"`
+	ManagedImageName string `mapstructure:"managed_image_name" required:"true"`
 	// Specify the storage account
 	// type for a managed image. Valid values are Standard_LRS and Premium_LRS.
 	// The default is Standard_LRS.
@@ -279,15 +261,22 @@ type Config struct {
 	diskCachingType compute.CachingTypes
 
 	// DTL values
-	StorageType           string `mapstructure:"storage_type"`
+	StorageType string `mapstructure:"storage_type"`
+	// Name of the virtual network used for communicating with the lab vms.
 	LabVirtualNetworkName string `mapstructure:"lab_virtual_network_name"`
-	LabName               string `mapstructure:"lab_name"`
-	LabSubnetName         string `mapstructure:"lab_subnet_name"`
-	LabResourceGroupName  string `mapstructure:"lab_resource_group_name"`
+	// Name of the existing lab where the virtual machine will be created.
+	LabName string `mapstructure:"lab_name" required:"true"`
+	// Name of the subnet being used in the lab, if not the default.
+	LabSubnetName string `mapstructure:"lab_subnet_name" required:"true"`
+	// Name of the resource group where the lab exist.
+	LabResourceGroupName string `mapstructure:"lab_resource_group_name" required:"true"`
+	//One or more Artifacts that should be added to the VM at start.
+	DtlArtifacts []DtlArtifact `mapstructure:"dtl_artifacts"`
+	// Name for the virtual machine within the DevTest lab.
+	VMName string `mapstructure:"vm_name"`
 
-	DtlArtifacts     []DtlArtifact `mapstructure:"dtl_artifacts"`
-	VMName           string        `mapstructure:"vm_name"`
-	DisallowPublicIP bool          `mapstructure:"disallow_public_ip" required:"false"`
+	// DisallowPublicIPAddress - Indicates whether the virtual machine is to be created without a public IP address.
+	DisallowPublicIP bool `mapstructure:"disallow_public_ip" required:"false"`
 
 	// Runtime Values
 	UserName                string

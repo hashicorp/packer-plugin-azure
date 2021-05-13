@@ -8,34 +8,10 @@
   image](https://azure.microsoft.com/en-us/blog/announcing-the-public-preview-of-shared-image-gallery/)
   as the source for this build. *VHD targets are incompatible with this
   build type* - the target must be a *Managed Image*.
-  
-  ```json
-  "shared_image_gallery": {
-      "subscription": "00000000-0000-0000-0000-00000000000",
-      "resource_group": "ResourceGroup",
-      "gallery_name": "GalleryName",
-      "image_name": "ImageName",
-      "image_version": "1.0.0"
-  }
-  "managed_image_name": "TargetImageName",
-  "managed_image_resource_group_name": "TargetResourceGroup"
-  ```
 
 - `shared_image_gallery_destination` (SharedImageGalleryDestination) - The name of the Shared Image Gallery under which the managed image will be published as Shared Gallery Image version.
   
   Following is an example.
-  
-  ```json
-  "shared_image_gallery_destination": {
-      "resource_group": "ResourceGroup",
-      "gallery_name": "GalleryName",
-      "image_name": "ImageName",
-      "image_version": "1.0.0",
-      "replication_regions": ["regionA", "regionB", "regionC"]
-  }
-  "managed_image_name": "TargetImageName",
-  "managed_image_resource_group_name": "TargetResourceGroup"
-  ```
 
 - `shared_image_gallery_timeout` (duration string | ex: "1h5m2s") - How long to wait for an image to be published to the shared image
   gallery before timing out. If your Packer build is failing on the
@@ -49,8 +25,8 @@
   If your Packer build is failing on the Capture Image step with the
   error `Original Error: context deadline exceeded`, but the image is
   present when you check your custom image repository, then you probably
-  need to increase this timeout from its default of "30m" (valid time
-  units include `s` for seconds, `m` for minutes, and `h` for hours.)
+  need to increase this timeout from its default of "30m" (valid time units
+  include `s` for seconds, `m` for minutes, and `h` for hours.)
 
 - `image_publisher` (string) - PublisherName for your base image. See
   [documentation](https://docs.microsoft.com/en-us/cli/azure/vm/image)
@@ -107,17 +83,6 @@
   
   CLI example `az vm list-sizes --location westus`
 
-- `managed_image_resource_group_name` (string) - Specify the managed image resource group name where the result of the
-  Packer build will be saved. The resource group must already exist. If
-  this value is set, the value managed_image_name must also be set. See
-  documentation to learn more about managed images.
-
-- `managed_image_name` (string) - Specify the managed image name where the result of the Packer build will
-  be saved. The image name must not exist ahead of time, and will not be
-  overwritten. If this value is set, the value
-  managed_image_resource_group_name must also be set. See documentation to
-  learn more about managed images.
-
 - `managed_image_storage_account_type` (string) - Specify the storage account
   type for a managed image. Valid values are Standard_LRS and Premium_LRS.
   The default is Standard_LRS.
@@ -161,16 +126,12 @@
 
 - `storage_type` (string) - DTL values
 
-- `lab_virtual_network_name` (string) - Lab Virtual Network Name
+- `lab_virtual_network_name` (string) - Name of the virtual network used for communicating with the lab vms.
 
-- `lab_name` (string) - Lab Name
+- `dtl_artifacts` ([]DtlArtifact) - One or more Artifacts that should be added to the VM at start.
 
-- `lab_subnet_name` (string) - Lab Subnet Name
+- `vm_name` (string) - Name for the virtual machine within the DevTest lab.
 
-- `lab_resource_group_name` (string) - Lab Resource Group Name
-
-- `dtl_artifacts` ([]DtlArtifact) - Dtl Artifacts
-
-- `vm_name` (string) - VM Name
+- `disallow_public_ip` (bool) - DisallowPublicIPAddress - Indicates whether the virtual machine is to be created without a public IP address.
 
 <!-- End of code generated from the comments of the Config struct in builder/azure/dtl/config.go; -->

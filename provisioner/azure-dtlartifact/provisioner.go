@@ -1,3 +1,4 @@
+//go:generate packer-sdc struct-markdown
 //go:generate packer-sdc mapstructure-to-hcl2 -type Config,DtlArtifact,ArtifactParameter
 
 package devtestlabsartifacts
@@ -37,12 +38,13 @@ type Config struct {
 	// Authentication via OAUTH
 	ClientConfig client.Config `mapstructure:",squash"`
 
-	DtlArtifacts []DtlArtifact `mapstructure:"dtl_artifacts"`
-	LabName      string        `mapstructure:"lab_name"`
-
-	ResourceGroupName string `mapstructure:"lab_resource_group_name"`
-
-	VMName string `mapstructure:"vm_name"`
+	DtlArtifacts []DtlArtifact `mapstructure:"dtl_artifacts" required:"true"`
+	// Name of the existing lab where the virtual machine exist.
+	LabName string `mapstructure:"lab_name" required:"true"`
+	// Name of the resource group where the lab exist.
+	ResourceGroupName string `mapstructure:"lab_resource_group_name" required:"true"`
+	// Name of the virtual machine within the DevTest lab.
+	VMName string `mapstructure:"vm_name" required:"true"`
 
 	// The default PollingDuration for azure is 15mins, this property will override
 	// that value. See [Azure DefaultPollingDuration](https://godoc.org/github.com/Azure/go-autorest/autorest#pkg-constants)
