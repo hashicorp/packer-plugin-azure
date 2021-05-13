@@ -37,7 +37,7 @@ func TestIsAzure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = f.Truncate(0)
+	err = f.Truncate(0)
 	if err != nil {
 		t.Fatal(err)
 	}
