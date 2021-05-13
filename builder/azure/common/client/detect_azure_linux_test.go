@@ -47,6 +47,5 @@ func TestIsAzure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-
 	assert.True(t, isAzureAssetTag(f.Name()), "asset tag is Azure's")
 }
