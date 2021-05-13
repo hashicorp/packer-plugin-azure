@@ -33,8 +33,6 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 )
 
-const DeviceLoginAcceptanceTest = "DEVICELOGIN_TEST"
-
 func TestBuilderAcc_ManagedDisk_Windows(t *testing.T) {
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name: "test-azure-managedisk-windows",
@@ -73,8 +71,6 @@ func TestBuilderAcc_ManagedDisk_Linux_Artifacts(t *testing.T) {
 		},
 	})
 }
-
-func testAccPreCheck(*testing.T) {}
 
 const testBuilderAccManagedDiskWindows = `
 {

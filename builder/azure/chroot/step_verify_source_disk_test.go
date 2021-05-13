@@ -150,8 +150,3 @@ func Test_StepVerifySourceDisk_Run(t *testing.T) {
 		})
 	}
 }
-
-type uiThatRemebersErrors struct {
-	packersdk.Ui
-	LastError string
-}

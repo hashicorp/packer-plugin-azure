@@ -3,7 +3,6 @@ package client
 import (
 	"log"
 	"net/http"
-	"regexp"
 	"time"
 
 	"github.com/hashicorp/packer-plugin-sdk/useragent"
@@ -32,8 +31,6 @@ type AzureClientSet interface {
 	// SubscriptionID returns the subscription ID that this client set was created for
 	SubscriptionID() string
 }
-
-var subscriptionPathRegex = regexp.MustCompile(`/subscriptions/([[:xdigit:]]{8}(-[[:xdigit:]]{4}){3}-[[:xdigit:]]{12})`)
 
 var _ AzureClientSet = &azureClientSet{}
 

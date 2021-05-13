@@ -418,7 +418,7 @@ func Test_getJWT(t *testing.T) {
 
 func newRandReader() io.Reader {
 	var seed int64
-	binary.Read(crand.Reader, binary.LittleEndian, &seed)
+	_ = binary.Read(crand.Reader, binary.LittleEndian, &seed)
 
 	return mrand.New(mrand.NewSource(seed))
 }
