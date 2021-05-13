@@ -1,6 +1,10 @@
-## 0.0.2 (May 12, 2021)
+## 0.0.2 (May 13, 2021)
 
-BUG FIXES:
+### IMPROVEMENTS:
+
+* builder/dtl: Add `disallow_public_ip` configuration to support private DevTest Lab VMs. [GH-85]
+
+### BUG FIXES:
 
 * Fixes a version string issue to support plugin vendoring from within Packer [hashicorp/packer#10979](https://github.com/hashicorp/packer/pull/10979).
   [GH-84]
