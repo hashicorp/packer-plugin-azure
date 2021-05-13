@@ -15,15 +15,37 @@ func TestIsAzure(t *testing.T) {
 	}
 	defer os.Remove(f.Name())
 
-	f.Seek(0, 0)
-	f.Truncate(0)
-	f.Write([]byte("not the azure assettag"))
+	_, err = f.Seek(0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = f.Truncate(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = f.Write([]byte("not the azure assettag"))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	assert.False(t, isAzureAssetTag(f.Name()), "asset tag is not Azure's")
 
-	f.Seek(0, 0)
-	f.Truncate(0)
-	f.Write(azureAssetTag)
+	_, err = f.Seek(0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = f.Truncate(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = f.Write(azureAssetTag)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	assert.True(t, isAzureAssetTag(f.Name()), "asset tag is Azure's")
 }

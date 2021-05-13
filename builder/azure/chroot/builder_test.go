@@ -12,7 +12,6 @@ import (
 
 func TestBuilder_Prepare(t *testing.T) {
 	type config map[string]interface{}
-	type regexMatchers map[string]string // map of regex : error message
 
 	tests := []struct {
 		name     string

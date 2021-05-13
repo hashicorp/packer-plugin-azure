@@ -112,6 +112,9 @@ func ToPEM(pfxData []byte, password string) ([]*pem.Block, error) {
 	}
 
 	bags, encodedPassword, err := getSafeContents(pfxData, encodedPassword)
+	if err != nil {
+		return nil, err
+	}
 
 	blocks := make([]*pem.Block, 0, len(bags))
 	for _, bag := range bags {
@@ -288,6 +291,10 @@ func convertToRawVal(val interface{}) (raw asn1.RawValue, err error) {
 	}
 
 	_, err = asn1.Unmarshal(bytes, &raw)
+	if err != nil {
+		return
+	}
+
 	return raw, nil
 }
 

@@ -48,7 +48,7 @@ func TestPbDecrypterFor(t *testing.T) {
 	ciphertext := make([]byte, len(plaintext))
 	cbc.CryptBlocks(ciphertext, plaintext)
 
-	if bytes.Compare(ciphertext, expectedCiphertext) != 0 {
+	if !bytes.Equal(ciphertext, expectedCiphertext) {
 		t.Errorf("bad ciphertext, got %x but wanted %x", ciphertext, expectedCiphertext)
 	}
 }

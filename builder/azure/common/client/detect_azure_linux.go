@@ -17,7 +17,7 @@ func IsAzure() bool {
 
 func isAzureAssetTag(filename string) bool {
 	if d, err := ioutil.ReadFile(filename); err == nil {
-		return bytes.Compare(d, azureAssetTag) == 0
+		return bytes.Equal(d, azureAssetTag)
 	}
 	return false
 }

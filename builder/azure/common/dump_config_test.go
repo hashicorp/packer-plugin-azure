@@ -5,7 +5,6 @@ import "testing"
 func TestShouldDumpPublicValues(t *testing.T) {
 	type S struct {
 		MyString string
-		myString string
 	}
 
 	data := &S{

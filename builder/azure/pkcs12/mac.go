@@ -44,7 +44,7 @@ func computeMac(message []byte, iterations int, salt, password []byte) []byte {
 	key := pbkdf(sha1Sum, 20, 64, salt, password, iterations, 3, 20)
 
 	mac := hmac.New(sha1.New, key)
-	mac.Write(message)
+	_, _ = mac.Write(message)
 
 	return mac.Sum(nil)
 }

@@ -12,11 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	testvm   = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/testGroup/Microsoft.Compute/virtualMachines/testVM"
-	testdisk = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/testGroup2/Microsoft.Compute/disks/testDisk"
-)
-
 // Tests assume current machine is capable of running chroot builder (i.e. an Azure VM)
 
 func Test_DiskAttacherAttachesDiskToVM(t *testing.T) {

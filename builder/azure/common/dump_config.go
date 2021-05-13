@@ -66,5 +66,5 @@ func (s *walker) isMaskable(name string) bool {
 
 func DumpConfig(config interface{}, say func(string)) {
 	walker := newDumpConfig(say)
-	reflectwalk.Walk(config, walker)
+	_ = reflectwalk.Walk(config, walker)
 }

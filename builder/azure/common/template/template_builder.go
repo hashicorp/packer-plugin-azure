@@ -369,7 +369,10 @@ func (s *TemplateBuilder) SetNetworkSecurityGroup(ipAddresses []string, port int
 		ID: to.StringPtr(resourceId),
 	}
 
-	s.addResource(vnetResource)
+	err = s.addResource(vnetResource)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
