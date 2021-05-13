@@ -35,12 +35,8 @@ import (
 
 func TestBuilderAcc_ManagedDisk_Windows(t *testing.T) {
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
-		Name: "test-azure-managedisk-windows",
-		Type: "azure-dtl",
-		Setup: func() error {
-			t.Skip("Skipping until we can get the test working")
-			return nil
-		},
+		Name:     "test-azure-managedisk-windows",
+		Type:     "azure-dtl",
 		Template: testBuilderAccManagedDiskWindows,
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
 			if buildCommand.ProcessState != nil {
@@ -54,12 +50,8 @@ func TestBuilderAcc_ManagedDisk_Windows(t *testing.T) {
 }
 func TestBuilderAcc_ManagedDisk_Linux_Artifacts(t *testing.T) {
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
-		Name: "test-azure-managedisk-linux",
-		Type: "azure-dtl",
-		Setup: func() error {
-			t.Skip("Skipping until we can get the test working")
-			return nil
-		},
+		Name:     "test-azure-managedisk-linux",
+		Type:     "azure-dtl",
 		Template: testBuilderAccManagedDiskLinux,
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
 			if buildCommand.ProcessState != nil {

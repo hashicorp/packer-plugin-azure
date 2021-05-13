@@ -71,8 +71,8 @@ type FlatConfig struct {
 	CustomManagedImageName              *string                            `mapstructure:"custom_managed_image_name" cty:"custom_managed_image_name" hcl:"custom_managed_image_name"`
 	Location                            *string                            `mapstructure:"location" cty:"location" hcl:"location"`
 	VMSize                              *string                            `mapstructure:"vm_size" cty:"vm_size" hcl:"vm_size"`
-	ManagedImageResourceGroupName       *string                            `mapstructure:"managed_image_resource_group_name" cty:"managed_image_resource_group_name" hcl:"managed_image_resource_group_name"`
-	ManagedImageName                    *string                            `mapstructure:"managed_image_name" cty:"managed_image_name" hcl:"managed_image_name"`
+	ManagedImageResourceGroupName       *string                            `mapstructure:"managed_image_resource_group_name" required:"true" cty:"managed_image_resource_group_name" hcl:"managed_image_resource_group_name"`
+	ManagedImageName                    *string                            `mapstructure:"managed_image_name" required:"true" cty:"managed_image_name" hcl:"managed_image_name"`
 	ManagedImageStorageAccountType      *string                            `mapstructure:"managed_image_storage_account_type" required:"false" cty:"managed_image_storage_account_type" hcl:"managed_image_storage_account_type"`
 	AzureTags                           map[string]*string                 `mapstructure:"azure_tags" required:"false" cty:"azure_tags" hcl:"azure_tags"`
 	PlanID                              *string                            `mapstructure:"plan_id" required:"false" cty:"plan_id" hcl:"plan_id"`
@@ -83,9 +83,9 @@ type FlatConfig struct {
 	DiskCachingType                     *string                            `mapstructure:"disk_caching_type" required:"false" cty:"disk_caching_type" hcl:"disk_caching_type"`
 	StorageType                         *string                            `mapstructure:"storage_type" cty:"storage_type" hcl:"storage_type"`
 	LabVirtualNetworkName               *string                            `mapstructure:"lab_virtual_network_name" cty:"lab_virtual_network_name" hcl:"lab_virtual_network_name"`
-	LabName                             *string                            `mapstructure:"lab_name" cty:"lab_name" hcl:"lab_name"`
-	LabSubnetName                       *string                            `mapstructure:"lab_subnet_name" cty:"lab_subnet_name" hcl:"lab_subnet_name"`
-	LabResourceGroupName                *string                            `mapstructure:"lab_resource_group_name" cty:"lab_resource_group_name" hcl:"lab_resource_group_name"`
+	LabName                             *string                            `mapstructure:"lab_name" required:"true" cty:"lab_name" hcl:"lab_name"`
+	LabSubnetName                       *string                            `mapstructure:"lab_subnet_name" required:"true" cty:"lab_subnet_name" hcl:"lab_subnet_name"`
+	LabResourceGroupName                *string                            `mapstructure:"lab_resource_group_name" required:"true" cty:"lab_resource_group_name" hcl:"lab_resource_group_name"`
 	DtlArtifacts                        []FlatDtlArtifact                  `mapstructure:"dtl_artifacts" cty:"dtl_artifacts" hcl:"dtl_artifacts"`
 	VMName                              *string                            `mapstructure:"vm_name" cty:"vm_name" hcl:"vm_name"`
 	DisallowPublicIP                    *bool                              `mapstructure:"disallow_public_ip" required:"false" cty:"disallow_public_ip" hcl:"disallow_public_ip"`

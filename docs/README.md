@@ -1,4 +1,4 @@
-# Scaffolding Plugins
+# Azure Plugins
 <!--
   Include a short overview about the plugin.
 
@@ -61,9 +61,9 @@ Packer can create Azure virtual machine images through variety of ways depending
   Managed Images in Azure Resource Manager.
 - [azure-chroot](builders/chroot.mdx) - The Azure chroot builder supports building a managed disk image without
   launching a new Azure VM for every build, but instead use an already-running Azure VM.
-- [azure-dtl] - The Azure DevTest Labs builder builds custom images and upload them to DevTest Lab image repository automatically.
+- [azure-dtl](builders/dtl.mdx) - The Azure DevTest Labs builder builds custom images and uploads them to DevTest Lab image repository automatically.
 
 ### Provisioners
 
-- [azure-dtlartifact] - The Azure DevTest Labs provisioner allows can be used to apply an artifact to a VM - See [Add an artifact to a VM](https://docs.microsoft.com/en-us/azure/devtest-labs/add-artifact-vm)
+- [azure-dtlartifact](provisioners/dtlartifact.mdx) - The Azure DevTest Labs provisioner can be used to apply an artifact to a VM - See [Add an artifact to a VM](https://docs.microsoft.com/en-us/azure/devtest-labs/add-artifact-vm)
 

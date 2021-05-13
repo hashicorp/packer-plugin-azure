@@ -1,0 +1,137 @@
+---
+description: Packer supports building images into an existing Azure Dev Test Lab.
+page_title: Azure DevTest Lab - Builders
+nav_title: DTL
+---
+
+# Azure DevTest Lab Builder
+
+Type: `azure-dtl`
+Artifact BuilderId: `Azure.ResourceManagement.VMImage`
+
+The Azure DevTest Labs builder builds custom images and uploads them to an existing DevTest Lab image repository automatically.
+For more information on crating an Azure DevTest Lab see the [Configuring a Lab How-to guide](https://docs.microsoft.com/en-us/azure/devtest-labs/devtest-lab-create-lab).
+
+## Configuration Reference
+
+There are many configuration options available for the builder. We'll start
+with authentication parameters, then go over the Azure ARM builder specific
+options. In addition to the options listed here, a [communicator](/docs/templates/legacy_json_templates/communicator) can be configured for this builder.
+
+### Authentication options
+
+@include 'builder/azure/common/client/Config.mdx'
+
+#### Managed Identity
+
+If you're running Packer on an Azure VM with a [managed identity](/docs/builders/azure#azure-managed-identity) you don't need to specify any additional configuration options. As Packer will attempt to use the Managed Identity and subscription of the VM that Packer is running on.
+
+#### Interactive User Authentication
+
+To use interactive user authentication, you should specify `subscription_id` only.
+Packer will use cached credentials or redirect you to a website to log in.
+
+#### Service Principal
+
+To use a [service principal](/docs/builders/azure#azure-active-directory-service-principal)
+you should specify `subscription_id`, `client_id` and one of `client_secret`,
+`client_cert_path` or `client_jwt`.
+
+- `subscription_id` (string) - Subscription under which the build will be
+  performed. **The service principal specified in `client_id` must have full
+  access to this subscription, unless build_resource_group_name option is
+  specified in which case it needs to have owner access to the existing
+  resource group specified in build_resource_group_name parameter.**
+
+- `client_id` (string) - The Active Directory service principal associated with
+  your builder.
+
+- `client_secret` (string) - The password or secret for your service principal.
+
+- `client_cert_path` (string) - The location of a PEM file containing a
+  certificate and private key for service principal.
+
+- `client_cert_token_timeout` (duration string | ex: "1h30m12s") - How long to set the expire time on the token created when using
+  `client_cert_path`.
+
+- `client_jwt` (string) - The bearer JWT assertion signed using a certificate
+  associated with your service principal principal. See [Azure Active
+  Directory docs](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-certificate-credentials)
+  for more information.
+
+## Azure DevTest Labs builder specific options
+
+### Required:
+
+@include 'builder/azure/dtl/Config-required.mdx'
+
+### Optional:
+
+@include 'builder/azure/dtl/Config-not-required.mdx'
+
+#### DtlArtifact
+@include 'provisioner/azure-dtlartifact/DtlArtifact-not-required.mdx'
+
+#### ArtifactParmater
+@include 'provisioner/azure-dtlartifact/ArtifactParameter-not-required.mdx'
+
+
+## Basic Example
+
+```hcl
+
+variable "client_id" {
+  type    = string
+  default = "${env("ARM_CLIENT_ID")}"
+}
+
+variable "client_secret" {
+  type    = string
+  default = "${env("ARM_CLIENT_SECRET")}"
+}
+
+variable "subscription_id" {
+  type    = string
+  default = "${env("ARM_SUBSCRIPTION_ID")}"
+}
+
+locals { timestamp = regex_replace(timestamp(), "[- TZ:]", "") }
+
+source "azure-dtl" "example" {
+  subscription_id                   = "${var.subscription_id}"
+  client_id          = "${var.client_id}"
+  client_secret      = "${var.client_secret}"
+  disallow_public_ip = true
+  dtl_artifacts {
+    artifact_name = "linux-apt-package"
+    parameters {
+      name  = "packages"
+      value = "vim"
+    }
+    parameters {
+      name  = "update"
+      value = "true"
+    }
+    parameters {
+      name  = "options"
+      value = "--fix-broken"
+    }
+  }
+  image_offer                       = "UbuntuServer"
+  image_publisher                   = "Canonical"
+  image_sku                         = "16.04-LTS"
+  lab_name                          = "packer-test"
+  lab_resource_group_name           = "packer-test"
+  lab_virtual_network_name          = "dtlpacker-test"
+  location                          = "South Central US"
+  managed_image_name                = "ManagedDiskLinux-${local.timestamp}"
+  managed_image_resource_group_name = "packer-test"
+  os_type                           = "Linux"
+  vm_size                           = "Standard_DS2_v2"
+}
+
+build {
+  sources = ["source.azure-dtl.example"]
+
+}
+```

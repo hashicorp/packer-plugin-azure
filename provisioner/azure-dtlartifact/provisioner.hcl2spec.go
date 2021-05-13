@@ -56,10 +56,10 @@ type FlatConfig struct {
 	TenantID                *string                `mapstructure:"tenant_id" required:"false" cty:"tenant_id" hcl:"tenant_id"`
 	SubscriptionID          *string                `mapstructure:"subscription_id" cty:"subscription_id" hcl:"subscription_id"`
 	UseAzureCLIAuth         *bool                  `mapstructure:"use_azure_cli_auth" required:"false" cty:"use_azure_cli_auth" hcl:"use_azure_cli_auth"`
-	DtlArtifacts            []FlatDtlArtifact      `mapstructure:"dtl_artifacts" cty:"dtl_artifacts" hcl:"dtl_artifacts"`
-	LabName                 *string                `mapstructure:"lab_name" cty:"lab_name" hcl:"lab_name"`
-	ResourceGroupName       *string                `mapstructure:"lab_resource_group_name" cty:"lab_resource_group_name" hcl:"lab_resource_group_name"`
-	VMName                  *string                `mapstructure:"vm_name" cty:"vm_name" hcl:"vm_name"`
+	DtlArtifacts            []FlatDtlArtifact      `mapstructure:"dtl_artifacts" required:"true" cty:"dtl_artifacts" hcl:"dtl_artifacts"`
+	LabName                 *string                `mapstructure:"lab_name" required:"true" cty:"lab_name" hcl:"lab_name"`
+	ResourceGroupName       *string                `mapstructure:"lab_resource_group_name" required:"true" cty:"lab_resource_group_name" hcl:"lab_resource_group_name"`
+	VMName                  *string                `mapstructure:"vm_name" required:"true" cty:"vm_name" hcl:"vm_name"`
 	PollingDurationTimeout  *string                `mapstructure:"polling_duration_timeout" required:"false" cty:"polling_duration_timeout" hcl:"polling_duration_timeout"`
 	AzureTags               map[string]*string     `mapstructure:"azure_tags" cty:"azure_tags" hcl:"azure_tags"`
 	Json                    map[string]interface{} `cty:"json" hcl:"json"`
