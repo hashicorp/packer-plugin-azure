@@ -1,4 +1,5 @@
-## 0.0.3 (Unreleased)
+## 0.0.3 (May 14, 2021)
+* Update packer-plugin-sdk to enable use of ntlm with WinRM
 
 ## 0.0.2 (May 13, 2021)
 
