@@ -63,6 +63,9 @@ Packer can create Azure virtual machine images through variety of ways depending
   launching a new Azure VM for every build, but instead use an already-running Azure VM.
 - [azure-dtl](builders/dtl.mdx) - The Azure DevTest Labs builder builds custom images and uploads them to DevTest Lab image repository automatically.
 
+### Data Sources:
+- [azure-keyvault-secret](/docs/datasources/keyvaultsecret.mdx) - provides information about a Keyvault secret, including its secret value.
+
 ### Provisioners
 
 - [azure-dtlartifact](provisioners/dtlartifact.mdx) - The Azure DevTest Labs provisioner can be used to apply an artifact to a VM - See [Add an artifact to a VM](https://docs.microsoft.com/en-us/azure/devtest-labs/add-artifact-vm)

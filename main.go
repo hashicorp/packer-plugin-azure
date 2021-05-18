@@ -7,6 +7,7 @@ import (
 	azurearm "github.com/hashicorp/packer-plugin-azure/builder/azure/arm"
 	azurechroot "github.com/hashicorp/packer-plugin-azure/builder/azure/chroot"
 	azuredtl "github.com/hashicorp/packer-plugin-azure/builder/azure/dtl"
+	keyvaultsecret "github.com/hashicorp/packer-plugin-azure/datasource/keyvaultsecret"
 	azuredtlartifact "github.com/hashicorp/packer-plugin-azure/provisioner/azure-dtlartifact"
 	"github.com/hashicorp/packer-plugin-azure/version"
 
@@ -18,6 +19,7 @@ func main() {
 	pps.RegisterBuilder("arm", new(azurearm.Builder))
 	pps.RegisterBuilder("chroot", new(azurechroot.Builder))
 	pps.RegisterBuilder("dtl", new(azuredtl.Builder))
+	pps.RegisterDatasource("keyvault-secret", new(keyvaultsecret.Datasource))
 	pps.RegisterProvisioner("dtlartifact", new(azuredtlartifact.Provisioner))
 	pps.SetVersion(version.AzurePluginVersion)
 	err := pps.Run()
