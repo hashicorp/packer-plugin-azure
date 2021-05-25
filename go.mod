@@ -13,7 +13,7 @@ require (
 	github.com/approvals/go-approval-tests v0.0.0-20210131072903-38d0b0ec12b1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/dnaeon/go-vcr v1.1.0 // indirect
-	github.com/google/go-cmp v0.5.5
+	github.com/google/go-cmp v0.5.6
 	github.com/hashicorp/go-azure-helpers v0.16.0
 	github.com/hashicorp/hcl/v2 v2.10.0
 	github.com/hashicorp/packer-plugin-sdk v0.2.2
