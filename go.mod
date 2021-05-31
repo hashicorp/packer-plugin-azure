@@ -14,7 +14,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/dnaeon/go-vcr v1.1.0 // indirect
 	github.com/google/go-cmp v0.5.5
-	github.com/hashicorp/go-azure-helpers v0.16.0
+	github.com/hashicorp/go-azure-helpers v0.16.3
 	github.com/hashicorp/hcl/v2 v2.10.0
 	github.com/hashicorp/packer-plugin-sdk v0.2.2
 	github.com/masterzen/winrm v0.0.0-20210504160029-28ed956f5227
