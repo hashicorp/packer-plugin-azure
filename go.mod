@@ -24,3 +24,6 @@ require (
 	github.com/zclconf/go-cty v1.8.3
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 )
+
+// Incorrect plugin registration for Azure component; see hashicorp/packer-plugin-azure/pull/73
+retract v0.0.1

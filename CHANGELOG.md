@@ -1,5 +1,10 @@
+## 1.0.0 (June 15, 2021)
+
+* Update packer-plugin-sdk to v0.2.3 [GH-96]
+* Add Go module retraction for v0.0.1
+
 ## 0.0.3 (May 14, 2021)
-* Update packer-plugin-sdk to enable use of ntlm with WinRM
+* Update packer-plugin-sdk to enable use of ntlm with WinRM.
 
 ## 0.0.2 (May 13, 2021)
 
