@@ -279,7 +279,7 @@ type Config struct {
 	DisallowPublicIP bool `mapstructure:"disallow_public_ip" required:"false"`
 
 	// Runtime Values
-	UserName                string `mapstructure:"user_name"`
+	UserName                string `mapstructure-to-hcl2:",skip"`
 	Password                string
 	tmpAdminPassword        string
 	tmpCertificatePassword  string
@@ -292,7 +292,7 @@ type Config struct {
 	tmpOSDiskName           string
 	tmpSubnetName           string
 	tmpVirtualNetworkName   string
-	VMCreationResourceGroup string `mapstructure:"vm_creation_resource_group"`
+	VMCreationResourceGroup string `mapstructure-to-hcl2:",skip"`
 	tmpFQDN                 string
 
 	// Authentication with the VM via SSH

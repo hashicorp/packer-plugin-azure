@@ -89,9 +89,7 @@ type FlatConfig struct {
 	DtlArtifacts                        []FlatDtlArtifact                  `mapstructure:"dtl_artifacts" cty:"dtl_artifacts" hcl:"dtl_artifacts"`
 	VMName                              *string                            `mapstructure:"vm_name" cty:"vm_name" hcl:"vm_name"`
 	DisallowPublicIP                    *bool                              `mapstructure:"disallow_public_ip" required:"false" cty:"disallow_public_ip" hcl:"disallow_public_ip"`
-	UserName                            *string                            `cty:"user_name" hcl:"user_name"`
 	Password                            *string                            `cty:"password" hcl:"password"`
-	VMCreationResourceGroup             *string                            `cty:"vm_creation_resource_group" hcl:"vm_creation_resource_group"`
 	Type                                *string                            `mapstructure:"communicator" cty:"communicator" hcl:"communicator"`
 	PauseBeforeConnect                  *string                            `mapstructure:"pause_before_connecting" cty:"pause_before_connecting" hcl:"pause_before_connecting"`
 	SSHHost                             *string                            `mapstructure:"ssh_host" cty:"ssh_host" hcl:"ssh_host"`
@@ -207,9 +205,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"dtl_artifacts":                            &hcldec.BlockListSpec{TypeName: "dtl_artifacts", Nested: hcldec.ObjectSpec((*FlatDtlArtifact)(nil).HCL2Spec())},
 		"vm_name":                                  &hcldec.AttrSpec{Name: "vm_name", Type: cty.String, Required: false},
 		"disallow_public_ip":                       &hcldec.AttrSpec{Name: "disallow_public_ip", Type: cty.Bool, Required: false},
-		"user_name":                                &hcldec.AttrSpec{Name: "user_name", Type: cty.String, Required: false},
 		"password":                                 &hcldec.AttrSpec{Name: "password", Type: cty.String, Required: false},
-		"vm_creation_resource_group":               &hcldec.AttrSpec{Name: "vm_creation_resource_group", Type: cty.String, Required: false},
 		"communicator":                             &hcldec.AttrSpec{Name: "communicator", Type: cty.String, Required: false},
 		"pause_before_connecting":                  &hcldec.AttrSpec{Name: "pause_before_connecting", Type: cty.String, Required: false},
 		"ssh_host":                                 &hcldec.AttrSpec{Name: "ssh_host", Type: cty.String, Required: false},
