@@ -92,6 +92,7 @@ type Properties struct {
 	OsProfile                    *compute.OSProfile                  `json:"osProfile,omitempty"`
 	PublicIPAllocatedMethod      *network.IPAllocationMethod         `json:"publicIPAllocationMethod,omitempty"`
 	Sku                          *Sku                                `json:"sku,omitempty"`
+	UserData                     *string                             `json:"userData,omitempty"`
 	//StorageProfile3              *compute.StorageProfile             `json:"storageProfile,omitempty"`
 	StorageProfile *StorageProfileUnion    `json:"storageProfile,omitempty"`
 	Subnets        *[]network.Subnet       `json:"subnets,omitempty"`
