@@ -3,7 +3,7 @@ module github.com/hashicorp/packer-plugin-azure
 go 1.16
 
 require (
-	github.com/Azure/azure-sdk-for-go v53.0.0+incompatible
+	github.com/Azure/azure-sdk-for-go v53.4.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.11.19
 	github.com/Azure/go-autorest/autorest/adal v0.9.14
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.2
