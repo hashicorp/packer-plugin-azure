@@ -96,7 +96,7 @@ type SharedImageGalleryDestination struct {
 	SigDestinationImageVersion       string   `mapstructure:"image_version"`
 	SigDestinationReplicationRegions []string `mapstructure:"replication_regions"`
 	// Specify a storage account type for the Shared Image Gallery Image Version.
-	// Defaults to `Standard_LRS`. Accepted values are `Standard_LRS` and `Standard_ZRS`
+	// Defaults to `Standard_LRS`. Accepted values are `Standard_LRS`, `Standard_ZRS` and `Premium_LRS`
 	SigDestinationStorageAccountType string `mapstructure:"storage_account_type"`
 }
 
