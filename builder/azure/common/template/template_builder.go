@@ -301,6 +301,18 @@ func (s *TemplateBuilder) SetCustomData(customData string) error {
 	return nil
 }
 
+func (s *TemplateBuilder) SetUserData(userData string) error {
+	s.setVariable("apiVersion", "2021-03-01") // Userdata value only added in this schema
+	resource, err := s.getResourceByType(resourceVirtualMachine)
+	if err != nil {
+		return err
+	}
+
+	resource.Properties.UserData = to.StringPtr(userData)
+
+	return nil
+}
+
 func (s *TemplateBuilder) SetVirtualNetwork(virtualNetworkResourceGroup, virtualNetworkName, subnetName string) error {
 	s.setVariable("virtualNetworkResourceGroup", virtualNetworkResourceGroup)
 	s.setVariable("virtualNetworkName", virtualNetworkName)

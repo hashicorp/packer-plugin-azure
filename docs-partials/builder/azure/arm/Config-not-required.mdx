@@ -208,6 +208,14 @@
   to learn more about custom data, and how it can be used to influence the
   provisioning process.
 
+- `user_data_file` (string) - Specify a file containing user data to inject into the cloud-init
+  process. The contents of the file are read and injected into the ARM
+  template. The user data will be available from the provision until the vm is
+  deleted. Any application on the virtual machine can access the user data
+  from the Azure Instance Metadata Service (IMDS) after provision.
+  See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/user-data)
+  to learn more about user data.
+
 - `plan_info` (PlanInformation) - Used for creating images from Marketplace images. Please refer to
   [Deploy an image with Marketplace
   terms](https://aka.ms/azuremarketplaceapideployment) for more details.

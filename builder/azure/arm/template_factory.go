@@ -137,6 +137,13 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 		}
 	}
 
+	if config.userData != "" {
+		err = builder.SetUserData(config.userData)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if config.PlanInfo.PlanName != "" {
 		err = builder.SetPlanInfo(config.PlanInfo.PlanName, config.PlanInfo.PlanProduct, config.PlanInfo.PlanPublisher, config.PlanInfo.PlanPromotionCode)
 		if err != nil {

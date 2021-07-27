@@ -359,6 +359,15 @@ type Config struct {
 	// provisioning process.
 	CustomDataFile string `mapstructure:"custom_data_file" required:"false"`
 	customData     string
+	// Specify a file containing user data to inject into the cloud-init
+	// process. The contents of the file are read and injected into the ARM
+	// template. The user data will be available from the provision until the vm is
+	// deleted. Any application on the virtual machine can access the user data
+	// from the Azure Instance Metadata Service (IMDS) after provision.
+	// See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/user-data)
+	// to learn more about user data.
+	UserDataFile string `mapstructure:"user_data_file" required:"false"`
+	userData     string
 	// Used for creating images from Marketplace images. Please refer to
 	// [Deploy an image with Marketplace
 	// terms](https://aka.ms/azuremarketplaceapideployment) for more details.
@@ -625,6 +634,11 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		return nil, err
 	}
 
+	err = setUserData(c)
+	if err != nil {
+		return nil, err
+	}
+
 	// NOTE: if the user did not specify a communicator, then default to both
 	// SSH and WinRM.  This is for backwards compatibility because the code did
 	// not specifically force the user to set a communicator.
@@ -793,6 +807,20 @@ func setCustomData(c *Config) error {
 	}
 
 	c.customData = base64.StdEncoding.EncodeToString(b)
+	return nil
+}
+
+func setUserData(c *Config) error {
+	if c.UserDataFile == "" {
+		return nil
+	}
+
+	b, err := ioutil.ReadFile(c.UserDataFile)
+	if err != nil {
+		return err
+	}
+
+	c.userData = base64.StdEncoding.EncodeToString(b)
 	return nil
 }
 
