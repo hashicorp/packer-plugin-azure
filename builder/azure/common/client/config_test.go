@@ -44,11 +44,11 @@ func Test_ClientConfig_RequiredParametersSet(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "client_id without client_secret, client_cert_path or client_jwt should error",
+			name: "client_id without client_secret, client_cert_path or client_jwt should not error",
 			config: Config{
 				ClientID: "error",
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name: "client_secret without client_id should error",
