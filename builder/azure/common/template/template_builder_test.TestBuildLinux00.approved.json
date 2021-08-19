@@ -3,7 +3,7 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "adminPassword": {
-      "type": "string"
+      "type": "securestring"
     },
     "adminUsername": {
       "type": "string"

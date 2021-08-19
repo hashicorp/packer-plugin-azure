@@ -611,7 +611,7 @@ const BasicTemplate = `{
       "type": "string"
     },
     "adminPassword": {
-      "type": "string"
+      "type": "securestring"
     },
     "dnsNameForPublicIP": {
       "type": "string"
