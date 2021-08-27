@@ -12,7 +12,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 	"github.com/hashicorp/go-azure-helpers/authentication"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )

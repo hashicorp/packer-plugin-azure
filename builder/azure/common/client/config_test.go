@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
