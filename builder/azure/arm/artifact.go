@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"path"
 	"strings"
+
+	"github.com/hashicorp/packer-plugin-sdk/packer/registryimage"
 )
 
 const (
@@ -191,6 +193,10 @@ func (a *Artifact) Id() string {
 }
 
 func (a *Artifact) State(name string) interface{} {
+	if name == registryimage.ArtifactStateURI {
+		return a.hapPackerRegistryMetadata()
+	}
+
 	if _, ok := a.StateData[name]; ok {
 		return a.StateData[name]
 	}
@@ -258,4 +264,33 @@ func (a *Artifact) stateAtlasMetadata() interface{} {
 	metadata["TemplateUriReadOnlySas"] = a.TemplateUriReadOnlySas
 
 	return metadata
+}
+
+func (a *Artifact) hapPackerRegistryMetadata() *registryimage.Image {
+	var id, location string
+
+	if a.isManagedImage() {
+		id = a.ManagedImageId
+		location = a.ManagedImageLocation
+
+		labels := make(map[string]interface{})
+		labels["OSType"] = a.OSType
+		labels["ManagedImageResourceGroupName"] = a.ManagedImageResourceGroupName
+		labels["ManagedImageName"] = a.ManagedImageName
+
+		return registryimage.FromArtifact(a,
+			registryimage.WithID(id),
+			registryimage.WithRegion(location),
+			registryimage.SetMetadata(labels),
+		)
+	}
+
+	location = a.StorageAccountLocation
+	id = a.OSDiskUri
+
+	return registryimage.FromArtifact(a,
+		registryimage.WithID(id),
+		registryimage.WithRegion(location),
+		registryimage.SetMetadata(a.stateAtlasMetadata().(map[string]interface{})),
+	)
 }
