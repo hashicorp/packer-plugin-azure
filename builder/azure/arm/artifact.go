@@ -8,7 +8,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/hashicorp/packer-plugin-sdk/packer/registryimage"
+	"github.com/hashicorp/packer-plugin-sdk/packer/registry/image"
 )
 
 const (
@@ -193,7 +193,7 @@ func (a *Artifact) Id() string {
 }
 
 func (a *Artifact) State(name string) interface{} {
-	if name == registryimage.ArtifactStateURI {
+	if name == image.ArtifactStateURI {
 		return a.hapPackerRegistryMetadata()
 	}
 
@@ -266,7 +266,7 @@ func (a *Artifact) stateAtlasMetadata() interface{} {
 	return metadata
 }
 
-func (a *Artifact) hapPackerRegistryMetadata() *registryimage.Image {
+func (a *Artifact) hapPackerRegistryMetadata() *image.Image {
 	var id, location string
 
 	if a.isManagedImage() {
@@ -278,19 +278,23 @@ func (a *Artifact) hapPackerRegistryMetadata() *registryimage.Image {
 		labels["ManagedImageResourceGroupName"] = a.ManagedImageResourceGroupName
 		labels["ManagedImageName"] = a.ManagedImageName
 
-		return registryimage.FromArtifact(a,
-			registryimage.WithID(id),
-			registryimage.WithRegion(location),
-			registryimage.SetMetadata(labels),
+		img, _ := image.FromArtifact(a,
+			image.WithID(id),
+			image.WithRegion(location),
+			image.SetLabels(labels),
 		)
+
+		return img
 	}
 
 	location = a.StorageAccountLocation
 	id = a.OSDiskUri
 
-	return registryimage.FromArtifact(a,
-		registryimage.WithID(id),
-		registryimage.WithRegion(location),
-		registryimage.SetMetadata(a.stateAtlasMetadata().(map[string]interface{})),
+	img, _ := image.FromArtifact(a,
+		image.WithID(id),
+		image.WithRegion(location),
+		image.SetLabels(a.stateAtlasMetadata().(map[string]interface{})),
 	)
+
+	return img
 }
