@@ -112,8 +112,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	}
 
 	if b.config.isManagedImage() {
-		_, err := azureClient.GroupsClient.Get(ctx, b.config.ManagedImageResourceGroupName)
-		if err != nil {
+		exist := b.isManagedImageResourceGroupExist(ctx, azureClient)
+		if !exist {
 			return nil, fmt.Errorf("Cannot locate the managed image resource group %s.", b.config.ManagedImageResourceGroupName)
 		}
 
@@ -354,6 +354,21 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	return &Artifact{
 		StateData: generatedData,
 	}, nil
+}
+
+func (b *Builder) isManagedImageResourceGroupExist(ctx context.Context, azureClient *AzureClient) bool {
+	var err error
+
+	if b.config.ManagedImageResourceGroupSubscriptionID != "" {
+		orig := azureClient.GroupsClient.SubscriptionID
+		azureClient.GroupsClient.SubscriptionID = b.config.ManagedImageResourceGroupSubscriptionID
+		_, err = azureClient.GroupsClient.Get(ctx, b.config.ManagedImageResourceGroupName)
+		azureClient.GroupsClient.SubscriptionID = orig
+	} else {
+		_, err = azureClient.GroupsClient.Get(ctx, b.config.ManagedImageResourceGroupName)
+	}
+
+	return err == nil
 }
 
 func (b *Builder) writeSSHPrivateKey(ui packersdk.Ui, debugKeyPath string) {

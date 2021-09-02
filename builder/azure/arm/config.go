@@ -264,6 +264,13 @@ type Config struct {
 	// this value is set, the value managed_image_name must also be set. See
 	// documentation to learn more about managed images.
 	ManagedImageResourceGroupName string `mapstructure:"managed_image_resource_group_name"`
+
+	// Specify the managed image resource group subscription id. This is only
+	// required if you're using a managed identity and the VM with the managed
+	// identity is in a subscription that differs from the subscription where
+	// the managed image resource group lives.
+	ManagedImageResourceGroupSubscriptionID string `mapstructure:"managed_image_resource_group_subscription_id"`
+
 	// Specify the managed image name where the result of the Packer build will
 	// be saved. The image name must not exist ahead of time, and will not be
 	// overwritten. If this value is set, the value
