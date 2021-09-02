@@ -40,4 +40,7 @@
   Works with normal authentication (`az login`) and service principals (`az login --service-principal --username APP_ID --password PASSWORD --tenant TENANT_ID`).
   Ignores all other configurations if enabled.
 
+- `use_interactive_auth` (bool) - Flag to use device code authentication. Defaults to false.
+  If enabled, it will use interactive authentication.
+
 <!-- End of code generated from the comments of the Config struct in builder/azure/common/client/config.go; -->

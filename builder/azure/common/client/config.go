@@ -17,14 +17,16 @@ import (
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
-// Config allows for various ways to authenticate Azure clients.
-// When `client_id` and `subscription_id` are specified, Packer will use the
-// specified Azure Active Directory (AAD) Service Principal (SP).
-// If only `subscription_id` is specified, Packer will try to interactively
-// log on the current user (tokens will be cached).
-// If none of these options are specified, Packer will attempt to use the
-// Managed Identity and subscription of the VM that Packer is running on.
-// This will only work if Packer is running on an Azure VM.
+// Config allows for various ways to authenticate Azure clients.  When
+// `client_id` and `subscription_id` are specified in addition to one and only
+// one of the following: `client_secret`, `client_jwt`, `client_cert_path` --
+// Packer will use the specified Azure Active Directory (AAD) Service Principal
+// (SP).  If only `use_interactive_auth` is specified, Packer will try to
+// interactively log on the current user (tokens will be cached).  If none of
+// these options are specified, Packer will attempt to use the Managed Identity
+// and subscription of the VM that Packer is running on.  This will only work if
+// Packer is running on an Azure VM with either a System Assigned Managed
+// Identity or User Assigned Managed Identity.
 type Config struct {
 	// One of Public, China, Germany, or
 	// USGovernment. Defaults to Public. Long forms such as
@@ -74,6 +76,9 @@ type Config struct {
 	// Works with normal authentication (`az login`) and service principals (`az login --service-principal --username APP_ID --password PASSWORD --tenant TENANT_ID`).
 	// Ignores all other configurations if enabled.
 	UseAzureCLIAuth bool `mapstructure:"use_azure_cli_auth" required:"false"`
+	// Flag to use interactive login (use device code) authentication. Defaults to false.
+	// If enabled, it will use interactive authentication.
+	UseInteractiveAuth bool `mapstructure:"use_interactive_auth" required:"false"`
 }
 
 const (
@@ -228,8 +233,15 @@ func (c Config) Validate(errs *packersdk.MultiError) {
 	}
 
 	errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("No valid set of authentication values specified:\n"+
-		"  to use the Managed Identity of the current machine, do not specify any of the fields below\n"+
-		"  to use interactive user authentication, specify only subscription_id\n"+
+		"  to use the Managed Identity of the current machine, do not specify any of the fields below:\n"+
+		"  - client_secret\n"+
+		"  - client_jwt\n"+
+		"  - client_cert_path\n"+
+		"  - use_interactive_auth\n"+
+		"  - use_azure_cli_auth\n"+
+		"  to use interactive user authentication, specify only the following fields:\n"+
+		"  - subscription_id\n"+
+		"  - use_interactive_auth\n"+
 		"  to use an Azure Active Directory service principal, specify either:\n"+
 		"  - subscription_id, client_id and client_secret\n"+
 		"  - subscription_id, client_id and client_cert_path\n"+
@@ -237,19 +249,16 @@ func (c Config) Validate(errs *packersdk.MultiError) {
 }
 
 func (c Config) useDeviceLogin() bool {
-	return c.SubscriptionID != "" &&
-		c.ClientID == "" &&
-		c.ClientSecret == "" &&
-		c.ClientJWT == "" &&
-		c.ClientCertPath == ""
+	return c.UseInteractiveAuth
 }
 
 func (c Config) UseCLI() bool {
-	return c.UseAzureCLIAuth == true
+	return c.UseAzureCLIAuth
 }
 
 func (c Config) UseMSI() bool {
-	return c.SubscriptionID == "" &&
+	return !c.UseInteractiveAuth &&
+		!c.UseAzureCLIAuth &&
 		c.ClientSecret == "" &&
 		c.ClientJWT == "" &&
 		c.ClientCertPath == "" &&

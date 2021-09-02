@@ -15,8 +15,6 @@ import (
 var requiredConfigValues = []string{
 	"capture_name_prefix",
 	"capture_container_name",
-	"client_id",
-	"client_secret",
 	"image_offer",
 	"image_publisher",
 	"image_sku",
@@ -24,7 +22,6 @@ var requiredConfigValues = []string{
 	"os_type",
 	"storage_account",
 	"resource_group_name",
-	"subscription_id",
 }
 
 func TestConfigShouldProvideReasonableDefaultValues(t *testing.T) {
