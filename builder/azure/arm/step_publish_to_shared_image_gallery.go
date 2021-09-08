@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-03-01/compute"
 	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -38,14 +38,15 @@ func NewStepPublishToSharedImageGallery(client *AzureClient, ui packersdk.Ui, co
 }
 
 func getSigDestinationStorageAccountType(s string) (compute.StorageAccountType, error) {
-	switch s {
-	case "", string(compute.StorageAccountTypeStandardLRS):
+	if s == "" {
 		return compute.StorageAccountTypeStandardLRS, nil
-	case string(compute.StorageAccountTypeStandardZRS):
-		return compute.StorageAccountTypeStandardZRS, nil
-	default:
-		return "", fmt.Errorf("not an accepted value for shared_image_gallery_destination.storage_account_type")
 	}
+	for _, t := range compute.PossibleStorageAccountTypeValues() {
+		if string(t) == s {
+			return t, nil
+		}
+	}
+	return "", fmt.Errorf("not an accepted value for shared_image_gallery_destination.storage_account_type")
 }
 
 func getSigDestination(state multistep.StateBag) SharedImageGalleryDestination {
@@ -97,12 +98,12 @@ func (s *StepPublishToSharedImageGallery) publishToSig(ctx context.Context, mdiI
 		Location: &location,
 		Tags:     tags,
 		GalleryImageVersionProperties: &compute.GalleryImageVersionProperties{
-			PublishingProfile: &compute.GalleryImageVersionPublishingProfile{
-				Source: &compute.GalleryArtifactSource{
-					ManagedImage: &compute.ManagedArtifact{
-						ID: &mdiID,
-					},
+			StorageProfile: &compute.GalleryImageVersionStorageProfile{
+				Source: &compute.GalleryArtifactVersionSource{
+					ID: &mdiID,
 				},
+			},
+			PublishingProfile: &compute.GalleryImageVersionPublishingProfile{
 				TargetRegions:      &replicationRegions,
 				EndOfLifeDate:      endOfLifeDate,
 				ExcludeFromLatest:  &miSGImageVersionExcludeFromLatest,
