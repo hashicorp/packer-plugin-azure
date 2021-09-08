@@ -261,7 +261,7 @@ func NewAzureClient(subscriptionID, sigSubscriptionID, resourceGroupName, storag
 
 	// This client is different than the above because it manages the vault
 	// itself rather than the contents of the vault.
-	azureClient.VaultClientDelete = keyvault.NewVaultsClient(subscriptionID)
+	azureClient.VaultClientDelete = keyvault.NewVaultsClientWithBaseURI(cloud.ResourceManagerEndpoint, subscriptionID)
 	azureClient.VaultClientDelete.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
 	azureClient.VaultClientDelete.RequestInspector = withInspection(maxlen)
 	azureClient.VaultClientDelete.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
