@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -208,6 +209,39 @@ func TestBuilderAcc_Blob_Linux(t *testing.T) {
 	})
 }
 
+func TestBuilderUserData_Linux(t *testing.T) {
+	b := Builder{}
+	b.Prepare()
+
+	tmpfile, err := ioutil.TempFile("", "userdata")
+	if err != nil {
+		t.Fatalf("failed creating tempfile: %s", err)
+	}
+
+	defer os.Remove(tmpfile.Name())
+
+	if _, err := tmpfile.WriteString(testBuilderCustomDataLinux); err != nil {
+		t.Fatalf("failed writing userdata: %s", err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatalf("failed closing file: %s", err)
+	}
+
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-azure-userdata-linux",
+		Type:     "azure-arm",
+		Template: testBuilderUserDataLinux(tmpfile.Name()),
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
+	})
+}
+
 func testAccPreCheck(*testing.T) {}
 
 func testAuthPreCheck(t *testing.T) {
@@ -297,6 +331,45 @@ func testUi() *packersdk.BasicUi {
 		ErrorWriter: new(bytes.Buffer),
 	}
 }
+
+func testBuilderUserDataLinux(userdata string) string {
+	return fmt.Sprintf(`
+{
+	"variables": {
+	  "client_id": "{{env `+"`ARM_CLIENT_ID`"+`}}",
+	  "client_secret": "{{env `+"`ARM_CLIENT_SECRET`"+`}}",
+	  "subscription_id": "{{env `+"`ARM_SUBSCRIPTION_ID`"+`}}",
+	  "storage_account": "{{env `+"`ARM_STORAGE_ACCOUNT`"+`}}"
+	},
+	"builders": [{
+	  "type": "azure-arm",
+
+	  "client_id": "{{user `+"`client_id`"+`}}",
+	  "client_secret": "{{user `+"`client_secret`"+`}}",
+	  "subscription_id": "{{user `+"`subscription_id`"+`}}",
+
+	  "storage_account": "{{user `+"`storage_account`"+`}}",
+	  "resource_group_name": "packer-acceptance-test",
+	  "capture_container_name": "test",
+	  "capture_name_prefix": "testBuilderUserDataLinux",
+
+	  "os_type": "Linux",
+	  "image_publisher": "Canonical",
+	  "image_offer": "UbuntuServer",
+	  "image_sku": "16.04-LTS",
+	  "user_data_file": "%s",
+
+	  "location": "South Central US",
+	  "vm_size": "Standard_DS2_v2"
+	}]
+}
+`, userdata)
+}
+
+const testBuilderCustomDataLinux = `#cloud-config
+growpart:
+  mode: off
+`
 
 const testBuilderAccManagedDiskWindows = `
 {
