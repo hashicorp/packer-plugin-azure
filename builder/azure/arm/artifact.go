@@ -194,19 +194,14 @@ func (a *Artifact) Id() string {
 
 func (a *Artifact) State(name string) interface{} {
 	if name == image.ArtifactStateURI {
-		return a.hapPackerRegistryMetadata()
+		return a.hcpPackerRegistryMetadata()
 	}
 
 	if _, ok := a.StateData[name]; ok {
 		return a.StateData[name]
 	}
 
-	switch name {
-	case "atlas.artifact.metadata":
-		return a.stateAtlasMetadata()
-	default:
-		return nil
-	}
+	return nil
 }
 
 func (a *Artifact) String() string {
@@ -255,18 +250,7 @@ func (*Artifact) Destroy() error {
 	return nil
 }
 
-func (a *Artifact) stateAtlasMetadata() interface{} {
-	metadata := make(map[string]string)
-	metadata["StorageAccountLocation"] = a.StorageAccountLocation
-	metadata["OSDiskUri"] = a.OSDiskUri
-	metadata["OSDiskUriReadOnlySas"] = a.OSDiskUriReadOnlySas
-	metadata["TemplateUri"] = a.TemplateUri
-	metadata["TemplateUriReadOnlySas"] = a.TemplateUriReadOnlySas
-
-	return metadata
-}
-
-func (a *Artifact) hapPackerRegistryMetadata() *image.Image {
+func (a *Artifact) hcpPackerRegistryMetadata() *image.Image {
 	var id, location string
 
 	if a.isManagedImage() {
@@ -274,27 +258,37 @@ func (a *Artifact) hapPackerRegistryMetadata() *image.Image {
 		location = a.ManagedImageLocation
 
 		labels := make(map[string]interface{})
-		labels["OSType"] = a.OSType
-		labels["ManagedImageResourceGroupName"] = a.ManagedImageResourceGroupName
-		labels["ManagedImageName"] = a.ManagedImageName
+		labels["os_type"] = a.OSType
+		labels["managed_image_resourcegroup_name"] = a.ManagedImageResourceGroupName
+		labels["managed_image_name"] = a.ManagedImageName
+		if a.ManagedImageSharedImageGalleryId != "" {
+			labels["managed_image_sharedimagegallery_id"] = a.ManagedImageSharedImageGalleryId
+		}
+		if a.OSDiskUri != "" {
+			labels["os_disk_uri"] = a.OSDiskUri
+		}
 
 		img, _ := image.FromArtifact(a,
 			image.WithID(id),
 			image.WithRegion(location),
+			image.WithProvider("azure"),
 			image.SetLabels(labels),
 		)
 
 		return img
 	}
 
-	location = a.StorageAccountLocation
-	id = a.OSDiskUri
+	labels := make(map[string]interface{})
+	labels["storage_account_location"] = a.StorageAccountLocation
+	labels["template_uri"] = a.TemplateUri
 
+	id = a.OSDiskUri
+	location = a.StorageAccountLocation
 	img, _ := image.FromArtifact(a,
 		image.WithID(id),
 		image.WithRegion(location),
-		image.SetLabels(a.stateAtlasMetadata().(map[string]interface{})),
+		image.WithProvider("azure"),
+		image.SetLabels(labels),
 	)
-
 	return img
 }

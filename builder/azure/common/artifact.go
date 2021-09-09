@@ -10,6 +10,8 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
+	"github.com/hashicorp/packer-plugin-sdk/packer/registry/image"
+	registryimage "github.com/hashicorp/packer-plugin-sdk/packer/registry/image"
 )
 
 // Artifact is an artifact implementation that contains built Managed Images or Disks.
@@ -58,6 +60,9 @@ func (a *Artifact) String() string {
 }
 
 func (a *Artifact) State(name string) interface{} {
+	if name == image.ArtifactStateURI {
+		return a.hcpPackerRegistryMetadata()
+	}
 	return a.StateData[name]
 }
 
@@ -101,4 +106,22 @@ func (a *Artifact) Destroy() error {
 	}
 
 	return nil
+}
+
+func (a *Artifact) hcpPackerRegistryMetadata() []*registryimage.Image {
+	var images []*registryimage.Image
+	for _, resource := range a.Resources {
+		image, err := registryimage.FromArtifact(a,
+			registryimage.WithProvider("azure"),
+			registryimage.WithID(resource),
+		)
+
+		if err != nil {
+			continue
+		}
+
+		images = append(images, image)
+	}
+
+	return images
 }
