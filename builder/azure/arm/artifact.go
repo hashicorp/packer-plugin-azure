@@ -8,7 +8,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/hashicorp/packer-plugin-sdk/packer/registry/image"
+	registryimage "github.com/hashicorp/packer-plugin-sdk/packer/registry/image"
 )
 
 const (
@@ -193,7 +193,7 @@ func (a *Artifact) Id() string {
 }
 
 func (a *Artifact) State(name string) interface{} {
-	if name == image.ArtifactStateURI {
+	if name == registryimage.ArtifactStateURI {
 		return a.hcpPackerRegistryMetadata()
 	}
 
@@ -250,7 +250,7 @@ func (*Artifact) Destroy() error {
 	return nil
 }
 
-func (a *Artifact) hcpPackerRegistryMetadata() *image.Image {
+func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
 	var id, location string
 
 	if a.isManagedImage() {
@@ -268,11 +268,11 @@ func (a *Artifact) hcpPackerRegistryMetadata() *image.Image {
 			labels["os_disk_uri"] = a.OSDiskUri
 		}
 
-		img, _ := image.FromArtifact(a,
-			image.WithID(id),
-			image.WithRegion(location),
-			image.WithProvider("azure"),
-			image.SetLabels(labels),
+		img, _ := registryimage.FromArtifact(a,
+			registryimage.WithID(id),
+			registryimage.WithRegion(location),
+			registryimage.WithProvider("azure"),
+			registryimage.SetLabels(labels),
 		)
 
 		return img
@@ -284,11 +284,11 @@ func (a *Artifact) hcpPackerRegistryMetadata() *image.Image {
 
 	id = a.OSDiskUri
 	location = a.StorageAccountLocation
-	img, _ := image.FromArtifact(a,
-		image.WithID(id),
-		image.WithRegion(location),
-		image.WithProvider("azure"),
-		image.SetLabels(labels),
+	img, _ := registryimage.FromArtifact(a,
+		registryimage.WithID(id),
+		registryimage.WithRegion(location),
+		registryimage.WithProvider("azure"),
+		registryimage.SetLabels(labels),
 	)
 	return img
 }
