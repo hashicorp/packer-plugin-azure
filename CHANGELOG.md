@@ -1,3 +1,24 @@
+## 1.0.3 (September 13, 2021)
+### NOTES:
+ Support for HCP Packer registry is currently in private beta.
+
+### FEATURES:
+* Add HCP Packer registry image metadata to builder artifacts. [GH-138] [GH-150]
+
+### IMPROVEMENTS:
+* Allow Premium_LRS as SIG storage account type. [GH-124]
+
+### BUG FIXES:
+* Update VaultClientDelete to pass correct Azure cloud environment endpoint.  [GH-137]
+
+## 1.0.2 (August 19, 2021)
+
+### IMPROVEMENTS:
+* Add user_data_file to arm builder. [GH-123]
+
+### BUG FIXES:
+* Bump github.com/Azure/azure-sdk-for-go to fix vulnerability in plugin dependency. [GH-117]
+
 ## 1.0.0 (June 15, 2021)
 
 * Update packer-plugin-sdk to v0.2.3 [GH-96]
