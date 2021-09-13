@@ -1,6 +1,6 @@
 ## 1.0.3 (September 13, 2021)
 ### NOTES:
- Support for HCP Packer registry is currently in private beta.
+HCP Packer registry is currently in private beta.
 
 ### FEATURES:
 * Add HCP Packer registry image metadata to builder artifacts. [GH-138] [GH-150]
