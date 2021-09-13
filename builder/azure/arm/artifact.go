@@ -251,19 +251,32 @@ func (*Artifact) Destroy() error {
 }
 
 func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
-	var id, location string
-
 	if a.isManagedImage() {
-		id = a.ManagedImageId
-		location = a.ManagedImageLocation
+		id := a.ManagedImageId
+		location := a.ManagedImageLocation
 
 		labels := make(map[string]interface{})
 		labels["os_type"] = a.OSType
 		labels["managed_image_resourcegroup_name"] = a.ManagedImageResourceGroupName
 		labels["managed_image_name"] = a.ManagedImageName
-		if a.ManagedImageSharedImageGalleryId != "" {
-			labels["managed_image_sharedimagegallery_id"] = a.ManagedImageSharedImageGalleryId
+
+		var generatedData map[string]interface{}
+
+		if a.StateData != nil {
+			generatedData = a.StateData["generated_data"].(map[string]interface{})
 		}
+
+		if a.ManagedImageSharedImageGalleryId != "" {
+			labels["sig_name"] = generatedData["SharedImageGalleryName"]
+			labels["sig_resource_group"] = generatedData["SharedImageGalleryResourceGroup"]
+			labels["sig_image_name"] = generatedData["SharedImageGalleryImageName"]
+			labels["sig_image_version"] = generatedData["SharedImageGalleryImageVersion"]
+
+			if rr, ok := generatedData["SharedImageGalleryReplicationRegions"].([]string); ok {
+				labels["sig_replicated_regions"] = strings.Join(rr, ", ")
+			}
+		}
+
 		if a.OSDiskUri != "" {
 			labels["os_disk_uri"] = a.OSDiskUri
 		}
@@ -282,8 +295,8 @@ func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
 	labels["storage_account_location"] = a.StorageAccountLocation
 	labels["template_uri"] = a.TemplateUri
 
-	id = a.OSDiskUri
-	location = a.StorageAccountLocation
+	id := a.OSDiskUri
+	location := a.StorageAccountLocation
 	img, _ := registryimage.FromArtifact(a,
 		registryimage.WithID(id),
 		registryimage.WithRegion(location),
