@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
+	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
 )
 
 type StepPublishToSharedImageGallery struct {
@@ -184,6 +185,13 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 
 		return multistep.ActionHalt
 	}
+
+	generatedData := packerbuilderdata.GeneratedData{State: stateBag}
+	generatedData.Put("SharedImageGalleryName", sharedImageGallery.SigDestinationGalleryName)
+	generatedData.Put("SharedImageGalleryImageName", sharedImageGallery.SigDestinationImageName)
+	generatedData.Put("SharedImageGalleryImageVersion", sharedImageGallery.SigDestinationImageVersion)
+	generatedData.Put("SharedImageGalleryResourceGroup", sharedImageGallery.SigDestinationResourceGroup)
+	generatedData.Put("SharedImageGalleryReplicationRegions", sharedImageGallery.SigDestinationReplicationRegions)
 
 	stateBag.Put(constants.ArmManagedImageSharedGalleryId, createdGalleryImageVersionID)
 	return multistep.ActionContinue
