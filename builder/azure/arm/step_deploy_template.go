@@ -152,7 +152,7 @@ func (s *StepDeployTemplate) getImageDetails(ctx context.Context, resourceGroupN
 	}
 
 	if vm.StorageProfile.OsDisk.ManagedDisk.ID == nil {
-		return "", "", fmt.Errorf("unable to obtain a os disk for %q, please check that the instance has been created", computeName)
+		return "", "", fmt.Errorf("unable to obtain a OS disk for %q, please check that the instance has been created", computeName)
 	}
 
 	imageType = "Microsoft.Compute/disks"
