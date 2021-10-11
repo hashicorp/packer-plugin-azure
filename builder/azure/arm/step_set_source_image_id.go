@@ -3,6 +3,7 @@ package arm
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -10,13 +11,15 @@ import (
 )
 
 type StepSetSourceImageName struct {
+	client *AzureClient
 	config *Config
 	say    func(message string)
 	error  func(e error)
 }
 
-func NewStepSetSourceImageName(config *Config, ui packersdk.Ui) *StepSetSourceImageName {
+func NewStepSetSourceImageName(client *AzureClient, config *Config, ui packersdk.Ui) *StepSetSourceImageName {
 	var step = &StepSetSourceImageName{
+		client: client,
 		config: config,
 		say:    func(message string) { ui.Say(message) },
 		error:  func(e error) { ui.Error(e.Error()) },
@@ -52,6 +55,23 @@ func (s *StepSetSourceImageName) Run(ctx context.Context, state multistep.StateB
 		if s.config.SharedGallery.ImageVersion != "" {
 			imageID += fmt.Sprintf("/versions/%s",
 				s.config.SharedGallery.ImageVersion)
+		}
+
+		// Lets keep track of the old subscription settings and reset once we have our
+		// managed image source.
+		sigID := s.client.GalleryImageVersionsClient.SubscriptionID
+		defer func() {
+			s.client.GalleryImageVersionsClient.SubscriptionID = sigID
+		}()
+
+		s.client.GalleryImageVersionsClient.SubscriptionID = s.config.SharedGallery.Subscription
+		i, err := s.client.GalleryImageVersionsClient.Get(ctx, s.config.SharedGallery.ResourceGroup, s.config.SharedGallery.GalleryName, s.config.SharedGallery.ImageName, s.config.SharedGallery.ImageVersion, "")
+		if err != nil {
+			log.Println("[TRACE] unable to derive managed image URL for shared gallery version image")
+		}
+
+		if i.GalleryImageVersionProperties.StorageProfile.Source.ID != nil {
+			imageID = *i.GalleryImageVersionProperties.StorageProfile.Source.ID
 		}
 
 		s.say(fmt.Sprintf(" -> SourceImageName used for deployment           : '%s'", imageID))
