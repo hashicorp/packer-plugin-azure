@@ -89,6 +89,7 @@ func (s *StepCreateNewDiskset) Run(ctx context.Context, state multistep.StateBag
 		if err != nil {
 			return errorMessage("could not parse source image id %q: %v", s.SourceImageResourceID, err)
 		}
+
 		if !strings.EqualFold(imageID.Provider+"/"+imageID.ResourceType.String(),
 			"Microsoft.Compute/galleries/images/versions") {
 			return errorMessage("source image id is not a shared image version %q, expected type 'Microsoft.Compute/galleries/images/versions'", imageID)
@@ -99,6 +100,7 @@ func (s *StepCreateNewDiskset) Run(ctx context.Context, state multistep.StateBag
 		if err != nil {
 			return errorMessage("error retrieving source image %q: %v", imageID, err)
 		}
+
 		if image.GalleryImageVersionProperties != nil &&
 			image.GalleryImageVersionProperties.StorageProfile != nil &&
 			image.GalleryImageVersionProperties.StorageProfile.DataDiskImages != nil {
@@ -168,12 +170,12 @@ func (s StepCreateNewDiskset) getOSDiskDefinition(subscriptionID string) compute
 
 	switch {
 	case s.SourcePlatformImage != nil:
+		imageID := fmt.Sprintf(
+			"/subscriptions/%s/providers/Microsoft.Compute/locations/%s/publishers/%s/artifacttypes/vmimage/offers/%s/skus/%s/versions/%s", subscriptionID, s.Location,
+			s.SourcePlatformImage.Publisher, s.SourcePlatformImage.Offer, s.SourcePlatformImage.Sku, s.SourcePlatformImage.Version)
 		disk.CreationData.CreateOption = compute.FromImage
 		disk.CreationData.ImageReference = &compute.ImageDiskReference{
-			ID: to.StringPtr(fmt.Sprintf(
-				"/subscriptions/%s/providers/Microsoft.Compute/locations/%s/publishers/%s/artifacttypes/vmimage/offers/%s/skus/%s/versions/%s",
-				subscriptionID, s.Location,
-				s.SourcePlatformImage.Publisher, s.SourcePlatformImage.Offer, s.SourcePlatformImage.Sku, s.SourcePlatformImage.Version)),
+			ID: to.StringPtr(imageID),
 		}
 	case s.SourceOSDiskResourceID != "":
 		disk.CreationData.CreateOption = compute.Copy

@@ -359,7 +359,9 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	}
 
 	packersdk.LogSecretFilter.Set(b.config.ClientConfig.ClientSecret, b.config.ClientConfig.ClientJWT)
-	return nil, warns, nil
+
+	generatedDataKeys := []string{"SourceImageName"}
+	return generatedDataKeys, warns, nil
 }
 
 func checkDiskCacheType(s string) interface{} {
@@ -524,7 +526,12 @@ func buildsteps(config Config, info *client.ComputeInfo) []multistep.Step {
 						SourcePlatformImage:      pi,
 
 						SkipCleanup: config.SkipCleanup,
-					})
+					},
+					&StepGetSourceImageName{
+						Location:            info.Location,
+						SourcePlatformImage: pi,
+					},
+				)
 			} else {
 				panic("Couldn't parse platfrom image urn: " + config.Source + " err: " + err.Error())
 			}
@@ -544,7 +551,12 @@ func buildsteps(config Config, info *client.ComputeInfo) []multistep.Step {
 					Location:                 info.Location,
 
 					SkipCleanup: config.SkipCleanup,
-				})
+				},
+				&StepGetSourceImageName{
+					SourceOSDiskResourceID: config.Source,
+					Location:               info.Location,
+				},
+			)
 
 		case sourceSharedImage:
 			addSteps(
@@ -563,7 +575,12 @@ func buildsteps(config Config, info *client.ComputeInfo) []multistep.Step {
 					Location:                   info.Location,
 
 					SkipCleanup: config.SkipCleanup,
-				})
+				},
+				&StepGetSourceImageName{
+					SourceImageResourceID: config.Source,
+					Location:              info.Location,
+				},
+			)
 
 		default:
 			panic(fmt.Errorf("Unknown source type: %+q", config.sourceType))
