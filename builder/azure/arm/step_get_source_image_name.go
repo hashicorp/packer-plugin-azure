@@ -6,7 +6,6 @@ import (
 	"log"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
-	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
 )
 
@@ -16,17 +15,6 @@ type StepGetSourceImageName struct {
 	generatedData *packerbuilderdata.GeneratedData
 	say           func(message string)
 	error         func(e error)
-}
-
-func NewStepGetSourceImageName(client *AzureClient, config *Config, ui packersdk.Ui) *StepGetSourceImageName {
-	var step = &StepGetSourceImageName{
-		client: client,
-		config: config,
-		say:    func(message string) { ui.Say(message) },
-		error:  func(e error) { ui.Error(e.Error()) },
-	}
-
-	return step
 }
 
 func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
