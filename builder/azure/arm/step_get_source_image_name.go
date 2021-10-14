@@ -35,20 +35,24 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 	if s.config.SharedGallery.Subscription != "" {
 		client := s.client.GalleryImageVersionsClient
 		client.SubscriptionID = s.config.SharedGallery.Subscription
-		image, err := client.Get(ctx, s.config.SharedGallery.ResourceGroup, s.config.SharedGallery.GalleryName, s.config.SharedGallery.ImageName, s.config.SharedGallery.ImageVersion, "")
+		image, err := client.Get(ctx, s.config.SharedGallery.ResourceGroup, s.config.SharedGallery.GalleryName,
+			s.config.SharedGallery.ImageName, s.config.SharedGallery.ImageVersion, "")
 		if err != nil {
 			log.Println("[TRACE] unable to derive managed image URL for shared gallery version image")
 		}
 
-		var imageID string
-		if image.GalleryImageVersionProperties.StorageProfile.Source.ID != nil {
-			log.Println("[TRACE] unable to derive managed image URL for shared gallery version image")
-			imageID = *image.GalleryImageVersionProperties.StorageProfile.Source.ID
+		if image.GalleryImageVersionProperties != nil && image.GalleryImageVersionProperties.StorageProfile != nil &&
+			image.GalleryImageVersionProperties.StorageProfile.Source != nil && image.GalleryImageVersionProperties.StorageProfile.Source.ID != nil {
+
+			imageID := *image.GalleryImageVersionProperties.StorageProfile.Source.ID
+			s.say(fmt.Sprintf(" -> SourceImageName: '%s'", imageID))
+			s.generatedData.Put("SourceImageName", imageID)
+			return multistep.ActionContinue
 		}
 
-		s.say(fmt.Sprintf(" -> SourceImageName: '%s'", imageID))
-		s.generatedData.Put("SourceImageName", imageID)
-		return multistep.ActionContinue
+		log.Println("[TRACE] unable to identify the source image for provided gallery image version")
+		s.error(fmt.Errorf("Unable to identify the source image for provided gallery image version"))
+		return multistep.ActionHalt
 	}
 
 	imageID := fmt.Sprintf("/subscriptions/%s/providers/Microsoft.Compute/locations/%s/publishers/%s/ArtifactTypes/vmimage/offers/%s/skus/%s/versions/%s",

@@ -517,6 +517,10 @@ func buildsteps(config Config, info *client.ComputeInfo) []multistep.Step {
 						})
 				}
 				addSteps(
+					&StepGetSourceImageName{
+						Location:            info.Location,
+						SourcePlatformImage: pi,
+					},
 					&StepCreateNewDiskset{
 						OSDiskID:                 config.TemporaryOSDiskID,
 						OSDiskSizeGB:             config.OSDiskSizeGB,
@@ -526,10 +530,6 @@ func buildsteps(config Config, info *client.ComputeInfo) []multistep.Step {
 						SourcePlatformImage:      pi,
 
 						SkipCleanup: config.SkipCleanup,
-					},
-					&StepGetSourceImageName{
-						Location:            info.Location,
-						SourcePlatformImage: pi,
 					},
 				)
 			} else {
@@ -542,6 +542,10 @@ func buildsteps(config Config, info *client.ComputeInfo) []multistep.Step {
 					SourceDiskResourceID: config.Source,
 					Location:             info.Location,
 				},
+				&StepGetSourceImageName{
+					SourceOSDiskResourceID: config.Source,
+					Location:               info.Location,
+				},
 				&StepCreateNewDiskset{
 					OSDiskID:                 config.TemporaryOSDiskID,
 					OSDiskSizeGB:             config.OSDiskSizeGB,
@@ -552,10 +556,6 @@ func buildsteps(config Config, info *client.ComputeInfo) []multistep.Step {
 
 					SkipCleanup: config.SkipCleanup,
 				},
-				&StepGetSourceImageName{
-					SourceOSDiskResourceID: config.Source,
-					Location:               info.Location,
-				},
 			)
 
 		case sourceSharedImage:
@@ -564,6 +564,10 @@ func buildsteps(config Config, info *client.ComputeInfo) []multistep.Step {
 					SharedImageID:  config.Source,
 					SubscriptionID: info.SubscriptionID,
 					Location:       info.Location,
+				},
+				&StepGetSourceImageName{
+					SourceImageResourceID: config.Source,
+					Location:              info.Location,
 				},
 				&StepCreateNewDiskset{
 					OSDiskID:                   config.TemporaryOSDiskID,
@@ -575,10 +579,6 @@ func buildsteps(config Config, info *client.ComputeInfo) []multistep.Step {
 					Location:                   info.Location,
 
 					SkipCleanup: config.SkipCleanup,
-				},
-				&StepGetSourceImageName{
-					SourceImageResourceID: config.Source,
-					Location:              info.Location,
 				},
 			)
 

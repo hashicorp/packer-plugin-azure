@@ -206,6 +206,13 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	var steps []multistep.Step
 	if b.config.OSType == constants.Target_Linux {
 		steps = []multistep.Step{
+			&StepGetSourceImageName{
+				client:        azureClient,
+				config:        &b.config,
+				generatedData: generatedData,
+				say:           func(message string) { ui.Say(message) },
+				error:         func(e error) { ui.Error(e.Error()) },
+			},
 			NewStepCreateResourceGroup(azureClient, ui),
 			NewStepValidateTemplate(azureClient, ui, &b.config, GetVirtualMachineDeployment),
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
@@ -219,13 +226,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			&commonsteps.StepCleanupTempKeys{
 				Comm: &b.config.Comm,
 			},
-			&StepGetSourceImageName{
-				client:        azureClient,
-				config:        &b.config,
-				generatedData: generatedData,
-				say:           func(message string) { ui.Say(message) },
-				error:         func(e error) { ui.Error(e.Error()) },
-			},
 			NewStepGetOSDisk(azureClient, ui),
 			NewStepGetAdditionalDisks(azureClient, ui),
 			NewStepPowerOffCompute(azureClient, ui),
@@ -236,6 +236,13 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		}
 	} else if b.config.OSType == constants.Target_Windows {
 		steps = []multistep.Step{
+			&StepGetSourceImageName{
+				client:        azureClient,
+				config:        &b.config,
+				generatedData: generatedData,
+				say:           func(message string) { ui.Say(message) },
+				error:         func(e error) { ui.Error(e.Error()) },
+			},
 			NewStepCreateResourceGroup(azureClient, ui),
 		}
 		if b.config.BuildKeyVaultName == "" {
@@ -266,13 +273,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				},
 			},
 			&commonsteps.StepProvision{},
-			&StepGetSourceImageName{
-				client:        azureClient,
-				config:        &b.config,
-				generatedData: generatedData,
-				say:           func(message string) { ui.Say(message) },
-				error:         func(e error) { ui.Error(e.Error()) },
-			},
 			NewStepGetOSDisk(azureClient, ui),
 			NewStepGetAdditionalDisks(azureClient, ui),
 			NewStepPowerOffCompute(azureClient, ui),

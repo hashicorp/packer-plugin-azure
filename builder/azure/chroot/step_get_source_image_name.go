@@ -40,24 +40,37 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 		imageID, err := client.ParseResourceID(s.SourceImageResourceID)
 		if err != nil {
 			log.Printf("[TRACE] could not parse source image id %q: %v", s.SourceImageResourceID, err)
-			return multistep.ActionContinue
+			return multistep.ActionHalt
 		}
 
 		image, err := azcli.GalleryImageVersionsClient().Get(ctx, imageID.ResourceGroup, imageID.ResourceName[0], imageID.ResourceName[1], imageID.ResourceName[2], "")
 		if err != nil {
 			log.Printf("[TRACE] error retrieving managed image name for shared source image %q: %v", s.SourceImageResourceID, err)
+			ui.Error("Unable to identify the source image for provided gallery image version")
+			return multistep.ActionHalt
+		}
+
+		if image.GalleryImageVersionProperties != nil && image.GalleryImageVersionProperties.StorageProfile != nil &&
+			image.GalleryImageVersionProperties.StorageProfile.Source != nil && image.GalleryImageVersionProperties.StorageProfile.Source.ID != nil {
+			id := *image.GalleryImageVersionProperties.StorageProfile.Source.ID
+			ui.Say(fmt.Sprintf(" -> SourceImageName: '%s'", id))
+			generatedData.Put("SourceImageName", id)
 			return multistep.ActionContinue
 		}
 
-		if image.GalleryImageVersionProperties.StorageProfile.Source.ID == nil {
-			log.Printf("[TRACE] error retrieving managed image name for shared source image %q: %v", s.SourceImageResourceID, err)
+		if image.GalleryImageVersionProperties != nil && image.GalleryImageVersionProperties.StorageProfile != nil &&
+			image.GalleryImageVersionProperties.StorageProfile.OsDiskImage != nil && image.GalleryImageVersionProperties.StorageProfile.OsDiskImage.Source != nil &&
+			image.GalleryImageVersionProperties.StorageProfile.OsDiskImage.Source.ID != nil {
+
+			id := *image.GalleryImageVersionProperties.StorageProfile.OsDiskImage.Source.ID
+			ui.Say(fmt.Sprintf(" -> SourceImageName: '%s'", id))
+			generatedData.Put("SourceImageName", id)
 			return multistep.ActionContinue
 		}
 
-		id := *image.GalleryImageVersionProperties.StorageProfile.Source.ID
-		ui.Say(fmt.Sprintf(" -> SourceImageName: '%s'", id))
-		generatedData.Put("SourceImageName", id)
-		return multistep.ActionContinue
+		log.Println("[TRACE] unable to identify the source image for provided gallery image version")
+		ui.Error("Unable to identify the source image for provided gallery image version")
+		return multistep.ActionHalt
 	}
 
 	imageID := fmt.Sprintf(
