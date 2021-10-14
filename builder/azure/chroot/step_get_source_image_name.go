@@ -20,7 +20,8 @@ type StepGetSourceImageName struct {
 	// Extract from shared image
 	SourceImageResourceID string
 
-	Location string
+	Location      string
+	GeneratedData *packerbuilderdata.GeneratedData
 }
 
 func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -28,11 +29,9 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 	ui := state.Get("ui").(packersdk.Ui)
 	ui.Say("Getting source image id for the deployment ...")
 
-	generatedData := &packerbuilderdata.GeneratedData{State: state}
-
 	if s.SourceOSDiskResourceID != "" {
 		ui.Say(fmt.Sprintf(" -> SourceImageName: '%s'", s.SourceOSDiskResourceID))
-		generatedData.Put("SourceImageName", s.SourceOSDiskResourceID)
+		s.GeneratedData.Put("SourceImageName", s.SourceOSDiskResourceID)
 		return multistep.ActionContinue
 	}
 
@@ -40,10 +39,12 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 		imageID, err := client.ParseResourceID(s.SourceImageResourceID)
 		if err != nil {
 			log.Printf("[TRACE] could not parse source image id %q: %v", s.SourceImageResourceID, err)
+			ui.Error("Unable to parse source image id")
 			return multistep.ActionHalt
 		}
 
-		image, err := azcli.GalleryImageVersionsClient().Get(ctx, imageID.ResourceGroup, imageID.ResourceName[0], imageID.ResourceName[1], imageID.ResourceName[2], "")
+		client := azcli.GalleryImageVersionsClient()
+		image, err := client.Get(ctx, imageID.ResourceGroup, imageID.ResourceName[0], imageID.ResourceName[1], imageID.ResourceName[2], "")
 		if err != nil {
 			log.Printf("[TRACE] error retrieving managed image name for shared source image %q: %v", s.SourceImageResourceID, err)
 			ui.Error("Unable to identify the source image for provided gallery image version")
@@ -54,17 +55,7 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 			image.GalleryImageVersionProperties.StorageProfile.Source != nil && image.GalleryImageVersionProperties.StorageProfile.Source.ID != nil {
 			id := *image.GalleryImageVersionProperties.StorageProfile.Source.ID
 			ui.Say(fmt.Sprintf(" -> SourceImageName: '%s'", id))
-			generatedData.Put("SourceImageName", id)
-			return multistep.ActionContinue
-		}
-
-		if image.GalleryImageVersionProperties != nil && image.GalleryImageVersionProperties.StorageProfile != nil &&
-			image.GalleryImageVersionProperties.StorageProfile.OsDiskImage != nil && image.GalleryImageVersionProperties.StorageProfile.OsDiskImage.Source != nil &&
-			image.GalleryImageVersionProperties.StorageProfile.OsDiskImage.Source.ID != nil {
-
-			id := *image.GalleryImageVersionProperties.StorageProfile.OsDiskImage.Source.ID
-			ui.Say(fmt.Sprintf(" -> SourceImageName: '%s'", id))
-			generatedData.Put("SourceImageName", id)
+			s.GeneratedData.Put("SourceImageName", id)
 			return multistep.ActionContinue
 		}
 
@@ -74,11 +65,11 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 	}
 
 	imageID := fmt.Sprintf(
-		"/subscriptions/%s/providers/Microsoft.Compute/locations/%s/publishers/%s/artifacttypes/vmimage/offers/%s/skus/%s/versions/%s", azcli.SubscriptionID(), s.Location,
+		"/subscriptions/%s/providers/Microsoft.Compute/locations/%s/publishers/%s/ArtifactTypes/vmimage/offers/%s/skus/%s/versions/%s", azcli.SubscriptionID(), s.Location,
 		s.SourcePlatformImage.Publisher, s.SourcePlatformImage.Offer, s.SourcePlatformImage.Sku, s.SourcePlatformImage.Version)
 
 	ui.Say(fmt.Sprintf(" -> SourceImageName: '%s'", imageID))
-	generatedData.Put("SourceImageName", imageID)
+	s.GeneratedData.Put("SourceImageName", imageID)
 	return multistep.ActionContinue
 }
 

@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/multistep/commonsteps"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
+	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 
@@ -424,6 +425,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	state.Put("ui", ui)
 	state.Put("azureclient", azcli)
 	state.Put("wrappedCommand", common.CommandWrapper(wrappedCommand))
+	generatedData := packerbuilderdata.GeneratedData{State: state}
 
 	info, err := azcli.MetadataClient().GetComputeInfo()
 	if err != nil {
@@ -439,7 +441,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	state.Put("instance", info)
 
 	// Build the step array from the config
-	steps := buildsteps(b.config, info)
+	steps := buildsteps(b.config, info, &generatedData)
 
 	// Run!
 	b.runner = commonsteps.NewRunner(steps, b.config.PackerConfig, ui)
@@ -478,7 +480,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	return artifact, nil
 }
 
-func buildsteps(config Config, info *client.ComputeInfo) []multistep.Step {
+func buildsteps(config Config, info *client.ComputeInfo, generatedData *packerbuilderdata.GeneratedData) []multistep.Step {
 	// Build the steps
 	var steps []multistep.Step
 	addSteps := func(s ...multistep.Step) { // convenience function
@@ -518,8 +520,9 @@ func buildsteps(config Config, info *client.ComputeInfo) []multistep.Step {
 				}
 				addSteps(
 					&StepGetSourceImageName{
-						Location:            info.Location,
+						GeneratedData:       generatedData,
 						SourcePlatformImage: pi,
+						Location:            info.Location,
 					},
 					&StepCreateNewDiskset{
 						OSDiskID:                 config.TemporaryOSDiskID,
@@ -543,6 +546,7 @@ func buildsteps(config Config, info *client.ComputeInfo) []multistep.Step {
 					Location:             info.Location,
 				},
 				&StepGetSourceImageName{
+					GeneratedData:          generatedData,
 					SourceOSDiskResourceID: config.Source,
 					Location:               info.Location,
 				},
@@ -566,6 +570,7 @@ func buildsteps(config Config, info *client.ComputeInfo) []multistep.Step {
 					Location:       info.Location,
 				},
 				&StepGetSourceImageName{
+					GeneratedData:         generatedData,
 					SourceImageResourceID: config.Source,
 					Location:              info.Location,
 				},
