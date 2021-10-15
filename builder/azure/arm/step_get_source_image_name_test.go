@@ -57,7 +57,7 @@ func TestStepGetSourceImageName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			step := &StepGetSourceImageName{
 				config:        tt.config,
-				generatedData: &genData,
+				GeneratedData: &genData,
 				say:           ui.Say,
 				error:         func(e error) {},
 			}

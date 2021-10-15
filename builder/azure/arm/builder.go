@@ -209,7 +209,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			&StepGetSourceImageName{
 				client:        azureClient,
 				config:        &b.config,
-				generatedData: generatedData,
+				GeneratedData: generatedData,
 				say:           func(message string) { ui.Say(message) },
 				error:         func(e error) { ui.Error(e.Error()) },
 			},
@@ -239,7 +239,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			&StepGetSourceImageName{
 				client:        azureClient,
 				config:        &b.config,
-				generatedData: generatedData,
+				GeneratedData: generatedData,
 				say:           func(message string) { ui.Say(message) },
 				error:         func(e error) { ui.Error(e.Error()) },
 			},

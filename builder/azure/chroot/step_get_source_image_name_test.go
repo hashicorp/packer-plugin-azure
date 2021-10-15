@@ -95,6 +95,14 @@ func TestChrootStepGetSourceImageName_SharedImage(t *testing.T) {
 			},
 			expected: "/subscription/resource/managed/image/name/as/source",
 		},
+		{
+			name: "SimulatedBadImageResponse",
+			step: &StepGetSourceImageName{
+				SourceImageResourceID: "/subscriptions/1234/resourceGroups/bar/providers/Microsoft.Compute/galleries/test/images/foo/versions/0.0.0",
+				GeneratedData:         &genData,
+			},
+			expected: "ERR_SOURCE_IMAGE_NAME_NOT_FOUND",
+		},
 	}
 	for _, tt := range tc {
 		tt := tt
@@ -122,6 +130,15 @@ func TestChrootStepGetSourceImageName_SharedImage(t *testing.T) {
 func MockGalleryImageClient(subID string) compute.GalleryImageVersionsClient {
 	giv := compute.NewGalleryImageVersionsClient(subID)
 	giv.Sender = autorest.SenderFunc(func(r *http.Request) (*http.Response, error) {
+
+		if strings.HasSuffix(r.URL.Path, "versions/0.0.0") {
+			return &http.Response{
+				Request:    r,
+				Body:       http.NoBody,
+				StatusCode: 200,
+			}, nil
+		}
+
 		return &http.Response{
 			Request: r,
 			Body: ioutil.NopCloser(strings.NewReader(`{

@@ -39,16 +39,16 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 		imageID, err := client.ParseResourceID(s.SourceImageResourceID)
 		if err != nil {
 			log.Printf("[TRACE] could not parse source image id %q: %v", s.SourceImageResourceID, err)
-			ui.Error("Unable to parse source image id")
-			return multistep.ActionHalt
+			s.GeneratedData.Put("SourceImageName", "ERR_SOURCE_IMAGE_NAME_NOT_FOUND")
+			return multistep.ActionContinue
 		}
 
 		client := azcli.GalleryImageVersionsClient()
 		image, err := client.Get(ctx, imageID.ResourceGroup, imageID.ResourceName[0], imageID.ResourceName[1], imageID.ResourceName[2], "")
 		if err != nil {
 			log.Printf("[TRACE] error retrieving managed image name for shared source image %q: %v", s.SourceImageResourceID, err)
-			ui.Error("Unable to identify the source image for provided gallery image version")
-			return multistep.ActionHalt
+			s.GeneratedData.Put("SourceImageName", "ERR_SOURCE_IMAGE_NAME_NOT_FOUND")
+			return multistep.ActionContinue
 		}
 
 		if image.GalleryImageVersionProperties != nil && image.GalleryImageVersionProperties.StorageProfile != nil &&
@@ -60,8 +60,8 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 		}
 
 		log.Println("[TRACE] unable to identify the source image for provided gallery image version")
-		ui.Error("Unable to identify the source image for provided gallery image version")
-		return multistep.ActionHalt
+		s.GeneratedData.Put("SourceImageName", "ERR_SOURCE_IMAGE_NAME_NOT_FOUND")
+		return multistep.ActionContinue
 	}
 
 	imageID := fmt.Sprintf(
