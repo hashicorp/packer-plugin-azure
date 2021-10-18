@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
+	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-12-01/compute"
 )
@@ -225,7 +226,7 @@ func Test_buildsteps(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			withMetadataStub(func() { // ensure that values are taken from info, instead of retrieved again
-				got := buildsteps(tt.config, info)
+				got := buildsteps(tt.config, info, &packerbuilderdata.GeneratedData{})
 				tt.verify(got, t)
 			})
 		})

@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/multistep/commonsteps"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
+	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
 )
 
 type Builder struct {
@@ -48,7 +49,9 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	b.setTemplateParameters(b.stateBag)
 	b.setImageParameters(b.stateBag)
 
-	return nil, warnings, errs
+	generatedDataKeys := []string{"SourceImageName"}
+
+	return generatedDataKeys, warnings, nil
 }
 
 func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook) (packersdk.Artifact, error) {
@@ -75,6 +78,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	b.stateBag.Put("hook", hook)
 	b.stateBag.Put(constants.Ui, ui)
+	generatedData := &packerbuilderdata.GeneratedData{State: b.stateBag}
 
 	spnCloud, spnKeyVault, err := b.getServicePrincipalTokens(ui.Say)
 	if err != nil {
@@ -202,6 +206,13 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	var steps []multistep.Step
 	if b.config.OSType == constants.Target_Linux {
 		steps = []multistep.Step{
+			&StepGetSourceImageName{
+				client:        azureClient,
+				config:        &b.config,
+				GeneratedData: generatedData,
+				say:           func(message string) { ui.Say(message) },
+				error:         func(e error) { ui.Error(e.Error()) },
+			},
 			NewStepCreateResourceGroup(azureClient, ui),
 			NewStepValidateTemplate(azureClient, ui, &b.config, GetVirtualMachineDeployment),
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
@@ -225,6 +236,13 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		}
 	} else if b.config.OSType == constants.Target_Windows {
 		steps = []multistep.Step{
+			&StepGetSourceImageName{
+				client:        azureClient,
+				config:        &b.config,
+				GeneratedData: generatedData,
+				say:           func(message string) { ui.Say(message) },
+				error:         func(e error) { ui.Error(e.Error()) },
+			},
 			NewStepCreateResourceGroup(azureClient, ui),
 		}
 		if b.config.BuildKeyVaultName == "" {
@@ -305,7 +323,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		return sasUrl
 	}
 
-	generatedData := map[string]interface{}{"generated_data": b.stateBag.Get("generated_data")}
+	stateData := map[string]interface{}{"generated_data": b.stateBag.Get("generated_data")}
 	if b.config.isManagedImage() {
 		managedImageID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/images/%s",
 			b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName, b.config.ManagedImageName)
@@ -318,7 +336,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				b.config.ManagedImageOSDiskSnapshotName,
 				b.config.ManagedImageDataDiskSnapshotPrefix,
 				b.stateBag.Get(constants.ArmManagedImageSharedGalleryId).(string),
-				generatedData)
+				stateData)
 		} else if template, ok := b.stateBag.GetOk(constants.ArmCaptureTemplate); ok {
 			return NewManagedImageArtifact(b.config.OSType,
 				b.config.ManagedImageResourceGroupName,
@@ -327,7 +345,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				managedImageID,
 				b.config.ManagedImageOSDiskSnapshotName,
 				b.config.ManagedImageDataDiskSnapshotPrefix,
-				generatedData,
+				stateData,
 				b.stateBag.Get(constants.ArmKeepOSDisk).(bool),
 				template.(*CaptureTemplate),
 				getSasUrlFunc)
@@ -339,7 +357,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			managedImageID,
 			b.config.ManagedImageOSDiskSnapshotName,
 			b.config.ManagedImageDataDiskSnapshotPrefix,
-			generatedData,
+			stateData,
 			b.stateBag.Get(constants.ArmKeepOSDisk).(bool),
 			nil,
 			getSasUrlFunc)
@@ -348,11 +366,11 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			template.(*CaptureTemplate),
 			getSasUrlFunc,
 			b.config.OSType,
-			generatedData)
+			stateData)
 	}
 
 	return &Artifact{
-		StateData: generatedData,
+		StateData: stateData,
 	}, nil
 }
 

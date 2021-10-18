@@ -22,7 +22,7 @@ content and enables some capabilities that are not possible with the
 `azure-arm` builder.
 
 > **This is an advanced builder** If you're just getting started with Packer,
-> it is recommend to start with the [azure-arm builder](/docs/builders/azure-arm),
+> it is recommend to start with the [azure-arm builder](https://packer.io/docs/builders/azure-arm),
 > which is much easier to use.
 
 ## How Does it Work?
@@ -30,7 +30,7 @@ content and enables some capabilities that are not possible with the
 This builder works by creating a new MD from either an existing source or from
 scratch and attaching it to the (already existing) Azure VM where Packer is
 running. Once attached, a [chroot](https://en.wikipedia.org/wiki/Chroot) is set
-up and made available to the [provisioners](/docs/provisioners).
+up and made available to the [provisioners](https://packer.io/docs/provisioners).
 After provisioning, the MD is detached, snapshotted and a MD image is created.
 
 Using this process, minutes can be shaved off the image creation process
@@ -55,7 +55,7 @@ options.
 
 None of the authentication options are required, but depending on which
 ones are specified a different authentication method may be used. See the
-[shared Azure builders documentation](/docs/builders/azure) for more
+[shared Azure builders documentation](https://packer.io/docs/builders/azure) for more
 information.
 
 @include 'builder/azure/common/client/Config-not-required.mdx'
@@ -145,6 +145,61 @@ This function can be used in the configuration templates, for example, use
 
 to fill in the subscription ID of the VM in any of the configuration options.
 
+## Build Shared Information Variables
+
+This builder generates data that are shared with provisioner and post-processor via build function of [template engine](https://packer.io/docs/templates/legacy_json_templates/engine) for JSON and [contextual variables](https://packer.io/docs/templates/hcl_templates/contextual-variables) for HCL2.
+
+The generated variables available for this builder are:
+
+- `SourceImageName` - The full name of the source image used in the deployment. When using
+shared images the resulting name will point to the actual source used to create the said version.
+  building the AMI.
+
+Usage example:
+
+<Tabs>
+<Tab heading="HCL2">
+
+```hcl
+// When accessing one of these variables from inside the builder, you need to
+// use the golang templating syntax. This is due to an architectural quirk that
+// won't be easily resolvable until legacy json templates are deprecated:
+
+{
+source "amazon-arm" "basic-example" {
+  source = "credativ:Debian:9:latest"
+}
+
+// when accessing one of the variables from a provisioner or post-processor, use
+// hcl-syntax
+post-processor "manifest" {
+    output = "manifest.json"
+    strip_path = true
+    custom_data = {
+        source_image_name = "${build.SourceImageName}"
+    }
+}
+```
+</Tab>
+<Tab heading="JSON">
+
+```json
+"post-processors": [
+  {
+    "type": "manifest",
+    "output": "manifest.json",
+    "strip_path": true,
+    "custom_data": {
+      "source_image_name": "{{ build `SourceImageName` }}"
+    }
+  }
+]
+```
+
+</Tab>
+</Tabs>
+
+
 ## Examples
 
 Here are some examples using this builder.
@@ -231,8 +286,7 @@ variable "client_secret" {
 }
 variable "subscription_id" {
   type = string
-}
-variable "resource_group" {
+} variable "resource_group" {
   type = string
 }
 
@@ -292,3 +346,4 @@ build {
 
 </Tab>
 </Tabs>
+

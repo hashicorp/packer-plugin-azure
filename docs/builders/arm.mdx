@@ -17,7 +17,7 @@ costs for VMs built and stored using Packer.
 
 Azure uses a combination of OAuth and Active Directory to authorize requests to
 the ARM API. Learn how to [authorize access to
-ARM](/docs/builders/azure#authentication-for-azure).
+ARM](https://packer.io/docs/builders/azure#authentication-for-azure).
 
 The documentation below references command output from the [Azure
 CLI](https://azure.microsoft.com/en-us/documentation/articles/xplat-cli-install/).
@@ -26,7 +26,7 @@ CLI](https://azure.microsoft.com/en-us/documentation/articles/xplat-cli-install/
 
 There are many configuration options available for the builder. We'll start
 with authentication parameters, then go over the Azure ARM builder specific
-options. In addition to the options listed here, a [communicator](/docs/templates/legacy_json_templates/communicator) can be configured for this builder.
+options. In addition to the options listed here, a [communicator](https://packer.io/docs/templates/legacy_json_templates/communicator) can be configured for this builder.
 
 ### Authentication options
 
@@ -34,7 +34,7 @@ options. In addition to the options listed here, a [communicator](/docs/template
 
 #### Managed Identity
 
-If you're running Packer on an Azure VM with a [managed identity](/docs/builders/azure#azure-managed-identity) you don't need to specify any additional configuration options. As Packer will attempt to use the Managed Identity and subscription of the VM that Packer is running on.
+If you're running Packer on an Azure VM with a [managed identity](https://packer.io/docs/builders/azure#azure-managed-identity) you don't need to specify any additional configuration options. As Packer will attempt to use the Managed Identity and subscription of the VM that Packer is running on.
 
 #### Interactive User Authentication
 
@@ -43,7 +43,7 @@ Packer will use cached credentials or redirect you to a website to log in.
 
 #### Service Principal
 
-To use a [service principal](/docs/builders/azure#azure-active-directory-service-principal)
+To use a [service principal](https://packer.io/docs/builders/azure#azure-active-directory-service-principal)
 you should specify `subscription_id`, `client_id` and one of `client_secret`,
 `client_cert_path` or `client_jwt`.
 
@@ -149,6 +149,63 @@ Providing `temp_resource_group_name` or `location` in combination with
 @include 'builder/azure/arm/Config-not-required.mdx'
 
 @include 'builder/azure/common/client/Config-not-required.mdx'
+
+## Build Shared Information Variables
+
+This builder generates data that are shared with provisioner and post-processor via build function of [template engine](https://packer.io/docs/templates/legacy_json_templates/engine) for JSON and [contextual variables](https://packer.io/docs/templates/hcl_templates/contextual-variables) for HCL2.
+
+The generated variables available for this builder are:
+
+- `SourceImageName` - The full name of the source image used in the deployment. When using
+shared images the resulting name will point to the actual source used to create the said version.
+  building the AMI.
+
+Usage example:
+
+<Tabs>
+<Tab heading="HCL2">
+
+```hcl
+// When accessing one of these variables from inside the builder, you need to
+// use the golang templating syntax. This is due to an architectural quirk that
+// won't be easily resolvable until legacy json templates are deprecated:
+
+{
+source "amazon-arm" "basic-example" {
+  os_type = "Linux"
+  image_publisher = "Canonical"
+  image_offer = "UbuntuServer"
+  image_sku = "14.04.4-LTS"
+}
+
+// when accessing one of the variables from a provisioner or post-processor, use
+// hcl-syntax
+post-processor "manifest" {
+    output = "manifest.json"
+    strip_path = true
+    custom_data = {
+        source_image_name = "${build.SourceImageName}"
+    }
+}
+```
+</Tab>
+<Tab heading="JSON">
+
+```json
+"post-processors": [
+  {
+    "type": "manifest",
+    "output": "manifest.json",
+    "strip_path": true,
+    "custom_data": {
+      "source_image_name": "{{ build `SourceImageName` }}"
+    }
+  }
+]
+```
+
+</Tab>
+</Tabs>
 
 ### Communicator Config
 

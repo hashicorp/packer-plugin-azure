@@ -109,11 +109,22 @@ func (a *Artifact) Destroy() error {
 }
 
 func (a *Artifact) hcpPackerRegistryMetadata() []*registryimage.Image {
+	var generatedData map[string]interface{}
+
+	if a.StateData != nil {
+		generatedData = a.StateData["generated_data"].(map[string]interface{})
+	}
+
+	var sourceID string
+	if sourceImage, ok := generatedData["SourceImageName"].(string); ok {
+		sourceID = sourceImage
+	}
 	var images []*registryimage.Image
 	for _, resource := range a.Resources {
 		image, err := registryimage.FromArtifact(a,
 			registryimage.WithProvider("azure"),
 			registryimage.WithID(resource),
+			registryimage.WithSourceID(sourceID),
 		)
 
 		if err != nil {

@@ -251,6 +251,17 @@ func (*Artifact) Destroy() error {
 }
 
 func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
+	var generatedData map[string]interface{}
+
+	if a.StateData != nil {
+		generatedData = a.StateData["generated_data"].(map[string]interface{})
+	}
+
+	var sourceID string
+	if sourceImage, ok := generatedData["SourceImageName"].(string); ok {
+		sourceID = sourceImage
+	}
+
 	if a.isManagedImage() {
 		id := a.ManagedImageId
 		location := a.ManagedImageLocation
@@ -259,12 +270,6 @@ func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
 		labels["os_type"] = a.OSType
 		labels["managed_image_resourcegroup_name"] = a.ManagedImageResourceGroupName
 		labels["managed_image_name"] = a.ManagedImageName
-
-		var generatedData map[string]interface{}
-
-		if a.StateData != nil {
-			generatedData = a.StateData["generated_data"].(map[string]interface{})
-		}
 
 		if a.ManagedImageSharedImageGalleryId != "" {
 			labels["sig_name"] = generatedData["SharedImageGalleryName"]
@@ -285,6 +290,7 @@ func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
 			registryimage.WithID(id),
 			registryimage.WithRegion(location),
 			registryimage.WithProvider("azure"),
+			registryimage.WithSourceID(sourceID),
 			registryimage.SetLabels(labels),
 		)
 
@@ -301,6 +307,7 @@ func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
 		registryimage.WithID(id),
 		registryimage.WithRegion(location),
 		registryimage.WithProvider("azure"),
+		registryimage.WithSourceID(sourceID),
 		registryimage.SetLabels(labels),
 	)
 	return img
