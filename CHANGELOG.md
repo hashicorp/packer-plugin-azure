@@ -1,14 +1,21 @@
 ## 1.0.4 (October 18, 2021)
 
+### NOTES:
+Support for the HCP Packer registry is currently in beta and requires 
+Packer v1.7.7 [GH-160]
+
 ### IMPROVEMENTS:
-* Add SourceImageName as shared builder information variable. [GH-160]
-* Add SourceImageName to HCP Packer registry image metadata. [GH-160]
+* Add `SourceImageNam`e as shared builder information variable. [GH-160]
+* Add `SourceImageName` to HCP Packer registry image metadata. [GH-160]
 * Update packer-plugin-sdk to v0.2.7 [GH-159]
 
 ### BUG FIXES:
 * builder/arm: Fix panic when running the cleanup step on a failed deployment. [GH-155]
 
 ## 1.0.3 (September 13, 2021)
+
+### NOTES:
+HCP Packer private beta support requires Packer version 1.7.5 or 1.7.6 [GH-150]
 
 ### FEATURES:
 * Add HCP Packer registry image metadata to builder artifacts. [GH-138] [GH-150]
