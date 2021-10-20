@@ -5,7 +5,7 @@ Support for the HCP Packer registry is currently in beta and requires
 Packer v1.7.7 [GH-160]
 
 ### IMPROVEMENTS:
-* Add `SourceImageNam`e as shared builder information variable. [GH-160]
+* Add `SourceImageName` as shared builder information variable. [GH-160]
 * Add `SourceImageName` to HCP Packer registry image metadata. [GH-160]
 * Update packer-plugin-sdk to v0.2.7 [GH-159]
 
