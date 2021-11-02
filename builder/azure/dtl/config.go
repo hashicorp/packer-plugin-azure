@@ -525,7 +525,7 @@ func setUserNamePassword(c *Config) error {
 		c.Password = c.tmpAdminPassword
 	}
 
-        return nil
+	return nil
 }
 
 func provideDefaultValues(c *Config) error {
