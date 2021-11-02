@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+        "time"
 
 	"github.com/Azure/azure-sdk-for-go/services/devtestlabs/mgmt/2018-09-15/dtl"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
@@ -120,14 +121,25 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupNa
 
 		dtlArtifacts := []dtl.ArtifactInstallProperties{*winrmArtifact}
 		dtlArtifactsRequest := dtl.ApplyArtifactsRequest{Artifacts: &dtlArtifacts}
-		f, err := s.client.DtlVirtualMachineClient.ApplyArtifacts(ctx, s.config.tmpResourceGroupName, s.config.LabName, s.config.tmpComputeName, dtlArtifactsRequest)
-		if err == nil {
-			err = f.WaitForCompletionRef(ctx, s.client.DtlVirtualMachineClient.Client)
-		}
-		if err != nil {
-			s.say(s.client.LastError.Error())
-			return err
-		}
+
+                for i := 0; i < 3; i++ {
+			f, err := s.client.DtlVirtualMachineClient.ApplyArtifacts(ctx, s.config.tmpResourceGroupName, s.config.LabName, s.config.tmpComputeName, dtlArtifactsRequest)
+			if err == nil {
+				s.say(fmt.Sprintf("WinRM artifact deployment started, waiting for completion"))
+				err = f.WaitForCompletionRef(ctx, s.client.DtlVirtualMachineClient.Client)
+				if err != nil {
+					s.say(s.client.LastError.Error())
+					return err
+				}
+				break
+			} else if i < 2 {
+				s.say(fmt.Sprintf("WinRM artifact deployment failed, sleeping a minute and retrying"))
+				time.Sleep(60 * time.Second)
+			} else if err != nil {
+				s.say(s.client.LastError.Error())
+				return err
+			}
+                }
 	}
 
 	xs := strings.Split(*vm.LabVirtualMachineProperties.ComputeID, "/")
