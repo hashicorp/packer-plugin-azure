@@ -401,7 +401,11 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		return nil, err
 	}
 
-	provideDefaultValues(c)
+	err = provideDefaultValues(c)
+	if err != nil {
+		return nil, err
+	}
+
 	setRuntimeValues(c)
 	err = setUserNamePassword(c)
 	if err != nil {
@@ -524,7 +528,7 @@ func setUserNamePassword(c *Config) error {
         return nil
 }
 
-func provideDefaultValues(c *Config) {
+func provideDefaultValues(c *Config) error {
 	if c.VMSize == "" {
 		c.VMSize = DefaultVMSize
 	}
@@ -553,7 +557,8 @@ func provideDefaultValues(c *Config) {
 		c.Comm.SSHUsername = DefaultUserName
 	}
 
-	c.ClientConfig.SetDefaultValues()
+	err := c.ClientConfig.SetDefaultValues()
+	return err
 }
 
 func assertTagProperties(c *Config, errs *packersdk.MultiError) {

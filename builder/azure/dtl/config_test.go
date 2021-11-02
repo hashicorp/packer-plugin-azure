@@ -27,10 +27,8 @@ var requiredConfigValues = []string{
 func TestConfigShouldProvideReasonableDefaultValues(t *testing.T) {
         config := Config{}
 	_, err := config.Prepare(getDtlBuilderConfiguration(), getPackerConfiguration())
-
 	if err != nil {
-		t.Error("Expected configuration creation to succeed, but it failed!\n")
-		t.Fatalf(" errors: %s\n", err)
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
 	}
 
 	if config.UserName == "" {
@@ -56,7 +54,10 @@ func TestConfigShouldProvideReasonableDefaultValues(t *testing.T) {
 
 func TestConfigShouldDefaultVMSizeToStandardA1(t *testing.T) {
         config := Config{}
-	config.Prepare(getDtlBuilderConfiguration(), getPackerConfiguration())
+	_, err := config.Prepare(getDtlBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
+	}
 
 	if config.VMSize != "Standard_A1" {
 		t.Errorf("Expected 'VMSize' to default to 'Standard_A1', but got '%s'.", config.VMSize)
@@ -65,7 +66,10 @@ func TestConfigShouldDefaultVMSizeToStandardA1(t *testing.T) {
 
 func TestConfigShouldDefaultImageVersionToLatest(t *testing.T) {
         config := Config{}
-	config.Prepare(getDtlBuilderConfiguration(), getPackerConfiguration())
+	_, err := config.Prepare(getDtlBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
+	}
 
 	if config.ImageVersion != "latest" {
 		t.Errorf("Expected 'ImageVersion' to default to 'latest', but got '%s'.", config.ImageVersion)
@@ -118,7 +122,10 @@ func TestConfigVirtualNetworkSubnetNameMustBeSetWithVirtualNetworkName(t *testin
 
 func TestSystemShouldDefineRuntimeValues(t *testing.T) {
         config := Config{}
-	config.Prepare(getDtlBuilderConfiguration(), getPackerConfiguration())
+	_, err := config.Prepare(getDtlBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
+	}
 
 	if config.Password == "" {
 		t.Errorf("Expected Password to not be empty, but it was '%s'!", config.Password)
@@ -143,7 +150,10 @@ func TestSystemShouldDefineRuntimeValues(t *testing.T) {
 
 func TestConfigShouldTransformToVirtualMachineCaptureParameters(t *testing.T) {
         config := Config{}
-	config.Prepare(getDtlBuilderConfiguration(), getPackerConfiguration())
+	_, err := config.Prepare(getDtlBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
+	}
 
 	parameters := config.toVirtualMachineCaptureParameters()
 
@@ -163,9 +173,8 @@ func TestConfigShouldTransformToVirtualMachineCaptureParameters(t *testing.T) {
 func TestConfigShouldSupportPackersConfigElements(t *testing.T) {
         config := Config{}
 	_, err := config.Prepare(getDtlBuilderConfiguration(), getPackerConfiguration(), getPackerCommunicatorConfiguration())
-
 	if err != nil {
-		t.Fatal(err)
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
 	}
 
 	if config.Comm.SSHTimeout != 1*time.Hour {
@@ -186,7 +195,7 @@ func TestWinRMConfigShouldSetRoundTripDecorator(t *testing.T) {
         config := Config{}
 	_, err := config.Prepare(config_dtl, getPackerConfiguration())
 	if err != nil {
-		t.Fatal(err)
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
 	}
 
 	if config.Comm.WinRMTransportDecorator == nil {
@@ -239,7 +248,7 @@ func TestConfigShouldAcceptTags(t *testing.T) {
         config := Config{}
 	_, err := config.Prepare(config_map, getPackerConfiguration())
 	if err != nil {
-		t.Fatal(err)
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
 	}
 
 	if len(config.AzureTags) != 2 {
@@ -439,7 +448,11 @@ func TestConfigShouldAcceptDiskCachingTypes(t *testing.T) {
 
 func TestConfigAdditionalDiskDefaultIsNil(t *testing.T) {
         config := Config{}
-	config.Prepare(getDtlBuilderConfiguration(), getPackerConfiguration())
+	_, err := config.Prepare(getDtlBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
+	}
+
 	if config.AdditionalDiskSize != nil {
 		t.Errorf("Expected Config to not have a set of additional disks, but got a non nil value")
 	}
@@ -463,7 +476,11 @@ func TestConfigAdditionalDiskOverrideDefault(t *testing.T) {
 	}
 
         config := Config{}
-	config.Prepare(config_map, diskconfig, getPackerConfiguration())
+	_, err := config.Prepare(config_map, diskconfig, getPackerConfiguration())
+	if err != nil {
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
+	}
+
 	if config.AdditionalDiskSize == nil {
 		t.Errorf("Expected Config to have a set of additional disks, but got nil")
 	}
