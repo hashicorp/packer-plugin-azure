@@ -16,12 +16,12 @@ require (
 	github.com/google/go-cmp v0.5.6
 	github.com/hashicorp/go-azure-helpers v0.16.5
 	github.com/hashicorp/hcl/v2 v2.11.1
-	github.com/hashicorp/packer-plugin-sdk v0.2.9
+	github.com/hashicorp/packer-plugin-sdk v0.2.10
 	github.com/masterzen/winrm v0.0.0-20210623064412-3b76017826b0
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/mitchellh/reflectwalk v1.0.0
 	github.com/stretchr/testify v1.7.0
-	github.com/zclconf/go-cty v1.9.1
+	github.com/zclconf/go-cty v1.10.0
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 )
 
