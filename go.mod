@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/Azure/azure-sdk-for-go v55.7.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.11.19
-	github.com/Azure/go-autorest/autorest/adal v0.9.14
+	github.com/Azure/go-autorest/autorest/adal v0.9.18
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.2
 	github.com/Azure/go-autorest/autorest/azure/cli v0.4.2
 	github.com/Azure/go-autorest/autorest/date v0.3.0
@@ -22,7 +22,7 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.0
 	github.com/stretchr/testify v1.7.0
 	github.com/zclconf/go-cty v1.10.0
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 )
 
 require (
@@ -44,9 +44,9 @@ require (
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/dylanmei/iso8601 v0.1.0 // indirect
 	github.com/fatih/color v1.12.0 // indirect
-	github.com/form3tech-oss/jwt-go v3.2.2+incompatible // indirect
 	github.com/gofrs/flock v0.8.1 // indirect
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
+	github.com/golang-jwt/jwt/v4 v4.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
