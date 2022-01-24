@@ -125,7 +125,7 @@ func (s *StepMountDevice) CleanupFunc(state multistep.StateBag) error {
 	wrappedCommand := state.Get("wrappedCommand").(common.CommandWrapper)
 
 	ui.Say("Unmounting the root device...")
-	unmountCommand, err := wrappedCommand(fmt.Sprintf("umount %s", s.mountPath))
+	unmountCommand, err := wrappedCommand(fmt.Sprintf("umount -R %s", s.mountPath))
 	if err != nil {
 		return fmt.Errorf("error creating unmount command: %s", err)
 	}

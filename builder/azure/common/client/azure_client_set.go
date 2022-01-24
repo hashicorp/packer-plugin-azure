@@ -25,6 +25,7 @@ type AzureClientSet interface {
 
 	VirtualMachinesClient() computeapi.VirtualMachinesClientAPI
 	VirtualMachineImagesClient() VirtualMachineImagesClientAPI
+	VirtualMachineScaleSetVMsClient() computeapi.VirtualMachineScaleSetVMsClientAPI
 
 	PollClient() autorest.Client
 
@@ -101,6 +102,13 @@ func (s azureClientSet) ImagesClient() computeapi.ImagesClientAPI {
 
 func (s azureClientSet) VirtualMachinesClient() computeapi.VirtualMachinesClientAPI {
 	c := compute.NewVirtualMachinesClient(s.subscriptionID)
+	s.configureAutorestClient(&c.Client)
+	c.PollingDelay = s.PollingDelay
+	return c
+}
+
+func (s azureClientSet) VirtualMachineScaleSetVMsClient() computeapi.VirtualMachineScaleSetVMsClientAPI {
+	c := compute.NewVirtualMachineScaleSetVMsClient(s.subscriptionID)
 	s.configureAutorestClient(&c.Client)
 	c.PollingDelay = s.PollingDelay
 	return c
