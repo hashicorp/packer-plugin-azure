@@ -30,6 +30,13 @@ func Test_ClientConfig_RequiredParametersSet(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "client_id, with no client_secret or subscription_id should enable MSI auth",
+			config: Config{
+				ClientID: "fake-id",
+			},
+			wantErr: false,
+		},
+		{
 			name: "use_azure_cli_auth will trigger Azure CLI auth",
 			config: Config{
 				UseAzureCLIAuth: true,
