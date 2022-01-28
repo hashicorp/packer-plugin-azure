@@ -250,7 +250,6 @@ func (c Config) UseCLI() bool {
 
 func (c Config) UseMSI() bool {
 	return c.SubscriptionID == "" &&
-		c.ClientID == "" &&
 		c.ClientSecret == "" &&
 		c.ClientJWT == "" &&
 		c.ClientCertPath == "" &&
@@ -290,7 +289,7 @@ func (c Config) GetServicePrincipalToken(
 		auth = NewCliOAuthTokenProvider(*c.cloudEnvironment, say, c.TenantID)
 	case authTypeMSI:
 		say("Getting tokens using Managed Identity for Azure")
-		auth = NewMSIOAuthTokenProvider(*c.cloudEnvironment)
+		auth = NewMSIOAuthTokenProvider(*c.cloudEnvironment, c.ClientID)
 	case authTypeClientSecret:
 		say("Getting tokens using client secret")
 		auth = NewSecretOAuthTokenProvider(*c.cloudEnvironment, c.ClientID, c.ClientSecret, c.TenantID)
