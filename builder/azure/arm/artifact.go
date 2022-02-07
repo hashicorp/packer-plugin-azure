@@ -8,6 +8,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	registryimage "github.com/hashicorp/packer-plugin-sdk/packer/registry/image"
 )
 
@@ -272,12 +273,14 @@ func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
 		labels["managed_image_name"] = a.ManagedImageName
 
 		if a.ManagedImageSharedImageGalleryId != "" {
-			labels["sig_name"] = generatedData["SharedImageGalleryName"]
-			labels["sig_resource_group"] = generatedData["SharedImageGalleryResourceGroup"]
-			labels["sig_image_name"] = generatedData["SharedImageGalleryImageName"]
-			labels["sig_image_version"] = generatedData["SharedImageGalleryImageVersion"]
+			//subscription := a.State(constants.ArmManagedImageSubscription).(string)
+			//storageAccountType := state.Get(constants.ArmManagedImageSharedGalleryImageVersionStorageAccountType).(string)
 
-			if rr, ok := generatedData["SharedImageGalleryReplicationRegions"].([]string); ok {
+			labels["sig_resource_group"] = a.State(constants.ArmManagedImageSigPublishResourceGroup).(string)
+			labels["sig_name"] = a.State(constants.ArmManagedImageSharedGalleryName).(string)
+			labels["sig_image_name"] = a.State(constants.ArmManagedImageSharedGalleryImageName).(string)
+			labels["sig_image_version"] = a.State(constants.ArmManagedImageSharedGalleryImageVersion).(string)
+			if rr, ok := a.State(constants.ArmManagedImageSharedGalleryReplicationRegions).([]string); ok {
 				labels["sig_replicated_regions"] = strings.Join(rr, ", ")
 			}
 		}

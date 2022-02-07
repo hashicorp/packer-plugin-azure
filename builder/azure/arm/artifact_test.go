@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
+	registryimage "github.com/hashicorp/packer-plugin-sdk/packer/registry/image"
+	"github.com/mitchellh/mapstructure"
 )
 
 func getFakeSasUrl(name string) string {
@@ -225,6 +229,84 @@ ManagedImageSharedImageGalleryId: fakeSharedImageGallery
 	result := artifact.String()
 	if result != expected {
 		t.Fatalf("bad: %s", result)
+	}
+}
+
+func TestArtifactIDManagedImageWithSharedImageGallery_PARMetadata(t *testing.T) {
+
+	fakeGalleryResourceGroup := "fakeResourceGroup"
+	fakeGalleryName := "fakeName"
+	fakeGalleryImageName := "fakeGalleryImageName"
+	fakeGalleryImageVersion := "fakeGalleryImageVersion"
+	fakeGalleryReplicationRegions := []string{"fake-region-1", "fake-region-2"}
+
+	stateData := map[string]interface{}{
+		// Previous Artifact code base used these state key from generated_data; providing duplicate info with empty strings.
+		"generated_data": map[string]interface{}{
+			"SharedImageGalleryName":               "",
+			"SharedImageGalleryImageName":          "",
+			"SharedImageGalleryImageVersion":       "",
+			"SharedImageGalleryResourceGroup":      "",
+			"SharedImageGalleryReplicationRegions": []string{},
+		},
+	}
+
+	stateData[constants.ArmManagedImageSigPublishResourceGroup] = fakeGalleryResourceGroup
+	stateData[constants.ArmManagedImageSharedGalleryName] = fakeGalleryName
+	stateData[constants.ArmManagedImageSharedGalleryImageName] = fakeGalleryImageName
+	stateData[constants.ArmManagedImageSharedGalleryImageVersion] = fakeGalleryImageVersion
+	stateData[constants.ArmManagedImageSharedGalleryReplicationRegions] = fakeGalleryReplicationRegions
+
+	artifact, err := NewManagedImageArtifactWithSIGAsDestination("Linux", "fakeResourceGroup", "fakeName", "fakeLocation", "fakeID", "fakeOsDiskSnapshotName", "fakeDataDiskSnapshotPrefix", "fakeSharedImageGallery", stateData)
+	if err != nil {
+		t.Fatalf("err=%s", err)
+	}
+
+	expected := `Azure.ResourceManagement.VMImage:
+
+OSType: Linux
+ManagedImageResourceGroupName: fakeResourceGroup
+ManagedImageName: fakeName
+ManagedImageId: fakeID
+ManagedImageLocation: fakeLocation
+ManagedImageOSDiskSnapshotName: fakeOsDiskSnapshotName
+ManagedImageDataDiskSnapshotPrefix: fakeDataDiskSnapshotPrefix
+ManagedImageSharedImageGalleryId: fakeSharedImageGallery
+`
+
+	result := artifact.String()
+	if result != expected {
+		t.Fatalf("bad: %s", result)
+	}
+
+	hcpImage := artifact.State(registryimage.ArtifactStateURI)
+	if hcpImage == nil {
+		t.Fatalf("Bad: HCP Packer registry image data was nil")
+	}
+
+	var image registryimage.Image
+	err = mapstructure.Decode(hcpImage, &image)
+	if err != nil {
+		t.Errorf("Bad: unexpected error when trying to decode state into registryimage.Image %v", err)
+	}
+
+	expectedSIGLabels := []string{
+		"sig_resource_group",
+		"sig_name",
+		"sig_image_name",
+		"sig_image_version",
+		"sig_replicated_regions",
+	}
+	for _, key := range expectedSIGLabels {
+		key := key
+		v, ok := image.Labels[key]
+		if !ok {
+			t.Errorf("expected labels to have %q but no entry was found", key)
+		}
+		if v == "" {
+			t.Errorf("expected labels[%q] to have a non-empty string value, but got %#v", key, v)
+		}
+
 	}
 }
 

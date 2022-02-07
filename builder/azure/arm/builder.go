@@ -327,17 +327,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if b.config.isManagedImage() {
 		managedImageID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/images/%s",
 			b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName, b.config.ManagedImageName)
+
 		if b.config.SharedGalleryDestination.SigDestinationGalleryName != "" {
-			return NewManagedImageArtifactWithSIGAsDestination(b.config.OSType,
-				b.config.ManagedImageResourceGroupName,
-				b.config.ManagedImageName,
-				b.config.Location,
-				managedImageID,
-				b.config.ManagedImageOSDiskSnapshotName,
-				b.config.ManagedImageDataDiskSnapshotPrefix,
-				b.stateBag.Get(constants.ArmManagedImageSharedGalleryId).(string),
-				stateData)
-		} else if template, ok := b.stateBag.GetOk(constants.ArmCaptureTemplate); ok {
+			return b.managedImageArtifactWithSIGAsDestination(managedImageID, stateData)
+		}
+
+		if template, ok := b.stateBag.GetOk(constants.ArmCaptureTemplate); ok {
 			return NewManagedImageArtifact(b.config.OSType,
 				b.config.ManagedImageResourceGroupName,
 				b.config.ManagedImageName,
@@ -350,6 +345,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				template.(*CaptureTemplate),
 				getSasUrlFunc)
 		}
+
 		return NewManagedImageArtifact(b.config.OSType,
 			b.config.ManagedImageResourceGroupName,
 			b.config.ManagedImageName,
@@ -361,7 +357,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			b.stateBag.Get(constants.ArmKeepOSDisk).(bool),
 			nil,
 			getSasUrlFunc)
-	} else if template, ok := b.stateBag.GetOk(constants.ArmCaptureTemplate); ok {
+	}
+
+	if template, ok := b.stateBag.GetOk(constants.ArmCaptureTemplate); ok {
 		return NewArtifact(
 			template.(*CaptureTemplate),
 			getSasUrlFunc,
@@ -369,9 +367,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			stateData)
 	}
 
-	return &Artifact{
-		StateData: stateData,
-	}, nil
+	return &Artifact{StateData: stateData}, nil
 }
 
 func (b *Builder) writeSSHPrivateKey(ui packersdk.Ui, debugKeyPath string) {
@@ -511,4 +507,23 @@ func getObjectIdFromToken(ui packersdk.Ui, token *adal.ServicePrincipalToken) st
 
 func normalizeAzureRegion(name string) string {
 	return strings.ToLower(strings.Replace(name, " ", "", -1))
+}
+
+func (b *Builder) managedImageArtifactWithSIGAsDestination(managedImageID string, stateData map[string]interface{}) (*Artifact, error) {
+
+	stateData[constants.ArmManagedImageSigPublishResourceGroup] = b.stateBag.Get(constants.ArmManagedImageSigPublishResourceGroup).(string)
+	stateData[constants.ArmManagedImageSharedGalleryName] = b.stateBag.Get(constants.ArmManagedImageSharedGalleryName).(string)
+	stateData[constants.ArmManagedImageSharedGalleryImageName] = b.stateBag.Get(constants.ArmManagedImageSharedGalleryImageName).(string)
+	stateData[constants.ArmManagedImageSharedGalleryImageVersion] = b.stateBag.Get(constants.ArmManagedImageSharedGalleryImageVersion).(string)
+	stateData[constants.ArmManagedImageSharedGalleryReplicationRegions] = b.stateBag.Get(constants.ArmManagedImageSharedGalleryReplicationRegions).([]string)
+
+	return NewManagedImageArtifactWithSIGAsDestination(b.config.OSType,
+		b.config.ManagedImageResourceGroupName,
+		b.config.ManagedImageName,
+		b.config.Location,
+		managedImageID,
+		b.config.ManagedImageOSDiskSnapshotName,
+		b.config.ManagedImageDataDiskSnapshotPrefix,
+		b.stateBag.Get(constants.ArmManagedImageSharedGalleryId).(string),
+		stateData)
 }

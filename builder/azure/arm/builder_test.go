@@ -65,3 +65,65 @@ func TestStateBagShouldPoluateExpectedTags(t *testing.T) {
 	}
 
 }
+
+func TestBuildSharedImageGalleryArtifact_withState(t *testing.T) {
+
+	var testSubject Builder
+	_, _, err := testSubject.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("failed to prepare: %s", err)
+	}
+
+	// During the publishing state to a shared image gallery this information is added to the builder StateBag.
+	// Adding it to the test to mimic a successful SIG publishing step.
+	testSubject.stateBag.Put(constants.ArmManagedImageSigPublishResourceGroup, "fakeGalleryResourceGroup")
+	testSubject.stateBag.Put(constants.ArmManagedImageSharedGalleryName, "faleGalleryName")
+	testSubject.stateBag.Put(constants.ArmManagedImageSharedGalleryImageName, "fakeGalleryImageName")
+	testSubject.stateBag.Put(constants.ArmManagedImageSharedGalleryImageVersion, "fakeGalleryImageVersion")
+	testSubject.stateBag.Put(constants.ArmManagedImageSharedGalleryReplicationRegions, []string{"fake-region-1", "fake-region-2"})
+	testSubject.stateBag.Put(constants.ArmManagedImageSharedGalleryId, "fakeSharedImageGallery")
+
+	testSubject.config.ManagedImageResourceGroupName = "fakeResourceGroup"
+	testSubject.config.ManagedImageName = "fakeName"
+	testSubject.config.Location = "fakeLocation"
+	testSubject.config.ManagedImageOSDiskSnapshotName = "fakeOsDiskSnapshotName"
+	testSubject.config.ManagedImageDataDiskSnapshotPrefix = "fakeDataDiskSnapshotPrefix"
+
+	artifact, err := testSubject.managedImageArtifactWithSIGAsDestination("fakeID", generatedData())
+	if err != nil {
+		t.Fatalf("err=%s", err)
+	}
+
+	expected := `Azure.ResourceManagement.VMImage:
+
+OSType: Linux
+ManagedImageResourceGroupName: fakeResourceGroup
+ManagedImageName: fakeName
+ManagedImageId: fakeID
+ManagedImageLocation: fakeLocation
+ManagedImageOSDiskSnapshotName: fakeOsDiskSnapshotName
+ManagedImageDataDiskSnapshotPrefix: fakeDataDiskSnapshotPrefix
+ManagedImageSharedImageGalleryId: fakeSharedImageGallery
+`
+
+	result := artifact.String()
+	if result != expected {
+		t.Fatalf("bad: %s", result)
+	}
+
+	if v, ok := artifact.State(constants.ArmManagedImageSigPublishResourceGroup).(string); !ok {
+		t.Errorf("expected artifact.State(%s) to return a value for the expected type but it returned %#v", constants.ArmManagedImageSigPublishResourceGroup, v)
+	}
+	if v, ok := artifact.State(constants.ArmManagedImageSharedGalleryName).(string); !ok {
+		t.Errorf("expected artifact.State(%s) to return a value for the expected type but it returned %#v", constants.ArmManagedImageSharedGalleryName, v)
+	}
+	if v, ok := artifact.State(constants.ArmManagedImageSharedGalleryImageName).(string); !ok {
+		t.Errorf("expected artifact.State(%s) to return a value for the expected type but it returned %#v", constants.ArmManagedImageSharedGalleryImageName, v)
+	}
+	if v, ok := artifact.State(constants.ArmManagedImageSharedGalleryImageVersion).(string); !ok {
+		t.Errorf("expected artifact.State(%s) to return a value for the expected type but it returned %#v", constants.ArmManagedImageSharedGalleryImageVersion, v)
+	}
+	if v, ok := artifact.State(constants.ArmManagedImageSharedGalleryReplicationRegions).([]string); !ok {
+		t.Errorf("expected artifact.State(%s) to return a value for the expected type but it returned %#v", constants.ArmManagedImageSharedGalleryReplicationRegions, v)
+	}
+}
