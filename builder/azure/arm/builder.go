@@ -511,11 +511,21 @@ func normalizeAzureRegion(name string) string {
 
 func (b *Builder) managedImageArtifactWithSIGAsDestination(managedImageID string, stateData map[string]interface{}) (*Artifact, error) {
 
-	stateData[constants.ArmManagedImageSigPublishResourceGroup] = b.stateBag.Get(constants.ArmManagedImageSigPublishResourceGroup).(string)
-	stateData[constants.ArmManagedImageSharedGalleryName] = b.stateBag.Get(constants.ArmManagedImageSharedGalleryName).(string)
-	stateData[constants.ArmManagedImageSharedGalleryImageName] = b.stateBag.Get(constants.ArmManagedImageSharedGalleryImageName).(string)
-	stateData[constants.ArmManagedImageSharedGalleryImageVersion] = b.stateBag.Get(constants.ArmManagedImageSharedGalleryImageVersion).(string)
-	stateData[constants.ArmManagedImageSharedGalleryReplicationRegions] = b.stateBag.Get(constants.ArmManagedImageSharedGalleryReplicationRegions).([]string)
+	sigDestinationStateKeys := []string{
+		constants.ArmManagedImageSigPublishResourceGroup,
+		constants.ArmManagedImageSharedGalleryName,
+		constants.ArmManagedImageSharedGalleryImageName,
+		constants.ArmManagedImageSharedGalleryImageVersion,
+		constants.ArmManagedImageSharedGalleryReplicationRegions,
+	}
+
+	for _, key := range sigDestinationStateKeys {
+		v, ok := b.stateBag.GetOk(key)
+		if !ok {
+			continue
+		}
+		stateData[key] = v
+	}
 
 	return NewManagedImageArtifactWithSIGAsDestination(b.config.OSType,
 		b.config.ManagedImageResourceGroupName,

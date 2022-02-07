@@ -273,9 +273,6 @@ func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
 		labels["managed_image_name"] = a.ManagedImageName
 
 		if a.ManagedImageSharedImageGalleryId != "" {
-			//subscription := a.State(constants.ArmManagedImageSubscription).(string)
-			//storageAccountType := state.Get(constants.ArmManagedImageSharedGalleryImageVersionStorageAccountType).(string)
-
 			labels["sig_resource_group"] = a.State(constants.ArmManagedImageSigPublishResourceGroup).(string)
 			labels["sig_name"] = a.State(constants.ArmManagedImageSharedGalleryName).(string)
 			labels["sig_image_name"] = a.State(constants.ArmManagedImageSharedGalleryImageName).(string)
