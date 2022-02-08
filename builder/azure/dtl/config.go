@@ -279,8 +279,8 @@ type Config struct {
 	// DisallowPublicIPAddress - Indicates whether the virtual machine is to be created without a public IP address.
 	DisallowPublicIP bool `mapstructure:"disallow_public_ip" required:"false"`
 
-	// SysPrepDone - Indicates whether SysPrep is to be requested to the DTL or has been already applied.
-	SysPrepDone bool `mapstructure:"sysprep_done" required:"false"`
+	// SkipSysprep - Indicates whether SysPrep is to be requested to the DTL or if it should be skipped because it has already been applied. Defaults to false.
+	SkipSysprep bool `mapstructure:"skip_sysprep" required:"false"`
 
 	// Runtime Values
 	UserName                string `mapstructure-to-hcl2:",skip"`
