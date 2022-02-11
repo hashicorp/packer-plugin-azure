@@ -7,11 +7,12 @@ import (
 
 // for managed identity auth
 type msiOAuthTokenProvider struct {
-	env azure.Environment
+	env      azure.Environment
+	ClientID string
 }
 
-func NewMSIOAuthTokenProvider(env azure.Environment) oAuthTokenProvider {
-	return &msiOAuthTokenProvider{env}
+func NewMSIOAuthTokenProvider(env azure.Environment, ClientID string) oAuthTokenProvider {
+	return &msiOAuthTokenProvider{env, ClientID}
 }
 
 func (tp *msiOAuthTokenProvider) getServicePrincipalToken() (*adal.ServicePrincipalToken, error) {
@@ -19,5 +20,7 @@ func (tp *msiOAuthTokenProvider) getServicePrincipalToken() (*adal.ServicePrinci
 }
 
 func (tp *msiOAuthTokenProvider) getServicePrincipalTokenWithResource(resource string) (*adal.ServicePrincipalToken, error) {
-	return adal.NewServicePrincipalTokenFromMSI("http://169.254.169.254/metadata/identity/oauth2/token", resource)
+	return adal.NewServicePrincipalTokenFromManagedIdentity(resource, &adal.ManagedIdentityOptions{
+		ClientID: tp.ClientID,
+	})
 }
