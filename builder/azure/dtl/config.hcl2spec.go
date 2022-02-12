@@ -89,7 +89,7 @@ type FlatConfig struct {
 	DtlArtifacts                        []FlatDtlArtifact                  `mapstructure:"dtl_artifacts" cty:"dtl_artifacts" hcl:"dtl_artifacts"`
 	VMName                              *string                            `mapstructure:"vm_name" cty:"vm_name" hcl:"vm_name"`
 	DisallowPublicIP                    *bool                              `mapstructure:"disallow_public_ip" required:"false" cty:"disallow_public_ip" hcl:"disallow_public_ip"`
-	SysPrepDone                         *bool                              `mapstructure:"sysprep_done" required:"false" cty:"sysprep_done" hcl:"sysprep_done"`
+	SkipSysprep                         *bool                              `mapstructure:"skip_sysprep" required:"false" cty:"skip_sysprep" hcl:"skip_sysprep"`
 	Password                            *string                            `cty:"password" hcl:"password"`
 	Type                                *string                            `mapstructure:"communicator" cty:"communicator" hcl:"communicator"`
 	PauseBeforeConnect                  *string                            `mapstructure:"pause_before_connecting" cty:"pause_before_connecting" hcl:"pause_before_connecting"`
@@ -206,7 +206,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"dtl_artifacts":                            &hcldec.BlockListSpec{TypeName: "dtl_artifacts", Nested: hcldec.ObjectSpec((*FlatDtlArtifact)(nil).HCL2Spec())},
 		"vm_name":                                  &hcldec.AttrSpec{Name: "vm_name", Type: cty.String, Required: false},
 		"disallow_public_ip":                       &hcldec.AttrSpec{Name: "disallow_public_ip", Type: cty.Bool, Required: false},
-		"sysprep_done":                             &hcldec.AttrSpec{Name: "sysprep_done", Type: cty.Bool, Required: false},
+		"skip_sysprep":                             &hcldec.AttrSpec{Name: "skip_sysprep", Type: cty.Bool, Required: false},
 		"password":                                 &hcldec.AttrSpec{Name: "password", Type: cty.String, Required: false},
 		"communicator":                             &hcldec.AttrSpec{Name: "communicator", Type: cty.String, Required: false},
 		"pause_before_connecting":                  &hcldec.AttrSpec{Name: "pause_before_connecting", Type: cty.String, Required: false},
