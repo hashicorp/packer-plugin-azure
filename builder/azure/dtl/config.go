@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/masterzen/winrm"
 
+	azcommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 
@@ -278,6 +279,9 @@ type Config struct {
 	// DisallowPublicIPAddress - Indicates whether the virtual machine is to be created without a public IP address.
 	DisallowPublicIP bool `mapstructure:"disallow_public_ip" required:"false"`
 
+	// SkipSysprep - Indicates whether SysPrep is to be requested to the DTL or if it should be skipped because it has already been applied. Defaults to false.
+	SkipSysprep bool `mapstructure:"skip_sysprep" required:"false"`
+
 	// Runtime Values
 	UserName                string `mapstructure-to-hcl2:",skip"`
 	Password                string
@@ -385,42 +389,44 @@ func (c *Config) createCertificate() (string, string, error) {
 	return base64.StdEncoding.EncodeToString(bytes), certifcatePassowrd, nil
 }
 
-func newConfig(raws ...interface{}) (*Config, []string, error) {
-	var c Config
-	c.ctx.Funcs = TemplateFuncs
-	err := config.Decode(&c, &config.DecodeOpts{
+func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
+	c.ctx.Funcs = azcommon.TemplateFuncs
+	err := config.Decode(c, &config.DecodeOpts{
 		PluginType:         BuilderId,
 		Interpolate:        true,
 		InterpolateContext: &c.ctx,
 	}, raws...)
 
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	provideDefaultValues(&c)
-	setRuntimeValues(&c)
-	setUserNamePassword(&c)
-	err = c.ClientConfig.SetDefaultValues()
+	err = provideDefaultValues(c)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
+	}
+
+	setRuntimeValues(c)
+	err = setUserNamePassword(c)
+	if err != nil {
+		return nil, err
 	}
 
 	// NOTE: if the user did not specify a communicator, then default to both
 	// SSH and WinRM.  This is for backwards compatibility because the code did
 	// not specifically force the user to set a communicator.
 	if c.Comm.Type == "" || strings.EqualFold(c.Comm.Type, "ssh") {
-		err = setSshValues(&c)
+		err = setSshValues(c)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
 	//For DTL, communication is done by installing Mandatory public artifact "windows-winrm"
 	if c.Comm.Type == "" || strings.EqualFold(c.Comm.Type, "winrm") {
-		err = setWinRMCertificate(&c)
+		err = setWinRMCertificate(c)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
@@ -429,13 +435,13 @@ func newConfig(raws ...interface{}) (*Config, []string, error) {
 
 	c.ClientConfig.Validate(errs)
 
-	assertRequiredParametersSet(&c, errs)
-	assertTagProperties(&c, errs)
+	assertRequiredParametersSet(c, errs)
+	assertTagProperties(c, errs)
 	if errs != nil && len(errs.Errors) > 0 {
-		return nil, nil, errs
+		return nil, errs
 	}
 
-	return &c, nil, nil
+	return nil, nil
 }
 
 func setSshValues(c *Config) error {
@@ -510,11 +516,7 @@ func setRuntimeValues(c *Config) {
 	c.tmpKeyVaultName = tempName.KeyVaultName
 }
 
-func setUserNamePassword(c *Config) {
-	if c.Comm.SSHUsername == "" {
-		c.Comm.SSHUsername = DefaultUserName
-	}
-
+func setUserNamePassword(c *Config) error {
 	c.UserName = c.Comm.SSHUsername
 
 	if c.Comm.SSHPassword != "" {
@@ -522,9 +524,11 @@ func setUserNamePassword(c *Config) {
 	} else {
 		c.Password = c.tmpAdminPassword
 	}
+
+	return nil
 }
 
-func provideDefaultValues(c *Config) {
+func provideDefaultValues(c *Config) error {
 	if c.VMSize == "" {
 		c.VMSize = DefaultVMSize
 	}
@@ -548,6 +552,13 @@ func provideDefaultValues(c *Config) {
 	if c.CustomImageCaptureTimeout == 0 {
 		c.CustomImageCaptureTimeout = DefaultCustomImageCaptureTimeout
 	}
+
+	if c.Comm.SSHUsername == "" {
+		c.Comm.SSHUsername = DefaultUserName
+	}
+
+	err := c.ClientConfig.SetDefaultValues()
+	return err
 }
 
 func assertTagProperties(c *Config, errs *packersdk.MultiError) {

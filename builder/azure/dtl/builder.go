@@ -24,7 +24,7 @@ import (
 )
 
 type Builder struct {
-	config   *Config
+	config   Config
 	stateBag multistep.StateBag
 	runner   multistep.Runner
 }
@@ -37,12 +37,10 @@ const (
 func (b *Builder) ConfigSpec() hcldec.ObjectSpec { return b.config.FlatMapstructure().HCL2Spec() }
 
 func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
-	c, warnings, errs := newConfig(raws...)
+	warnings, errs := b.config.Prepare(raws...)
 	if errs != nil {
 		return nil, warnings, errs
 	}
-
-	b.config = c
 
 	b.stateBag = new(multistep.BasicStateBag)
 	b.configureStateBag(b.stateBag)
@@ -90,7 +88,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	}
 
 	resolver := newResourceResolver(azureClient)
-	if err := resolver.Resolve(b.config); err != nil {
+	if err := resolver.Resolve(&b.config); err != nil {
 		return nil, err
 	}
 	if b.config.ClientConfig.ObjectID == "" {
@@ -182,7 +180,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	if b.config.OSType == constants.Target_Linux {
 		steps = []multistep.Step{
-			NewStepDeployTemplate(azureClient, ui, b.config, deploymentName, GetVirtualMachineDeployment),
+			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			&communicator.StepConnectSSH{
 				Config:    &b.config.Comm,
 				Host:      lin.SSHHost,
@@ -192,14 +190,14 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			&commonsteps.StepCleanupTempKeys{
 				Comm: &b.config.Comm,
 			},
-			NewStepPowerOffCompute(azureClient, ui, b.config),
-			NewStepCaptureImage(azureClient, ui, b.config),
-			NewStepPublishToSharedImageGallery(azureClient, ui, b.config),
-			NewStepDeleteVirtualMachine(azureClient, ui, b.config),
+			NewStepPowerOffCompute(azureClient, ui, &b.config),
+			NewStepCaptureImage(azureClient, ui, &b.config),
+			NewStepPublishToSharedImageGallery(azureClient, ui, &b.config),
+			NewStepDeleteVirtualMachine(azureClient, ui, &b.config),
 		}
 	} else if b.config.OSType == constants.Target_Windows {
 		steps = []multistep.Step{
-			NewStepDeployTemplate(azureClient, ui, b.config, deploymentName, GetVirtualMachineDeployment),
+			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			&StepSaveWinRMPassword{
 				Password:  b.config.tmpAdminPassword,
 				BuildName: b.config.PackerBuildName,
@@ -217,10 +215,10 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				},
 			},
 			&commonsteps.StepProvision{},
-			NewStepPowerOffCompute(azureClient, ui, b.config),
-			NewStepCaptureImage(azureClient, ui, b.config),
-			NewStepPublishToSharedImageGallery(azureClient, ui, b.config),
-			NewStepDeleteVirtualMachine(azureClient, ui, b.config),
+			NewStepPowerOffCompute(azureClient, ui, &b.config),
+			NewStepCaptureImage(azureClient, ui, &b.config),
+			NewStepPublishToSharedImageGallery(azureClient, ui, &b.config),
+			NewStepDeleteVirtualMachine(azureClient, ui, &b.config),
 		}
 	} else {
 		return nil, fmt.Errorf("Builder does not support the os_type '%s'", b.config.OSType)

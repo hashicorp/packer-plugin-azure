@@ -25,47 +25,54 @@ var requiredConfigValues = []string{
 }
 
 func TestConfigShouldProvideReasonableDefaultValues(t *testing.T) {
-	c, _, err := newConfig(getDtlBuilderConfiguration(), getPackerConfiguration())
-
+	config := Config{}
+	_, err := config.Prepare(getDtlBuilderConfiguration(), getPackerConfiguration())
 	if err != nil {
-		t.Error("Expected configuration creation to succeed, but it failed!\n")
-		t.Fatalf(" errors: %s\n", err)
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
 	}
 
-	if c.UserName == "" {
+	if config.UserName == "" {
 		t.Error("Expected 'UserName' to be populated, but it was empty!")
 	}
 
-	if c.VMSize == "" {
+	if config.VMSize == "" {
 		t.Error("Expected 'VMSize' to be populated, but it was empty!")
 	}
 
-	if c.ClientConfig.ObjectID != "" {
-		t.Errorf("Expected 'ObjectID' to be nil, but it was '%s'!", c.ClientConfig.ObjectID)
+	if config.ClientConfig.ObjectID != "" {
+		t.Errorf("Expected 'ObjectID' to be nil, but it was '%s'!", config.ClientConfig.ObjectID)
 	}
 
-	if c.managedImageStorageAccountType == "" {
+	if config.managedImageStorageAccountType == "" {
 		t.Errorf("Expected 'managedImageStorageAccountType' to be populated, but it was empty!")
 	}
 
-	if c.diskCachingType == "" {
+	if config.diskCachingType == "" {
 		t.Errorf("Expected 'diskCachingType' to be populated, but it was empty!")
 	}
 }
 
 func TestConfigShouldDefaultVMSizeToStandardA1(t *testing.T) {
-	c, _, _ := newConfig(getDtlBuilderConfiguration(), getPackerConfiguration())
+	config := Config{}
+	_, err := config.Prepare(getDtlBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
+	}
 
-	if c.VMSize != "Standard_A1" {
-		t.Errorf("Expected 'VMSize' to default to 'Standard_A1', but got '%s'.", c.VMSize)
+	if config.VMSize != "Standard_A1" {
+		t.Errorf("Expected 'VMSize' to default to 'Standard_A1', but got '%s'.", config.VMSize)
 	}
 }
 
 func TestConfigShouldDefaultImageVersionToLatest(t *testing.T) {
-	c, _, _ := newConfig(getDtlBuilderConfiguration(), getPackerConfiguration())
+	config := Config{}
+	_, err := config.Prepare(getDtlBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
+	}
 
-	if c.ImageVersion != "latest" {
-		t.Errorf("Expected 'ImageVersion' to default to 'latest', but got '%s'.", c.ImageVersion)
+	if config.ImageVersion != "latest" {
+		t.Errorf("Expected 'ImageVersion' to default to 'latest', but got '%s'.", config.ImageVersion)
 	}
 }
 
@@ -73,7 +80,7 @@ func TestConfigShouldDefaultImageVersionToLatest(t *testing.T) {
 // a virtual network's resource group, or to help with disambiguation.  The value should
 // only be set if virtual_network_name was set.
 func TestConfigVirtualNetworkResourceGroupNameMustBeSetWithVirtualNetworkName(t *testing.T) {
-	config := map[string]string{
+	config_map := map[string]string{
 		"capture_name_prefix":                 "ignore",
 		"capture_container_name":              "ignore",
 		"location":                            "ignore",
@@ -84,7 +91,8 @@ func TestConfigVirtualNetworkResourceGroupNameMustBeSetWithVirtualNetworkName(t 
 		"virtual_network_resource_group_name": "MyVirtualNetworkRG",
 	}
 
-	_, _, err := newConfig(config, getPackerConfiguration())
+	config := Config{}
+	_, err := config.Prepare(config_map, getPackerConfiguration())
 	if err == nil {
 		t.Error("Expected Config to reject virtual_network_resource_group_name, if virtual_network_name is not set.")
 	}
@@ -94,7 +102,7 @@ func TestConfigVirtualNetworkResourceGroupNameMustBeSetWithVirtualNetworkName(t 
 // a virtual network subnet's name, or to help with disambiguation.  The value should
 // only be set if virtual_network_name was set.
 func TestConfigVirtualNetworkSubnetNameMustBeSetWithVirtualNetworkName(t *testing.T) {
-	config := map[string]string{
+	config_map := map[string]string{
 		"capture_name_prefix":         "ignore",
 		"capture_container_name":      "ignore",
 		"location":                    "ignore",
@@ -105,46 +113,56 @@ func TestConfigVirtualNetworkSubnetNameMustBeSetWithVirtualNetworkName(t *testin
 		"virtual_network_subnet_name": "MyVirtualNetworkRG",
 	}
 
-	_, _, err := newConfig(config, getPackerConfiguration())
+	config := Config{}
+	_, err := config.Prepare(config_map, getPackerConfiguration())
 	if err == nil {
 		t.Error("Expected Config to reject virtual_network_subnet_name, if virtual_network_name is not set.")
 	}
 }
 
 func TestSystemShouldDefineRuntimeValues(t *testing.T) {
-	c, _, _ := newConfig(getDtlBuilderConfiguration(), getPackerConfiguration())
-
-	if c.Password == "" {
-		t.Errorf("Expected Password to not be empty, but it was '%s'!", c.Password)
+	config := Config{}
+	_, err := config.Prepare(getDtlBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
 	}
 
-	if c.tmpComputeName == "" {
-		t.Errorf("Expected tmpComputeName to not be empty, but it was '%s'!", c.tmpComputeName)
+	if config.Password == "" {
+		t.Errorf("Expected Password to not be empty, but it was '%s'!", config.Password)
 	}
 
-	if c.tmpDeploymentName == "" {
-		t.Errorf("Expected tmpDeploymentName to not be empty, but it was '%s'!", c.tmpDeploymentName)
+	if config.tmpComputeName == "" {
+		t.Errorf("Expected tmpComputeName to not be empty, but it was '%s'!", config.tmpComputeName)
 	}
 
-	if c.tmpResourceGroupName == "" {
-		t.Errorf("Expected tmpResourceGroupName to not be empty, but it was '%s'!", c.tmpResourceGroupName)
+	if config.tmpDeploymentName == "" {
+		t.Errorf("Expected tmpDeploymentName to not be empty, but it was '%s'!", config.tmpDeploymentName)
 	}
 
-	if c.tmpOSDiskName == "" {
-		t.Errorf("Expected tmpOSDiskName to not be empty, but it was '%s'!", c.tmpOSDiskName)
+	if config.tmpResourceGroupName == "" {
+		t.Errorf("Expected tmpResourceGroupName to not be empty, but it was '%s'!", config.tmpResourceGroupName)
+	}
+
+	if config.tmpOSDiskName == "" {
+		t.Errorf("Expected tmpOSDiskName to not be empty, but it was '%s'!", config.tmpOSDiskName)
 	}
 }
 
 func TestConfigShouldTransformToVirtualMachineCaptureParameters(t *testing.T) {
-	c, _, _ := newConfig(getDtlBuilderConfiguration(), getPackerConfiguration())
-	parameters := c.toVirtualMachineCaptureParameters()
-
-	if *parameters.DestinationContainerName != c.CaptureContainerName {
-		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", *parameters.DestinationContainerName, c.CaptureContainerName)
+	config := Config{}
+	_, err := config.Prepare(getDtlBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
 	}
 
-	if *parameters.VhdPrefix != c.CaptureNamePrefix {
-		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", *parameters.VhdPrefix, c.CaptureNamePrefix)
+	parameters := config.toVirtualMachineCaptureParameters()
+
+	if *parameters.DestinationContainerName != config.CaptureContainerName {
+		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", *parameters.DestinationContainerName, config.CaptureContainerName)
+	}
+
+	if *parameters.VhdPrefix != config.CaptureNamePrefix {
+		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", *parameters.VhdPrefix, config.CaptureNamePrefix)
 	}
 
 	if *parameters.OverwriteVhds != false {
@@ -153,42 +171,40 @@ func TestConfigShouldTransformToVirtualMachineCaptureParameters(t *testing.T) {
 }
 
 func TestConfigShouldSupportPackersConfigElements(t *testing.T) {
-	c, _, err := newConfig(
-		getDtlBuilderConfiguration(),
-		getPackerConfiguration(),
-		getPackerCommunicatorConfiguration())
-
+	config := Config{}
+	_, err := config.Prepare(getDtlBuilderConfiguration(), getPackerConfiguration(), getPackerCommunicatorConfiguration())
 	if err != nil {
-		t.Fatal(err)
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
 	}
 
-	if c.Comm.SSHTimeout != 1*time.Hour {
-		t.Errorf("Expected Comm.SSHTimeout to be a duration of an hour, but got '%s' instead.", c.Comm.SSHTimeout)
+	if config.Comm.SSHTimeout != 1*time.Hour {
+		t.Errorf("Expected Comm.SSHTimeout to be a duration of an hour, but got '%s' instead.", config.Comm.SSHTimeout)
 	}
 
-	if c.Comm.WinRMTimeout != 2*time.Hour {
-		t.Errorf("Expected Comm.WinRMTimeout to be a durationof two hours, but got '%s' instead.", c.Comm.WinRMTimeout)
+	if config.Comm.WinRMTimeout != 2*time.Hour {
+		t.Errorf("Expected Comm.WinRMTimeout to be a durationof two hours, but got '%s' instead.", config.Comm.WinRMTimeout)
 	}
 }
 
 func TestWinRMConfigShouldSetRoundTripDecorator(t *testing.T) {
-	config := getDtlBuilderConfiguration()
-	config["communicator"] = "winrm"
-	config["winrm_username"] = "username"
-	config["winrm_password"] = "password"
+	config_dtl := getDtlBuilderConfiguration()
+	config_dtl["communicator"] = "winrm"
+	config_dtl["winrm_username"] = "username"
+	config_dtl["winrm_password"] = "password"
 
-	c, _, err := newConfig(config, getPackerConfiguration())
+	config := Config{}
+	_, err := config.Prepare(config_dtl, getPackerConfiguration())
 	if err != nil {
-		t.Fatal(err)
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
 	}
 
-	if c.Comm.WinRMTransportDecorator == nil {
+	if config.Comm.WinRMTransportDecorator == nil {
 		t.Error("Expected WinRMTransportDecorator to be set, but it was nil")
 	}
 }
 
 func TestUserDeviceLoginIsEnabledForLinux(t *testing.T) {
-	config := map[string]string{
+	config_map := map[string]string{
 		"capture_name_prefix":      "ignore",
 		"capture_container_name":   "ignore",
 		"image_offer":              "ignore",
@@ -202,14 +218,15 @@ func TestUserDeviceLoginIsEnabledForLinux(t *testing.T) {
 		"lab_virtual_network_name": "ignore",
 	}
 
-	_, _, err := newConfig(config, getPackerConfiguration())
+	config := Config{}
+	_, err := config.Prepare(config_map, getPackerConfiguration())
 	if err != nil {
 		t.Fatalf("failed to use device login for Linux: %s", err)
 	}
 }
 
 func TestConfigShouldAcceptTags(t *testing.T) {
-	config := map[string]interface{}{
+	config_map := map[string]interface{}{
 		"capture_name_prefix":      "ignore",
 		"capture_container_name":   "ignore",
 		"image_offer":              "ignore",
@@ -228,29 +245,29 @@ func TestConfigShouldAcceptTags(t *testing.T) {
 		},
 	}
 
-	c, _, err := newConfig(config, getPackerConfiguration())
-
+	config := Config{}
+	_, err := config.Prepare(config_map, getPackerConfiguration())
 	if err != nil {
-		t.Fatal(err)
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
 	}
 
-	if len(c.AzureTags) != 2 {
-		t.Fatalf("expected to find 2 tags, but got %d", len(c.AzureTags))
+	if len(config.AzureTags) != 2 {
+		t.Fatalf("expected to find 2 tags, but got %d", len(config.AzureTags))
 	}
 
-	if _, ok := c.AzureTags["tag01"]; !ok {
+	if _, ok := config.AzureTags["tag01"]; !ok {
 		t.Error("expected to find key=\"tag01\", but did not")
 	}
-	if _, ok := c.AzureTags["tag02"]; !ok {
+	if _, ok := config.AzureTags["tag02"]; !ok {
 		t.Error("expected to find key=\"tag02\", but did not")
 	}
 
-	value := c.AzureTags["tag01"]
+	value := config.AzureTags["tag01"]
 	if *value != "value01" {
 		t.Errorf("expected AzureTags[\"tag01\"] to have value \"value01\", but got %q", *value)
 	}
 
-	value = c.AzureTags["tag02"]
+	value = config.AzureTags["tag02"]
 	if *value != "value02" {
 		t.Errorf("expected AzureTags[\"tag02\"] to have value \"value02\", but got %q", *value)
 	}
@@ -262,7 +279,7 @@ func TestConfigShouldRejectTagsInExcessOf15AcceptTags(t *testing.T) {
 		tooManyTags[fmt.Sprintf("tag%.2d", i)] = "ignored"
 	}
 
-	config := map[string]interface{}{
+	config_map := map[string]interface{}{
 		"capture_name_prefix":      "ignore",
 		"capture_container_name":   "ignore",
 		"image_offer":              "ignore",
@@ -278,8 +295,8 @@ func TestConfigShouldRejectTagsInExcessOf15AcceptTags(t *testing.T) {
 		"azure_tags": tooManyTags,
 	}
 
-	_, _, err := newConfig(config, getPackerConfiguration())
-
+	config := Config{}
+	_, err := config.Prepare(config_map, getPackerConfiguration())
 	if err == nil {
 		t.Fatal("expected config to reject based on an excessive amount of tags (> 15)")
 	}
@@ -294,7 +311,7 @@ func TestConfigShouldRejectExcessiveTagNameLength(t *testing.T) {
 	tags := map[string]string{}
 	tags[string(nameTooLong)] = "ignored"
 
-	config := map[string]interface{}{
+	config_map := map[string]interface{}{
 		"capture_name_prefix":      "ignore",
 		"capture_container_name":   "ignore",
 		"image_offer":              "ignore",
@@ -310,7 +327,8 @@ func TestConfigShouldRejectExcessiveTagNameLength(t *testing.T) {
 		"azure_tags": tags,
 	}
 
-	_, _, err := newConfig(config, getPackerConfiguration())
+	config := Config{}
+	_, err := config.Prepare(config_map, getPackerConfiguration())
 	if err == nil {
 		t.Fatal("expected config to reject tag name based on length (> 512)")
 	}
@@ -325,7 +343,7 @@ func TestConfigShouldRejectExcessiveTagValueLength(t *testing.T) {
 	tags := map[string]string{}
 	tags["tag01"] = string(valueTooLong)
 
-	config := map[string]interface{}{
+	config_map := map[string]interface{}{
 		"capture_name_prefix":      "ignore",
 		"capture_container_name":   "ignore",
 		"image_offer":              "ignore",
@@ -341,14 +359,15 @@ func TestConfigShouldRejectExcessiveTagValueLength(t *testing.T) {
 		"azure_tags": tags,
 	}
 
-	_, _, err := newConfig(config, getPackerConfiguration())
+	config := Config{}
+	_, err := config.Prepare(config_map, getPackerConfiguration())
 	if err == nil {
 		t.Fatal("expected config to reject tag value based on length (> 256)")
 	}
 }
 
 func TestConfigShouldAcceptPlatformManagedImageBuild(t *testing.T) {
-	config := map[string]interface{}{
+	config_map := map[string]interface{}{
 		"image_offer":                       "ignore",
 		"image_publisher":                   "ignore",
 		"image_sku":                         "ignore",
@@ -364,14 +383,15 @@ func TestConfigShouldAcceptPlatformManagedImageBuild(t *testing.T) {
 		"os_type": constants.Target_Linux,
 	}
 
-	_, _, err := newConfig(config, getPackerConfiguration())
+	config := Config{}
+	_, err := config.Prepare(config_map, getPackerConfiguration())
 	if err != nil {
 		t.Fatal("expected config to accept platform managed image build")
 	}
 }
 
 func TestConfigShouldAcceptManagedImageStorageAccountTypes(t *testing.T) {
-	config := map[string]interface{}{
+	config_map := map[string]interface{}{
 		"custom_managed_image_resource_group_name": "ignore",
 		"custom_managed_image_name":                "ignore",
 		"location":                                 "ignore",
@@ -389,8 +409,9 @@ func TestConfigShouldAcceptManagedImageStorageAccountTypes(t *testing.T) {
 	storage_account_types := []string{"Premium_LRS", "Standard_LRS"}
 
 	for _, x := range storage_account_types {
-		config["managed_image_storage_account_type"] = x
-		_, _, err := newConfig(config, getPackerConfiguration())
+		config_map["managed_image_storage_account_type"] = x
+		config := Config{}
+		_, err := config.Prepare(config_map, getPackerConfiguration())
 		if err != nil {
 			t.Fatalf("expected config to accept a managed_image_storage_account_type of %q", x)
 		}
@@ -398,7 +419,7 @@ func TestConfigShouldAcceptManagedImageStorageAccountTypes(t *testing.T) {
 }
 
 func TestConfigShouldAcceptDiskCachingTypes(t *testing.T) {
-	config := map[string]interface{}{
+	config_map := map[string]interface{}{
 		"custom_managed_image_resource_group_name": "ignore",
 		"custom_managed_image_name":                "ignore",
 		"location":                                 "ignore",
@@ -416,8 +437,9 @@ func TestConfigShouldAcceptDiskCachingTypes(t *testing.T) {
 	storage_account_types := []string{"None", "ReadOnly", "ReadWrite"}
 
 	for _, x := range storage_account_types {
-		config["disk_caching_type"] = x
-		_, _, err := newConfig(config, getPackerConfiguration())
+		config_map["disk_caching_type"] = x
+		config := Config{}
+		_, err := config.Prepare(config_map, getPackerConfiguration())
 		if err != nil {
 			t.Fatalf("expected config to accept a disk_caching_type of %q", x)
 		}
@@ -425,14 +447,19 @@ func TestConfigShouldAcceptDiskCachingTypes(t *testing.T) {
 }
 
 func TestConfigAdditionalDiskDefaultIsNil(t *testing.T) {
-	c, _, _ := newConfig(getDtlBuilderConfiguration(), getPackerConfiguration())
-	if c.AdditionalDiskSize != nil {
+	config := Config{}
+	_, err := config.Prepare(getDtlBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
+	}
+
+	if config.AdditionalDiskSize != nil {
 		t.Errorf("Expected Config to not have a set of additional disks, but got a non nil value")
 	}
 }
 
 func TestConfigAdditionalDiskOverrideDefault(t *testing.T) {
-	config := map[string]string{
+	config_map := map[string]string{
 		"capture_name_prefix":      "ignore",
 		"capture_container_name":   "ignore",
 		"location":                 "ignore",
@@ -448,23 +475,28 @@ func TestConfigAdditionalDiskOverrideDefault(t *testing.T) {
 		"disk_additional_size": {32, 64},
 	}
 
-	c, _, _ := newConfig(config, diskconfig, getPackerConfiguration())
-	if c.AdditionalDiskSize == nil {
+	config := Config{}
+	_, err := config.Prepare(config_map, diskconfig, getPackerConfiguration())
+	if err != nil {
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
+	}
+
+	if config.AdditionalDiskSize == nil {
 		t.Errorf("Expected Config to have a set of additional disks, but got nil")
 	}
-	if len(c.AdditionalDiskSize) != 2 {
-		t.Errorf("Expected Config to have a 2 additional disks, but got %d additional disks", len(c.AdditionalDiskSize))
+	if len(config.AdditionalDiskSize) != 2 {
+		t.Errorf("Expected Config to have a 2 additional disks, but got %d additional disks", len(config.AdditionalDiskSize))
 	}
-	if c.AdditionalDiskSize[0] != 32 {
-		t.Errorf("Expected Config to have the first additional disks of size 32Gb, but got %dGb", c.AdditionalDiskSize[0])
+	if config.AdditionalDiskSize[0] != 32 {
+		t.Errorf("Expected Config to have the first additional disks of size 32Gb, but got %dGb", config.AdditionalDiskSize[0])
 	}
-	if c.AdditionalDiskSize[1] != 64 {
-		t.Errorf("Expected Config to have the second additional disks of size 64Gb, but got %dGb", c.AdditionalDiskSize[1])
+	if config.AdditionalDiskSize[1] != 64 {
+		t.Errorf("Expected Config to have the second additional disks of size 64Gb, but got %dGb", config.AdditionalDiskSize[1])
 	}
 }
 
 func TestConfigShouldAllowSharedImageGalleryOptions(t *testing.T) {
-	config := map[string]interface{}{
+	config_map := map[string]interface{}{
 		"location":                 "ignore",
 		"subscription_id":          "ignore",
 		"os_type":                  "linux",
@@ -479,7 +511,8 @@ func TestConfigShouldAllowSharedImageGalleryOptions(t *testing.T) {
 		},
 	}
 
-	_, _, err := newConfig(config, getPackerConfiguration())
+	config := Config{}
+	_, err := config.Prepare(config_map, getPackerConfiguration())
 	if err == nil {
 		t.Log("expected config to accept Shared Image Gallery options", err)
 	}
@@ -487,7 +520,7 @@ func TestConfigShouldAllowSharedImageGalleryOptions(t *testing.T) {
 }
 
 func TestConfigShouldRejectSharedImageGalleryWithVhdTarget(t *testing.T) {
-	config := map[string]interface{}{
+	config_map := map[string]interface{}{
 		"location":        "ignore",
 		"subscription_id": "ignore",
 		"os_type":         "linux",
@@ -504,7 +537,8 @@ func TestConfigShouldRejectSharedImageGalleryWithVhdTarget(t *testing.T) {
 		"lab_virtual_network_name": "ignore",
 	}
 
-	_, _, err := newConfig(config, getPackerConfiguration())
+	config := Config{}
+	_, err := config.Prepare(config_map, getPackerConfiguration())
 	if err != nil {
 		t.Log("expected an error if Shared Image Gallery source is used with VHD target", err)
 	}
