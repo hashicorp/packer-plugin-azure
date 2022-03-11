@@ -10,6 +10,8 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-12-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
+	"github.com/hashicorp/packer-plugin-sdk/multistep"
+	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
 type DiskAttacher interface {
@@ -33,10 +35,15 @@ type diskAttacher struct {
 
 var DiskNotFoundError = errors.New("Disk not found")
 
-func (da *diskAttacher) DetachDisk(ctx context.Context, diskID string) error {
+func (da *diskAttacher) DetachDisk(ctx context.Context, state multistep.StateBag, diskID string) error {
+	ui := state.Get("ui").(packersdk.Ui)
+
 	log.Println("Fetching list of disks currently attached to VM")
 	currentDisks, err := da.getDisks(ctx)
 	if err != nil {
+		log.Printf("DetachDisk.getDisks: error: %+v\n", err)
+		log.Println("Checking to see if instance is part of a VM scale set before giving up.")
+		ui.Say("Initial call for fetching VM instance disks returned an error. Checking to see if instance is part of a VM scale set before giving up.")
 		currentDisks, err = da.getScaleSetDisks(ctx)
 		if err != nil {
 			return err
@@ -58,6 +65,9 @@ func (da *diskAttacher) DetachDisk(ctx context.Context, diskID string) error {
 	log.Println("Updating new list of disks attached to VM")
 	err = da.setDisks(ctx, newDisks)
 	if err != nil {
+		log.Printf("DetachDisk.setDisks: error: %+v\n", err)
+		log.Println("Checking to see if instance is part of a VM scale set before giving up.")
+		ui.Say("Initial call for setting VM instance disks returned an error. Checking to see if instance is part of a VM scale set before giving up.")
 		err = da.setScaleSetDisks(ctx, newDisks)
 		if err != nil {
 			return err
@@ -71,6 +81,8 @@ func (da *diskAttacher) WaitForDetach(ctx context.Context, diskID string) error 
 	for { // loop until disk is not attached, timeout or error
 		list, err := da.getDisks(ctx)
 		if err != nil {
+			log.Printf("WaitForDetach.getDisks: error: %+v\n", err)
+			log.Println("Checking to see if instance is part of a VM scale set before giving up.")
 			list, err = da.getScaleSetDisks(ctx)
 			if err != nil {
 				return err
@@ -89,9 +101,14 @@ func (da *diskAttacher) WaitForDetach(ctx context.Context, diskID string) error 
 	}
 }
 
-func (da *diskAttacher) AttachDisk(ctx context.Context, diskID string) (int32, error) {
+func (da *diskAttacher) AttachDisk(ctx context.Context, state multistep.StateBag, diskID string) (int32, error) {
+	ui := state.Get("ui").(packersdk.Ui)
+
 	dataDisks, err := da.getDisks(ctx)
 	if err != nil {
+		log.Printf("AttachDisk.getDisks: error: %+v\n", err)
+		log.Println("Checking to see if instance is part of a VM scale set before giving up.")
+		ui.Say("Initial call for fetching VM instance disks returned an error. Checking to see if instance is part of a VM scale set before giving up.")
 		dataDisks, err = da.getScaleSetDisks(ctx)
 		if err != nil {
 			return -1, err
@@ -133,6 +150,9 @@ findFreeLun:
 	// prepare resource object for update operation
 	err = da.setDisks(ctx, dataDisks)
 	if err != nil {
+		log.Printf("AttachDisk.setDisks: error: %+v\n", err)
+		log.Println("Checking to see if instance is part of a VM scale set before giving up.")
+		ui.Say("Initial call for fetching VM instance disks returned an error. Checking to see if instance is part of a VM scale set before giving up.")
 		err = da.setScaleSetDisks(ctx, dataDisks)
 		if err != nil {
 			return -1, err

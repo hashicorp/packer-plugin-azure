@@ -26,7 +26,7 @@ func (s *StepAttachDisk) Run(ctx context.Context, state multistep.StateBag) mult
 	ui.Say(fmt.Sprintf("Attaching disk '%s'", diskResourceID))
 
 	da := NewDiskAttacher(azcli)
-	lun, err := da.AttachDisk(ctx, diskResourceID)
+	lun, err := da.AttachDisk(ctx, state, diskResourceID)
 	if err != nil {
 		log.Printf("StepAttachDisk.Run: error: %+v", err)
 		err := fmt.Errorf(
@@ -74,7 +74,7 @@ func (s *StepAttachDisk) CleanupFunc(state multistep.StateBag) error {
 		ui.Say(fmt.Sprintf("Detaching disk '%s'", diskResourceID))
 
 		da := NewDiskAttacher(azcli)
-		err := da.DetachDisk(context.Background(), diskResourceID)
+		err := da.DetachDisk(context.Background(), state, diskResourceID)
 		if err != nil {
 			return fmt.Errorf("error detaching %q: %v", diskResourceID, err)
 		}
