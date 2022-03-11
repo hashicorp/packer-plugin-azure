@@ -15,9 +15,9 @@ import (
 )
 
 type DiskAttacher interface {
-	AttachDisk(ctx context.Context, disk string) (lun int32, err error)
+	AttachDisk(ctx context.Context, state multistep.StateBag, disk string) (lun int32, err error)
 	WaitForDevice(ctx context.Context, i int32) (device string, err error)
-	DetachDisk(ctx context.Context, disk string) (err error)
+	DetachDisk(ctx context.Context, state multistep.StateBag, disk string) (err error)
 	WaitForDetach(ctx context.Context, diskID string) error
 }
 

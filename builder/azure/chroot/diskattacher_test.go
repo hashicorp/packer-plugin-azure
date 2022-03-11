@@ -2,12 +2,16 @@ package chroot
 
 import (
 	"context"
+	"io/ioutil"
+	"strings"
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-12-01/compute"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
+	"github.com/hashicorp/packer-plugin-sdk/multistep"
+	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,6 +24,17 @@ func Test_DiskAttacherAttachesDiskToVM(t *testing.T) {
 	da := NewDiskAttacher(azcli)
 	testDiskName := t.Name()
 
+	errorBuffer := &strings.Builder{}
+	ui := &packersdk.BasicUi{
+		Reader:      strings.NewReader(""),
+		Writer:      ioutil.Discard,
+		ErrorWriter: errorBuffer,
+	}
+
+	state := new(multistep.BasicStateBag)
+	state.Put("azureclient", azcli)
+	state.Put("ui", ui)
+
 	vm, err := azcli.MetadataClient().GetComputeInfo()
 	require.Nil(t, err, "Test needs to run on an Azure VM, unable to retrieve VM information")
 	t.Log("Creating new disk '", testDiskName, "' in ", vm.ResourceGroupName)
@@ -29,7 +44,7 @@ func Test_DiskAttacherAttachesDiskToVM(t *testing.T) {
 		t.Log("Disk already exists")
 		if disk.DiskState == compute.Attached {
 			t.Log("Disk is attached, assuming to this machine, trying to detach")
-			err = da.DetachDisk(context.TODO(), to.String(disk.ID))
+			err = da.DetachDisk(context.TODO(), state, to.String(disk.ID))
 			require.Nil(t, err)
 		}
 		t.Log("Deleting disk")
@@ -60,7 +75,7 @@ func Test_DiskAttacherAttachesDiskToVM(t *testing.T) {
 	assert.NotNil(t, d)
 
 	t.Log("Attaching disk")
-	lun, err := da.AttachDisk(context.TODO(), to.String(d.ID))
+	lun, err := da.AttachDisk(context.TODO(), state, to.String(d.ID))
 	assert.Nil(t, err)
 
 	t.Log("Waiting for device")
@@ -70,7 +85,7 @@ func Test_DiskAttacherAttachesDiskToVM(t *testing.T) {
 	t.Log("Device path:", dev)
 
 	t.Log("Detaching disk")
-	err = da.DetachDisk(context.TODO(), to.String(d.ID))
+	err = da.DetachDisk(context.TODO(), state, to.String(d.ID))
 	require.Nil(t, err)
 
 	t.Log("Deleting disk")
