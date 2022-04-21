@@ -52,10 +52,18 @@ func TestStepAttachDisk_Run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &StepAttachDisk{}
 
-			NewDiskAttacher = func(azcli client.AzureClientSet) DiskAttacher {
+			errorBuffer := &strings.Builder{}
+			ui := &packersdk.BasicUi{
+				Reader:      strings.NewReader(""),
+				Writer:      ioutil.Discard,
+				ErrorWriter: errorBuffer,
+			}
+
+			NewDiskAttacher = func(azcli client.AzureClientSet, ui packersdk.Ui) DiskAttacher {
 				return &fakeDiskAttacher{
 					attachError:        tt.fields.attachError,
 					waitForDeviceError: tt.fields.waitForDeviceError,
+					ui:                 ui,
 				}
 			}
 
@@ -67,13 +75,6 @@ func TestStepAttachDisk_Run(t *testing.T) {
 					StatusCode: tt.fields.GetDiskResponseCode,
 				}, nil
 			})
-
-			errorBuffer := &strings.Builder{}
-			ui := &packersdk.BasicUi{
-				Reader:      strings.NewReader(""),
-				Writer:      ioutil.Discard,
-				ErrorWriter: errorBuffer,
-			}
 
 			state := new(multistep.BasicStateBag)
 			state.Put("azureclient", &client.AzureClientSetMock{})
@@ -97,11 +98,12 @@ func TestStepAttachDisk_Run(t *testing.T) {
 type fakeDiskAttacher struct {
 	attachError        error
 	waitForDeviceError error
+	ui                 packersdk.Ui
 }
 
 var _ DiskAttacher = &fakeDiskAttacher{}
 
-func (da *fakeDiskAttacher) AttachDisk(ctx context.Context, state multistep.StateBag, disk string) (lun int32, err error) {
+func (da *fakeDiskAttacher) AttachDisk(ctx context.Context, disk string) (lun int32, err error) {
 	if da.attachError != nil {
 		return 0, da.attachError
 	}
@@ -122,7 +124,7 @@ func (da *fakeDiskAttacher) WaitForDevice(ctx context.Context, lun int32) (devic
 	panic("expected lun==3")
 }
 
-func (da *fakeDiskAttacher) DetachDisk(ctx context.Context, state multistep.StateBag, disk string) (err error) {
+func (da *fakeDiskAttacher) DetachDisk(ctx context.Context, disk string) (err error) {
 	panic("not implemented")
 }
 

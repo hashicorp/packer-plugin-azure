@@ -21,7 +21,6 @@ import (
 func Test_DiskAttacherAttachesDiskToVM(t *testing.T) {
 	azcli, err := client.GetTestClientSet(t) // integration test
 	require.Nil(t, err)
-	da := NewDiskAttacher(azcli)
 	testDiskName := t.Name()
 
 	errorBuffer := &strings.Builder{}
@@ -35,6 +34,8 @@ func Test_DiskAttacherAttachesDiskToVM(t *testing.T) {
 	state.Put("azureclient", azcli)
 	state.Put("ui", ui)
 
+	da := NewDiskAttacher(azcli, ui)
+
 	vm, err := azcli.MetadataClient().GetComputeInfo()
 	require.Nil(t, err, "Test needs to run on an Azure VM, unable to retrieve VM information")
 	t.Log("Creating new disk '", testDiskName, "' in ", vm.ResourceGroupName)
@@ -44,7 +45,7 @@ func Test_DiskAttacherAttachesDiskToVM(t *testing.T) {
 		t.Log("Disk already exists")
 		if disk.DiskState == compute.Attached {
 			t.Log("Disk is attached, assuming to this machine, trying to detach")
-			err = da.DetachDisk(context.TODO(), state, to.String(disk.ID))
+			err = da.DetachDisk(context.TODO(), to.String(disk.ID))
 			require.Nil(t, err)
 		}
 		t.Log("Deleting disk")
@@ -75,7 +76,7 @@ func Test_DiskAttacherAttachesDiskToVM(t *testing.T) {
 	assert.NotNil(t, d)
 
 	t.Log("Attaching disk")
-	lun, err := da.AttachDisk(context.TODO(), state, to.String(d.ID))
+	lun, err := da.AttachDisk(context.TODO(), to.String(d.ID))
 	assert.Nil(t, err)
 
 	t.Log("Waiting for device")
@@ -85,7 +86,7 @@ func Test_DiskAttacherAttachesDiskToVM(t *testing.T) {
 	t.Log("Device path:", dev)
 
 	t.Log("Detaching disk")
-	err = da.DetachDisk(context.TODO(), state, to.String(d.ID))
+	err = da.DetachDisk(context.TODO(), to.String(d.ID))
 	require.Nil(t, err)
 
 	t.Log("Deleting disk")
