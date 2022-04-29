@@ -30,10 +30,6 @@ func Test_DiskAttacherAttachesDiskToVM(t *testing.T) {
 		ErrorWriter: errorBuffer,
 	}
 
-	state := new(multistep.BasicStateBag)
-	state.Put("azureclient", azcli)
-	state.Put("ui", ui)
-
 	da := NewDiskAttacher(azcli, ui)
 
 	vm, err := azcli.MetadataClient().GetComputeInfo()
