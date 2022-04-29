@@ -52,10 +52,18 @@ func TestStepAttachDisk_Run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &StepAttachDisk{}
 
-			NewDiskAttacher = func(azcli client.AzureClientSet) DiskAttacher {
+			errorBuffer := &strings.Builder{}
+			ui := &packersdk.BasicUi{
+				Reader:      strings.NewReader(""),
+				Writer:      ioutil.Discard,
+				ErrorWriter: errorBuffer,
+			}
+
+			NewDiskAttacher = func(azcli client.AzureClientSet, ui packersdk.Ui) DiskAttacher {
 				return &fakeDiskAttacher{
 					attachError:        tt.fields.attachError,
 					waitForDeviceError: tt.fields.waitForDeviceError,
+					ui:                 ui,
 				}
 			}
 
@@ -67,13 +75,6 @@ func TestStepAttachDisk_Run(t *testing.T) {
 					StatusCode: tt.fields.GetDiskResponseCode,
 				}, nil
 			})
-
-			errorBuffer := &strings.Builder{}
-			ui := &packersdk.BasicUi{
-				Reader:      strings.NewReader(""),
-				Writer:      ioutil.Discard,
-				ErrorWriter: errorBuffer,
-			}
 
 			state := new(multistep.BasicStateBag)
 			state.Put("azureclient", &client.AzureClientSetMock{})
@@ -97,6 +98,7 @@ func TestStepAttachDisk_Run(t *testing.T) {
 type fakeDiskAttacher struct {
 	attachError        error
 	waitForDeviceError error
+	ui                 packersdk.Ui
 }
 
 var _ DiskAttacher = &fakeDiskAttacher{}

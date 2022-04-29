@@ -30,9 +30,11 @@ func (s MetadataClientStub) GetComputeInfo() (*ComputeInfo, error) {
 // ComputeInfo defines the Azure VM metadata that is used in Packer
 type ComputeInfo struct {
 	Name              string
+	ResourceID        string
 	ResourceGroupName string
 	SubscriptionID    string
 	Location          string
+	VmScaleSetName    string
 }
 
 // metadataClient implements MetadataClient
@@ -43,7 +45,7 @@ type metadataClient struct {
 
 var _ MetadataClientAPI = metadataClient{}
 
-const imdsURL = "http://169.254.169.254/metadata/instance?api-version=2017-08-01"
+const imdsURL = "http://169.254.169.254/metadata/instance?api-version=2021-02-01"
 
 // VMResourceID returns the resource ID of the current VM
 func (client metadataClient) GetComputeInfo() (*ComputeInfo, error) {
@@ -78,12 +80,8 @@ func (client metadataClient) GetComputeInfo() (*ComputeInfo, error) {
 	return &vminfo.ComputeInfo, nil
 }
 
-func (ci ComputeInfo) ResourceID() string {
-	return fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s",
-		ci.SubscriptionID,
-		ci.ResourceGroupName,
-		ci.Name,
-	)
+func (ci ComputeInfo) GetResourceID() string {
+	return fmt.Sprintf("/%s", ci.ResourceID)
 }
 
 // NewMetadataClient creates a new instance metadata client

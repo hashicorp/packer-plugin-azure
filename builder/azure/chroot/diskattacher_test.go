@@ -2,12 +2,15 @@ package chroot
 
 import (
 	"context"
+	"io/ioutil"
+	"strings"
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-12-01/compute"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
+	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,8 +20,16 @@ import (
 func Test_DiskAttacherAttachesDiskToVM(t *testing.T) {
 	azcli, err := client.GetTestClientSet(t) // integration test
 	require.Nil(t, err)
-	da := NewDiskAttacher(azcli)
 	testDiskName := t.Name()
+
+	errorBuffer := &strings.Builder{}
+	ui := &packersdk.BasicUi{
+		Reader:      strings.NewReader(""),
+		Writer:      ioutil.Discard,
+		ErrorWriter: errorBuffer,
+	}
+
+	da := NewDiskAttacher(azcli, ui)
 
 	vm, err := azcli.MetadataClient().GetComputeInfo()
 	require.Nil(t, err, "Test needs to run on an Azure VM, unable to retrieve VM information")

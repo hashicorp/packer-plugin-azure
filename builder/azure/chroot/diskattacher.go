@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-12-01/compute"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
+	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
 type DiskAttacher interface {
@@ -20,9 +20,10 @@ type DiskAttacher interface {
 	WaitForDetach(ctx context.Context, diskID string) error
 }
 
-var NewDiskAttacher = func(azureClient client.AzureClientSet) DiskAttacher {
+var NewDiskAttacher = func(azureClient client.AzureClientSet, ui packersdk.Ui) DiskAttacher {
 	return &diskAttacher{
 		azcli: azureClient,
+		ui:    ui,
 	}
 }
 
@@ -30,6 +31,7 @@ type diskAttacher struct {
 	azcli client.AzureClientSet
 
 	vm *client.ComputeInfo // store info about this VM so that we don't have to ask metadata service on every call
+	ui packersdk.Ui
 }
 
 var DiskNotFoundError = errors.New("Disk not found")
@@ -38,7 +40,13 @@ func (da *diskAttacher) DetachDisk(ctx context.Context, diskID string) error {
 	log.Println("Fetching list of disks currently attached to VM")
 	currentDisks, err := da.getDisks(ctx)
 	if err != nil {
-		return err
+		log.Printf("DetachDisk.getDisks: error: %+v\n", err)
+		log.Println("Checking to see if instance is part of a VM scale set before giving up.")
+		da.ui.Say("Initial call for fetching VM instance disks returned an error. Checking to see if instance is part of a VM scale set before giving up.")
+		currentDisks, err = da.getScaleSetDisks(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	log.Printf("Removing %q from list of disks currently attached to VM", diskID)
@@ -56,7 +64,13 @@ func (da *diskAttacher) DetachDisk(ctx context.Context, diskID string) error {
 	log.Println("Updating new list of disks attached to VM")
 	err = da.setDisks(ctx, newDisks)
 	if err != nil {
-		return err
+		log.Printf("DetachDisk.setDisks: error: %+v\n", err)
+		log.Println("Checking to see if instance is part of a VM scale set before giving up.")
+		da.ui.Say("Initial call for setting VM instance disks returned an error. Checking to see if instance is part of a VM scale set before giving up.")
+		err = da.setScaleSetDisks(ctx, newDisks)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -66,7 +80,12 @@ func (da *diskAttacher) WaitForDetach(ctx context.Context, diskID string) error 
 	for { // loop until disk is not attached, timeout or error
 		list, err := da.getDisks(ctx)
 		if err != nil {
-			return err
+			log.Printf("WaitForDetach.getDisks: error: %+v\n", err)
+			log.Println("Checking to see if instance is part of a VM scale set before giving up.")
+			list, err = da.getScaleSetDisks(ctx)
+			if err != nil {
+				return err
+			}
 		}
 		if findDiskInList(list, diskID) == nil {
 			log.Println("Disk is no longer in VM model, assuming detached")
@@ -84,7 +103,13 @@ func (da *diskAttacher) WaitForDetach(ctx context.Context, diskID string) error 
 func (da *diskAttacher) AttachDisk(ctx context.Context, diskID string) (int32, error) {
 	dataDisks, err := da.getDisks(ctx)
 	if err != nil {
-		return -1, err
+		log.Printf("AttachDisk.getDisks: error: %+v\n", err)
+		log.Println("Checking to see if instance is part of a VM scale set before giving up.")
+		da.ui.Say("Initial call for fetching VM instance disks returned an error. Checking to see if instance is part of a VM scale set before giving up.")
+		dataDisks, err = da.getScaleSetDisks(ctx)
+		if err != nil {
+			return -1, err
+		}
 	}
 
 	// check to see if disk is already attached, remember lun if found
@@ -122,7 +147,13 @@ findFreeLun:
 	// prepare resource object for update operation
 	err = da.setDisks(ctx, dataDisks)
 	if err != nil {
-		return -1, err
+		log.Printf("AttachDisk.setDisks: error: %+v\n", err)
+		log.Println("Checking to see if instance is part of a VM scale set before giving up.")
+		da.ui.Say("Initial call for setting VM instance disks returned an error. Checking to see if instance is part of a VM scale set before giving up.")
+		err = da.setScaleSetDisks(ctx, dataDisks)
+		if err != nil {
+			return -1, err
+		}
 	}
 
 	return lun, nil
@@ -150,8 +181,40 @@ func (da *diskAttacher) getThisVM(ctx context.Context) (compute.VirtualMachine, 
 	return vmResource, nil
 }
 
+func (da *diskAttacher) getThisScaleSetVM(ctx context.Context) (compute.VirtualMachineScaleSetVM, error) {
+	// getting resource info for this VM
+	if da.vm == nil {
+		vm, err := da.azcli.MetadataClient().GetComputeInfo()
+		if err != nil {
+			return compute.VirtualMachineScaleSetVM{}, err
+		}
+		da.vm = vm
+	}
+
+	// retrieve actual VM
+	scaleSetVMInstanceID := da.vm.ResourceID[strings.LastIndex(da.vm.ResourceID, "/")+1:]
+	vmResource, err := da.azcli.VirtualMachineScaleSetVMsClient().Get(ctx, da.vm.ResourceGroupName, da.vm.VmScaleSetName, scaleSetVMInstanceID, "")
+	if err != nil {
+		return compute.VirtualMachineScaleSetVM{}, err
+	}
+	if vmResource.StorageProfile == nil {
+		return compute.VirtualMachineScaleSetVM{}, errors.New("properties.storageProfile is not set on VM, this is unexpected")
+	}
+
+	return vmResource, nil
+}
+
 func (da diskAttacher) getDisks(ctx context.Context) ([]compute.DataDisk, error) {
 	vmResource, err := da.getThisVM(ctx)
+	if err != nil {
+		return []compute.DataDisk{}, err
+	}
+
+	return *vmResource.StorageProfile.DataDisks, nil
+}
+
+func (da diskAttacher) getScaleSetDisks(ctx context.Context) ([]compute.DataDisk, error) {
+	vmResource, err := da.getThisScaleSetVM(ctx)
 	if err != nil {
 		return []compute.DataDisk{}, err
 	}
@@ -165,7 +228,17 @@ func (da diskAttacher) setDisks(ctx context.Context, disks []compute.DataDisk) e
 		return err
 	}
 
-	id, err := azure.ParseResourceID(to.String(vmResource.ID))
+	vmResource.StorageProfile.DataDisks = &disks
+	vmResource.Resources = nil
+
+	// update the VM resource, attach disk
+	_, err = da.azcli.VirtualMachinesClient().CreateOrUpdate(ctx, da.vm.ResourceGroupName, da.vm.Name, vmResource)
+
+	return err
+}
+
+func (da diskAttacher) setScaleSetDisks(ctx context.Context, disks []compute.DataDisk) error {
+	vmResource, err := da.getThisScaleSetVM(ctx)
 	if err != nil {
 		return err
 	}
@@ -174,7 +247,8 @@ func (da diskAttacher) setDisks(ctx context.Context, disks []compute.DataDisk) e
 	vmResource.Resources = nil
 
 	// update the VM resource, attach disk
-	_, err = da.azcli.VirtualMachinesClient().CreateOrUpdate(ctx, id.ResourceGroup, id.ResourceName, vmResource)
+	scaleSetVMInstanceID := da.vm.ResourceID[strings.LastIndex(da.vm.ResourceID, "/")+1:]
+	_, err = da.azcli.VirtualMachineScaleSetVMsClient().Update(ctx, da.vm.ResourceGroupName, da.vm.VmScaleSetName, scaleSetVMInstanceID, vmResource)
 
 	return err
 }

@@ -9,16 +9,17 @@ var _ AzureClientSet = &AzureClientSetMock{}
 
 // AzureClientSetMock provides a generic mock for AzureClientSet
 type AzureClientSetMock struct {
-	DisksClientMock                computeapi.DisksClientAPI
-	SnapshotsClientMock            computeapi.SnapshotsClientAPI
-	ImagesClientMock               computeapi.ImagesClientAPI
-	VirtualMachineImagesClientMock VirtualMachineImagesClientAPI
-	VirtualMachinesClientMock      computeapi.VirtualMachinesClientAPI
-	GalleryImagesClientMock        computeapi.GalleryImagesClientAPI
-	GalleryImageVersionsClientMock computeapi.GalleryImageVersionsClientAPI
-	PollClientMock                 autorest.Client
-	MetadataClientMock             MetadataClientAPI
-	SubscriptionIDMock             string
+	DisksClientMock                     computeapi.DisksClientAPI
+	SnapshotsClientMock                 computeapi.SnapshotsClientAPI
+	ImagesClientMock                    computeapi.ImagesClientAPI
+	VirtualMachineImagesClientMock      VirtualMachineImagesClientAPI
+	VirtualMachinesClientMock           computeapi.VirtualMachinesClientAPI
+	VirtualMachineScaleSetVMsClientMock computeapi.VirtualMachineScaleSetVMsClientAPI
+	GalleryImagesClientMock             computeapi.GalleryImagesClientAPI
+	GalleryImageVersionsClientMock      computeapi.GalleryImageVersionsClientAPI
+	PollClientMock                      autorest.Client
+	MetadataClientMock                  MetadataClientAPI
+	SubscriptionIDMock                  string
 }
 
 // DisksClient returns a DisksClientAPI
@@ -44,6 +45,11 @@ func (m *AzureClientSetMock) VirtualMachineImagesClient() VirtualMachineImagesCl
 // VirtualMachinesClient returns a VirtualMachinesClientAPI
 func (m *AzureClientSetMock) VirtualMachinesClient() computeapi.VirtualMachinesClientAPI {
 	return m.VirtualMachinesClientMock
+}
+
+// VirtualMachineScaleSetVMsClient returns a VirtualMachineScaleSetVMsClientAPI
+func (m *AzureClientSetMock) VirtualMachineScaleSetVMsClient() computeapi.VirtualMachineScaleSetVMsClientAPI {
+	return m.VirtualMachineScaleSetVMsClientMock
 }
 
 // GalleryImagesClient returns a GalleryImagesClientAPI

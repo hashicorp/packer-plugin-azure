@@ -221,7 +221,7 @@ func (s *StepCreateNewDiskset) Cleanup(state multistep.StateBag) {
 		for _, d := range s.disks {
 
 			ui.Say(fmt.Sprintf("Waiting for disk %q detach to complete", d))
-			err := NewDiskAttacher(azcli).WaitForDetach(context.Background(), d.String())
+			err := NewDiskAttacher(azcli, ui).WaitForDetach(context.Background(), d.String())
 			if err != nil {
 				ui.Error(fmt.Sprintf("error detaching disk %q: %s", d, err))
 			}

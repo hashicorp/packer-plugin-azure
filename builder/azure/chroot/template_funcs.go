@@ -29,7 +29,7 @@ func CreateVMMetadataTemplateFunc() func(string) (string, error) {
 		case "location":
 			return data.Location, nil
 		case "resource_id":
-			return data.ResourceID(), nil
+			return data.GetResourceID(), nil
 		default:
 			return "", fmt.Errorf("unknown metadata key: %s (supported: name, subscription_id, resource_group, location, resource_id)", key)
 		}
