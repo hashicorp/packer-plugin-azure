@@ -22,6 +22,7 @@ package arm
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -231,6 +232,28 @@ func TestBuilderUserData_Linux(t *testing.T) {
 		Name:     "test-azure-userdata-linux",
 		Type:     "azure-arm",
 		Template: testBuilderUserDataLinux(tmpfile.Name()),
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
+	})
+}
+
+//go:embed testdata/rsa_sha2_only_server.pkr.hcl
+var rsaSHA2OnlyTemplate []byte
+
+func TestBuilderAcc_rsaSHA2OnlyServer(t *testing.T) {
+	b := Builder{}
+	b.Prepare()
+
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-azure-ubuntu-jammy-linux",
+		Type:     "azure-arm",
+		Template: string(rsaSHA2OnlyTemplate),
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
 			if buildCommand.ProcessState != nil {
 				if buildCommand.ProcessState.ExitCode() != 0 {
