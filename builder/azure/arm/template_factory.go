@@ -108,6 +108,13 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 		if err != nil {
 			return nil, err
 		}
+	} else if config.SharedGallery.CommunityGalleryImageId != "" {
+		imageID := config.SharedGallery.CommunityGalleryImageId
+
+		err = builder.SetCommunityGalleryImage(config.Location, imageID, config.diskCachingType)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		err = builder.SetMarketPlaceImage(config.ImagePublisher, config.ImageOffer, config.ImageSku, config.ImageVersion, config.diskCachingType)
 		if err != nil {

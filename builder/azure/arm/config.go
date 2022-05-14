@@ -86,6 +86,9 @@ type SharedImageGallery struct {
 	// version across regions set this value to one that is available in all
 	// regions where you are deploying.
 	ImageVersion string `mapstructure:"image_version" required:"false"`
+
+	// Id of the community gallery image : /CommunityGalleries/{cgName}/Images/{img}[/Versions/{}] (Versions part is optional)
+	CommunityGalleryImageId string `mapstructure:"communityGallery_image_id" required:"false"`
 }
 
 type SharedImageGalleryDestination struct {
@@ -131,7 +134,8 @@ type Config struct {
 	//     "resource_group": "ResourceGroup",
 	//     "gallery_name": "GalleryName",
 	//     "image_name": "ImageName",
-	//     "image_version": "1.0.0"
+	//     "image_version": "1.0.0",
+	//     "communityGallery_image_id": "/CommunityGalleries/{cg}/Images/{}/Versions/{}"
 	// }
 	// "managed_image_name": "TargetImageName",
 	// "managed_image_resource_group_name": "TargetResourceGroup"
