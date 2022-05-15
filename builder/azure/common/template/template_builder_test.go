@@ -199,6 +199,32 @@ func TestSharedImageGallery00(t *testing.T) {
 	approvaltests.VerifyJSONBytes(t, []byte(*doc))
 }
 
+// Shared Image Gallery Build
+func TestCommunitySharedImageGallery00(t *testing.T) {
+	testSubject, err := NewTemplateBuilder(BasicTemplate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = testSubject.BuildLinux("--test-ssh-authorized-key--", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	imageID := "/communityGalleries/cg/Images/img/Versions/1.0.0"
+	err = testSubject.SetCommunityGalleryImage("westcentralus", imageID, compute.CachingTypesReadOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	doc, err := testSubject.ToJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
+}
+
 // Linux build with Network Security Group
 func TestNetworkSecurityGroup00(t *testing.T) {
 	testSubject, err := NewTemplateBuilder(BasicTemplate)

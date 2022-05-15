@@ -198,7 +198,7 @@ func (s *TemplateBuilder) SetCommunityGalleryImage(location, imageID string, cac
 		return err
 	}
 
-	s.setVariable("apiVersion", "2021-10-01") // Required for Community Gallery Image
+	s.setVariable("apiVersion", "2021-07-01") // Required for Community Gallery Image
 	profile := resource.Properties.StorageProfile
 	profile.ImageReference = &compute.ImageReference{CommunityGalleryImageID: &imageID}
 	profile.OsDisk.OsType = s.osType
