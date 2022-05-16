@@ -3,7 +3,7 @@ package template
 import (
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-04-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	approvaltests "github.com/approvals/go-approval-tests"
 )
 
@@ -45,7 +45,7 @@ func TestBuildLinux01(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = testSubject.SetImageUrl("http://azure/custom.vhd", compute.Linux, compute.CachingTypesReadWrite)
+	err = testSubject.SetImageUrl("http://azure/custom.vhd", compute.OperatingSystemTypesLinux, compute.CachingTypesReadWrite)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestBuildLinux02(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = testSubject.SetImageUrl("http://azure/custom.vhd", compute.Linux, compute.CachingTypesReadWrite)
+	err = testSubject.SetImageUrl("http://azure/custom.vhd", compute.OperatingSystemTypesLinux, compute.CachingTypesReadWrite)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -8,7 +8,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/to"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-12-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/stretchr/testify/assert"
@@ -38,7 +38,7 @@ func Test_DiskAttacherAttachesDiskToVM(t *testing.T) {
 	disk, err := azcli.DisksClient().Get(context.TODO(), vm.ResourceGroupName, testDiskName)
 	if err == nil {
 		t.Log("Disk already exists")
-		if disk.DiskState == compute.Attached {
+		if disk.DiskState == compute.DiskStateAttached {
 			t.Log("Disk is attached, assuming to this machine, trying to detach")
 			err = da.DetachDisk(context.TODO(), to.String(disk.ID))
 			require.Nil(t, err)
@@ -54,11 +54,11 @@ func Test_DiskAttacherAttachesDiskToVM(t *testing.T) {
 	r, err := azcli.DisksClient().CreateOrUpdate(context.TODO(), vm.ResourceGroupName, testDiskName, compute.Disk{
 		Location: to.StringPtr(vm.Location),
 		Sku: &compute.DiskSku{
-			Name: compute.StandardLRS,
+			Name: compute.DiskStorageAccountTypesStandardLRS,
 		},
 		DiskProperties: &compute.DiskProperties{
 			DiskSizeGB:   to.Int32Ptr(30),
-			CreationData: &compute.CreationData{CreateOption: compute.Empty},
+			CreationData: &compute.CreationData{CreateOption: compute.DiskCreateOptionEmpty},
 		},
 	})
 	require.Nil(t, err)

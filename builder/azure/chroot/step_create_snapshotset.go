@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-12-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
 )
 
@@ -63,7 +63,7 @@ func (s *StepCreateSnapshotset) Run(ctx context.Context, state multistep.StateBa
 			Location: to.StringPtr(s.Location),
 			SnapshotProperties: &compute.SnapshotProperties{
 				CreationData: &compute.CreationData{
-					CreateOption:     compute.Copy,
+					CreateOption:     compute.DiskCreateOptionCopy,
 					SourceResourceID: to.StringPtr(resource.String()),
 				},
 				Incremental: to.BoolPtr(false),

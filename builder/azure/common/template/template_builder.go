@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-04-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-01-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 )
@@ -66,7 +66,7 @@ func (s *TemplateBuilder) BuildLinux(sshAuthorizedKey string, disablePasswordAut
 		profile.AdminPassword = nil
 	}
 
-	s.osType = compute.Linux
+	s.osType = compute.OperatingSystemTypesLinux
 	return nil
 }
 
@@ -104,7 +104,7 @@ func (s *TemplateBuilder) BuildWindows(keyVaultName, winRMCertificateUrl string)
 		},
 	}
 
-	s.osType = compute.Windows
+	s.osType = compute.OperatingSystemTypesWindows
 	return nil
 }
 

@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-12-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
 )
 
@@ -173,20 +173,20 @@ func (s StepCreateNewDiskset) getOSDiskDefinition(subscriptionID string) compute
 		imageID := fmt.Sprintf(
 			"/subscriptions/%s/providers/Microsoft.Compute/locations/%s/publishers/%s/artifacttypes/vmimage/offers/%s/skus/%s/versions/%s", subscriptionID, s.Location,
 			s.SourcePlatformImage.Publisher, s.SourcePlatformImage.Offer, s.SourcePlatformImage.Sku, s.SourcePlatformImage.Version)
-		disk.CreationData.CreateOption = compute.FromImage
+		disk.CreationData.CreateOption = compute.DiskCreateOptionFromImage
 		disk.CreationData.ImageReference = &compute.ImageDiskReference{
 			ID: to.StringPtr(imageID),
 		}
 	case s.SourceOSDiskResourceID != "":
-		disk.CreationData.CreateOption = compute.Copy
+		disk.CreationData.CreateOption = compute.DiskCreateOptionCopy
 		disk.CreationData.SourceResourceID = to.StringPtr(s.SourceOSDiskResourceID)
 	case s.SourceImageResourceID != "":
-		disk.CreationData.CreateOption = compute.FromImage
+		disk.CreationData.CreateOption = compute.DiskCreateOptionFromImage
 		disk.CreationData.GalleryImageReference = &compute.ImageDiskReference{
 			ID: to.StringPtr(s.SourceImageResourceID),
 		}
 	default:
-		disk.CreationData.CreateOption = compute.Empty
+		disk.CreationData.CreateOption = compute.DiskCreateOptionEmpty
 	}
 	return disk
 }
@@ -199,7 +199,7 @@ func (s StepCreateNewDiskset) getDatadiskDefinitionFromImage(lun int32) compute.
 		},
 	}
 
-	disk.CreationData.CreateOption = compute.FromImage
+	disk.CreationData.CreateOption = compute.DiskCreateOptionFromImage
 	disk.CreationData.GalleryImageReference = &compute.ImageDiskReference{
 		ID:  to.StringPtr(s.SourceImageResourceID),
 		Lun: to.Int32Ptr(lun),

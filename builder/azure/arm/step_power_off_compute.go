@@ -2,6 +2,7 @@ package arm
 
 import (
 	"context"
+	"flag"
 	"fmt"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
@@ -28,7 +29,7 @@ func NewStepPowerOffCompute(client *AzureClient, ui packersdk.Ui) *StepPowerOffC
 }
 
 func (s *StepPowerOffCompute) powerOffCompute(ctx context.Context, resourceGroupName string, computeName string) error {
-	f, err := s.client.VirtualMachinesClient.Deallocate(ctx, resourceGroupName, computeName)
+	f, err := s.client.VirtualMachinesClient.Deallocate(ctx, resourceGroupName, computeName, flag.Bool("forceDelete", true, "forces fast deletion"))
 	if err == nil {
 		err = f.WaitForCompletionRef(ctx, s.client.VirtualMachinesClient.Client)
 	}

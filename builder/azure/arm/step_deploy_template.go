@@ -3,6 +3,7 @@ package arm
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"net/url"
 	"strings"
@@ -165,7 +166,7 @@ func (s *StepDeployTemplate) getImageDetails(ctx context.Context, resourceGroupN
 func deleteResource(ctx context.Context, client *AzureClient, resourceType string, resourceName string, resourceGroupName string) error {
 	switch resourceType {
 	case "Microsoft.Compute/virtualMachines":
-		f, err := client.VirtualMachinesClient.Delete(ctx, resourceGroupName, resourceName)
+		f, err := client.VirtualMachinesClient.Delete(ctx, resourceGroupName, resourceName, flag.Bool("forceDelete", true, "forces fast deletion"))
 		if err == nil {
 			err = f.WaitForCompletionRef(ctx, client.VirtualMachinesClient.Client)
 		}

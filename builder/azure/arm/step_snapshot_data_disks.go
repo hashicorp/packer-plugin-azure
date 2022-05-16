@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-04-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -35,9 +35,9 @@ func NewStepSnapshotDataDisks(client *AzureClient, ui packersdk.Ui, config *Conf
 func (s *StepSnapshotDataDisks) createDataDiskSnapshot(ctx context.Context, resourceGroupName string, srcUriVhd string, location string, tags map[string]*string, dstSnapshotName string) error {
 
 	srcVhdToSnapshot := compute.Snapshot{
-		DiskProperties: &compute.DiskProperties{
+		SnapshotProperties: &compute.SnapshotProperties{
 			CreationData: &compute.CreationData{
-				CreateOption:     compute.Copy,
+				CreateOption:     compute.DiskCreateOptionCopy,
 				SourceResourceID: to.StringPtr(srcUriVhd),
 			},
 		},

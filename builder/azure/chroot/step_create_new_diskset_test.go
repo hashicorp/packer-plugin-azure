@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-12-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/go-autorest/autorest"
 )
 
@@ -30,8 +30,8 @@ func TestStepCreateNewDisk_Run(t *testing.T) {
 			fields: StepCreateNewDiskset{
 				OSDiskID:                 "/subscriptions/SubscriptionID/resourcegroups/ResourceGroupName/providers/Microsoft.Compute/disks/TemporaryOSDiskName",
 				OSDiskSizeGB:             42,
-				OSDiskStorageAccountType: string(compute.PremiumLRS),
-				HyperVGeneration:         string(compute.V1),
+				OSDiskStorageAccountType: string(compute.StorageAccountTypesPremiumLRS),
+				HyperVGeneration:         string(compute.HyperVGenerationTypesV1),
 				Location:                 "westus",
 				SourceOSDiskResourceID:   "SourceDisk",
 			},
@@ -58,8 +58,8 @@ func TestStepCreateNewDisk_Run(t *testing.T) {
 			name: "from platform image",
 			fields: StepCreateNewDiskset{
 				OSDiskID:                 "/subscriptions/SubscriptionID/resourcegroups/ResourceGroupName/providers/Microsoft.Compute/disks/TemporaryOSDiskName",
-				OSDiskStorageAccountType: string(compute.StandardLRS),
-				HyperVGeneration:         string(compute.V1),
+				OSDiskStorageAccountType: string(compute.StorageAccountTypeStandardLRS),
+				HyperVGeneration:         string(compute.HyperVGenerationTypesV1),
 				Location:                 "westus",
 				SourcePlatformImage: &client.PlatformImage{
 					Publisher: "Microsoft",
@@ -92,10 +92,10 @@ func TestStepCreateNewDisk_Run(t *testing.T) {
 			name: "from shared image",
 			fields: StepCreateNewDiskset{
 				OSDiskID:                   "/subscriptions/SubscriptionID/resourcegroups/ResourceGroupName/providers/Microsoft.Compute/disks/TemporaryOSDiskName",
-				OSDiskStorageAccountType:   string(compute.StandardLRS),
-				DataDiskStorageAccountType: string(compute.PremiumLRS),
+				OSDiskStorageAccountType:   string(compute.StorageAccountTypeStandardLRS),
+				DataDiskStorageAccountType: string(compute.StorageAccountTypesPremiumLRS),
 				DataDiskIDPrefix:           "/subscriptions/SubscriptionID/resourcegroups/ResourceGroupName/providers/Microsoft.Compute/disks/TemporaryDataDisk-",
-				HyperVGeneration:           string(compute.V1),
+				HyperVGeneration:           string(compute.HyperVGenerationTypesV1),
 				Location:                   "westus",
 				SourceImageResourceID:      "/subscriptions/SubscriptionID/resourcegroups/imagegroup/providers/Microsoft.Compute/galleries/MyGallery/images/MyImage/versions/1.2.3",
 			},
