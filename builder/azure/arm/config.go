@@ -89,6 +89,9 @@ type SharedImageGallery struct {
 
 	// Id of the community gallery image : /CommunityGalleries/{cgName}/Images/{img}[/Versions/{}] (Versions part is optional)
 	CommunityGalleryImageId string `mapstructure:"communityGallery_image_id" required:"false"`
+
+	// Id of the direct shared gallery image : /sharedGalleries/{cgName}/Images/{img}[/Versions/{}] (Versions part is optional)
+	SharedGalleryImageID string `mapstructure:"sharedGallery_image_id" required:"false"`
 }
 
 type SharedImageGalleryDestination struct {

@@ -208,6 +208,22 @@ func (s *TemplateBuilder) SetCommunityGalleryImage(location, imageID string, cac
 	return nil
 }
 
+func (s *TemplateBuilder) SetDirectSharedGalleryImage(location, imageID string, cachingType compute.CachingTypes) error {
+	resource, err := s.getResourceByType(resourceVirtualMachine)
+	if err != nil {
+		return err
+	}
+
+	s.setVariable("apiVersion", "2021-07-01") // Required for Shared Gallery Image
+	profile := resource.Properties.StorageProfile
+	profile.ImageReference = &compute.ImageReference{SharedGalleryImageID: &imageID}
+	profile.OsDisk.OsType = s.osType
+	profile.OsDisk.Vhd = nil
+	profile.OsDisk.Caching = cachingType
+
+	return nil
+}
+
 func (s *TemplateBuilder) SetMarketPlaceImage(publisher, offer, sku, version string, cachingType compute.CachingTypes) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
