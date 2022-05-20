@@ -226,7 +226,7 @@ func Test_buildsteps(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			withMetadataStub(func() { // ensure that values are taken from info, instead of retrieved again
-				got := buildsteps(tt.config, info, &packerbuilderdata.GeneratedData{})
+				got := buildsteps(tt.config, info, &packerbuilderdata.GeneratedData{}, func(string) {})
 				tt.verify(got, t)
 			})
 		})
