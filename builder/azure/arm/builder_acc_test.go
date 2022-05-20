@@ -183,10 +183,7 @@ func TestBuilderAcc_Blob_Windows(t *testing.T) {
 
 func TestBuilderAcc_Blob_Linux(t *testing.T) {
 	b := Builder{}
-	_, _, err := b.Prepare()
-	if err != nil {
-		t.Fatal(err)
-	}
+	_, _, _ = b.Prepare()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-blob-linux",
 		Type:     "azure-arm",
@@ -208,11 +205,7 @@ func TestBuilderAcc_Blob_Linux(t *testing.T) {
 
 func TestBuilderUserData_Linux(t *testing.T) {
 	b := Builder{}
-	_, _, err := b.Prepare()
-
-	if err != nil {
-		t.Fatal(err)
-	}
+	_, _, _ = b.Prepare()
 	tmpfile, err := ioutil.TempFile("", "userdata")
 	if err != nil {
 		t.Fatalf("failed creating tempfile: %s", err)
@@ -247,10 +240,7 @@ var rsaSHA2OnlyTemplate []byte
 
 func TestBuilderAcc_rsaSHA2OnlyServer(t *testing.T) {
 	b := Builder{}
-	_, _, err := b.Prepare()
-	if err != nil {
-		t.Fatal(err)
-	}
+	_, _, _ = b.Prepare()
 
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-ubuntu-jammy-linux",
