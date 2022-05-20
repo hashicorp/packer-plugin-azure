@@ -73,7 +73,8 @@ func (s *StepGetIPAddress) getPublicIP(ctx context.Context, resourceGroupName st
 }
 
 func (s *StepGetIPAddress) getPublicIPInPrivateNetwork(ctx context.Context, resourceGroupName string, ipAddressName string, interfaceName string) (string, error) {
-	s.getPrivateIP(ctx, resourceGroupName, ipAddressName, interfaceName)
+	// TODO: This was being called without capturing any return variables, causing linter issue, as far as I can tell calling getPrivateIP here does nothing, look into removing
+	_, _ = s.getPrivateIP(ctx, resourceGroupName, ipAddressName, interfaceName)
 	return s.getPublicIP(ctx, resourceGroupName, ipAddressName, interfaceName)
 }
 

@@ -23,13 +23,9 @@ func Test_StepVerifySourceDisk_Run(t *testing.T) {
 		GetDiskResponseCode int
 		GetDiskResponseBody string
 	}
-	type args struct {
-		state multistep.StateBag
-	}
 	tests := []struct {
 		name       string
 		fields     fields
-		args       args
 		want       multistep.StepAction
 		errormatch string
 	}{

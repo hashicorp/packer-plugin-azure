@@ -6,14 +6,17 @@ import (
 
 func TestResourceResolverIgnoresEmptyVirtualNetworkName(t *testing.T) {
 	var c Config
-	c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	if c.VirtualNetworkName != "" {
 		t.Fatalf("Expected VirtualNetworkName to be empty by default")
 	}
 
 	sut := newTestResourceResolver()
 	sut.findVirtualNetworkResourceGroup = nil // assert that this is not even called
-	sut.Resolve(&c)
+	_ = sut.Resolve(&c)
 
 	if c.VirtualNetworkName != "" {
 		t.Fatalf("Expected VirtualNetworkName to be empty")
@@ -27,7 +30,10 @@ func TestResourceResolverIgnoresEmptyVirtualNetworkName(t *testing.T) {
 // there is no need to do a lookup.
 func TestResourceResolverIgnoresSetVirtualNetwork(t *testing.T) {
 	var c Config
-	c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	c.VirtualNetworkName = "--virtual-network-name--"
 	c.VirtualNetworkResourceGroupName = "--virtual-network-resource-group-name--"
 	c.VirtualNetworkSubnetName = "--virtual-network-subnet-name--"
@@ -35,7 +41,7 @@ func TestResourceResolverIgnoresSetVirtualNetwork(t *testing.T) {
 	sut := newTestResourceResolver()
 	sut.findVirtualNetworkResourceGroup = nil // assert that this is not even called
 	sut.findVirtualNetworkSubnet = nil        // assert that this is not even called
-	sut.Resolve(&c)
+	_ = sut.Resolve(&c)
 
 	if c.VirtualNetworkName != "--virtual-network-name--" {
 		t.Fatalf("Expected VirtualNetworkName to be --virtual-network-name--")
@@ -52,11 +58,14 @@ func TestResourceResolverIgnoresSetVirtualNetwork(t *testing.T) {
 // resource group name.
 func TestResourceResolverSetVirtualNetworkResourceGroupName(t *testing.T) {
 	var c Config
-	c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	c.VirtualNetworkName = "--virtual-network-name--"
 
 	sut := newTestResourceResolver()
-	sut.Resolve(&c)
+	_ = sut.Resolve(&c)
 
 	if c.VirtualNetworkResourceGroupName != "findVirtualNetworkResourceGroup is mocked" {
 		t.Fatalf("Expected VirtualNetworkResourceGroupName to be 'findVirtualNetworkResourceGroup is mocked'")

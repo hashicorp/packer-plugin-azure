@@ -126,7 +126,7 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupNa
 		for {
 			f, err := s.client.DtlVirtualMachineClient.ApplyArtifacts(ctx, s.config.tmpResourceGroupName, s.config.LabName, s.config.tmpComputeName, dtlArtifactsRequest)
 			if err == nil {
-				s.say(fmt.Sprintf("WinRM artifact deployment started, waiting for completion"))
+				s.say("WinRM artifact deployment started, waiting for completion")
 				err = f.WaitForCompletionRef(ctx, s.client.DtlVirtualMachineClient.Client)
 				if err != nil {
 					s.say(s.client.LastError.Error())
@@ -134,7 +134,7 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupNa
 				}
 				break
 			} else {
-				s.say(fmt.Sprintf("WinRM artifact deployment failed, sleeping a minute and retrying"))
+				s.say("WinRM artifact deployment failed, sleeping a minute and retrying")
 				time.Sleep(60 * time.Second)
 			}
 		}

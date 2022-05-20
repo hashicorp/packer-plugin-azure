@@ -20,21 +20,14 @@ package arm
 //   go test -v -timeout 90m -run TestBuilderAcc_.*
 
 import (
-	"bytes"
-	"context"
 	_ "embed"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"strings"
 	"testing"
 
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
-	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
 const DeviceLoginAcceptanceTest = "DEVICELOGIN_TEST"
@@ -190,7 +183,10 @@ func TestBuilderAcc_Blob_Windows(t *testing.T) {
 
 func TestBuilderAcc_Blob_Linux(t *testing.T) {
 	b := Builder{}
-	b.Prepare()
+	_, _, err := b.Prepare()
+	if err != nil {
+		t.Fatal(err)
+	}
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-blob-linux",
 		Type:     "azure-arm",
@@ -212,8 +208,11 @@ func TestBuilderAcc_Blob_Linux(t *testing.T) {
 
 func TestBuilderUserData_Linux(t *testing.T) {
 	b := Builder{}
-	b.Prepare()
+	_, _, err := b.Prepare()
 
+	if err != nil {
+		t.Fatal(err)
+	}
 	tmpfile, err := ioutil.TempFile("", "userdata")
 	if err != nil {
 		t.Fatalf("failed creating tempfile: %s", err)
@@ -248,7 +247,10 @@ var rsaSHA2OnlyTemplate []byte
 
 func TestBuilderAcc_rsaSHA2OnlyServer(t *testing.T) {
 	b := Builder{}
-	b.Prepare()
+	_, _, err := b.Prepare()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-ubuntu-jammy-linux",
@@ -263,96 +265,6 @@ func TestBuilderAcc_rsaSHA2OnlyServer(t *testing.T) {
 			return nil
 		},
 	})
-}
-
-func testAccPreCheck(*testing.T) {}
-
-func testAuthPreCheck(t *testing.T) {
-	_, err := auth.NewAuthorizerFromEnvironment()
-	if err != nil {
-		t.Fatalf("failed to auth to azure: %s", err)
-	}
-}
-
-func checkTemporaryGroupDeleted(t *testing.T, b *Builder) {
-	ui := testUi()
-
-	spnCloud, spnKeyVault, err := b.getServicePrincipalTokens(ui.Say)
-	if err != nil {
-		t.Fatalf("failed getting azure tokens: %s", err)
-	}
-
-	ui.Message("Creating test Azure Resource Manager (ARM) client ...")
-	azureClient, err := NewAzureClient(
-		b.config.ClientConfig.SubscriptionID,
-		b.config.SharedGalleryDestination.SigDestinationSubscription,
-		b.config.ResourceGroupName,
-		b.config.StorageAccount,
-		b.config.ClientConfig.CloudEnvironment(),
-		b.config.SharedGalleryTimeout,
-		b.config.PollingDurationTimeout,
-		spnCloud,
-		spnKeyVault)
-
-	if err != nil {
-		t.Fatalf("failed to create azure client: %s", err)
-	}
-
-	// Validate resource group has been deleted
-	_, err = azureClient.GroupsClient.Get(context.Background(), b.config.tmpResourceGroupName)
-	if err == nil || !resourceNotFound(err) {
-		t.Fatalf("failed validating resource group deletion: %s", err)
-	}
-}
-
-func checkUnmanagedVHDDeleted(t *testing.T, b *Builder) {
-	ui := testUi()
-
-	spnCloud, spnKeyVault, err := b.getServicePrincipalTokens(ui.Say)
-	if err != nil {
-		t.Fatalf("failed getting azure tokens: %s", err)
-	}
-
-	azureClient, err := NewAzureClient(
-		b.config.ClientConfig.SubscriptionID,
-		b.config.SharedGalleryDestination.SigDestinationSubscription,
-		b.config.ResourceGroupName,
-		b.config.StorageAccount,
-		b.config.ClientConfig.CloudEnvironment(),
-		b.config.SharedGalleryTimeout,
-		b.config.PollingDurationTimeout,
-		spnCloud,
-		spnKeyVault)
-
-	if err != nil {
-		t.Fatalf("failed to create azure client: %s", err)
-	}
-
-	// validate temporary os blob was deleted
-	blob := azureClient.BlobStorageClient.GetContainerReference("images").GetBlobReference(b.config.tmpOSDiskName)
-	_, err = blob.BreakLease(nil)
-	if err != nil && !strings.Contains(err.Error(), "BlobNotFound") {
-		t.Fatalf("failed validating deletion of unmanaged vhd: %s", err)
-	}
-
-	// Validate resource group has been deleted
-	_, err = azureClient.GroupsClient.Get(context.Background(), b.config.tmpResourceGroupName)
-	if err == nil || !resourceNotFound(err) {
-		t.Fatalf("failed validating resource group deletion: %s", err)
-	}
-}
-
-func resourceNotFound(err error) bool {
-	derr := autorest.DetailedError{}
-	return errors.As(err, &derr) && derr.StatusCode == 404
-}
-
-func testUi() *packersdk.BasicUi {
-	return &packersdk.BasicUi{
-		Reader:      new(bytes.Buffer),
-		Writer:      new(bytes.Buffer),
-		ErrorWriter: new(bytes.Buffer),
-	}
 }
 
 func testBuilderUserDataLinux(userdata string) string {

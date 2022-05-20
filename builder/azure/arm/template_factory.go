@@ -24,7 +24,7 @@ func GetKeyVaultDeployment(config *Config) (*resources.Deployment, error) {
 	}
 
 	builder, _ := template.NewTemplateBuilder(template.KeyVault)
-	builder.SetTags(&config.AzureTags)
+	_ = builder.SetTags(&config.AzureTags)
 
 	doc, _ := builder.ToJSON()
 	return createDeploymentParameters(*doc, params)
@@ -92,7 +92,10 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 			config.ImageSku,
 			config.ImageVersion)
 
-		builder.SetManagedMarketplaceImage(config.Location, config.ImagePublisher, config.ImageOffer, config.ImageSku, config.ImageVersion, imageID, config.managedImageStorageAccountType, config.diskCachingType)
+		err = builder.SetManagedMarketplaceImage(config.Location, config.ImagePublisher, config.ImageOffer, config.ImageSku, config.ImageVersion, imageID, config.managedImageStorageAccountType, config.diskCachingType)
+		if err != nil {
+			return nil, err
+		}
 	} else if config.SharedGallery.Subscription != "" {
 		imageID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/galleries/%s/images/%s",
 			config.SharedGallery.Subscription,
