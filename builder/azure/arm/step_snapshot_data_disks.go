@@ -81,7 +81,7 @@ func (s *StepSnapshotDataDisks) Run(ctx context.Context, stateBag multistep.Stat
 	var additionalDisks = stateBag.Get(constants.ArmAdditionalDiskVhds).([]string)
 	var dstSnapshotPrefix = stateBag.Get(constants.ArmManagedImageDataDiskSnapshotPrefix).(string)
 
-	s.say("Snapshotting data disks ...")
+	s.say("Snapshotting data disk(s) ...")
 
 	for i, disk := range additionalDisks {
 		s.say(fmt.Sprintf(" -> Data Disk   : '%s'", disk))
