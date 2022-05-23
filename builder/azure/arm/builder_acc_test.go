@@ -20,14 +20,21 @@ package arm
 //   go test -v -timeout 90m -run TestBuilderAcc_.*
 
 import (
+	"bytes"
+	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
+	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
 const DeviceLoginAcceptanceTest = "DEVICELOGIN_TEST"
@@ -255,6 +262,101 @@ func TestBuilderAcc_rsaSHA2OnlyServer(t *testing.T) {
 			return nil
 		},
 	})
+}
+
+//Following functions are left in as they are part of newer Packer plugin acceptance testing framework
+//See https://github.com/hashicorp/packer-plugin-azure/pull/200#discussion_r879529490
+//nolint
+func testAuthPreCheck(t *testing.T) {
+	_, err := auth.NewAuthorizerFromEnvironment()
+	if err != nil {
+		t.Fatalf("failed to auth to azure: %s", err)
+	}
+}
+
+//nolint
+func checkTemporaryGroupDeleted(t *testing.T, b *Builder) {
+	ui := testUi()
+
+	spnCloud, spnKeyVault, err := b.getServicePrincipalTokens(ui.Say)
+	if err != nil {
+		t.Fatalf("failed getting azure tokens: %s", err)
+	}
+
+	ui.Message("Creating test Azure Resource Manager (ARM) client ...")
+	azureClient, err := NewAzureClient(
+		b.config.ClientConfig.SubscriptionID,
+		b.config.SharedGalleryDestination.SigDestinationSubscription,
+		b.config.ResourceGroupName,
+		b.config.StorageAccount,
+		b.config.ClientConfig.CloudEnvironment(),
+		b.config.SharedGalleryTimeout,
+		b.config.PollingDurationTimeout,
+		spnCloud,
+		spnKeyVault)
+
+	if err != nil {
+		t.Fatalf("failed to create azure client: %s", err)
+	}
+
+	// Validate resource group has been deleted
+	_, err = azureClient.GroupsClient.Get(context.Background(), b.config.tmpResourceGroupName)
+	if err == nil || !resourceNotFound(err) {
+		t.Fatalf("failed validating resource group deletion: %s", err)
+	}
+}
+
+//nolint
+func checkUnmanagedVHDDeleted(t *testing.T, b *Builder) {
+	ui := testUi()
+
+	spnCloud, spnKeyVault, err := b.getServicePrincipalTokens(ui.Say)
+	if err != nil {
+		t.Fatalf("failed getting azure tokens: %s", err)
+	}
+
+	azureClient, err := NewAzureClient(
+		b.config.ClientConfig.SubscriptionID,
+		b.config.SharedGalleryDestination.SigDestinationSubscription,
+		b.config.ResourceGroupName,
+		b.config.StorageAccount,
+		b.config.ClientConfig.CloudEnvironment(),
+		b.config.SharedGalleryTimeout,
+		b.config.PollingDurationTimeout,
+		spnCloud,
+		spnKeyVault)
+
+	if err != nil {
+		t.Fatalf("failed to create azure client: %s", err)
+	}
+
+	// validate temporary os blob was deleted
+	blob := azureClient.BlobStorageClient.GetContainerReference("images").GetBlobReference(b.config.tmpOSDiskName)
+	_, err = blob.BreakLease(nil)
+	if err != nil && !strings.Contains(err.Error(), "BlobNotFound") {
+		t.Fatalf("failed validating deletion of unmanaged vhd: %s", err)
+	}
+
+	// Validate resource group has been deleted
+	_, err = azureClient.GroupsClient.Get(context.Background(), b.config.tmpResourceGroupName)
+	if err == nil || !resourceNotFound(err) {
+		t.Fatalf("failed validating resource group deletion: %s", err)
+	}
+}
+
+//nolint
+func resourceNotFound(err error) bool {
+	derr := autorest.DetailedError{}
+	return errors.As(err, &derr) && derr.StatusCode == 404
+}
+
+//nolint
+func testUi() *packersdk.BasicUi {
+	return &packersdk.BasicUi{
+		Reader:      new(bytes.Buffer),
+		Writer:      new(bytes.Buffer),
+		ErrorWriter: new(bytes.Buffer),
+	}
 }
 
 func testBuilderUserDataLinux(userdata string) string {
