@@ -23,6 +23,8 @@ const (
 	resourceNetworkSecurityGroups = "Microsoft.Network/networkSecurityGroups"
 
 	variableSshKeyPath = "sshKeyPath"
+
+	communityGalleryApiVersion = "2021-07-01"
 )
 
 type TemplateBuilder struct {
@@ -198,7 +200,7 @@ func (s *TemplateBuilder) SetCommunityGalleryImage(location, imageID string, cac
 		return err
 	}
 
-	s.setVariable("apiVersion", "2021-07-01") // Required for Community Gallery Image
+	s.setVariable("apiVersion", communityGalleryApiVersion) // Required for Community Gallery Image
 	profile := resource.Properties.StorageProfile
 	profile.ImageReference = &compute.ImageReference{CommunityGalleryImageID: &imageID}
 	profile.OsDisk.OsType = s.osType
@@ -214,7 +216,7 @@ func (s *TemplateBuilder) SetDirectSharedGalleryImage(location, imageID string, 
 		return err
 	}
 
-	s.setVariable("apiVersion", "2021-07-01") // Required for Shared Gallery Image
+	s.setVariable("apiVersion", communityGalleryApiVersion) // Required for DirectShared Gallery Image
 	profile := resource.Properties.StorageProfile
 	profile.ImageReference = &compute.ImageReference{SharedGalleryImageID: &imageID}
 	profile.OsDisk.OsType = s.osType
