@@ -98,6 +98,8 @@ type ArtifactParameter struct {
 type Config struct {
 	common.PackerConfig `mapstructure:",squash"`
 
+	azcommon.Config `mapstructure:",squash"`
+
 	// Authentication via OAUTH
 	ClientConfig client.Config `mapstructure:",squash"`
 

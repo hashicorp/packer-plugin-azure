@@ -18,6 +18,7 @@ type FlatConfig struct {
 	PackerOnError                     *string                            `mapstructure:"packer_on_error" cty:"packer_on_error" hcl:"packer_on_error"`
 	PackerUserVars                    map[string]string                  `mapstructure:"packer_user_variables" cty:"packer_user_variables" hcl:"packer_user_variables"`
 	PackerSensitiveVars               []string                           `mapstructure:"packer_sensitive_variables" cty:"packer_sensitive_variables" hcl:"packer_sensitive_variables"`
+	SkipCreateImage                   *bool                              `mapstructure:"skip_create_image" required:"false" cty:"skip_create_image" hcl:"skip_create_image"`
 	CloudEnvironmentName              *string                            `mapstructure:"cloud_environment_name" required:"false" cty:"cloud_environment_name" hcl:"cloud_environment_name"`
 	MetadataHost                      *string                            `mapstructure:"metadata_host" required:"false" cty:"metadata_host" hcl:"metadata_host"`
 	ClientID                          *string                            `mapstructure:"client_id" cty:"client_id" hcl:"client_id"`
@@ -74,6 +75,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"packer_on_error":                 &hcldec.AttrSpec{Name: "packer_on_error", Type: cty.String, Required: false},
 		"packer_user_variables":           &hcldec.AttrSpec{Name: "packer_user_variables", Type: cty.Map(cty.String), Required: false},
 		"packer_sensitive_variables":      &hcldec.AttrSpec{Name: "packer_sensitive_variables", Type: cty.List(cty.String), Required: false},
+		"skip_create_image":               &hcldec.AttrSpec{Name: "skip_create_image", Type: cty.Bool, Required: false},
 		"cloud_environment_name":          &hcldec.AttrSpec{Name: "cloud_environment_name", Type: cty.String, Required: false},
 		"metadata_host":                   &hcldec.AttrSpec{Name: "metadata_host", Type: cty.String, Required: false},
 		"client_id":                       &hcldec.AttrSpec{Name: "client_id", Type: cty.String, Required: false},
