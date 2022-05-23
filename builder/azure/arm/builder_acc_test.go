@@ -190,7 +190,7 @@ func TestBuilderAcc_Blob_Windows(t *testing.T) {
 
 func TestBuilderAcc_Blob_Linux(t *testing.T) {
 	b := Builder{}
-	b.Prepare()
+	_, _, _ = b.Prepare()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-blob-linux",
 		Type:     "azure-arm",
@@ -212,8 +212,7 @@ func TestBuilderAcc_Blob_Linux(t *testing.T) {
 
 func TestBuilderUserData_Linux(t *testing.T) {
 	b := Builder{}
-	b.Prepare()
-
+	_, _, _ = b.Prepare()
 	tmpfile, err := ioutil.TempFile("", "userdata")
 	if err != nil {
 		t.Fatalf("failed creating tempfile: %s", err)
@@ -248,7 +247,7 @@ var rsaSHA2OnlyTemplate []byte
 
 func TestBuilderAcc_rsaSHA2OnlyServer(t *testing.T) {
 	b := Builder{}
-	b.Prepare()
+	_, _, _ = b.Prepare()
 
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-ubuntu-jammy-linux",
@@ -265,8 +264,9 @@ func TestBuilderAcc_rsaSHA2OnlyServer(t *testing.T) {
 	})
 }
 
-func testAccPreCheck(*testing.T) {}
-
+//Following functions are left in as they are part of newer Packer plugin acceptance testing framework
+//See https://github.com/hashicorp/packer-plugin-azure/pull/200#discussion_r879529490
+//nolint
 func testAuthPreCheck(t *testing.T) {
 	_, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
@@ -274,6 +274,7 @@ func testAuthPreCheck(t *testing.T) {
 	}
 }
 
+//nolint
 func checkTemporaryGroupDeleted(t *testing.T, b *Builder) {
 	ui := testUi()
 
@@ -305,6 +306,7 @@ func checkTemporaryGroupDeleted(t *testing.T, b *Builder) {
 	}
 }
 
+//nolint
 func checkUnmanagedVHDDeleted(t *testing.T, b *Builder) {
 	ui := testUi()
 
@@ -342,11 +344,13 @@ func checkUnmanagedVHDDeleted(t *testing.T, b *Builder) {
 	}
 }
 
+//nolint
 func resourceNotFound(err error) bool {
 	derr := autorest.DetailedError{}
 	return errors.As(err, &derr) && derr.StatusCode == 404
 }
 
+//nolint
 func testUi() *packersdk.BasicUi {
 	return &packersdk.BasicUi{
 		Reader:      new(bytes.Buffer),

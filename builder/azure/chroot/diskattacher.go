@@ -123,6 +123,8 @@ func (da *diskAttacher) AttachDisk(ctx context.Context, diskID string) (int32, e
 
 	// disk was not found on VM, go and actually attach it
 
+	// TODO This assignment looks like it would do nothing, consider removing it
+	//nolint
 	var lun int32 = -1
 findFreeLun:
 	for lun = 0; lun < 64; lun++ {

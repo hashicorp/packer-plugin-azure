@@ -173,8 +173,10 @@ func TestConfigShouldBeAbleToOverrideDefaultedValues(t *testing.T) {
 
 func TestConfigShouldDefaultVMSizeToStandardA1(t *testing.T) {
 	var c Config
-	c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
-
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	if c.VMSize != "Standard_A1" {
 		t.Errorf("Expected 'VMSize' to default to 'Standard_A1', but got '%s'.", c.VMSize)
 	}
@@ -182,8 +184,10 @@ func TestConfigShouldDefaultVMSizeToStandardA1(t *testing.T) {
 
 func TestConfigShouldDefaultImageVersionToLatest(t *testing.T) {
 	var c Config
-	c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
-
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	if c.ImageVersion != "latest" {
 		t.Errorf("Expected 'ImageVersion' to default to 'latest', but got '%s'.", c.ImageVersion)
 	}
@@ -203,7 +207,10 @@ func TestConfigShouldNotDefaultImageVersionIfCustomImage(t *testing.T) {
 	}
 
 	var c Config
-	c.Prepare(config, getPackerConfiguration())
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	if c.ImageVersion != "" {
 		t.Errorf("Expected 'ImageVersion' to empty, but got '%s'.", c.ImageVersion)
 	}
@@ -292,7 +299,10 @@ func TestConfigVirtualNetworkNameIsOptional(t *testing.T) {
 	}
 
 	var c Config
-	c.Prepare(config, getPackerConfiguration())
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	if c.VirtualNetworkName != "MyVirtualNetwork" {
 		t.Errorf("Expected Config to set virtual_network_name to MyVirtualNetwork, but got %q", c.VirtualNetworkName)
 	}
@@ -484,8 +494,10 @@ func TestConfigShouldRejectInboundIpAddressesWithVirtualNetwork(t *testing.T) {
 
 func TestConfigShouldDefaultToPublicCloud(t *testing.T) {
 	var c Config
-	c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
-
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	if c.ClientConfig.CloudEnvironmentName != "Public" {
 		t.Errorf("Expected 'CloudEnvironmentName' to default to 'Public', but got '%s'.", c.ClientConfig.CloudEnvironmentName)
 	}
@@ -576,8 +588,11 @@ func TestUserShouldProvideRequiredValues(t *testing.T) {
 
 func TestSystemShouldDefineRuntimeValues(t *testing.T) {
 	var c Config
-	c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
 
+	if err != nil {
+		t.Fatal(err)
+	}
 	if c.Password == "" {
 		t.Errorf("Expected Password to not be empty, but it was '%s'!", c.Password)
 	}
@@ -609,7 +624,10 @@ func TestSystemShouldDefineRuntimeValues(t *testing.T) {
 
 func TestConfigShouldTransformToVirtualMachineCaptureParameters(t *testing.T) {
 	var c Config
-	c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	parameters := c.toVirtualMachineCaptureParameters()
 
 	if *parameters.DestinationContainerName != c.CaptureContainerName {
@@ -1654,7 +1672,10 @@ func TestConfigShouldRejectManagedDiskNames(t *testing.T) {
 
 func TestConfigAdditionalDiskDefaultIsNil(t *testing.T) {
 	var c Config
-	c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	if c.AdditionalDiskSize != nil {
 		t.Errorf("Expected Config to not have a set of additional disks, but got a non nil value")
 	}
@@ -1678,7 +1699,10 @@ func TestConfigAdditionalDiskOverrideDefault(t *testing.T) {
 	}
 
 	var c Config
-	c.Prepare(config, diskconfig, getPackerConfiguration())
+	_, err := c.Prepare(config, diskconfig, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	if c.AdditionalDiskSize == nil {
 		t.Errorf("Expected Config to have a set of additional disks, but got nil")
 	}

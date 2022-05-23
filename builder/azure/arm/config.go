@@ -847,7 +847,7 @@ func provideDefaultValues(c *Config) {
 		c.BuildKeyVaultSKU = DefaultKeyVaultSKU
 	}
 
-	c.ClientConfig.SetDefaultValues()
+	_ = c.ClientConfig.SetDefaultValues()
 }
 
 func assertTagProperties(c *Config, errs *packersdk.MultiError) {
