@@ -191,9 +191,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				Comm: &b.config.Comm,
 			},
 			NewStepPowerOffCompute(azureClient, ui, &b.config),
-			NewStepCaptureImage(azureClient, ui, &b.config),
-			NewStepPublishToSharedImageGallery(azureClient, ui, &b.config),
-			NewStepDeleteVirtualMachine(azureClient, ui, &b.config),
 		}
 	} else if b.config.OSType == constants.Target_Windows {
 		steps = []multistep.Step{
@@ -216,13 +213,19 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			},
 			&commonsteps.StepProvision{},
 			NewStepPowerOffCompute(azureClient, ui, &b.config),
-			NewStepCaptureImage(azureClient, ui, &b.config),
-			NewStepPublishToSharedImageGallery(azureClient, ui, &b.config),
-			NewStepDeleteVirtualMachine(azureClient, ui, &b.config),
 		}
 	} else {
 		return nil, fmt.Errorf("Builder does not support the os_type '%s'", b.config.OSType)
 	}
+
+	captureSteps := b.config.CaptureSteps(
+		ui.Say,
+		NewStepCaptureImage(azureClient, ui, &b.config),
+		NewStepPublishToSharedImageGallery(azureClient, ui, &b.config),
+	)
+
+	steps = append(steps, captureSteps...)
+	steps = append(steps, NewStepDeleteVirtualMachine(azureClient, ui, &b.config))
 
 	if b.config.PackerDebug {
 		ui.Message(fmt.Sprintf("temp admin user: '%s'", b.config.UserName))

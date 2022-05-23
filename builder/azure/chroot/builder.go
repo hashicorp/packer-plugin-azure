@@ -40,6 +40,8 @@ const BuilderID = "azure.chroot"
 type Config struct {
 	common.PackerConfig `mapstructure:",squash"`
 
+	azcommon.Config `mapstructure:",squash"`
+
 	ClientConfig client.Config `mapstructure:",squash"`
 
 	// When set to `true`, starts with an empty, unpartitioned disk. Defaults to `false`.
@@ -441,7 +443,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	state.Put("instance", info)
 
 	// Build the step array from the config
-	steps := buildsteps(b.config, info, &generatedData)
+	steps := buildsteps(b.config, info, &generatedData, ui.Say)
 
 	// Run!
 	b.runner = commonsteps.NewRunner(steps, b.config.PackerConfig, ui)
@@ -480,7 +482,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	return artifact, nil
 }
 
-func buildsteps(config Config, info *client.ComputeInfo, generatedData *packerbuilderdata.GeneratedData) []multistep.Step {
+func buildsteps(
+	config Config,
+	info *client.ComputeInfo,
+	generatedData *packerbuilderdata.GeneratedData,
+	say func(string),
+) []multistep.Step {
 	// Build the steps
 	var steps []multistep.Step
 	addSteps := func(s ...multistep.Step) { // convenience function
@@ -615,23 +622,32 @@ func buildsteps(config Config, info *client.ComputeInfo, generatedData *packerbu
 		&chroot.StepEarlyCleanup{},
 	)
 
+	var captureSteps []multistep.Step
+
 	if config.ImageResourceID != "" {
-		addSteps(&StepCreateImage{
-			ImageResourceID:          config.ImageResourceID,
-			ImageOSState:             string(compute.Generalized),
-			OSDiskCacheType:          config.OSDiskCacheType,
-			OSDiskStorageAccountType: config.OSDiskStorageAccountType,
-			Location:                 info.Location,
-		})
+		captureSteps = append(
+			captureSteps,
+			&StepCreateImage{
+				ImageResourceID:          config.ImageResourceID,
+				ImageOSState:             string(compute.Generalized),
+				OSDiskCacheType:          config.OSDiskCacheType,
+				OSDiskStorageAccountType: config.OSDiskStorageAccountType,
+				Location:                 info.Location,
+			},
+		)
 	}
 	if hasValidSharedImage {
-		addSteps(
+		captureSteps = append(
+			captureSteps,
 			&StepCreateSnapshotset{
 				OSDiskSnapshotID:         config.TemporaryOSDiskSnapshotID,
 				DataDiskSnapshotIDPrefix: config.TemporaryDataDiskSnapshotIDPrefix,
 				Location:                 info.Location,
 				SkipCleanup:              config.SkipCleanup,
 			},
+		)
+		captureSteps = append(
+			captureSteps,
 			&StepCreateSharedImageVersion{
 				Destination:     config.SharedImageGalleryDestination,
 				OSDiskCacheType: config.OSDiskCacheType,
@@ -639,6 +655,8 @@ func buildsteps(config Config, info *client.ComputeInfo, generatedData *packerbu
 			},
 		)
 	}
+
+	addSteps(config.CaptureSteps(say, captureSteps...)...)
 
 	return steps
 }
