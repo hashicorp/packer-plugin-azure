@@ -1291,7 +1291,7 @@ func (c *Config) validateLocationZoneResiliency(say func(s string)) {
 	zones["westus2"] = struct{}{}
 	zones["westus3"] = struct{}{}
 
-	if _, ok := zones[c.Location]; !ok {
+	if _, ok := zones[normalizeAzureRegion(c.Location)]; !ok {
 		say(fmt.Sprintf("WARNING: Zone resiliency may not be supported in %s, checkout the docs at https://docs.microsoft.com/en-us/azure/availability-zones/", c.Location))
 	}
 }
