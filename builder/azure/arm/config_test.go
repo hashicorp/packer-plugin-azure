@@ -1955,6 +1955,48 @@ func TestConfigShouldAllowSharedImageGalleryOptions(t *testing.T) {
 
 }
 
+func TestConfigShouldAllowCommunityGalleryOptions(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           "linux",
+		"managed_image_name":                "ignore",
+		"managed_image_resource_group_name": "ignore",
+		"async_resourcegroup_delete":        "true",
+		"shared_image_gallery": map[string]string{
+			"communityGallery_image_id": "/CommunityGalleries/cg/Images/img",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Errorf("community gallery might not be accepted - failed with %q", err)
+	}
+
+}
+
+func TestConfigShouldAllowDirestSharedGalleryOptions(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           "linux",
+		"managed_image_name":                "ignore",
+		"managed_image_resource_group_name": "ignore",
+		"async_resourcegroup_delete":        "true",
+		"shared_image_gallery": map[string]string{
+			"directSharedGallery_image_id": "/SharedGalleries/cg/Images/img",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Errorf("direct shared gallery might not be accepted - failed with %q", err)
+	}
+
+}
+
 func TestConfigShouldRejectSharedImageGalleryInvalidStorageAccountType(t *testing.T) {
 	config := map[string]interface{}{
 		"location":        "ignore",

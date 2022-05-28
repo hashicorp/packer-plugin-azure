@@ -140,7 +140,8 @@ type Config struct {
 	//     "gallery_name": "GalleryName",
 	//     "image_name": "ImageName",
 	//     "image_version": "1.0.0",
-	//     "communityGallery_image_id": "/CommunityGalleries/{cg}/Images/{}/Versions/{}"
+	//     "communityGallery_image_id": "/CommunityGalleries/{cg}/Images/{}/Versions/{}",
+	//     "directSharedGallery_image_id": "/SharedGalleries/{cg}/Images/{}/Versions/{}"
 	// }
 	// "managed_image_name": "TargetImageName",
 	// "managed_image_resource_group_name": "TargetResourceGroup"
@@ -954,7 +955,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	isImageUrl := c.ImageUrl != ""
 	isCustomManagedImage := c.CustomManagedImageName != "" || c.CustomManagedImageResourceGroupName != ""
-	isSharedGallery := c.SharedGallery.GalleryName != ""
+	isSharedGallery := c.SharedGallery.GalleryName != "" || c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.SharedGalleryImageID != ""
 	isPlatformImage := c.ImagePublisher != "" || c.ImageOffer != "" || c.ImageSku != ""
 
 	countSourceInputs := toInt(isImageUrl) + toInt(isCustomManagedImage) + toInt(isPlatformImage) + toInt(isSharedGallery)
@@ -967,7 +968,14 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A managed image must be created from a managed image, it cannot be created from a VHD."))
 	}
 
-	if c.SharedGallery.GalleryName != "" {
+	if c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.SharedGalleryImageID != "" {
+		if c.CaptureContainerName != "" {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_container_name] is not supported when using Shared Image Gallery as source. Use managed_image_resource_group_name instead."))
+		}
+		if c.CaptureNamePrefix != "" {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_name_prefix] is not supported when using Shared Image Gallery as source. Use managed_image_name instead."))
+		}
+	} else if c.SharedGallery.GalleryName != "" {
 		if c.SharedGallery.Subscription == "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A shared_image_gallery.subscription must be specified"))
 		}
