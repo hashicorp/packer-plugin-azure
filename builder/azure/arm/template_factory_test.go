@@ -14,7 +14,10 @@ import (
 // Ensure the link values are not set, and the concrete values are set.
 func TestVirtualMachineDeployment00(t *testing.T) {
 	var c Config
-	c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	deployment, err := GetVirtualMachineDeployment(&c)
 	if err != nil {
 		t.Fatal(err)
@@ -44,7 +47,10 @@ func TestVirtualMachineDeployment00(t *testing.T) {
 // Ensure the Virtual Machine template is a valid JSON document.
 func TestVirtualMachineDeployment01(t *testing.T) {
 	var c Config
-	c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	deployment, err := GetVirtualMachineDeployment(&c)
 	if err != nil {
 		t.Fatal(err)
@@ -59,7 +65,10 @@ func TestVirtualMachineDeployment01(t *testing.T) {
 // Ensure the Virtual Machine template parameters are correct.
 func TestVirtualMachineDeployment02(t *testing.T) {
 	var c Config
-	c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	deployment, err := GetVirtualMachineDeployment(&c)
 	if err != nil {
 		t.Fatal(err)
@@ -474,7 +483,10 @@ func TestVirtualMachineDeployment14(t *testing.T) {
 // Ensure the link values are not set, and the concrete values are set.
 func TestKeyVaultDeployment00(t *testing.T) {
 	var c Config
-	c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	deployment, err := GetKeyVaultDeployment(&c)
 	if err != nil {
 		t.Fatal(err)
@@ -504,7 +516,10 @@ func TestKeyVaultDeployment00(t *testing.T) {
 // Ensure the KeyVault template is a valid JSON document.
 func TestKeyVaultDeployment01(t *testing.T) {
 	var c Config
-	c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	deployment, err := GetKeyVaultDeployment(&c)
 	if err != nil {
 		t.Fatal(err)
@@ -519,8 +534,10 @@ func TestKeyVaultDeployment01(t *testing.T) {
 // Ensure the KeyVault template parameters are correct.
 func TestKeyVaultDeployment02(t *testing.T) {
 	var c Config
-	c.Prepare(getArmBuilderConfigurationWithWindows(), getPackerConfiguration())
-
+	_, err := c.Prepare(getArmBuilderConfigurationWithWindows(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	deployment, err := GetKeyVaultDeployment(&c)
 	if err != nil {
 		t.Fatal(err)
@@ -562,7 +579,10 @@ func TestKeyVaultDeployment03(t *testing.T) {
 	}
 
 	var c Config
-	c.Prepare(tags, getArmBuilderConfigurationWithWindows(), getPackerConfiguration())
+	_, err := c.Prepare(tags, getArmBuilderConfigurationWithWindows(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	deployment, err := GetKeyVaultDeployment(&c)
 	if err != nil {
 		t.Fatal(err)
@@ -581,7 +601,10 @@ func TestPlanInfo01(t *testing.T) {
 	}
 
 	var c Config
-	c.Prepare(planInfo, getArmBuilderConfiguration(), getPackerConfiguration())
+	_, err := c.Prepare(planInfo, getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	deployment, err := GetVirtualMachineDeployment(&c)
 	if err != nil {
 		t.Fatal(err)
@@ -604,7 +627,10 @@ func TestPlanInfo02(t *testing.T) {
 	}
 
 	var c Config
-	c.Prepare(planInfo, getArmBuilderConfiguration(), getPackerConfiguration())
+	_, err := c.Prepare(planInfo, getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
 	deployment, err := GetVirtualMachineDeployment(&c)
 	if err != nil {
 		t.Fatal(err)

@@ -89,7 +89,7 @@ func (s *StepCreateResourceGroup) Run(ctx context.Context, state multistep.State
 
 		s.say(fmt.Sprintf(" -> ResourceGroupName : '%s'", resourceGroupName))
 		s.say(fmt.Sprintf(" -> Location          : '%s'", location))
-		s.say(fmt.Sprintf(" -> Tags              :"))
+		s.say(" -> Tags              :")
 		for k, v := range tags {
 			s.say(fmt.Sprintf(" ->> %s : %s", k, *v))
 		}

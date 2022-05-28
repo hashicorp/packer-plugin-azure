@@ -88,7 +88,7 @@ func (s *StepPublishToSharedImageGallery) publishToSig(ctx context.Context, mdiI
 		endOfLifeDate = (*date.Time)(nil)
 	}
 
-	storageAccountType, err := getSigDestinationStorageAccountType(string(sharedImageGallery.SigDestinationStorageAccountType))
+	storageAccountType, err := getSigDestinationStorageAccountType(sharedImageGallery.SigDestinationStorageAccountType)
 	if err != nil {
 		s.error(err)
 		return "", err
