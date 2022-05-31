@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-04-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-01-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 )
@@ -23,6 +23,8 @@ const (
 	resourceNetworkSecurityGroups = "Microsoft.Network/networkSecurityGroups"
 
 	variableSshKeyPath = "sshKeyPath"
+
+	communityGalleryApiVersion = "2021-07-01"
 )
 
 type TemplateBuilder struct {
@@ -66,7 +68,7 @@ func (s *TemplateBuilder) BuildLinux(sshAuthorizedKey string, disablePasswordAut
 		profile.AdminPassword = nil
 	}
 
-	s.osType = compute.Linux
+	s.osType = compute.OperatingSystemTypesLinux
 	return nil
 }
 
@@ -104,7 +106,7 @@ func (s *TemplateBuilder) BuildWindows(keyVaultName, winRMCertificateUrl string)
 		},
 	}
 
-	s.osType = compute.Windows
+	s.osType = compute.OperatingSystemTypesWindows
 	return nil
 }
 
@@ -185,6 +187,38 @@ func (s *TemplateBuilder) SetSharedGalleryImage(location, imageID string, cachin
 	s.setVariable("apiVersion", "2018-06-01") // Required for Shared Image Gallery
 	profile := resource.Properties.StorageProfile
 	profile.ImageReference = &compute.ImageReference{ID: &imageID}
+	profile.OsDisk.OsType = s.osType
+	profile.OsDisk.Vhd = nil
+	profile.OsDisk.Caching = cachingType
+
+	return nil
+}
+
+func (s *TemplateBuilder) SetCommunityGalleryImage(location, imageID string, cachingType compute.CachingTypes) error {
+	resource, err := s.getResourceByType(resourceVirtualMachine)
+	if err != nil {
+		return err
+	}
+
+	s.setVariable("apiVersion", communityGalleryApiVersion) // Required for Community Gallery Image
+	profile := resource.Properties.StorageProfile
+	profile.ImageReference = &compute.ImageReference{CommunityGalleryImageID: &imageID}
+	profile.OsDisk.OsType = s.osType
+	profile.OsDisk.Vhd = nil
+	profile.OsDisk.Caching = cachingType
+
+	return nil
+}
+
+func (s *TemplateBuilder) SetDirectSharedGalleryImage(location, imageID string, cachingType compute.CachingTypes) error {
+	resource, err := s.getResourceByType(resourceVirtualMachine)
+	if err != nil {
+		return err
+	}
+
+	s.setVariable("apiVersion", communityGalleryApiVersion) // Required for DirectShared Gallery Image
+	profile := resource.Properties.StorageProfile
+	profile.ImageReference = &compute.ImageReference{SharedGalleryImageID: &imageID}
 	profile.OsDisk.OsType = s.osType
 	profile.OsDisk.Vhd = nil
 	profile.OsDisk.Caching = cachingType

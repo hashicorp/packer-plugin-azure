@@ -165,7 +165,8 @@ func (s *StepDeployTemplate) getImageDetails(ctx context.Context, resourceGroupN
 func deleteResource(ctx context.Context, client *AzureClient, resourceType string, resourceName string, resourceGroupName string) error {
 	switch resourceType {
 	case "Microsoft.Compute/virtualMachines":
-		f, err := client.VirtualMachinesClient.Delete(ctx, resourceGroupName, resourceName)
+		forcedelete := false
+		f, err := client.VirtualMachinesClient.Delete(ctx, resourceGroupName, resourceName, &forcedelete)
 		if err == nil {
 			err = f.WaitForCompletionRef(ctx, client.VirtualMachinesClient.Client)
 		}

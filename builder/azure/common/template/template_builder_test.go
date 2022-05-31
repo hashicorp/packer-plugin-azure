@@ -3,7 +3,7 @@ package template
 import (
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-04-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	approvaltests "github.com/approvals/go-approval-tests"
 )
 
@@ -45,7 +45,7 @@ func TestBuildLinux01(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = testSubject.SetImageUrl("http://azure/custom.vhd", compute.Linux, compute.CachingTypesReadWrite)
+	err = testSubject.SetImageUrl("http://azure/custom.vhd", compute.OperatingSystemTypesLinux, compute.CachingTypesReadWrite)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestBuildLinux02(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = testSubject.SetImageUrl("http://azure/custom.vhd", compute.Linux, compute.CachingTypesReadWrite)
+	err = testSubject.SetImageUrl("http://azure/custom.vhd", compute.OperatingSystemTypesLinux, compute.CachingTypesReadWrite)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,6 +187,58 @@ func TestSharedImageGallery00(t *testing.T) {
 
 	imageID := "/subscriptions/ignore/resourceGroups/ignore/providers/Microsoft.Compute/galleries/ignore/images/ignore"
 	err = testSubject.SetSharedGalleryImage("westcentralus", imageID, compute.CachingTypesReadOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	doc, err := testSubject.ToJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
+}
+
+// Community Shared Image Gallery Build
+func TestCommunitySharedImageGallery00(t *testing.T) {
+	testSubject, err := NewTemplateBuilder(BasicTemplate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = testSubject.BuildLinux("--test-ssh-authorized-key--", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	imageID := "/communityGalleries/cg/Images/img/Versions/1.0.0"
+	err = testSubject.SetCommunityGalleryImage("westcentralus", imageID, compute.CachingTypesReadOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	doc, err := testSubject.ToJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
+}
+
+// Community Shared Image Gallery Build
+func TestDirectSharedImageGallery00(t *testing.T) {
+	testSubject, err := NewTemplateBuilder(BasicTemplate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = testSubject.BuildLinux("--test-ssh-authorized-key--", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	imageID := "/sharedGalleries/dsg/Images/img/Versions/1.0.0"
+	err = testSubject.SetDirectSharedGalleryImage("westcentralus", imageID, compute.CachingTypesReadOnly)
 	if err != nil {
 		t.Fatal(err)
 	}

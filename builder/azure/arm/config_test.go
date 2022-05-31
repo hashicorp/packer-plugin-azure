@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-04-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	sdkconfig "github.com/hashicorp/packer-plugin-sdk/template/config"
@@ -1975,6 +1975,48 @@ func TestConfigShouldAllowSharedImageGalleryOptions(t *testing.T) {
 	_, err := c.Prepare(config, getPackerConfiguration())
 	if err == nil {
 		t.Log("expected config to accept Shared Image Gallery options", err)
+	}
+
+}
+
+func TestConfigShouldAllowCommunityGalleryOptions(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           "linux",
+		"managed_image_name":                "ignore",
+		"managed_image_resource_group_name": "ignore",
+		"async_resourcegroup_delete":        "true",
+		"shared_image_gallery": map[string]string{
+			"communityGallery_image_id": "/CommunityGalleries/cg/Images/img",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Errorf("community gallery might not be accepted - failed with %q", err)
+	}
+
+}
+
+func TestConfigShouldAllowDirestSharedGalleryOptions(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           "linux",
+		"managed_image_name":                "ignore",
+		"managed_image_resource_group_name": "ignore",
+		"async_resourcegroup_delete":        "true",
+		"shared_image_gallery": map[string]string{
+			"directSharedGallery_image_id": "/SharedGalleries/cg/Images/img",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Errorf("direct shared gallery might not be accepted - failed with %q", err)
 	}
 
 }

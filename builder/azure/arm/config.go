@@ -20,7 +20,7 @@ import (
 
 	"github.com/hashicorp/packer-plugin-sdk/random"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-04-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/masterzen/winrm"
 
@@ -86,6 +86,12 @@ type SharedImageGallery struct {
 	// version across regions set this value to one that is available in all
 	// regions where you are deploying.
 	ImageVersion string `mapstructure:"image_version" required:"false"`
+
+	// Id of the community gallery image : /CommunityGalleries/{cgName}/Images/{img}[/Versions/{}] (Versions part is optional)
+	CommunityGalleryImageId string `mapstructure:"communityGallery_image_id" required:"false"`
+
+	// Id of the direct shared gallery image : /sharedGalleries/{cgName}/Images/{img}[/Versions/{}] (Versions part is optional)
+	SharedGalleryImageID string `mapstructure:"directSharedGallery_image_id" required:"false"`
 }
 
 type SharedImageGalleryDestination struct {
@@ -133,7 +139,9 @@ type Config struct {
 	//     "resource_group": "ResourceGroup",
 	//     "gallery_name": "GalleryName",
 	//     "image_name": "ImageName",
-	//     "image_version": "1.0.0"
+	//     "image_version": "1.0.0",
+	//     "communityGallery_image_id": "/CommunityGalleries/{cg}/Images/{}/Versions/{}",
+	//     "directSharedGallery_image_id": "/SharedGalleries/{cg}/Images/{}/Versions/{}"
 	// }
 	// "managed_image_name": "TargetImageName",
 	// "managed_image_resource_group_name": "TargetResourceGroup"
@@ -947,7 +955,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	isImageUrl := c.ImageUrl != ""
 	isCustomManagedImage := c.CustomManagedImageName != "" || c.CustomManagedImageResourceGroupName != ""
-	isSharedGallery := c.SharedGallery.GalleryName != ""
+	isSharedGallery := c.SharedGallery.GalleryName != "" || c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.SharedGalleryImageID != ""
 	isPlatformImage := c.ImagePublisher != "" || c.ImageOffer != "" || c.ImageSku != ""
 
 	countSourceInputs := toInt(isImageUrl) + toInt(isCustomManagedImage) + toInt(isPlatformImage) + toInt(isSharedGallery)
@@ -960,7 +968,14 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A managed image must be created from a managed image, it cannot be created from a VHD."))
 	}
 
-	if c.SharedGallery.GalleryName != "" {
+	if c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.SharedGalleryImageID != "" {
+		if c.CaptureContainerName != "" {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_container_name] is not supported when using Shared Image Gallery as source. Use managed_image_resource_group_name instead."))
+		}
+		if c.CaptureNamePrefix != "" {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_name_prefix] is not supported when using Shared Image Gallery as source. Use managed_image_name instead."))
+		}
+	} else if c.SharedGallery.GalleryName != "" {
 		if c.SharedGallery.Subscription == "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A shared_image_gallery.subscription must be specified"))
 		}

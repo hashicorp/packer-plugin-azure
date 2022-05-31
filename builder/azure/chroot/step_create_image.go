@@ -6,7 +6,7 @@ import (
 	"log"
 	"sort"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-12-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
@@ -53,7 +53,7 @@ func (s *StepCreateImage) Run(ctx context.Context, state multistep.StateBag) mul
 			StorageProfile: &compute.ImageStorageProfile{
 				OsDisk: &compute.ImageOSDisk{
 					OsState: compute.OperatingSystemStateTypes(s.ImageOSState),
-					OsType:  compute.Linux,
+					OsType:  compute.OperatingSystemTypesLinux,
 					ManagedDisk: &compute.SubResource{
 						ID: &diskResourceID,
 					},

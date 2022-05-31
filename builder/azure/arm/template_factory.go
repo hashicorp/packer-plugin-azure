@@ -3,7 +3,7 @@ package arm
 import (
 	"encoding/json"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-04-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
 
 	"fmt"
@@ -51,7 +51,7 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 	if err != nil {
 		return nil, err
 	}
-	osType := compute.Linux
+	osType := compute.OperatingSystemTypesLinux
 
 	switch config.OSType {
 	case constants.Target_Linux:
@@ -60,7 +60,7 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 			return nil, err
 		}
 	case constants.Target_Windows:
-		osType = compute.Windows
+		osType = compute.OperatingSystemTypesWindows
 		err = builder.BuildWindows(config.tmpKeyVaultName, config.tmpWinRMCertificateUrl)
 		if err != nil {
 			return nil, err
@@ -106,6 +106,20 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 		}
 
 		err = builder.SetSharedGalleryImage(config.Location, imageID, config.diskCachingType)
+		if err != nil {
+			return nil, err
+		}
+	} else if config.SharedGallery.CommunityGalleryImageId != "" {
+		imageID := config.SharedGallery.CommunityGalleryImageId
+
+		err = builder.SetCommunityGalleryImage(config.Location, imageID, config.diskCachingType)
+		if err != nil {
+			return nil, err
+		}
+	} else if config.SharedGallery.SharedGalleryImageID != "" {
+		imageID := config.SharedGallery.SharedGalleryImageID
+
+		err = builder.SetDirectSharedGalleryImage(config.Location, imageID, config.diskCachingType)
 		if err != nil {
 			return nil, err
 		}

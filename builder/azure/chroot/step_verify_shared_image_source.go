@@ -6,7 +6,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-12-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -110,7 +110,7 @@ func (s *StepVerifySharedImageSource) Run(ctx context.Context, state multistep.S
 		image.GalleryImageProperties.HyperVGeneration,
 		image.GalleryImageProperties.OsState)
 
-	if image.GalleryImageProperties.OsType != compute.Linux {
+	if image.GalleryImageProperties.OsType != compute.OperatingSystemTypesLinux {
 		return errorMessage("The shared image (%q) is not a Linux image (found %q). Currently only Linux images are supported.",
 			to.String(image.ID),
 			image.GalleryImageProperties.OsType)

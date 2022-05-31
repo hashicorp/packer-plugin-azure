@@ -11,8 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-04-01/compute"
-	newCompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-03-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2018-02-14/keyvault"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-01-01/network"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
@@ -46,8 +45,8 @@ type AzureClient struct {
 	armStorage.AccountsClient
 	compute.DisksClient
 	compute.SnapshotsClient
-	newCompute.GalleryImageVersionsClient
-	newCompute.GalleryImagesClient
+	compute.GalleryImageVersionsClient
+	compute.GalleryImagesClient
 
 	InspectorMaxLength int
 	Template           *CaptureTemplate
@@ -227,7 +226,7 @@ func NewAzureClient(subscriptionID, sigSubscriptionID, resourceGroupName, storag
 	azureClient.AccountsClient.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.AccountsClient.UserAgent)
 	azureClient.AccountsClient.Client.PollingDuration = pollingDuration
 
-	azureClient.GalleryImageVersionsClient = newCompute.NewGalleryImageVersionsClientWithBaseURI(cloud.ResourceManagerEndpoint, subscriptionID)
+	azureClient.GalleryImageVersionsClient = compute.NewGalleryImageVersionsClientWithBaseURI(cloud.ResourceManagerEndpoint, subscriptionID)
 	azureClient.GalleryImageVersionsClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
 	azureClient.GalleryImageVersionsClient.RequestInspector = withInspection(maxlen)
 	azureClient.GalleryImageVersionsClient.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
@@ -237,7 +236,7 @@ func NewAzureClient(subscriptionID, sigSubscriptionID, resourceGroupName, storag
 		azureClient.GalleryImageVersionsClient.SubscriptionID = sigSubscriptionID
 	}
 
-	azureClient.GalleryImagesClient = newCompute.NewGalleryImagesClientWithBaseURI(cloud.ResourceManagerEndpoint, subscriptionID)
+	azureClient.GalleryImagesClient = compute.NewGalleryImagesClientWithBaseURI(cloud.ResourceManagerEndpoint, subscriptionID)
 	azureClient.GalleryImagesClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
 	azureClient.GalleryImagesClient.RequestInspector = withInspection(maxlen)
 	azureClient.GalleryImagesClient.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
