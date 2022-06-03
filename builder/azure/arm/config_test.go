@@ -1981,6 +1981,31 @@ func TestConfigShouldAllowSharedImageGalleryOptions(t *testing.T) {
 
 }
 
+func TestSharedImageGalleryWithSkipImageCreateOptions(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           "linux",
+		"managed_image_name":                "ignore",
+		"managed_image_resource_group_name": "ignore",
+		"skip_create_image":                 true,
+		"shared_image_gallery": map[string]string{
+			"subscription":   "ignore",
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "ignore",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Errorf("expected config to accept Shared Image Gallery with skip create options - but failed with %q", err)
+	}
+
+}
+
 func TestConfigShouldAllowCommunityGalleryOptions(t *testing.T) {
 	config := map[string]interface{}{
 		"location":                          "ignore",
