@@ -91,7 +91,7 @@ type SharedImageGallery struct {
 	CommunityGalleryImageId string `mapstructure:"community_gallery_image_id" required:"false"`
 
 	// Id of the direct shared gallery image : /sharedGalleries/{galleryUniqueName}/Images/{img}[/Versions/{}] (Versions part is optional)
-	SharedGalleryImageID string `mapstructure:"direct_shared_gallery_image_id" required:"false"`
+	DirectSharedGalleryImageID string `mapstructure:"direct_shared_gallery_image_id" required:"false"`
 }
 
 type SharedImageGalleryDestination struct {
@@ -955,7 +955,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	isImageUrl := c.ImageUrl != ""
 	isCustomManagedImage := c.CustomManagedImageName != "" || c.CustomManagedImageResourceGroupName != ""
-	isSharedGallery := c.SharedGallery.GalleryName != "" || c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.SharedGalleryImageID != ""
+	isSharedGallery := c.SharedGallery.GalleryName != "" || c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.DirectSharedGalleryImageID != ""
 	isPlatformImage := c.ImagePublisher != "" || c.ImageOffer != "" || c.ImageSku != ""
 
 	countSourceInputs := toInt(isImageUrl) + toInt(isCustomManagedImage) + toInt(isPlatformImage) + toInt(isSharedGallery)
@@ -968,7 +968,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A managed image must be created from a managed image, it cannot be created from a VHD."))
 	}
 
-	if c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.SharedGalleryImageID != "" {
+	if c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.DirectSharedGalleryImageID != "" {
 		if c.SharedGallery.GalleryName != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Cannot specify 2 kinds of azure compute gallery sources"))
 		}
@@ -978,7 +978,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		if c.CaptureNamePrefix != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_name_prefix] is not supported when using Shared Image Gallery as source. Use managed_image_name instead."))
 		}
-		if c.SharedGallery.CommunityGalleryImageId != "" && c.SharedGallery.SharedGalleryImageID != "" {
+		if c.SharedGallery.CommunityGalleryImageId != "" && c.SharedGallery.DirectSharedGalleryImageID != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Cannot specify both community gallery and direct shared gallery as a source"))
 		}
 	} else if c.SharedGallery.GalleryName != "" {
