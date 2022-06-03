@@ -303,13 +303,13 @@ func (*FlatPlanInformation) HCL2Spec() map[string]hcldec.Spec {
 // FlatSharedImageGallery is an auto-generated flat version of SharedImageGallery.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatSharedImageGallery struct {
-	Subscription            *string `mapstructure:"subscription" cty:"subscription" hcl:"subscription"`
-	ResourceGroup           *string `mapstructure:"resource_group" cty:"resource_group" hcl:"resource_group"`
-	GalleryName             *string `mapstructure:"gallery_name" cty:"gallery_name" hcl:"gallery_name"`
-	ImageName               *string `mapstructure:"image_name" cty:"image_name" hcl:"image_name"`
-	ImageVersion            *string `mapstructure:"image_version" required:"false" cty:"image_version" hcl:"image_version"`
-	CommunityGalleryImageId *string `mapstructure:"community_gallery_image_id" required:"false" cty:"community_gallery_image_id" hcl:"community_gallery_image_id"`
-	SharedGalleryImageID    *string `mapstructure:"direct_shared_gallery_image_id" required:"false" cty:"direct_shared_gallery_image_id" hcl:"direct_shared_gallery_image_id"`
+	Subscription               *string `mapstructure:"subscription" cty:"subscription" hcl:"subscription"`
+	ResourceGroup              *string `mapstructure:"resource_group" cty:"resource_group" hcl:"resource_group"`
+	GalleryName                *string `mapstructure:"gallery_name" cty:"gallery_name" hcl:"gallery_name"`
+	ImageName                  *string `mapstructure:"image_name" cty:"image_name" hcl:"image_name"`
+	ImageVersion               *string `mapstructure:"image_version" required:"false" cty:"image_version" hcl:"image_version"`
+	CommunityGalleryImageId    *string `mapstructure:"community_gallery_image_id" required:"false" cty:"community_gallery_image_id" hcl:"community_gallery_image_id"`
+	DirectSharedGalleryImageID *string `mapstructure:"direct_shared_gallery_image_id" required:"false" cty:"direct_shared_gallery_image_id" hcl:"direct_shared_gallery_image_id"`
 }
 
 // FlatMapstructure returns a new FlatSharedImageGallery.
