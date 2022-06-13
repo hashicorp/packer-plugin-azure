@@ -1283,14 +1283,33 @@ func (c *Config) validateLocationZoneResiliency(say func(s string)) {
 
 	var zones = make(map[string]struct{})
 	zones["westeurope"] = struct{}{}
+	zones["australiaeast"] = struct{}{}
+	zones["brazilsouth"] = struct{}{}
+	zones["canadacentral"] = struct{}{}
+	zones["centralindia"] = struct{}{}
 	zones["centralus"] = struct{}{}
+	zones["chinanorth3"] = struct{}{}
+	zones["eastasia"] = struct{}{}
+	zones["eastus"] = struct{}{}
 	zones["eastus2"] = struct{}{}
 	zones["francecentral"] = struct{}{}
+	zones["germanywestcentral"] = struct{}{}
+	zones["japaneast"] = struct{}{}
+	zones["koreacentral"] = struct{}{}
 	zones["northeurope"] = struct{}{}
+	zones["norwayeast"] = struct{}{}
+	zones["southafricanorth"] = struct{}{}
+	zones["southcentralus"] = struct{}{}
 	zones["southeastasia"] = struct{}{}
+	zones["swedencentral"] = struct{}{}
+	zones["switzerlandnorth"] = struct{}{}
+	zones["uksouth"] = struct{}{}
+	zones["usgovvirginia"] = struct{}{}
+	zones["westeurope"] = struct{}{}
 	zones["westus2"] = struct{}{}
+	zones["westus3"] = struct{}{}
 
-	if _, ok := zones[c.Location]; !ok {
+	if _, ok := zones[normalizeAzureRegion(c.Location)]; !ok {
 		say(fmt.Sprintf("WARNING: Zone resiliency may not be supported in %s, checkout the docs at https://docs.microsoft.com/en-us/azure/availability-zones/", c.Location))
 	}
 }
