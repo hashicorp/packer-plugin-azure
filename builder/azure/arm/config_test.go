@@ -1959,9 +1959,11 @@ func TestConfigShouldAllowAsyncResourceGroupOverrideBadValue(t *testing.T) {
 }
 func TestConfigShouldAllowSharedImageGalleryOptions(t *testing.T) {
 	config := map[string]interface{}{
-		"location":        "ignore",
-		"subscription_id": "ignore",
-		"os_type":         "linux",
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           "linux",
+		"managed_image_name":                "ignore",
+		"managed_image_resource_group_name": "ignore",
 		"shared_image_gallery": map[string]string{
 			"subscription":   "ignore",
 			"resource_group": "ignore",
@@ -1973,8 +1975,33 @@ func TestConfigShouldAllowSharedImageGalleryOptions(t *testing.T) {
 
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
-	if err == nil {
-		t.Log("expected config to accept Shared Image Gallery options", err)
+	if err != nil {
+		t.Errorf("expected config to accept Shared Image Gallery options - but failed with %q", err)
+	}
+
+}
+
+func TestSharedImageGalleryWithSkipImageCreateOptions(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           "linux",
+		"managed_image_name":                "ignore",
+		"managed_image_resource_group_name": "ignore",
+		"skip_create_image":                 true,
+		"shared_image_gallery": map[string]string{
+			"subscription":   "ignore",
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "ignore",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Errorf("expected config to accept Shared Image Gallery with skip create options - but failed with %q", err)
 	}
 
 }
@@ -1988,7 +2015,7 @@ func TestConfigShouldAllowCommunityGalleryOptions(t *testing.T) {
 		"managed_image_resource_group_name": "ignore",
 		"async_resourcegroup_delete":        "true",
 		"shared_image_gallery": map[string]string{
-			"communityGallery_image_id": "/CommunityGalleries/cg/Images/img",
+			"community_gallery_image_id": "/CommunityGalleries/cg/Images/img",
 		},
 	}
 
@@ -2000,7 +2027,7 @@ func TestConfigShouldAllowCommunityGalleryOptions(t *testing.T) {
 
 }
 
-func TestConfigShouldAllowDirestSharedGalleryOptions(t *testing.T) {
+func TestConfigShouldAllowDirectSharedGalleryOptions(t *testing.T) {
 	config := map[string]interface{}{
 		"location":                          "ignore",
 		"subscription_id":                   "ignore",
@@ -2009,7 +2036,7 @@ func TestConfigShouldAllowDirestSharedGalleryOptions(t *testing.T) {
 		"managed_image_resource_group_name": "ignore",
 		"async_resourcegroup_delete":        "true",
 		"shared_image_gallery": map[string]string{
-			"directSharedGallery_image_id": "/SharedGalleries/cg/Images/img",
+			"direct_shared_gallery_image_id": "/SharedGalleries/cg/Images/img",
 		},
 	}
 
@@ -2017,6 +2044,53 @@ func TestConfigShouldAllowDirestSharedGalleryOptions(t *testing.T) {
 	_, err := c.Prepare(config, getPackerConfiguration())
 	if err != nil {
 		t.Errorf("direct shared gallery might not be accepted - failed with %q", err)
+	}
+
+}
+
+func TestConfigShouldNotAllowBothDirectSharedGalleryAndCommunityGalleryOptions(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           "linux",
+		"managed_image_name":                "ignore",
+		"managed_image_resource_group_name": "ignore",
+		"async_resourcegroup_delete":        "true",
+		"shared_image_gallery": map[string]string{
+			"direct_shared_gallery_image_id": "/SharedGalleries/cg/Images/img",
+			"community_gallery_image_id":     "/CommunityGalleries/cg/Images/img",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Errorf("Provided both direct shared and community gallery as inputs and did not get error.")
+	}
+
+}
+
+func TestConfigShouldNotAllowBothCommunityAndSharedImageGalleryOptions(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           "linux",
+		"managed_image_name":                "ignore",
+		"managed_image_resource_group_name": "ignore",
+		"shared_image_gallery": map[string]string{
+			"subscription":               "ignore",
+			"resource_group":             "ignore",
+			"gallery_name":               "ignore",
+			"image_name":                 "ignore",
+			"image_version":              "ignore",
+			"community_gallery_image_id": "/CommunityGalleries/cg/Images/img",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Errorf("Provided both normal private gallery and community gallery as inputs and did not get error.")
 	}
 
 }

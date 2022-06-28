@@ -116,8 +116,8 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 		if err != nil {
 			return nil, err
 		}
-	} else if config.SharedGallery.SharedGalleryImageID != "" {
-		imageID := config.SharedGallery.SharedGalleryImageID
+	} else if config.SharedGallery.DirectSharedGalleryImageID != "" {
+		imageID := config.SharedGallery.DirectSharedGalleryImageID
 
 		err = builder.SetDirectSharedGalleryImage(config.Location, imageID, config.diskCachingType)
 		if err != nil {

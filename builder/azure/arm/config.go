@@ -78,7 +78,7 @@ type PlanInformation struct {
 type SharedImageGallery struct {
 	Subscription  string `mapstructure:"subscription"`
 	ResourceGroup string `mapstructure:"resource_group"`
-	GalleryName   string `mapstructure:"gallery_name"`
+	GalleryName   string `mapstructure:"gallery_name"` //Gallery resource name
 	ImageName     string `mapstructure:"image_name"`
 	// Specify a specific version of an OS to boot from.
 	// Defaults to latest. There may be a difference in versions available
@@ -87,11 +87,11 @@ type SharedImageGallery struct {
 	// regions where you are deploying.
 	ImageVersion string `mapstructure:"image_version" required:"false"`
 
-	// Id of the community gallery image : /CommunityGalleries/{cgName}/Images/{img}[/Versions/{}] (Versions part is optional)
-	CommunityGalleryImageId string `mapstructure:"communityGallery_image_id" required:"false"`
+	// Id of the community gallery image : /CommunityGalleries/{galleryUniqueName}/Images/{img}[/Versions/{}] (Versions part is optional)
+	CommunityGalleryImageId string `mapstructure:"community_gallery_image_id" required:"false"`
 
-	// Id of the direct shared gallery image : /sharedGalleries/{cgName}/Images/{img}[/Versions/{}] (Versions part is optional)
-	SharedGalleryImageID string `mapstructure:"directSharedGallery_image_id" required:"false"`
+	// Id of the direct shared gallery image : /sharedGalleries/{galleryUniqueName}/Images/{img}[/Versions/{}] (Versions part is optional)
+	DirectSharedGalleryImageID string `mapstructure:"direct_shared_gallery_image_id" required:"false"`
 }
 
 type SharedImageGalleryDestination struct {
@@ -140,8 +140,6 @@ type Config struct {
 	//     "gallery_name": "GalleryName",
 	//     "image_name": "ImageName",
 	//     "image_version": "1.0.0",
-	//     "communityGallery_image_id": "/CommunityGalleries/{cg}/Images/{}/Versions/{}",
-	//     "directSharedGallery_image_id": "/SharedGalleries/{cg}/Images/{}/Versions/{}"
 	// }
 	// "managed_image_name": "TargetImageName",
 	// "managed_image_resource_group_name": "TargetResourceGroup"
@@ -955,7 +953,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	isImageUrl := c.ImageUrl != ""
 	isCustomManagedImage := c.CustomManagedImageName != "" || c.CustomManagedImageResourceGroupName != ""
-	isSharedGallery := c.SharedGallery.GalleryName != "" || c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.SharedGalleryImageID != ""
+	isSharedGallery := c.SharedGallery.GalleryName != "" || c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.DirectSharedGalleryImageID != ""
 	isPlatformImage := c.ImagePublisher != "" || c.ImageOffer != "" || c.ImageSku != ""
 
 	countSourceInputs := toInt(isImageUrl) + toInt(isCustomManagedImage) + toInt(isPlatformImage) + toInt(isSharedGallery)
@@ -968,12 +966,18 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A managed image must be created from a managed image, it cannot be created from a VHD."))
 	}
 
-	if c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.SharedGalleryImageID != "" {
+	if c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.DirectSharedGalleryImageID != "" {
+		if c.SharedGallery.GalleryName != "" {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Cannot specify 2 kinds of azure compute gallery sources"))
+		}
 		if c.CaptureContainerName != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_container_name] is not supported when using Shared Image Gallery as source. Use managed_image_resource_group_name instead."))
 		}
 		if c.CaptureNamePrefix != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_name_prefix] is not supported when using Shared Image Gallery as source. Use managed_image_name instead."))
+		}
+		if c.SharedGallery.CommunityGalleryImageId != "" && c.SharedGallery.DirectSharedGalleryImageID != "" {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Cannot specify both community gallery and direct shared gallery as a source"))
 		}
 	} else if c.SharedGallery.GalleryName != "" {
 		if c.SharedGallery.Subscription == "" {
