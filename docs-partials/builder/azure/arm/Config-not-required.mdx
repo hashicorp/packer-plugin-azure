@@ -210,9 +210,25 @@
   to learn more about custom data, and how it can be used to influence the
   provisioning process.
 
+- `custom_data` (string) - Specify a Base64-encode custom data to apply when launching the instance.
+  Note that you need to be careful about escaping characters due to the templates being JSON.
+  The custom data will be passed to cloud-init for processing at
+  the time of provisioning. See
+  [documentation](http://cloudinit.readthedocs.io/en/latest/topics/examples.html)
+  to learn more about custom data, and how it can be used to influence the
+  provisioning process.
+
 - `user_data_file` (string) - Specify a file containing user data to inject into the cloud-init
   process. The contents of the file are read and injected into the ARM
   template. The user data will be available from the provision until the vm is
+  deleted. Any application on the virtual machine can access the user data
+  from the Azure Instance Metadata Service (IMDS) after provision.
+  See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/user-data)
+  to learn more about user data.
+
+- `user_data` (string) - Specify a Base64-encode user data to apply
+  Note that you need to be careful about escaping characters due to the templates being JSON.
+  The user data will be available from the provision until the vm is
   deleted. Any application on the virtual machine can access the user data
   from the Azure Instance Metadata Service (IMDS) after provision.
   See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/user-data)

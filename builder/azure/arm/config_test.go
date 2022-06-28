@@ -2,6 +2,8 @@ package arm
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -2250,5 +2252,67 @@ func TestConfigShouldRejectMalformedUserAssignedManagedIdentities(t *testing.T) 
 		if _, err := c.Prepare(config, getPackerConfiguration()); err == nil {
 			t.Errorf("Expected test to fail, but it succeeded with the malformed user_assigned_managed_identities set to %q.", x)
 		}
+	}
+}
+
+func TestConfigShouldRejectUserDataAndUserDataFile(t *testing.T) {
+	tmpfile, err := ioutil.TempFile("", "userdata")
+	if err != nil {
+		t.Fatalf("failed creating tempfile: %s", err)
+	}
+	config := map[string]interface{}{
+		"capture_container_name": "ignore",
+		"capture_name_prefix":    "ignore",
+		"image_publisher":        "ignore",
+		"image_offer":            "ignore",
+		"image_sku":              "ignore",
+		"location":               "ignore",
+		"storage_account":        "ignore",
+		"resource_group_name":    "ignore",
+		"subscription_id":        "ignore",
+		"os_type":                constants.Target_Linux,
+		"communicator":           "none",
+		// custom may define one or the other, but not both
+		"user_data":      "user_data",
+		"user_data_file": tmpfile.Name(),
+	}
+
+	var c Config
+	_, err = c.Prepare(config, getPackerConfiguration())
+
+	defer os.Remove(tmpfile.Name())
+	if err == nil {
+		t.Fatal("expected config to reject the use of both user_data and user_data_file")
+	}
+}
+
+func TestConfigShouldRejectCustomDataAndCustomDataFile(t *testing.T) {
+	tmpfile, err := ioutil.TempFile("", "customdata")
+	if err != nil {
+		t.Fatalf("failed creating tempfile: %s", err)
+	}
+	config := map[string]interface{}{
+		"capture_container_name": "ignore",
+		"capture_name_prefix":    "ignore",
+		"image_publisher":        "ignore",
+		"image_offer":            "ignore",
+		"image_sku":              "ignore",
+		"location":               "ignore",
+		"storage_account":        "ignore",
+		"resource_group_name":    "ignore",
+		"subscription_id":        "ignore",
+		"os_type":                constants.Target_Linux,
+		"communicator":           "none",
+		// custom may define one or the other, but not both
+		"custom_data":      "custom_data",
+		"custom_data_file": tmpfile.Name(),
+	}
+
+	var c Config
+	_, err = c.Prepare(config, getPackerConfiguration())
+
+	defer os.Remove(tmpfile.Name())
+	if err == nil {
+		t.Fatal("expected config to reject the use of both custom_data and custom_data_file")
 	}
 }
