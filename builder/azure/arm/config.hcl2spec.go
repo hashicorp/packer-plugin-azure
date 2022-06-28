@@ -307,13 +307,13 @@ func (*FlatPlanInformation) HCL2Spec() map[string]hcldec.Spec {
 // FlatSharedImageGallery is an auto-generated flat version of SharedImageGallery.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatSharedImageGallery struct {
-	Subscription            *string `mapstructure:"subscription" cty:"subscription" hcl:"subscription"`
-	ResourceGroup           *string `mapstructure:"resource_group" cty:"resource_group" hcl:"resource_group"`
-	GalleryName             *string `mapstructure:"gallery_name" cty:"gallery_name" hcl:"gallery_name"`
-	ImageName               *string `mapstructure:"image_name" cty:"image_name" hcl:"image_name"`
-	ImageVersion            *string `mapstructure:"image_version" required:"false" cty:"image_version" hcl:"image_version"`
-	CommunityGalleryImageId *string `mapstructure:"communityGallery_image_id" required:"false" cty:"communityGallery_image_id" hcl:"communityGallery_image_id"`
-	SharedGalleryImageID    *string `mapstructure:"directSharedGallery_image_id" required:"false" cty:"directSharedGallery_image_id" hcl:"directSharedGallery_image_id"`
+	Subscription               *string `mapstructure:"subscription" cty:"subscription" hcl:"subscription"`
+	ResourceGroup              *string `mapstructure:"resource_group" cty:"resource_group" hcl:"resource_group"`
+	GalleryName                *string `mapstructure:"gallery_name" cty:"gallery_name" hcl:"gallery_name"`
+	ImageName                  *string `mapstructure:"image_name" cty:"image_name" hcl:"image_name"`
+	ImageVersion               *string `mapstructure:"image_version" required:"false" cty:"image_version" hcl:"image_version"`
+	CommunityGalleryImageId    *string `mapstructure:"community_gallery_image_id" required:"false" cty:"community_gallery_image_id" hcl:"community_gallery_image_id"`
+	DirectSharedGalleryImageID *string `mapstructure:"direct_shared_gallery_image_id" required:"false" cty:"direct_shared_gallery_image_id" hcl:"direct_shared_gallery_image_id"`
 }
 
 // FlatMapstructure returns a new FlatSharedImageGallery.
@@ -328,13 +328,13 @@ func (*SharedImageGallery) FlatMapstructure() interface{ HCL2Spec() map[string]h
 // The decoded values from this spec will then be applied to a FlatSharedImageGallery.
 func (*FlatSharedImageGallery) HCL2Spec() map[string]hcldec.Spec {
 	s := map[string]hcldec.Spec{
-		"subscription":                 &hcldec.AttrSpec{Name: "subscription", Type: cty.String, Required: false},
-		"resource_group":               &hcldec.AttrSpec{Name: "resource_group", Type: cty.String, Required: false},
-		"gallery_name":                 &hcldec.AttrSpec{Name: "gallery_name", Type: cty.String, Required: false},
-		"image_name":                   &hcldec.AttrSpec{Name: "image_name", Type: cty.String, Required: false},
-		"image_version":                &hcldec.AttrSpec{Name: "image_version", Type: cty.String, Required: false},
-		"communityGallery_image_id":    &hcldec.AttrSpec{Name: "communityGallery_image_id", Type: cty.String, Required: false},
-		"directSharedGallery_image_id": &hcldec.AttrSpec{Name: "directSharedGallery_image_id", Type: cty.String, Required: false},
+		"subscription":                   &hcldec.AttrSpec{Name: "subscription", Type: cty.String, Required: false},
+		"resource_group":                 &hcldec.AttrSpec{Name: "resource_group", Type: cty.String, Required: false},
+		"gallery_name":                   &hcldec.AttrSpec{Name: "gallery_name", Type: cty.String, Required: false},
+		"image_name":                     &hcldec.AttrSpec{Name: "image_name", Type: cty.String, Required: false},
+		"image_version":                  &hcldec.AttrSpec{Name: "image_version", Type: cty.String, Required: false},
+		"community_gallery_image_id":     &hcldec.AttrSpec{Name: "community_gallery_image_id", Type: cty.String, Required: false},
+		"direct_shared_gallery_image_id": &hcldec.AttrSpec{Name: "direct_shared_gallery_image_id", Type: cty.String, Required: false},
 	}
 	return s
 }

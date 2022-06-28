@@ -111,7 +111,7 @@ When creating a managed image the following additional options are required:
   [documentation](https://docs.microsoft.com/en-us/azure/storage/storage-managed-disks-overview#images)
   to learn more about managed images.
 
-Creating a managed image using a [Shared Gallery image](https://azure.microsoft.com/en-us/blog/announcing-the-public-preview-of-shared-image-gallery/) as the source can be achieved by specifying the [shared_image_gallery](#shared_image_gallery) configuration option.
+Creating a managed image using a [Shared Gallery image](https://azure.microsoft.com/en-us/blog/announcing-the-public-preview-of-shared-image-gallery/) as the source can be achieved by specifying the [shared_image_gallery](#shared-image-gallery) configuration option.
 
 #### Resource Group Usage
 
@@ -151,6 +151,22 @@ Providing `temp_resource_group_name` or `location` in combination with
 @include 'builder/azure/common/client/Config-not-required.mdx'
 
 @include 'builder/azure/common/Config-not-required.mdx'
+
+
+### Shared Image Gallery
+
+The shared_image_gallery block is available for building a new image from a private or [community shared imaged gallery](https://docs.microsoft.com/en-us/azure/virtual-machines/azure-compute-gallery#community-gallery-preview) owned gallery.
+
+@include 'builder/azure/arm/SharedImageGallery-not-required.mdx'
+
+
+### Shared Image Gallery Destination
+
+The shared_image_gallery_destination block is available for publishing a new image version to an existing shared image gallery. 
+
+@include 'builder/azure/arm/SharedImageGalleryDestination-not-required.mdx'
+
+
 
 ## Build Shared Information Variables
 
