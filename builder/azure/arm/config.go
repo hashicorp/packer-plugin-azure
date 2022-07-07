@@ -367,6 +367,14 @@ type Config struct {
 	// provisioning process.
 	CustomDataFile string `mapstructure:"custom_data_file" required:"false"`
 	customData     string
+	// Specify a Base64-encode custom data to apply when launching the instance.
+	// Note that you need to be careful about escaping characters due to the templates being JSON.
+	// The custom data will be passed to cloud-init for processing at
+	// the time of provisioning. See
+	// [documentation](http://cloudinit.readthedocs.io/en/latest/topics/examples.html)
+	// to learn more about custom data, and how it can be used to influence the
+	// provisioning process.
+	CustomData string `mapstructure:"custom_data" required:"false"`
 	// Specify a file containing user data to inject into the cloud-init
 	// process. The contents of the file are read and injected into the ARM
 	// template. The user data will be available from the provision until the vm is
@@ -376,6 +384,14 @@ type Config struct {
 	// to learn more about user data.
 	UserDataFile string `mapstructure:"user_data_file" required:"false"`
 	userData     string
+	// Specify a Base64-encode user data to apply
+	// Note that you need to be careful about escaping characters due to the templates being JSON.
+	// The user data will be available from the provision until the vm is
+	// deleted. Any application on the virtual machine can access the user data
+	// from the Azure Instance Metadata Service (IMDS) after provision.
+	// See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/user-data)
+	// to learn more about user data.
+	UserData string `mapstructure:"user_data" required:"false"`
 	// Used for creating images from Marketplace images. Please refer to
 	// [Deploy an image with Marketplace
 	// terms](https://aka.ms/azuremarketplaceapideployment) for more details.
@@ -642,7 +658,17 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		return nil, err
 	}
 
+	err = setCustomDataFile(c)
+	if err != nil {
+		return nil, err
+	}
+
 	err = setUserData(c)
+	if err != nil {
+		return nil, err
+	}
+
+	err = setUserDataFile(c)
 	if err != nil {
 		return nil, err
 	}
@@ -805,6 +831,15 @@ func setUserNamePassword(c *Config) error {
 }
 
 func setCustomData(c *Config) error {
+	if c.CustomData == "" {
+		return nil
+	}
+
+	c.customData = c.CustomData
+	return nil
+}
+
+func setCustomDataFile(c *Config) error {
 	if c.CustomDataFile == "" {
 		return nil
 	}
@@ -819,6 +854,15 @@ func setCustomData(c *Config) error {
 }
 
 func setUserData(c *Config) error {
+	if c.UserData == "" {
+		return nil
+	}
+
+	c.userData = c.UserData
+	return nil
+}
+
+func setUserDataFile(c *Config) error {
 	if c.UserDataFile == "" {
 		return nil
 	}
@@ -1126,6 +1170,14 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 				errs = packersdk.MultiErrorAppend(errs, err)
 			}
 		}
+	}
+
+	if c.UserData != "" && c.UserDataFile != "" {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Only one of user_data or user_data_file can be specified."))
+	}
+
+	if c.CustomData != "" && c.CustomDataFile != "" {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Only one of custom_data or custom_data_file can be specified."))
 	}
 
 	/////////////////////////////////////////////
