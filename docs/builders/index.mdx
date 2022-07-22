@@ -55,12 +55,12 @@ the subscription level.
 
 If your organization allows it, you can use a command line interactive login
 method based on oAuth 'device code flow'. Packer will select this method when
-you only specify a `subscription_id` in your builder configuration. When you
+you only specify `use_interactive_auth` in your builder configuration. When you
 run Packer, it will ask you to visit a web site and input a code. This web site
 will then authenticate you, satisfying any two-factor authentication policies
-that your organization might have. The tokens are cached under the `.azure/packer`
-directory in your home directory and will be reused if they are still valid
-on subsequent runs.
+that your organization might have. The tokens are cached under the
+`.azure/packer` directory in your home directory and will be reused if they are
+still valid on subsequent runs.
 
 Please note that the interactive login is only available on the Azure public
 cloud, not on sovereign/government clouds.

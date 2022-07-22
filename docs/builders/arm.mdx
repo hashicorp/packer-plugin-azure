@@ -34,12 +34,21 @@ options. In addition to the options listed here, a [communicator](https://packer
 
 #### Managed Identity
 
-If you're running Packer on an Azure VM with a [managed identity](https://packer.io/docs/builders/azure#azure-managed-identity) you don't need to specify any additional configuration options. As Packer will attempt to use the Managed Identity and subscription of the VM that Packer is running on.
+If you're running Packer on an Azure VM with a [managed
+identity](https://packer.io/docs/builders/azure#azure-managed-identity) you
+don't need to specify any additional configuration options. As Packer will
+attempt to use the Managed Identity and subscription of the VM that Packer is
+running on.
+
+You can use a different subscription if you set `subscription_id`.  If your VM
+has multiple user assigned managed identities you will need to set `client_id`
+too.
 
 #### Interactive User Authentication
 
-To use interactive user authentication, you should specify `subscription_id` only.
-Packer will use cached credentials or redirect you to a website to log in.
+To use interactive user authentication, you should specify
+`use_interactive_auth` only.  Packer will use cached credentials or redirect you
+to a website to log in.
 
 #### Service Principal
 

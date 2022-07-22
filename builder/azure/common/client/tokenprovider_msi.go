@@ -8,11 +8,11 @@ import (
 // for managed identity auth
 type msiOAuthTokenProvider struct {
 	env      azure.Environment
-	ClientID string
+	clientID string
 }
 
-func NewMSIOAuthTokenProvider(env azure.Environment, ClientID string) oAuthTokenProvider {
-	return &msiOAuthTokenProvider{env, ClientID}
+func NewMSIOAuthTokenProvider(env azure.Environment, clientID string) oAuthTokenProvider {
+	return &msiOAuthTokenProvider{env: env, clientID: clientID}
 }
 
 func (tp *msiOAuthTokenProvider) getServicePrincipalToken() (*adal.ServicePrincipalToken, error) {
@@ -21,6 +21,6 @@ func (tp *msiOAuthTokenProvider) getServicePrincipalToken() (*adal.ServicePrinci
 
 func (tp *msiOAuthTokenProvider) getServicePrincipalTokenWithResource(resource string) (*adal.ServicePrincipalToken, error) {
 	return adal.NewServicePrincipalTokenFromManagedIdentity(resource, &adal.ManagedIdentityOptions{
-		ClientID: tp.ClientID,
+		ClientID: tp.clientID,
 	})
 }

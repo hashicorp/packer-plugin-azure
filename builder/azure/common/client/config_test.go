@@ -44,16 +44,16 @@ func Test_ClientConfig_RequiredParametersSet(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "subscription_id is set will trigger device flow",
+			name: "use_interactive_auth will trigger device code flow",
 			config: Config{
-				SubscriptionID: "error",
+				UseInteractiveAuth: true,
 			},
 			wantErr: false,
 		},
 		{
 			name: "client_id without client_secret, client_cert_path or client_jwt should not error",
 			config: Config{
-				ClientID: "error",
+				SubscriptionID: "error",
 			},
 			wantErr: false,
 		},
@@ -315,14 +315,16 @@ func Test_ClientConfig_CanUseDeviceCode(t *testing.T) {
 	// TenantID is optional, but Builder will look up tenant ID before requesting
 	t.Run("without TenantID", func(t *testing.T) {
 		cfg := Config{
-			SubscriptionID: "12345",
+			UseInteractiveAuth: true,
+			SubscriptionID:     "12345",
 		}
 		assertValid(t, cfg)
 	})
 	t.Run("with TenantID", func(t *testing.T) {
 		cfg := Config{
-			SubscriptionID: "12345",
-			TenantID:       "12345",
+			UseInteractiveAuth: true,
+			SubscriptionID:     "12345",
+			TenantID:           "12345",
 		}
 		assertValid(t, cfg)
 	})
