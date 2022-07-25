@@ -2253,6 +2253,8 @@ func getArmBuilderConfigurationWithWindows() map[string]string {
 
 	m["object_id"] = "ignored00"
 	m["tenant_id"] = "ignored00"
+	m["subscription_id"] = "ignored00"
+	m["use_interactive_auth"] = "true"
 	m["winrm_username"] = "ignored00"
 	m["communicator"] = "winrm"
 	m["os_type"] = constants.Target_Windows
