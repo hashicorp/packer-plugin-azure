@@ -2389,3 +2389,53 @@ func TestConfigShouldRejectCustomDataAndCustomDataFile(t *testing.T) {
 		t.Fatal("expected config to reject the use of both custom_data and custom_data_file")
 	}
 }
+
+func TestConfigShouldRejectInvalidCustomResourceBuildPrefix(t *testing.T) {
+	config := map[string]interface{}{
+		"location":               "ignore",
+		"subscription_id":        "ignore",
+		"image_offer":            "ignore",
+		"image_publisher":        "ignore",
+		"image_sku":              "ignore",
+		"os_type":                "linux",
+		"resource_group_name":    "ignore",
+		"storage_account":        "ignore",
+		"capture_container_name": "ignore",
+		"capture_name_prefix":    "ignore",
+	}
+
+	badResourcePrefixes := []string{"pkr_123456", "pkr-1234567", "-pkr123", "pkr.123"}
+	for _, resourcePrefix := range badResourcePrefixes {
+		config["custom_resource_build_prefix"] = resourcePrefix
+		var c Config
+		_, err := c.Prepare(config, getPackerConfiguration())
+		if err == nil {
+			t.Fatalf("expected config to reject %s as custom_resource_build_prefix", resourcePrefix)
+		}
+	}
+}
+
+func TestConfigShouldAcceptValidCustomResourceBuildPrefix(t *testing.T) {
+	config := map[string]interface{}{
+		"location":               "ignore",
+		"subscription_id":        "ignore",
+		"image_offer":            "ignore",
+		"image_publisher":        "ignore",
+		"image_sku":              "ignore",
+		"os_type":                "linux",
+		"resource_group_name":    "ignore",
+		"storage_account":        "ignore",
+		"capture_container_name": "ignore",
+		"capture_name_prefix":    "ignore",
+	}
+
+	goodResourcePrefixes := []string{"pkr-123456", "pkr-12345-", "pkr123"}
+	for _, resourcePrefix := range goodResourcePrefixes {
+		config["custom_resource_build_prefix"] = resourcePrefix
+		var c Config
+		_, err := c.Prepare(config, getPackerConfiguration())
+		if err != nil {
+			t.Fatalf("expected config to accept %s as custom_resource_build_prefix but got error: %s", resourcePrefix, err)
+		}
+	}
+}
