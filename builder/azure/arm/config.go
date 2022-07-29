@@ -1264,7 +1264,7 @@ func assertManagedImageDataDiskSnapshotName(name, setting string) (bool, error) 
 }
 
 func assertResourceNamePrefix(name, setting string) (bool, error) {
-	if !reResourceNamePrefix.Match([]byte(name)) {
+	if !reResourceNamePrefix.MatchString(name) {
 		return false, fmt.Errorf("The setting %s must only contain characters from a-z, A-Z, 0-9 and - and the maximum length is 10 characters", setting)
 	}
 	return true, nil
