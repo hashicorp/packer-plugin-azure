@@ -64,7 +64,7 @@ var (
 	reResourceGroupName    = regexp.MustCompile(validResourceGroupNameRe)
 	reSnapshotName         = regexp.MustCompile(`^[A-Za-z0-9_]{1,79}$`)
 	reSnapshotPrefix       = regexp.MustCompile(`^[A-Za-z0-9_]{1,59}$`)
-	reResourceNamePrefix   = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]{1,9}$`)
+	reResourceNamePrefix   = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]{0,9}$`)
 )
 
 type PlanInformation struct {
