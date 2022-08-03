@@ -490,6 +490,12 @@ type Config struct {
 	// `custom_resource_build_prefix` + resourcetype + 5 character random alphanumeric string
 	CustomResourcePrefix string `mapstructure:"custom_resource_build_prefix" required:"false"`
 
+	// Specifies if Secure Boot and Trusted Launch is enabled for the Virtual Machine.
+	SecureBootEnabled bool `mapstructure:"secure_boot_enabled" required:"false"`
+
+	// Specifies if vTPM (virtual Trusted Platform Module) and Trusted Launch is enabled for the Virtual Machine.
+	VTpmEnabled bool `mapstructure:"vtpm_enabled" required:"false"`
+
 	// Runtime Values
 	UserName               string `mapstructure-to-hcl2:",skip"`
 	Password               string `mapstructure-to-hcl2:",skip"`

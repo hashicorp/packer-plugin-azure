@@ -325,6 +325,10 @@
   this will set the prefix for the resources. The actuall resource names will be
   `custom_resource_build_prefix` + resourcetype + 5 character random alphanumeric string
 
+- `secure_boot_enabled` (bool) - Specifies if Secure Boot and Trusted Launch is enabled for the Virtual Machine.
+
+- `vtpm_enabled` (bool) - Specifies if vTPM (virtual Trusted Platform Module) and Trusted Launch is enabled for the Virtual Machine.
+
 - `async_resourcegroup_delete` (bool) - If you want packer to delete the
   temporary resource group asynchronously set this value. It's a boolean
   value and defaults to false. Important Setting this true means that

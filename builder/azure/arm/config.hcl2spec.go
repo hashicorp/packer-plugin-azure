@@ -85,6 +85,8 @@ type FlatConfig struct {
 	AllowedInboundIpAddresses                  []string                           `mapstructure:"allowed_inbound_ip_addresses" cty:"allowed_inbound_ip_addresses" hcl:"allowed_inbound_ip_addresses"`
 	BootDiagSTGAccount                         *string                            `mapstructure:"boot_diag_storage_account" required:"false" cty:"boot_diag_storage_account" hcl:"boot_diag_storage_account"`
 	CustomResourcePrefix                       *string                            `mapstructure:"custom_resource_build_prefix" required:"false" cty:"custom_resource_build_prefix" hcl:"custom_resource_build_prefix"`
+	SecureBootEnabled                          *bool                              `mapstructure:"secure_boot_enabled" required:"false" cty:"secure_boot_enabled" hcl:"secure_boot_enabled"`
+	VTpmEnabled                                *bool                              `mapstructure:"vtpm_enabled" required:"false" cty:"vtpm_enabled" hcl:"vtpm_enabled"`
 	Type                                       *string                            `mapstructure:"communicator" cty:"communicator" hcl:"communicator"`
 	PauseBeforeConnect                         *string                            `mapstructure:"pause_before_connecting" cty:"pause_before_connecting" hcl:"pause_before_connecting"`
 	SSHHost                                    *string                            `mapstructure:"ssh_host" cty:"ssh_host" hcl:"ssh_host"`
@@ -223,6 +225,8 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"allowed_inbound_ip_addresses":                     &hcldec.AttrSpec{Name: "allowed_inbound_ip_addresses", Type: cty.List(cty.String), Required: false},
 		"boot_diag_storage_account":                        &hcldec.AttrSpec{Name: "boot_diag_storage_account", Type: cty.String, Required: false},
 		"custom_resource_build_prefix":                     &hcldec.AttrSpec{Name: "custom_resource_build_prefix", Type: cty.String, Required: false},
+		"secure_boot_enabled":                              &hcldec.AttrSpec{Name: "secure_boot_enabled", Type: cty.Bool, Required: false},
+		"vtpm_enabled":                                     &hcldec.AttrSpec{Name: "vtpm_enabled", Type: cty.Bool, Required: false},
 		"communicator":                                     &hcldec.AttrSpec{Name: "communicator", Type: cty.String, Required: false},
 		"pause_before_connecting":                          &hcldec.AttrSpec{Name: "pause_before_connecting", Type: cty.String, Required: false},
 		"ssh_host":                                         &hcldec.AttrSpec{Name: "ssh_host", Type: cty.String, Required: false},
