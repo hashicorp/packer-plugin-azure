@@ -508,14 +508,8 @@ func (s *TemplateBuilder) SetSecurityProfile(secureBootEnabled bool, vtpmEnabled
 	resource.Properties.SecurityProfile = &compute.SecurityProfile{}
 	resource.Properties.SecurityProfile.UefiSettings = &compute.UefiSettings{}
 	resource.Properties.SecurityProfile.SecurityType = compute.SecurityTypesTrustedLaunch
-
-	if secureBootEnabled {
-		resource.Properties.SecurityProfile.UefiSettings.SecureBootEnabled = to.BoolPtr(secureBootEnabled)
-	}
-
-	if vtpmEnabled {
-		resource.Properties.SecurityProfile.UefiSettings.VTpmEnabled = to.BoolPtr(vtpmEnabled)
-	}
+	resource.Properties.SecurityProfile.UefiSettings.SecureBootEnabled = to.BoolPtr(secureBootEnabled)
+	resource.Properties.SecurityProfile.UefiSettings.VTpmEnabled = to.BoolPtr(vtpmEnabled)
 
 	return nil
 }
