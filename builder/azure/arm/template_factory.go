@@ -238,6 +238,13 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 		}
 	}
 
+	if config.SecureBootEnabled || config.VTpmEnabled {
+		err = builder.SetSecurityProfile(config.SecureBootEnabled, config.VTpmEnabled)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	err = builder.SetTags(&config.AzureTags)
 	if err != nil {
 		return nil, err

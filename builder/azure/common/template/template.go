@@ -104,6 +104,7 @@ type Properties struct {
 	Sku                          *Sku                                       `json:"sku,omitempty"`
 	UserData                     *string                                    `json:"userData,omitempty"`
 	StorageProfile               *StorageProfileUnion                       `json:"storageProfile,omitempty"`
+	SecurityProfile              *compute.SecurityProfile                   `json:"securityProfile,omitempty"`
 	Subnets                      *[]network.Subnet                          `json:"subnets,omitempty"`
 	SecurityRules                *[]network.SecurityRule                    `json:"securityRules,omitempty"`
 	TenantId                     *string                                    `json:"tenantId,omitempty"`

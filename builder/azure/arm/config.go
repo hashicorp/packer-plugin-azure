@@ -535,6 +535,11 @@ type Config struct {
 	// or
 	// [Linux](https://learn.microsoft.com/en-us/azure/virtual-machines/linux/azure-hybrid-benefit-linux)
 	LicenseType string `mapstructure:"license_type" required:"false"`
+	// Specifies if Secure Boot and Trusted Launch is enabled for the Virtual Machine.
+	SecureBootEnabled bool `mapstructure:"secure_boot_enabled" required:"false"`
+
+	// Specifies if vTPM (virtual Trusted Platform Module) and Trusted Launch is enabled for the Virtual Machine.
+	VTpmEnabled bool `mapstructure:"vtpm_enabled" required:"false"`
 
 	// Runtime Values
 	UserName               string `mapstructure-to-hcl2:",skip"`
