@@ -25,6 +25,8 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
 )
 
+var ErrNoImage = errors.New("failed to find shared image gallery id in state")
+
 type Builder struct {
 	config   Config
 	stateBag multistep.StateBag
@@ -531,6 +533,13 @@ func (b *Builder) managedImageArtifactWithSIGAsDestination(managedImageID string
 		stateData[key] = v
 	}
 
+	destinationSharedImageGalleryId := ""
+	if galleryID, ok := b.stateBag.GetOk(constants.ArmManagedImageSharedGalleryId); ok {
+		destinationSharedImageGalleryId = galleryID.(string)
+	} else {
+		return nil, ErrNoImage
+	}
+
 	return NewManagedImageArtifactWithSIGAsDestination(b.config.OSType,
 		b.config.ManagedImageResourceGroupName,
 		b.config.ManagedImageName,
@@ -538,6 +547,6 @@ func (b *Builder) managedImageArtifactWithSIGAsDestination(managedImageID string
 		managedImageID,
 		b.config.ManagedImageOSDiskSnapshotName,
 		b.config.ManagedImageDataDiskSnapshotPrefix,
-		b.stateBag.Get(constants.ArmManagedImageSharedGalleryId).(string),
+		destinationSharedImageGalleryId,
 		stateData)
 }
