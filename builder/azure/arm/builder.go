@@ -320,6 +320,11 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		return nil, errors.New("Build was halted.")
 	}
 
+	if b.config.SkipCreateImage {
+		// NOTE(jkoelker) if the capture was skipped, then just return
+		return nil, nil
+	}
+
 	getSasUrlFunc := func(name string) string {
 		blob := azureClient.BlobStorageClient.GetContainerReference(DefaultSasBlobContainer).GetBlobReference(name)
 		options := storage.BlobSASOptions{}
