@@ -73,6 +73,10 @@ type StorageProfileUnion struct {
 	DataDisks      *[]DataDiskUnion        `json:"dataDisks,omitempty"`
 }
 
+type BillingProfile struct {
+	MaxPrice float32 `json:"maxPrice,omitempty"`
+}
+
 // Template > Resource > Properties
 type Properties struct {
 	AccessPolicies               *[]AccessPolicies                   `json:"accessPolicies,omitempty"`
@@ -90,11 +94,14 @@ type Properties struct {
 	Sku                          *Sku                                `json:"sku,omitempty"`
 	UserData                     *string                             `json:"userData,omitempty"`
 	//StorageProfile3              *compute.StorageProfile             `json:"storageProfile,omitempty"`
-	StorageProfile *StorageProfileUnion    `json:"storageProfile,omitempty"`
-	Subnets        *[]network.Subnet       `json:"subnets,omitempty"`
-	SecurityRules  *[]network.SecurityRule `json:"securityRules,omitempty"`
-	TenantId       *string                 `json:"tenantId,omitempty"`
-	Value          *string                 `json:"value,omitempty"`
+	StorageProfile *StorageProfileUnion                       `json:"storageProfile,omitempty"`
+	Subnets        *[]network.Subnet                          `json:"subnets,omitempty"`
+	SecurityRules  *[]network.SecurityRule                    `json:"securityRules,omitempty"`
+	TenantId       *string                                    `json:"tenantId,omitempty"`
+	Value          *string                                    `json:"value,omitempty"`
+	Priority       *string                                    `json:"priority,omitempty"`
+	EvictionPolicy *compute.VirtualMachineEvictionPolicyTypes `json:"evictionPolicy,omitempty"`
+	BillingProfile *BillingProfile                            `json:"billingProfile,omitempty"`
 }
 
 // Template > Resource > Identity
