@@ -111,7 +111,7 @@
   
   CLI example `az vm list-sizes --location westus`
 
-- `spot` (Spot) - If set will use spot instance type.
+- `spot` (Spot) - If set use a spot instance during build; spot configuration settings only apply to the virtual machine launched by Packer and will not be persisted on the resulting image artifact.
 
 - `managed_image_resource_group_name` (string) - Specify the managed image resource group name where the result of the
   Packer build will be saved. The resource group must already exist. If

@@ -273,7 +273,7 @@ type Config struct {
 	// CLI example `az vm list-sizes --location westus`
 	VMSize string `mapstructure:"vm_size" required:"false"`
 
-	// If set will use spot instance type.
+	// If set use a spot instance during build; spot configuration settings only apply to the virtual machine launched by Packer and will not be persisted on the resulting image artifact.
 	Spot Spot `mapstructure:"spot" required:"false"`
 
 	// Specify the managed image resource group name where the result of the
