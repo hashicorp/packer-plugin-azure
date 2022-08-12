@@ -55,7 +55,6 @@ const (
 	// This is not an exhaustive match, but it should be extremely close.
 	validResourceGroupNameRe = "^[^_\\W][\\w-._\\(\\)]{0,89}$"
 	validManagedDiskName     = "^[^_\\W][\\w-._)]{0,79}$"
-	validResourceNamePrefix  = "^[^_\\W][\\w-._)]{0,10}$"
 )
 
 var (
@@ -65,7 +64,7 @@ var (
 	reResourceGroupName    = regexp.MustCompile(validResourceGroupNameRe)
 	reSnapshotName         = regexp.MustCompile(`^[A-Za-z0-9_]{1,79}$`)
 	reSnapshotPrefix       = regexp.MustCompile(`^[A-Za-z0-9_]{1,59}$`)
-	reResourceNamePrefix   = regexp.MustCompile(validResourceNamePrefix)
+	reResourceNamePrefix   = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]{0,9}$`)
 )
 
 type PlanInformation struct {
@@ -1265,8 +1264,8 @@ func assertManagedImageDataDiskSnapshotName(name, setting string) (bool, error) 
 }
 
 func assertResourceNamePrefix(name, setting string) (bool, error) {
-	if !isValidAzureName(reResourceNamePrefix, name) {
-		return false, fmt.Errorf("The setting %s must only contain characters from a-z, A-Z, 0-9 and _ and the maximum length is 10 characters", setting)
+	if !reResourceNamePrefix.MatchString(name) {
+		return false, fmt.Errorf("The setting %s must only contain characters from a-z, A-Z, 0-9 and - and the maximum length is 10 characters", setting)
 	}
 	return true, nil
 }
