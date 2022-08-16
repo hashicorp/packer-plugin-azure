@@ -47,14 +47,12 @@ func TestStepValidateTemplateShouldPassIfValidatePasses(t *testing.T) {
 	}
 }
 
-func TestStepValidateTemplateShouldTakeStepArgumentsFromStateBag(t *testing.T) {
+func TestStepValidateTemplateShouldTakeResourceGroupNameArgumentFromStateBag(t *testing.T) {
 	var actualResourceGroupName string
-	var actualDeploymentName string
 
 	var testSubject = &StepValidateTemplate{
 		validate: func(ctx context.Context, resourceGroupName string, deploymentName string) error {
 			actualResourceGroupName = resourceGroupName
-			actualDeploymentName = deploymentName
 
 			return nil
 		},
@@ -69,15 +67,37 @@ func TestStepValidateTemplateShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 		t.Fatalf("Expected the step to return 'ActionContinue', but got '%d'.", result)
 	}
 
-	var expectedDeploymentName = stateBag.Get(constants.ArmDeploymentName).(string)
 	var expectedResourceGroupName = stateBag.Get(constants.ArmResourceGroupName).(string)
-
-	if actualDeploymentName != expectedDeploymentName {
-		t.Fatal("Expected the step to source 'constants.ArmDeploymentName' from the state bag, but it did not.")
-	}
 
 	if actualResourceGroupName != expectedResourceGroupName {
 		t.Fatal("Expected the step to source 'constants.ArmResourceGroupName' from the state bag, but it did not.")
+	}
+}
+
+func TestStepValidateTemplateShouldTakeDeploymentNameArgumentFromParam(t *testing.T) {
+	var actualDeploymentName string
+	var expectedDeploymentName = "Unit Test: DeploymentName"
+
+	stateBag := createTestStateBagStepValidateTemplate()
+	var testSubject = &StepValidateTemplate{
+		validate: func(ctx context.Context, resourceGroupName string, deploymentName string) error {
+			actualDeploymentName = deploymentName
+
+			return nil
+		},
+		say:   func(message string) {},
+		error: func(e error) {},
+		name:  expectedDeploymentName,
+	}
+
+	var result = testSubject.Run(context.Background(), stateBag)
+
+	if result != multistep.ActionContinue {
+		t.Fatalf("Expected the step to return 'ActionContinue', but got '%d'.", result)
+	}
+
+	if actualDeploymentName != expectedDeploymentName {
+		t.Fatal("Expected the step to source 'deploymentName' from parameter, but it did not.")
 	}
 }
 
