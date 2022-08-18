@@ -733,6 +733,12 @@ func setSshValues(c *Config) error {
 		c.Comm.SSHPrivateKey = sshKeyPair.PrivateKey()
 	}
 
+	cert, err := c.createCertificate()
+	c.winrmCertificate = cert
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -805,6 +811,11 @@ func setUserNamePassword(c *Config) error {
 	if c.Comm.SSHPassword != "" {
 		c.Password = c.Comm.SSHPassword
 	}
+
+	if c.Comm.SSHPassword == "" {
+		c.Comm.SSHPassword = c.Password
+	}
+	c.Password = c.Comm.SSHPassword
 
 	if c.Comm.Type == "ssh" {
 		return nil
