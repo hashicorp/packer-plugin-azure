@@ -258,7 +258,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			NewStepValidateTemplate(azureClient, ui, &b.config, GetVirtualMachineDeployment),
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),
-
+		)
 		if strings.EqualFold(b.config.Comm.Type, "ssh") {
 			steps = append(steps,
 				&communicator.StepConnectSSH{
