@@ -116,7 +116,7 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupNa
 	}
 
 	err = f.WaitForCompletionRef(ctx, s.client.DeploymentsClient.Client)
-	if err == nil {
+	if err != nil {
 		s.say(s.client.LastError.Error())
 	}
 
