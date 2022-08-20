@@ -214,7 +214,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				error:         func(e error) { ui.Error(e.Error()) },
 			},
 			NewStepCreateResourceGroup(azureClient, ui),
-			NewStepValidateTemplate(azureClient, ui, &b.config, GetVirtualMachineDeployment),
+			NewStepValidateTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),
 			&communicator.StepConnectSSH{
@@ -246,7 +246,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		if b.config.BuildKeyVaultName == "" {
 			keyVaultDeploymentName := b.stateBag.Get(constants.ArmKeyVaultDeploymentName).(string)
 			steps = append(steps,
-				NewStepValidateTemplate(azureClient, ui, &b.config, GetKeyVaultDeployment),
+				NewStepValidateTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetKeyVaultDeployment),
 				NewStepDeployTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetKeyVaultDeployment),
 			)
 		} else {
@@ -255,7 +255,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		steps = append(steps,
 			NewStepGetCertificate(azureClient, ui),
 			NewStepSetCertificate(&b.config, ui),
-			NewStepValidateTemplate(azureClient, ui, &b.config, GetVirtualMachineDeployment),
+			NewStepValidateTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),
 		)
