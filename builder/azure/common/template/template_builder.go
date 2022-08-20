@@ -72,13 +72,21 @@ func (s *TemplateBuilder) BuildLinux(sshAuthorizedKey string, disablePasswordAut
 	return nil
 }
 
-func (s *TemplateBuilder) BuildWindows(keyVaultName, winRMCertificateUrl string) error {
+func (s *TemplateBuilder) BuildWindows(communicatorType string, keyVaultName string, winRMCertificateUrl string) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
 	}
 
 	profile := resource.Properties.OsProfile
+	s.osType = compute.OperatingSystemTypesWindows
+
+	if communicatorType == "ssh" {
+		profile.WindowsConfiguration = &compute.WindowsConfiguration{
+			ProvisionVMAgent: to.BoolPtr(true),
+		}
+		return nil
+	}
 
 	profile.Secrets = &[]compute.VaultSecretGroup{
 		{
@@ -106,7 +114,6 @@ func (s *TemplateBuilder) BuildWindows(keyVaultName, winRMCertificateUrl string)
 		},
 	}
 
-	s.osType = compute.OperatingSystemTypesWindows
 	return nil
 }
 

@@ -258,18 +258,32 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			NewStepValidateTemplate(azureClient, ui, &b.config, GetVirtualMachineDeployment),
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),
-			&communicator.StepConnectWinRM{
-				Config: &b.config.Comm,
-				Host: func(stateBag multistep.StateBag) (string, error) {
-					return stateBag.Get(constants.SSHHost).(string), nil
+		)
+		if strings.EqualFold(b.config.Comm.Type, "ssh") {
+			steps = append(steps,
+				&communicator.StepConnectSSH{
+					Config:    &b.config.Comm,
+					Host:      lin.SSHHost,
+					SSHConfig: b.config.Comm.SSHConfigFunc(),
 				},
-				WinRMConfig: func(multistep.StateBag) (*communicator.WinRMConfig, error) {
-					return &communicator.WinRMConfig{
-						Username: b.config.UserName,
-						Password: b.config.Password,
-					}, nil
+			)
+		} else {
+			steps = append(steps,
+				&communicator.StepConnectWinRM{
+					Config: &b.config.Comm,
+					Host: func(stateBag multistep.StateBag) (string, error) {
+						return stateBag.Get(constants.SSHHost).(string), nil
+					},
+					WinRMConfig: func(multistep.StateBag) (*communicator.WinRMConfig, error) {
+						return &communicator.WinRMConfig{
+							Username: b.config.UserName,
+							Password: b.config.Password,
+						}, nil
+					},
 				},
-			},
+			)
+		}
+		steps = append(steps,
 			&commonsteps.StepProvision{},
 			NewStepGetOSDisk(azureClient, ui),
 			NewStepGetAdditionalDisks(azureClient, ui),
