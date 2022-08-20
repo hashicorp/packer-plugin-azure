@@ -5,7 +5,6 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
-	gossh "golang.org/x/crypto/ssh"
 	"log"
 	"os"
 	"runtime"
@@ -25,6 +24,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/multistep/commonsteps"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
+	"golang.org/x/crypto/ssh"
 )
 
 type Builder struct {
@@ -263,7 +263,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 					NewStepDeployTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetSSHKeyVaultDeployment),
 				)
 			} else {
-				privateKey, err := gossh.ParseRawPrivateKey(b.config.Comm.SSHPrivateKey)
+				privateKey, err := ssh.ParseRawPrivateKey(b.config.Comm.SSHPrivateKey)
 				if err != nil {
 					return nil, err.(error)
 				}
