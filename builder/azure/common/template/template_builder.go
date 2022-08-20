@@ -72,13 +72,21 @@ func (s *TemplateBuilder) BuildLinux(sshAuthorizedKey string, disablePasswordAut
 	return nil
 }
 
-func (s *TemplateBuilder) BuildWindows(keyVaultName, winRMCertificateUrl string) error {
+func (s *TemplateBuilder) BuildWindows(communicatorType string, keyVaultName string, winRMCertificateUrl string) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
 	}
 
 	profile := resource.Properties.OsProfile
+	s.osType = compute.OperatingSystemTypesWindows
+
+	if communicatorType == "ssh" {
+		profile.WindowsConfiguration = &compute.WindowsConfiguration{
+			ProvisionVMAgent: to.BoolPtr(true),
+		}
+		return nil
+	}
 
 	profile.Secrets = &[]compute.VaultSecretGroup{
 		{
@@ -93,7 +101,6 @@ func (s *TemplateBuilder) BuildWindows(keyVaultName, winRMCertificateUrl string)
 			},
 		},
 	}
-
 	profile.WindowsConfiguration = &compute.WindowsConfiguration{
 		ProvisionVMAgent: to.BoolPtr(true),
 		WinRM: &compute.WinRMConfiguration{
@@ -106,7 +113,6 @@ func (s *TemplateBuilder) BuildWindows(keyVaultName, winRMCertificateUrl string)
 		},
 	}
 
-	s.osType = compute.OperatingSystemTypesWindows
 	return nil
 }
 
@@ -568,7 +574,6 @@ func (s *TemplateBuilder) createNsgResource(srcIpAddresses []string, port int) (
 //
 //  1. The SDK defines no types for a Key Vault
 //  2. The Key Vault template is relatively simple, and is static.
-//
 const KeyVault = `{
   "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json",
   "contentVersion": "1.0.0.0",

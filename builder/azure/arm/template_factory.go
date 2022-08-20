@@ -61,7 +61,7 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 		}
 	case constants.Target_Windows:
 		osType = compute.OperatingSystemTypesWindows
-		err = builder.BuildWindows(config.tmpKeyVaultName, config.tmpWinRMCertificateUrl)
+		err = builder.BuildWindows(config.Comm.Type, config.tmpKeyVaultName, config.tmpWinRMCertificateUrl)
 		if err != nil {
 			return nil, err
 		}
