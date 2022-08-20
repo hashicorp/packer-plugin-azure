@@ -10,19 +10,19 @@ import (
 )
 
 type StepCertificateInKeyVault struct {
-	config *Config
-	client common.AZVaultClientIface
-	say    func(message string)
-	error  func(e error)
+	config      *Config
+	client      common.AZVaultClientIface
+	say         func(message string)
+	error       func(e error)
 	certificate string
 }
 
 func NewStepCertificateInKeyVault(cli common.AZVaultClientIface, ui packersdk.Ui, config *Config, certificate string) *StepCertificateInKeyVault {
 	var step = &StepCertificateInKeyVault{
-		client: cli,
-		config: config,
-		say:    func(message string) { ui.Say(message) },
-		error:  func(e error) { ui.Error(e.Error()) },
+		client:      cli,
+		config:      config,
+		say:         func(message string) { ui.Say(message) },
+		error:       func(e error) { ui.Error(e.Error()) },
 		certificate: certificate,
 	}
 
