@@ -129,6 +129,19 @@
           "adminPassword": "[parameters('adminPassword')]",
           "adminUsername": "[parameters('adminUsername')]",
           "computerName": "[parameters('vmName')]",
+          "secrets": [
+            {
+              "sourceVault": {
+                "id": "[resourceId(resourceGroup().name, 'Microsoft.KeyVault/vaults', '--test-key-vault-name')]"
+              },
+              "vaultCertificates": [
+                {
+                  "certificateStore": "My",
+                  "certificateUrl": "--test-ssh-certificate-url--"
+                }
+              ]
+            }
+          ],
           "windowsConfiguration": {
             "provisionVMAgent": true
           }

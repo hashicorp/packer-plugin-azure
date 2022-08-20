@@ -571,7 +571,10 @@ func (c *Config) createCertificate() (string, error) {
 		err = fmt.Errorf("Failed to Generate Private Key: %s", err)
 		return "", err
 	}
+	return c.formatCertificateForKeyVault(privateKey)
+}
 
+func (c *Config) formatCertificateForKeyVault(privateKey *rsa.PrivateKey) (string, error) {
 	host := fmt.Sprintf("%s.cloudapp.net", c.tmpComputeName)
 	notBefore := time.Now()
 	notAfter := notBefore.Add(24 * time.Hour)

@@ -72,7 +72,7 @@ func (s *TemplateBuilder) BuildLinux(sshAuthorizedKey string, disablePasswordAut
 	return nil
 }
 
-func (s *TemplateBuilder) BuildWindows(communicatorType string, keyVaultName string, winRMCertificateUrl string) error {
+func (s *TemplateBuilder) BuildWindows(communicatorType string, keyVaultName string, certificateUrl string) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
@@ -80,13 +80,6 @@ func (s *TemplateBuilder) BuildWindows(communicatorType string, keyVaultName str
 
 	profile := resource.Properties.OsProfile
 	s.osType = compute.OperatingSystemTypesWindows
-
-	if communicatorType == "ssh" {
-		profile.WindowsConfiguration = &compute.WindowsConfiguration{
-			ProvisionVMAgent: to.BoolPtr(true),
-		}
-		return nil
-	}
 
 	profile.Secrets = &[]compute.VaultSecretGroup{
 		{
@@ -96,10 +89,17 @@ func (s *TemplateBuilder) BuildWindows(communicatorType string, keyVaultName str
 			VaultCertificates: &[]compute.VaultCertificate{
 				{
 					CertificateStore: to.StringPtr("My"),
-					CertificateURL:   to.StringPtr(winRMCertificateUrl),
+					CertificateURL:   to.StringPtr(certificateUrl),
 				},
 			},
 		},
+	}
+
+	if communicatorType == "ssh" {
+		profile.WindowsConfiguration = &compute.WindowsConfiguration{
+			ProvisionVMAgent: to.BoolPtr(true),
+		}
+		return nil
 	}
 
 	profile.WindowsConfiguration = &compute.WindowsConfiguration{
@@ -108,7 +108,7 @@ func (s *TemplateBuilder) BuildWindows(communicatorType string, keyVaultName str
 			Listeners: &[]compute.WinRMListener{
 				{
 					Protocol:       "https",
-					CertificateURL: to.StringPtr(winRMCertificateUrl),
+					CertificateURL: to.StringPtr(certificateUrl),
 				},
 			},
 		},

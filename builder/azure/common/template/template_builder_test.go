@@ -181,7 +181,7 @@ func TestBuildWindows03(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = testSubject.BuildWindows("ssh", "--test-key-vault-name", "--test-winrm-certificate-url--")
+	err = testSubject.BuildWindows("ssh", "--test-key-vault-name", "--test-ssh-certificate-url--")
 	if err != nil {
 		t.Fatal(err)
 	}
