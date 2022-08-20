@@ -243,18 +243,22 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			},
 			NewStepCreateResourceGroup(azureClient, ui),
 		}
-		if b.config.BuildKeyVaultName == "" {
-			keyVaultDeploymentName := b.stateBag.Get(constants.ArmKeyVaultDeploymentName).(string)
+		if strings.EqualFold(b.config.Comm.Type, "winrm") {
+			if b.config.BuildKeyVaultName == "" {
+				keyVaultDeploymentName := b.stateBag.Get(constants.ArmKeyVaultDeploymentName).(string)
+				steps = append(steps,
+					NewStepValidateTemplate(azureClient, ui, &b.config, GetKeyVaultDeployment),
+					NewStepDeployTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetKeyVaultDeployment),
+				)
+			} else {
+				steps = append(steps, NewStepCertificateInKeyVault(&azureClient.VaultClient, ui, &b.config))
+			}
 			steps = append(steps,
-				NewStepValidateTemplate(azureClient, ui, &b.config, GetKeyVaultDeployment),
-				NewStepDeployTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetKeyVaultDeployment),
+				NewStepGetCertificate(azureClient, ui),
+				NewStepSetCertificate(&b.config, ui),
 			)
-		} else {
-			steps = append(steps, NewStepCertificateInKeyVault(&azureClient.VaultClient, ui, &b.config))
 		}
 		steps = append(steps,
-			NewStepGetCertificate(azureClient, ui),
-			NewStepSetCertificate(&b.config, ui),
 			NewStepValidateTemplate(azureClient, ui, &b.config, GetVirtualMachineDeployment),
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),
