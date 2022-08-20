@@ -27,6 +27,9 @@ func GetSSHKeyVaultDeployment(config *Config) (*resources.Deployment, error) {
 	}
 	pk, _ := privateKey.(*rsa.PrivateKey)
 	secret, err := config.formatCertificateForKeyVault(pk)
+	if err != nil {
+		return nil, err.(error)
+	}
 	return GetKeyVaultDeployment(config, secret)
 }
 

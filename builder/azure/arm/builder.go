@@ -5,7 +5,7 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/ssh"
+	gossh "golang.org/x/crypto/ssh"
 	"log"
 	"os"
 	"runtime"
@@ -263,12 +263,15 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 					NewStepDeployTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetSSHKeyVaultDeployment),
 				)
 			} else {
-				privateKey, err := ssh.ParseRawPrivateKey(b.config.Comm.SSHPrivateKey)
+				privateKey, err := gossh.ParseRawPrivateKey(b.config.Comm.SSHPrivateKey)
 				if err != nil {
 					return nil, err.(error)
 				}
 				pk, _ := privateKey.(*rsa.PrivateKey)
 				secret, err := b.config.formatCertificateForKeyVault(pk)
+				if err != nil {
+					return nil, err.(error)
+				}
 				steps = append(steps, NewStepCertificateInKeyVault(&azureClient.VaultClient, ui, &b.config, secret))
 			}
 
