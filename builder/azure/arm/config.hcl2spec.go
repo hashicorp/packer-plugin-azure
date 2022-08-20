@@ -73,6 +73,7 @@ type FlatConfig struct {
 	VirtualNetworkResourceGroupName            *string                            `mapstructure:"virtual_network_resource_group_name" required:"false" cty:"virtual_network_resource_group_name" hcl:"virtual_network_resource_group_name"`
 	CustomDataFile                             *string                            `mapstructure:"custom_data_file" required:"false" cty:"custom_data_file" hcl:"custom_data_file"`
 	CustomData                                 *string                            `mapstructure:"custom_data" required:"false" cty:"custom_data" hcl:"custom_data"`
+	CustomScript                               *string                            `mapstructure:"custom_script" required:"false" cty:"custom_script" hcl:"custom_script"`
 	UserDataFile                               *string                            `mapstructure:"user_data_file" required:"false" cty:"user_data_file" hcl:"user_data_file"`
 	UserData                                   *string                            `mapstructure:"user_data" required:"false" cty:"user_data" hcl:"user_data"`
 	PlanInfo                                   *FlatPlanInformation               `mapstructure:"plan_info" required:"false" cty:"plan_info" hcl:"plan_info"`
@@ -211,6 +212,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"virtual_network_resource_group_name":              &hcldec.AttrSpec{Name: "virtual_network_resource_group_name", Type: cty.String, Required: false},
 		"custom_data_file":                                 &hcldec.AttrSpec{Name: "custom_data_file", Type: cty.String, Required: false},
 		"custom_data":                                      &hcldec.AttrSpec{Name: "custom_data", Type: cty.String, Required: false},
+		"custom_script":                                    &hcldec.AttrSpec{Name: "custom_script", Type: cty.String, Required: false},
 		"user_data_file":                                   &hcldec.AttrSpec{Name: "user_data_file", Type: cty.String, Required: false},
 		"user_data":                                        &hcldec.AttrSpec{Name: "user_data", Type: cty.String, Required: false},
 		"plan_info":                                        &hcldec.BlockSpec{TypeName: "plan_info", Nested: hcldec.ObjectSpec((*FlatPlanInformation)(nil).HCL2Spec())},

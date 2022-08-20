@@ -575,7 +575,6 @@ func (s *TemplateBuilder) createNsgResource(srcIpAddresses []string, port int) (
 //
 //  1. The SDK defines no types for a Key Vault
 //  2. The Key Vault template is relatively simple, and is static.
-//
 const KeyVault = `{
   "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json",
   "contentVersion": "1.0.0.0",
@@ -642,6 +641,43 @@ const KeyVault = `{
       ]
     }
   ]
+}`
+
+// adapted from https://github.com/Azure/azure-quickstart-templates/blob/b78db5d27fd6344656ebdd30f74eee5d22f40dde/application-workloads/ros/ros-vm-windows/nestedtemplates/customScriptExtension.json
+const CustomScript = `{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vmName": {
+            "metadata": {
+                "description": "The name of the vm"
+            },
+            "type": "string"
+        },
+        "commandToExecute": {
+            "type": "string"
+        }
+    },
+    "variables": {
+        "location": "[resourceGroup().location]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "apiVersion": "2019-12-01",
+            "name": "[concat(parameters('vmName'), '/extension-customscript')]",
+            "location": "[variables('location')]",
+            "properties": {
+                "publisher": "Microsoft.Compute",
+                "type": "CustomScriptExtension",
+                "typeHandlerVersion": "1.8",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "commandToExecute": "[parameters('commandToExecute')]"
+                }
+            }
+        }
+    ]
 }`
 
 const BasicTemplate = `{

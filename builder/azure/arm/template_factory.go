@@ -2,12 +2,9 @@ package arm
 
 import (
 	"encoding/json"
-
+	"fmt"
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
-
-	"fmt"
-
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/template"
 )
@@ -26,6 +23,20 @@ func GetKeyVaultDeployment(config *Config) (*resources.Deployment, error) {
 	builder, _ := template.NewTemplateBuilder(template.KeyVault)
 	_ = builder.SetTags(&config.AzureTags)
 
+	doc, _ := builder.ToJSON()
+	return createDeploymentParameters(*doc, params)
+}
+
+func GetCustomScriptDeployment(config *Config) (*resources.Deployment, error) {
+	params := &template.TemplateParameters{
+		CommandToExecute: &template.TemplateParameter{Value: config.CustomScript},
+		VMName:           &template.TemplateParameter{Value: config.tmpComputeName},
+	}
+
+	builder, err := template.NewTemplateBuilder(template.CustomScript)
+	if err != nil {
+		return nil, err
+	}
 	doc, _ := builder.ToJSON()
 	return createDeploymentParameters(*doc, params)
 }

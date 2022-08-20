@@ -21,6 +21,7 @@ const (
 	ArmComputeName                                             string = "arm.ComputeName"
 	ArmImageParameters                                         string = "arm.ImageParameters"
 	ArmCertificateUrl                                          string = "arm.CertificateUrl"
+	ArmCustomScriptDeploymentName                              string = "arm.CustomScriptDeploymentName"
 	ArmKeyVaultDeploymentName                                  string = "arm.KeyVaultDeploymentName"
 	ArmDeploymentName                                          string = "arm.DeploymentName"
 	ArmNicName                                                 string = "arm.NicName"

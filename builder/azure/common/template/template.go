@@ -5,7 +5,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-01-01/network"
 )
 
-/////////////////////////////////////////////////
+// ///////////////////////////////////////////////
 // Template
 type Template struct {
 	Schema         *string                `json:"$schema"`
@@ -15,14 +15,14 @@ type Template struct {
 	Resources      []*Resource            `json:"resources"`
 }
 
-/////////////////////////////////////////////////
+// ///////////////////////////////////////////////
 // Template > Parameters
 type Parameters struct {
 	Type         *string `json:"type"`
 	DefaultValue *string `json:"defaultValue,omitempty"`
 }
 
-/////////////////////////////////////////////////
+// ///////////////////////////////////////////////
 // Template > Resource
 type Resource struct {
 	ApiVersion *string            `json:"apiVersion"`
@@ -76,7 +76,7 @@ type StorageProfileUnion struct {
 	DataDisks      *[]DataDiskUnion        `json:"dataDisks,omitempty"`
 }
 
-/////////////////////////////////////////////////
+// ///////////////////////////////////////////////
 // Template > Resource > Properties
 type Properties struct {
 	AccessPolicies               *[]AccessPolicies                   `json:"accessPolicies,omitempty"`
@@ -94,11 +94,20 @@ type Properties struct {
 	Sku                          *Sku                                `json:"sku,omitempty"`
 	UserData                     *string                             `json:"userData,omitempty"`
 	//StorageProfile3              *compute.StorageProfile             `json:"storageProfile,omitempty"`
-	StorageProfile *StorageProfileUnion    `json:"storageProfile,omitempty"`
-	Subnets        *[]network.Subnet       `json:"subnets,omitempty"`
-	SecurityRules  *[]network.SecurityRule `json:"securityRules,omitempty"`
-	TenantId       *string                 `json:"tenantId,omitempty"`
-	Value          *string                 `json:"value,omitempty"`
+	StorageProfile          *StorageProfileUnion    `json:"storageProfile,omitempty"`
+	Subnets                 *[]network.Subnet       `json:"subnets,omitempty"`
+	SecurityRules           *[]network.SecurityRule `json:"securityRules,omitempty"`
+	TenantId                *string                 `json:"tenantId,omitempty"`
+	Value                   *string                 `json:"value,omitempty"`
+	Publisher               *string                 `json:"publisher,omitempty"`
+	Type                    *string                 `json:"type,omitempty"`
+	TypeHandlerVersion      *string                 `json:"typeHandlerVersion,omitempty"`
+	AutoUpgradeMinorVersion *bool                   `json:"autoUpgradeMinorVersion,omitempty"`
+	Settings                *CustomScriptSettings   `json:"settings,omitempty"`
+}
+
+type CustomScriptSettings struct {
+	CommandToExecute *string `json:"commandToExecute,omitempty"`
 }
 
 // Template > Resource > Identity
