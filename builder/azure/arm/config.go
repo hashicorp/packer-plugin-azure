@@ -202,7 +202,7 @@ type Config struct {
 	SharedGalleryImageVersionEndOfLifeDate string `mapstructure:"shared_gallery_image_version_end_of_life_date" required:"false"`
 	// The number of replicas of the Image Version to be created per region. This
 	// property would take effect for a region when regionalReplicaCount is not specified.
-	// Replica count must be between 1 and 10.
+	// Replica count must be between 1 and 100, but 50 replicas should be sufficient for most use cases.
 	SharedGalleryImageVersionReplicaCount int32 `mapstructure:"shared_image_gallery_replica_count" required:"false"`
 	// If set to true, Virtual Machines deployed from the latest version of the
 	// Image Definition won't use this Image Version.
