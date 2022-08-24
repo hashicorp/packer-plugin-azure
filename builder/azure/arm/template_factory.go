@@ -1,21 +1,40 @@
 package arm
 
 import (
+	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/template"
+	"golang.org/x/crypto/ssh"
 )
 
 type templateFactoryFunc func(*Config) (*resources.Deployment, error)
 
-func GetKeyVaultDeployment(config *Config) (*resources.Deployment, error) {
+func GetWinRMKeyVaultDeployment(config *Config) (*resources.Deployment, error) {
+	return GetKeyVaultDeployment(config, config.winrmCertificate)
+}
+
+func GetSSHKeyVaultDeployment(config *Config) (*resources.Deployment, error) {
+	privateKey, err := ssh.ParseRawPrivateKey(config.Comm.SSHPrivateKey)
+	if err != nil {
+		return nil, err.(error)
+	}
+	pk, _ := privateKey.(*rsa.PrivateKey)
+	secret, err := config.formatCertificateForKeyVault(pk)
+	if err != nil {
+		return nil, err.(error)
+	}
+	return GetKeyVaultDeployment(config, secret)
+}
+
+func GetKeyVaultDeployment(config *Config, secretValue string) (*resources.Deployment, error) {
 	params := &template.TemplateParameters{
 		KeyVaultName:        &template.TemplateParameter{Value: config.tmpKeyVaultName},
 		KeyVaultSKU:         &template.TemplateParameter{Value: config.BuildKeyVaultSKU},
-		KeyVaultSecretValue: &template.TemplateParameter{Value: config.winrmCertificate},
+		KeyVaultSecretValue: &template.TemplateParameter{Value: secretValue},
 		ObjectId:            &template.TemplateParameter{Value: config.ClientConfig.ObjectID},
 		TenantId:            &template.TemplateParameter{Value: config.ClientConfig.TenantID},
 	}

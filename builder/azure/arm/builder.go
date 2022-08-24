@@ -2,6 +2,7 @@ package arm
 
 import (
 	"context"
+	"crypto/rsa"
 	"errors"
 	"fmt"
 	"log"
@@ -23,6 +24,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/multistep/commonsteps"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
+	"golang.org/x/crypto/ssh"
 )
 
 type Builder struct {
@@ -247,18 +249,35 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			if b.config.BuildKeyVaultName == "" {
 				keyVaultDeploymentName := b.stateBag.Get(constants.ArmKeyVaultDeploymentName).(string)
 				steps = append(steps,
-					NewStepValidateTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetKeyVaultDeployment),
-					NewStepDeployTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetKeyVaultDeployment),
+					NewStepValidateTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetWinRMKeyVaultDeployment),
+					NewStepDeployTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetWinRMKeyVaultDeployment),
 				)
 			} else {
-				steps = append(steps, NewStepCertificateInKeyVault(&azureClient.VaultClient, ui, &b.config))
+				steps = append(steps, NewStepCertificateInKeyVault(&azureClient.VaultClient, ui, &b.config, b.config.winrmCertificate))
 			}
-			steps = append(steps,
-				NewStepGetCertificate(azureClient, ui),
-				NewStepSetCertificate(&b.config, ui),
-			)
+		} else {
+			if b.config.BuildKeyVaultName == "" {
+				keyVaultDeploymentName := b.stateBag.Get(constants.ArmKeyVaultDeploymentName).(string)
+				steps = append(steps,
+					NewStepValidateTemplate(azureClient, ui, &b.config, GetSSHKeyVaultDeployment),
+					NewStepDeployTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetSSHKeyVaultDeployment),
+				)
+			} else {
+				privateKey, err := ssh.ParseRawPrivateKey(b.config.Comm.SSHPrivateKey)
+				if err != nil {
+					return nil, err.(error)
+				}
+				pk, _ := privateKey.(*rsa.PrivateKey)
+				secret, err := b.config.formatCertificateForKeyVault(pk)
+				if err != nil {
+					return nil, err.(error)
+				}
+				steps = append(steps, NewStepCertificateInKeyVault(&azureClient.VaultClient, ui, &b.config, secret))
+			}
 		}
 		steps = append(steps,
+			NewStepGetCertificate(azureClient, ui),
+			NewStepSetCertificate(&b.config, ui),
 			NewStepValidateTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),

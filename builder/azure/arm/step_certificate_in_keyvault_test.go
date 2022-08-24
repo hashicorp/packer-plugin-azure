@@ -24,7 +24,7 @@ func TestNewStepCertificateInKeyVault(t *testing.T) {
 		winrmCertificate: "testCertificateString",
 	}
 
-	certKVStep := NewStepCertificateInKeyVault(&cli, ui, config)
+	certKVStep := NewStepCertificateInKeyVault(&cli, ui, config, config.winrmCertificate)
 	stepAction := certKVStep.Run(context.TODO(), state)
 
 	if stepAction == multistep.ActionHalt {
@@ -57,7 +57,7 @@ func TestNewStepCertificateInKeyVault_error(t *testing.T) {
 		winrmCertificate: "testCertificateString",
 	}
 
-	certKVStep := NewStepCertificateInKeyVault(&cli, ui, config)
+	certKVStep := NewStepCertificateInKeyVault(&cli, ui, config, config.winrmCertificate)
 	stepAction := certKVStep.Run(context.TODO(), state)
 
 	if stepAction != multistep.ActionHalt {
