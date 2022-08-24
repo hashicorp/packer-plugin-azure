@@ -259,7 +259,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			if b.config.BuildKeyVaultName == "" {
 				keyVaultDeploymentName := b.stateBag.Get(constants.ArmKeyVaultDeploymentName).(string)
 				steps = append(steps,
-					NewStepValidateTemplate(azureClient, ui, &b.config, GetSSHKeyVaultDeployment),
+					NewStepValidateTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetSSHKeyVaultDeployment),
 					NewStepDeployTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetSSHKeyVaultDeployment),
 				)
 			} else {
