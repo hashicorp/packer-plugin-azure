@@ -16,15 +16,17 @@ type StepValidateTemplate struct {
 	error    func(e error)
 	config   *Config
 	factory  templateFactoryFunc
+	name     string
 }
 
-func NewStepValidateTemplate(client *AzureClient, ui packersdk.Ui, config *Config, factory templateFactoryFunc) *StepValidateTemplate {
+func NewStepValidateTemplate(client *AzureClient, ui packersdk.Ui, config *Config, deploymentName string, factory templateFactoryFunc) *StepValidateTemplate {
 	var step = &StepValidateTemplate{
 		client:  client,
 		say:     func(message string) { ui.Say(message) },
 		error:   func(e error) { ui.Error(e.Error()) },
 		config:  config,
 		factory: factory,
+		name:    deploymentName,
 	}
 
 	step.validate = step.validateTemplate
@@ -48,12 +50,11 @@ func (s *StepValidateTemplate) Run(ctx context.Context, state multistep.StateBag
 	s.say("Validating deployment template ...")
 
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
-	var deploymentName = state.Get(constants.ArmDeploymentName).(string)
 
 	s.say(fmt.Sprintf(" -> ResourceGroupName : '%s'", resourceGroupName))
-	s.say(fmt.Sprintf(" -> DeploymentName    : '%s'", deploymentName))
+	s.say(fmt.Sprintf(" -> DeploymentName    : '%s'", s.name))
 
-	err := s.validate(ctx, resourceGroupName, deploymentName)
+	err := s.validate(ctx, resourceGroupName, s.name)
 	return processStepResult(err, s.error, state)
 }
 

@@ -27,6 +27,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+var ErrNoImage = errors.New("failed to find shared image gallery id in state")
+
 type Builder struct {
 	config   Config
 	stateBag multistep.StateBag
@@ -216,7 +218,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				error:         func(e error) { ui.Error(e.Error()) },
 			},
 			NewStepCreateResourceGroup(azureClient, ui),
-			NewStepValidateTemplate(azureClient, ui, &b.config, GetVirtualMachineDeployment),
+			NewStepValidateTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),
 			&communicator.StepConnectSSH{
@@ -249,7 +251,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			if b.config.BuildKeyVaultName == "" {
 				keyVaultDeploymentName := b.stateBag.Get(constants.ArmKeyVaultDeploymentName).(string)
 				steps = append(steps,
-					NewStepValidateTemplate(azureClient, ui, &b.config, GetWinRMKeyVaultDeployment),
+					NewStepValidateTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetWinRMKeyVaultDeployment),
 					NewStepDeployTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetWinRMKeyVaultDeployment),
 				)
 			} else {
@@ -279,7 +281,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		steps = append(steps,
 			NewStepGetCertificate(azureClient, ui),
 			NewStepSetCertificate(&b.config, ui),
-			NewStepValidateTemplate(azureClient, ui, &b.config, GetVirtualMachineDeployment),
+			NewStepValidateTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),
 		)
@@ -354,6 +356,11 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	if _, ok := b.stateBag.GetOk(multistep.StateHalted); ok {
 		return nil, errors.New("Build was halted.")
+	}
+
+	if b.config.SkipCreateImage {
+		// NOTE(jkoelker) if the capture was skipped, then just return
+		return nil, nil
 	}
 
 	getSasUrlFunc := func(name string) string {
@@ -569,6 +576,13 @@ func (b *Builder) managedImageArtifactWithSIGAsDestination(managedImageID string
 		stateData[key] = v
 	}
 
+	destinationSharedImageGalleryId := ""
+	if galleryID, ok := b.stateBag.GetOk(constants.ArmManagedImageSharedGalleryId); ok {
+		destinationSharedImageGalleryId = galleryID.(string)
+	} else {
+		return nil, ErrNoImage
+	}
+
 	return NewManagedImageArtifactWithSIGAsDestination(b.config.OSType,
 		b.config.ManagedImageResourceGroupName,
 		b.config.ManagedImageName,
@@ -576,6 +590,6 @@ func (b *Builder) managedImageArtifactWithSIGAsDestination(managedImageID string
 		managedImageID,
 		b.config.ManagedImageOSDiskSnapshotName,
 		b.config.ManagedImageDataDiskSnapshotPrefix,
-		b.stateBag.Get(constants.ArmManagedImageSharedGalleryId).(string),
+		destinationSharedImageGalleryId,
 		stateData)
 }
