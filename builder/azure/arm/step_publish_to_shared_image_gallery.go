@@ -158,10 +158,10 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 	miSGImageVersionEndOfLifeDate, _ := stateBag.Get(constants.ArmManagedImageSharedGalleryImageVersionEndOfLifeDate).(string)
 	miSGImageVersionExcludeFromLatest, _ := stateBag.Get(constants.ArmManagedImageSharedGalleryImageVersionExcludeFromLatest).(bool)
 	miSigReplicaCount, _ := stateBag.Get(constants.ArmManagedImageSharedGalleryImageVersionReplicaCount).(int32)
-	// Replica count must be between 1 and 10 inclusive.
+	// Replica count must be between 1 and 100 inclusive
 	if miSigReplicaCount <= 0 {
 		miSigReplicaCount = constants.SharedImageGalleryImageVersionDefaultMinReplicaCount
-	} else if miSigReplicaCount > 10 {
+	} else if miSigReplicaCount > constants.SharedImageGalleryImageVersionDefaultMaxReplicaCount {
 		miSigReplicaCount = constants.SharedImageGalleryImageVersionDefaultMaxReplicaCount
 	}
 
@@ -174,7 +174,7 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 	s.say(fmt.Sprintf(" -> SIG storage account type              : '%s'", sharedImageGallery.SigDestinationStorageAccountType))
 	s.say(fmt.Sprintf(" -> SIG image version endoflife date      : '%s'", miSGImageVersionEndOfLifeDate))
 	s.say(fmt.Sprintf(" -> SIG image version exclude from latest : '%t'", miSGImageVersionExcludeFromLatest))
-	s.say(fmt.Sprintf(" -> SIG replica count [1, 10]             : '%d'", miSigReplicaCount))
+	s.say(fmt.Sprintf(" -> SIG replica count [1, 100]            : '%d'", miSigReplicaCount))
 
 	createdGalleryImageVersionID, err := s.publish(ctx, mdiID, sharedImageGallery, miSGImageVersionEndOfLifeDate, miSGImageVersionExcludeFromLatest, miSigReplicaCount, location, tags)
 

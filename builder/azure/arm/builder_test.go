@@ -3,6 +3,8 @@ package arm
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 )
 
@@ -64,6 +66,16 @@ func TestStateBagShouldPoluateExpectedTags(t *testing.T) {
 		}
 	}
 
+}
+
+func TestManagedImageArtifactWithSIGAsDestinationNoImage(t *testing.T) {
+	var testSubject Builder
+
+	_, _, err := testSubject.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	assert.NoErrorf(t, err, "failed to prepare: %s", err)
+
+	_, err = testSubject.managedImageArtifactWithSIGAsDestination("fakeID", generatedData())
+	assert.ErrorIs(t, err, ErrNoImage)
 }
 
 func TestBuildSharedImageGalleryArtifact_withState(t *testing.T) {

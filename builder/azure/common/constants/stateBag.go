@@ -13,7 +13,7 @@ const (
 // Default replica count for image versions in shared image gallery
 const (
 	SharedImageGalleryImageVersionDefaultMinReplicaCount int32 = 1
-	SharedImageGalleryImageVersionDefaultMaxReplicaCount int32 = 10
+	SharedImageGalleryImageVersionDefaultMaxReplicaCount int32 = 100
 )
 
 const (

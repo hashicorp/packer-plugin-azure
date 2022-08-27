@@ -27,6 +27,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+var ErrNoImage = errors.New("failed to find shared image gallery id in state")
+
 type Builder struct {
 	config   Config
 	stateBag multistep.StateBag
@@ -364,6 +366,11 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		return nil, errors.New("Build was halted.")
 	}
 
+	if b.config.SkipCreateImage {
+		// NOTE(jkoelker) if the capture was skipped, then just return
+		return nil, nil
+	}
+
 	getSasUrlFunc := func(name string) string {
 		blob := azureClient.BlobStorageClient.GetContainerReference(DefaultSasBlobContainer).GetBlobReference(name)
 		options := storage.BlobSASOptions{}
@@ -580,6 +587,13 @@ func (b *Builder) managedImageArtifactWithSIGAsDestination(managedImageID string
 		stateData[key] = v
 	}
 
+	destinationSharedImageGalleryId := ""
+	if galleryID, ok := b.stateBag.GetOk(constants.ArmManagedImageSharedGalleryId); ok {
+		destinationSharedImageGalleryId = galleryID.(string)
+	} else {
+		return nil, ErrNoImage
+	}
+
 	return NewManagedImageArtifactWithSIGAsDestination(b.config.OSType,
 		b.config.ManagedImageResourceGroupName,
 		b.config.ManagedImageName,
@@ -587,6 +601,6 @@ func (b *Builder) managedImageArtifactWithSIGAsDestination(managedImageID string
 		managedImageID,
 		b.config.ManagedImageOSDiskSnapshotName,
 		b.config.ManagedImageDataDiskSnapshotPrefix,
-		b.stateBag.Get(constants.ArmManagedImageSharedGalleryId).(string),
+		destinationSharedImageGalleryId,
 		stateData)
 }
