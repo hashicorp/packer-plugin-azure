@@ -161,7 +161,6 @@ func (s *StepDeployTemplate) getImageDetails(ctx context.Context, resourceGroupN
 	return imageType, imageName, nil
 }
 
-//TODO(paulmey): move to helpers file
 func deleteResource(ctx context.Context, client *AzureClient, resourceType string, resourceName string, resourceGroupName string) error {
 	switch resourceType {
 	case "Microsoft.Compute/virtualMachines":
