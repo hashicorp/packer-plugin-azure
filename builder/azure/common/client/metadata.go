@@ -22,7 +22,7 @@ type MetadataClientStub struct {
 	ComputeInfo
 }
 
-//GetComputeInfo implements MetadataClientAPI
+// GetComputeInfo implements MetadataClientAPI
 func (s MetadataClientStub) GetComputeInfo() (*ComputeInfo, error) {
 	return &s.ComputeInfo, nil
 }

@@ -568,7 +568,6 @@ func (s *TemplateBuilder) createNsgResource(srcIpAddresses []string, port int) (
 //
 //  1. The SDK defines no types for a Key Vault
 //  2. The Key Vault template is relatively simple, and is static.
-//
 const KeyVault = `{
   "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json",
   "contentVersion": "1.0.0.0",

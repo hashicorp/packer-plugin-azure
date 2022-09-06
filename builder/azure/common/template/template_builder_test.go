@@ -8,7 +8,7 @@ import (
 )
 
 // Ensure that a Linux template is configured as expected.
-//  * Include SSH configuration: authorized key, and key path.
+// Include SSH configuration: authorized key, and key path.
 func TestBuildLinux00(t *testing.T) {
 	testSubject, err := NewTemplateBuilder(BasicTemplate)
 	if err != nil {
@@ -92,8 +92,8 @@ func TestBuildLinux02(t *testing.T) {
 }
 
 // Ensure that a Windows template is configured as expected.
-//  * Include WinRM configuration.
-//  * Include KeyVault configuration, which is needed for WinRM.
+// * Include WinRM configuration.
+// * Include KeyVault configuration, which is needed for WinRM.
 func TestBuildWindows00(t *testing.T) {
 	testSubject, err := NewTemplateBuilder(BasicTemplate)
 	if err != nil {
