@@ -110,17 +110,9 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 		if err != nil {
 			return nil, err
 		}
-	} else if config.ManagedImageName != "" && config.ImagePublisher != "" {
-		imageID := fmt.Sprintf("/subscriptions/%s/providers/Microsoft.Compute/locations/%s/publishers/%s/ArtifactTypes/vmimage/offers/%s/skus/%s/versions/%s",
-			config.ClientConfig.SubscriptionID,
-			config.Location,
-			config.ImagePublisher,
-			config.ImageOffer,
-			config.ImageSku,
-			config.ImageVersion)
-
+	} else if (config.isManagedImage() || config.isPublishToSIG()) && config.ImagePublisher != "" {
 		// TODO : Handle this error
-		_ = builder.SetManagedMarketplaceImage(config.Location, config.ImagePublisher, config.ImageOffer, config.ImageSku, config.ImageVersion, imageID, config.managedImageStorageAccountType, config.diskCachingType)
+		_ = builder.SetManagedMarketplaceImage(config.ImagePublisher, config.ImageOffer, config.ImageSku, config.ImageVersion, config.managedImageStorageAccountType, config.diskCachingType)
 	} else if config.SharedGallery.Subscription != "" {
 		imageID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/galleries/%s/images/%s",
 			config.SharedGallery.Subscription,

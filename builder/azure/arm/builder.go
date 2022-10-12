@@ -73,7 +73,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	//When running Packer on an Azure instance using Managed Identity, FillParameters will update SubscriptionID from the instance
 	// so lets make sure to update our state bag with the valid subscriptionID.
-	if b.config.isManagedImage() && b.config.SharedGalleryDestination.SigDestinationGalleryName != "" {
+	if b.config.isPublishToSIG() {
 		b.stateBag.Put(constants.ArmManagedImageSubscription, b.config.ClientConfig.SubscriptionID)
 	}
 
@@ -141,7 +141,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				return nil, fmt.Errorf("the managed image named %s already exists in the resource group %s, use the -force option to automatically delete it.", b.config.ManagedImageName, b.config.ManagedImageResourceGroupName)
 			}
 		}
-	} else {
+	} else if !b.config.isPublishToSIG() {
 		// User is not using Managed Images to build, warning message here that this path is being deprecated
 		ui.Error("Warning: You are using Azure Packer Builder to create VHDs which is being deprecated, consider using Managed Images. Learn more https://www.packer.io/docs/builders/azure/arm#azure-arm-builder-specific-options")
 	}
@@ -182,11 +182,11 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	deploymentName := b.stateBag.Get(constants.ArmDeploymentName).(string)
 
-	// For Managed Images, validate that Shared Gallery Image exists before publishing to SIG
-	if b.config.isManagedImage() && b.config.SharedGalleryDestination.SigDestinationGalleryName != "" {
+	// Validate that Shared Gallery Image exists before publishing to SIG
+	if b.config.isPublishToSIG() {
 		_, err = azureClient.GalleryImagesClient.Get(ctx, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
 		if err != nil {
-			return nil, fmt.Errorf("the Shared Gallery Image to which to publish the managed image version to does not exist in the resource group %s", b.config.SharedGalleryDestination.SigDestinationResourceGroup)
+			return nil, fmt.Errorf("the Shared Gallery Image '%s' to which to publish the managed image version to does not exist in the resource group '%s' or does not contain managed image '%s'", b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationImageName)
 		}
 		// SIG requires that replication regions include the region in which the Managed Image resides
 		managedImageLocation := normalizeAzureRegion(b.stateBag.Get(constants.ArmLocation).(string))
@@ -371,7 +371,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		managedImageID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/images/%s",
 			b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName, b.config.ManagedImageName)
 
-		if b.config.SharedGalleryDestination.SigDestinationGalleryName != "" {
+		if b.config.isPublishToSIG() {
 			return b.managedImageArtifactWithSIGAsDestination(managedImageID, stateData)
 		}
 
@@ -400,6 +400,10 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			b.stateBag.Get(constants.ArmKeepOSDisk).(bool),
 			nil,
 			getSasUrlFunc)
+	}
+
+	if b.config.isPublishToSIG() {
+		return b.sharedImageArtifact(stateData)
 	}
 
 	if template, ok := b.stateBag.GetOk(constants.ArmCaptureTemplate); ok {
@@ -501,7 +505,8 @@ func (b *Builder) configureStateBag(stateBag multistep.StateBag) {
 	stateBag.Put(constants.ArmAsyncResourceGroupDelete, b.config.AsyncResourceGroupDelete)
 	stateBag.Put(constants.ArmKeepOSDisk, b.config.KeepOSDisk)
 
-	if b.config.isManagedImage() && b.config.SharedGalleryDestination.SigDestinationGalleryName != "" {
+	stateBag.Put(constants.ArmIsSIGImage, b.config.isPublishToSIG())
+	if b.config.isPublishToSIG() {
 		stateBag.Put(constants.ArmManagedImageSigPublishResourceGroup, b.config.SharedGalleryDestination.SigDestinationResourceGroup)
 		stateBag.Put(constants.ArmManagedImageSharedGalleryName, b.config.SharedGalleryDestination.SigDestinationGalleryName)
 		stateBag.Put(constants.ArmManagedImageSharedGalleryImageName, b.config.SharedGalleryDestination.SigDestinationImageName)
@@ -586,4 +591,32 @@ func (b *Builder) managedImageArtifactWithSIGAsDestination(managedImageID string
 		b.config.ManagedImageDataDiskSnapshotPrefix,
 		destinationSharedImageGalleryId,
 		stateData)
+}
+
+func (b *Builder) sharedImageArtifact(stateData map[string]interface{}) (*Artifact, error) {
+
+	sigDestinationStateKeys := []string{
+		constants.ArmManagedImageSigPublishResourceGroup,
+		constants.ArmManagedImageSharedGalleryName,
+		constants.ArmManagedImageSharedGalleryImageName,
+		constants.ArmManagedImageSharedGalleryImageVersion,
+		constants.ArmManagedImageSharedGalleryReplicationRegions,
+	}
+
+	for _, key := range sigDestinationStateKeys {
+		v, ok := b.stateBag.GetOk(key)
+		if !ok {
+			continue
+		}
+		stateData[key] = v
+	}
+
+	destinationSharedImageGalleryId := ""
+	if galleryID, ok := b.stateBag.GetOk(constants.ArmManagedImageSharedGalleryId); ok {
+		destinationSharedImageGalleryId = galleryID.(string)
+	} else {
+		return nil, ErrNoImage
+	}
+
+	return NewSharedImageArtifact(b.config.OSType, destinationSharedImageGalleryId, stateData)
 }

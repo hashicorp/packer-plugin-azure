@@ -100,6 +100,14 @@ func NewManagedImageArtifactWithSIGAsDestination(osType, resourceGroup, name, lo
 	}, nil
 }
 
+func NewSharedImageArtifact(osType, destinationSharedImageGalleryId string, generatedData map[string]interface{}) (*Artifact, error) {
+	return &Artifact{
+		OSType:                           osType,
+		ManagedImageSharedImageGalleryId: destinationSharedImageGalleryId,
+		StateData:                        generatedData,
+	}, nil
+}
+
 func NewArtifact(template *CaptureTemplate, getSasUrl func(name string) string, osType string, generatedData map[string]interface{}) (*Artifact, error) {
 	if template == nil {
 		return nil, fmt.Errorf("nil capture template")

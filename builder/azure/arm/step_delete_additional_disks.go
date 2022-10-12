@@ -67,6 +67,7 @@ func (s *StepDeleteAdditionalDisk) Run(ctx context.Context, state multistep.Stat
 		dataDisks = disks.([]string)
 	}
 	var isManagedDisk = state.Get(constants.ArmIsManagedImage).(bool)
+	var isSIGImage = state.Get(constants.ArmIsSIGImage).(bool)
 	var isExistingResourceGroup = state.Get(constants.ArmIsExistingResourceGroup).(bool)
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
 
@@ -75,7 +76,7 @@ func (s *StepDeleteAdditionalDisk) Run(ctx context.Context, state multistep.Stat
 		return multistep.ActionContinue
 	}
 
-	if isManagedDisk && !isExistingResourceGroup {
+	if (isManagedDisk || isSIGImage) && !isExistingResourceGroup {
 		s.say(" -> Additional Disk : skipping, managed disk was used...")
 		return multistep.ActionContinue
 	}
@@ -83,7 +84,7 @@ func (s *StepDeleteAdditionalDisk) Run(ctx context.Context, state multistep.Stat
 	for i, additionaldisk := range dataDisks {
 		s.say(fmt.Sprintf(" -> Additional Disk %d: '%s'", i+1, additionaldisk))
 		var err error
-		if isManagedDisk {
+		if isManagedDisk || isSIGImage {
 			err = s.deleteManaged(ctx, resourceGroupName, additionaldisk)
 			if err != nil {
 				s.say("Failed to delete the managed Additional Disk!")

@@ -155,6 +155,7 @@ func TestStepDeleteAdditionalDiskShouldPassIfManagedDiskInTempResourceGroup(t *t
 	stateBag := new(multistep.BasicStateBag)
 	stateBag.Put(constants.ArmAdditionalDiskVhds, []string{"subscriptions/123-456-789/resourceGroups/existingresourcegroup/providers/Microsoft.Compute/disks/osdisk"})
 	stateBag.Put(constants.ArmIsManagedImage, true)
+	stateBag.Put(constants.ArmIsSIGImage, false)
 	stateBag.Put(constants.ArmIsExistingResourceGroup, false)
 	stateBag.Put(constants.ArmResourceGroupName, "testgroup")
 
@@ -179,6 +180,7 @@ func TestStepDeleteAdditionalDiskShouldFailIfManagedDiskInExistingResourceGroupF
 	stateBag := new(multistep.BasicStateBag)
 	stateBag.Put(constants.ArmAdditionalDiskVhds, []string{"subscriptions/123-456-789/resourceGroups/existingresourcegroup/providers/Microsoft.Compute/disks/osdisk"})
 	stateBag.Put(constants.ArmIsManagedImage, true)
+	stateBag.Put(constants.ArmIsSIGImage, false)
 	stateBag.Put(constants.ArmIsExistingResourceGroup, true)
 	stateBag.Put(constants.ArmResourceGroupName, "testgroup")
 
@@ -203,6 +205,7 @@ func TestStepDeleteAdditionalDiskShouldFailIfManagedDiskInExistingResourceGroupI
 	stateBag := new(multistep.BasicStateBag)
 	stateBag.Put(constants.ArmAdditionalDiskVhds, []string{"subscriptions/123-456-789/resourceGroups/existingresourcegroup/providers/Microsoft.Compute/disks/osdisk"})
 	stateBag.Put(constants.ArmIsManagedImage, true)
+	stateBag.Put(constants.ArmIsSIGImage, false)
 	stateBag.Put(constants.ArmIsExistingResourceGroup, true)
 	stateBag.Put(constants.ArmResourceGroupName, "testgroup")
 
@@ -220,6 +223,7 @@ func DeleteTestStateBagStepDeleteAdditionalDisk(osDiskVhds []string) multistep.S
 	stateBag := new(multistep.BasicStateBag)
 	stateBag.Put(constants.ArmAdditionalDiskVhds, osDiskVhds)
 	stateBag.Put(constants.ArmIsManagedImage, false)
+	stateBag.Put(constants.ArmIsSIGImage, false)
 	stateBag.Put(constants.ArmIsExistingResourceGroup, false)
 	stateBag.Put(constants.ArmResourceGroupName, "testgroup")
 

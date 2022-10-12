@@ -66,7 +66,7 @@ func (s *StepCaptureImage) captureImage(ctx context.Context, resourceGroupName s
 }
 
 func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	s.say("Capturing image ...")
+	s.say("Generalizing machine ...")
 
 	var computeName = state.Get(constants.ArmComputeName).(string)
 	var location = state.Get(constants.ArmLocation).(string)
@@ -75,9 +75,7 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 	var imageParameters = state.Get(constants.ArmImageParameters).(*compute.Image)
 
 	var isManagedImage = state.Get(constants.ArmIsManagedImage).(bool)
-	var targetManagedImageResourceGroupName = state.Get(constants.ArmManagedImageResourceGroupName).(string)
-	var targetManagedImageName = state.Get(constants.ArmManagedImageName).(string)
-	var targetManagedImageLocation = state.Get(constants.ArmLocation).(string)
+	var isSIGImage = state.Get(constants.ArmIsSIGImage).(bool)
 
 	s.say(fmt.Sprintf(" -> Compute ResourceGroupName : '%s'", resourceGroupName))
 	s.say(fmt.Sprintf(" -> Compute Name              : '%s'", computeName))
@@ -87,11 +85,19 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 
 	if err == nil {
 		if isManagedImage {
+			s.say("Capturing image ...")
+			var targetManagedImageResourceGroupName = state.Get(constants.ArmManagedImageResourceGroupName).(string)
+			var targetManagedImageName = state.Get(constants.ArmManagedImageName).(string)
+			var targetManagedImageLocation = state.Get(constants.ArmLocation).(string)
 			s.say(fmt.Sprintf(" -> Image ResourceGroupName   : '%s'", targetManagedImageResourceGroupName))
 			s.say(fmt.Sprintf(" -> Image Name                : '%s'", targetManagedImageName))
 			s.say(fmt.Sprintf(" -> Image Location            : '%s'", targetManagedImageLocation))
 			err = s.captureManagedImage(ctx, targetManagedImageResourceGroupName, targetManagedImageName, imageParameters)
+		} else if isSIGImage {
+			// It's possible to create SIG image
+			return multistep.ActionContinue
 		} else {
+			s.say("Capturing VHD ...")
 			err = s.captureVhd(ctx, resourceGroupName, computeName, vmCaptureParameters)
 		}
 	}
