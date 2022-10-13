@@ -89,7 +89,7 @@ func TestBuildSharedImageGalleryArtifact_withState(t *testing.T) {
 	// During the publishing state to a shared image gallery this information is added to the builder StateBag.
 	// Adding it to the test to mimic a successful SIG publishing step.
 	testSubject.stateBag.Put(constants.ArmManagedImageSigPublishResourceGroup, "fakeGalleryResourceGroup")
-	testSubject.stateBag.Put(constants.ArmManagedImageSharedGalleryName, "faleGalleryName")
+	testSubject.stateBag.Put(constants.ArmManagedImageSharedGalleryName, "fakeGalleryName")
 	testSubject.stateBag.Put(constants.ArmManagedImageSharedGalleryImageName, "fakeGalleryImageName")
 	testSubject.stateBag.Put(constants.ArmManagedImageSharedGalleryImageVersion, "fakeGalleryImageVersion")
 	testSubject.stateBag.Put(constants.ArmManagedImageSharedGalleryReplicationRegions, []string{"fake-region-1", "fake-region-2"})
@@ -116,6 +116,11 @@ ManagedImageLocation: fakeLocation
 ManagedImageOSDiskSnapshotName: fakeOsDiskSnapshotName
 ManagedImageDataDiskSnapshotPrefix: fakeDataDiskSnapshotPrefix
 ManagedImageSharedImageGalleryId: fakeSharedImageGallery
+SharedImageGalleryResourceGroup: fakeGalleryResourceGroup
+SharedImageGalleryName: fakeGalleryName
+SharedImageGalleryImageName: fakeGalleryImageName
+SharedImageGalleryImageVersion: fakeGalleryImageVersion
+SharedImageGalleryReplicatedRegions: fake-region-1, fake-region-2
 `
 
 	result := artifact.String()

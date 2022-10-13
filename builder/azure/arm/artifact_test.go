@@ -272,6 +272,11 @@ ManagedImageLocation: fakeLocation
 ManagedImageOSDiskSnapshotName: fakeOsDiskSnapshotName
 ManagedImageDataDiskSnapshotPrefix: fakeDataDiskSnapshotPrefix
 ManagedImageSharedImageGalleryId: fakeSharedImageGallery
+SharedImageGalleryResourceGroup: fakeResourceGroup
+SharedImageGalleryName: fakeName
+SharedImageGalleryImageName: fakeGalleryImageName
+SharedImageGalleryImageVersion: fakeGalleryImageVersion
+SharedImageGalleryReplicatedRegions: fake-region-1, fake-region-2
 `
 
 	result := artifact.String()
