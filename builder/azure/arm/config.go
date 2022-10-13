@@ -1166,9 +1166,6 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		if c.SharedGalleryDestination.SigDestinationImageVersion == "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("An image_version must be specified for shared_image_gallery_destination"))
 		}
-		if len(c.SharedGalleryDestination.SigDestinationReplicationRegions) == 0 {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A list of replication_regions must be specified for shared_image_gallery_destination"))
-		}
 		if c.SharedGalleryDestination.SigDestinationSubscription == "" {
 			c.SharedGalleryDestination.SigDestinationSubscription = c.ClientConfig.SubscriptionID
 		}
