@@ -247,35 +247,25 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			},
 			NewStepCreateResourceGroup(azureClient, ui),
 		}
-		if strings.EqualFold(b.config.Comm.Type, "winrm") {
-			if b.config.BuildKeyVaultName == "" {
-				keyVaultDeploymentName := b.stateBag.Get(constants.ArmKeyVaultDeploymentName).(string)
-				steps = append(steps,
-					NewStepValidateTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetWinRMKeyVaultDeployment),
-					NewStepDeployTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetWinRMKeyVaultDeployment),
-				)
-			} else {
-				steps = append(steps, NewStepCertificateInKeyVault(&azureClient.VaultClient, ui, &b.config, b.config.winrmCertificate))
-			}
+		if b.config.BuildKeyVaultName == "" {
+			keyVaultDeploymentName := b.stateBag.Get(constants.ArmKeyVaultDeploymentName).(string)
+			steps = append(steps,
+				NewStepValidateTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetCommunicatorSpecificKeyVaultDeployment),
+				NewStepDeployTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetCommunicatorSpecificKeyVaultDeployment),
+			)
+		} else if b.config.Comm.Type == "winrm" {
+			steps = append(steps, NewStepCertificateInKeyVault(&azureClient.VaultClient, ui, &b.config, b.config.winrmCertificate))
 		} else {
-			if b.config.BuildKeyVaultName == "" {
-				keyVaultDeploymentName := b.stateBag.Get(constants.ArmKeyVaultDeploymentName).(string)
-				steps = append(steps,
-					NewStepValidateTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetSSHKeyVaultDeployment),
-					NewStepDeployTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetSSHKeyVaultDeployment),
-				)
-			} else {
-				privateKey, err := ssh.ParseRawPrivateKey(b.config.Comm.SSHPrivateKey)
-				if err != nil {
-					return nil, err.(error)
-				}
-				pk, _ := privateKey.(*rsa.PrivateKey)
-				secret, err := b.config.formatCertificateForKeyVault(pk)
-				if err != nil {
-					return nil, err.(error)
-				}
-				steps = append(steps, NewStepCertificateInKeyVault(&azureClient.VaultClient, ui, &b.config, secret))
+			privateKey, err := ssh.ParseRawPrivateKey(b.config.Comm.SSHPrivateKey)
+			if err != nil {
+				return nil, err
 			}
+			pk, _ := privateKey.(*rsa.PrivateKey)
+			secret, err := b.config.formatCertificateForKeyVault(pk)
+			if err != nil {
+				return nil, err
+			}
+			steps = append(steps, NewStepCertificateInKeyVault(&azureClient.VaultClient, ui, &b.config, secret))
 		}
 		steps = append(steps,
 			NewStepGetCertificate(azureClient, ui),
@@ -293,7 +283,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			)
 		}
 
-		if strings.EqualFold(b.config.Comm.Type, "ssh") {
+		if b.config.Comm.Type == "ssh" {
 			steps = append(steps,
 				&communicator.StepConnectSSH{
 					Config:    &b.config.Comm,

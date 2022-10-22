@@ -14,21 +14,21 @@ import (
 
 type templateFactoryFunc func(*Config) (*resources.Deployment, error)
 
-func GetWinRMKeyVaultDeployment(config *Config) (*resources.Deployment, error) {
-	return GetKeyVaultDeployment(config, config.winrmCertificate)
-}
-
-func GetSSHKeyVaultDeployment(config *Config) (*resources.Deployment, error) {
-	privateKey, err := ssh.ParseRawPrivateKey(config.Comm.SSHPrivateKey)
-	if err != nil {
-		return nil, err.(error)
+func GetCommunicatorSpecificKeyVaultDeployment(config *Config) (*resources.Deployment, error) {
+	if config.Comm.Type == "ssh" {
+		privateKey, err := ssh.ParseRawPrivateKey(config.Comm.SSHPrivateKey)
+		if err != nil {
+			return nil, err.(error)
+		}
+		pk, _ := privateKey.(*rsa.PrivateKey)
+		secret, err := config.formatCertificateForKeyVault(pk)
+		if err != nil {
+			return nil, err.(error)
+		}
+		return GetKeyVaultDeployment(config, secret)
+	} else {
+		return GetKeyVaultDeployment(config, config.winrmCertificate)
 	}
-	pk, _ := privateKey.(*rsa.PrivateKey)
-	secret, err := config.formatCertificateForKeyVault(pk)
-	if err != nil {
-		return nil, err.(error)
-	}
-	return GetKeyVaultDeployment(config, secret)
 }
 
 func GetKeyVaultDeployment(config *Config, secretValue string) (*resources.Deployment, error) {
