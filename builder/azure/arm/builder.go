@@ -275,14 +275,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),
 		)
 
-		if b.config.CustomScript != "" {
-			customScriptDeploymentName := b.stateBag.Get(constants.ArmCustomScriptDeploymentName).(string)
-			steps = append(steps,
-				NewStepValidateTemplate(azureClient, ui, &b.config, customScriptDeploymentName, GetCustomScriptDeployment),
-				NewStepDeployTemplate(azureClient, ui, &b.config, customScriptDeploymentName, GetCustomScriptDeployment),
-			)
-		}
-
 		if b.config.Comm.Type == "ssh" {
 			steps = append(steps,
 				&communicator.StepConnectSSH{
