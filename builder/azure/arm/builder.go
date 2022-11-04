@@ -260,7 +260,11 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			if err != nil {
 				return nil, err
 			}
-			pk, _ := privateKey.(*rsa.PrivateKey)
+			pk, ok := privateKey.(*rsa.PrivateKey)
+			if !ok {
+				//https://learn.microsoft.com/en-us/azure/virtual-machines/windows/connect-ssh?tabs=azurecli#supported-ssh-key-formats
+				return nil, errors.New("Provided private key must be in RSA format to use for SSH on Windows on Azure")
+			}
 			secret, err := b.config.formatCertificateForKeyVault(pk)
 			if err != nil {
 				return nil, err
