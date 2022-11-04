@@ -3,8 +3,8 @@ package arm
 import (
 	"crypto/rsa"
 	"encoding/json"
-	"fmt"
 	"errors"
+	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
