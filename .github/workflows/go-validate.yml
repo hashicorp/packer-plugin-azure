@@ -1,0 +1,79 @@
+#
+# This GitHub action runs basic linting checks for Packer.
+#
+
+name: "Go Validate"
+
+on: [ push ]
+
+permissions:
+  contents: read
+
+jobs:
+  get-go-version:
+    runs-on: ubuntu-latest
+    outputs:
+      go-version: ${{ steps.get-go-version.outputs.go-version }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: 'Determine Go version'
+        id: get-go-version
+        run: |
+          echo "Found Go $(cat .go-version)"
+          echo "go-version=$(cat .go-version)" >> $GITHUB_OUTPUT
+  check-mod-tidy:
+    needs:
+      - get-go-version
+    runs-on: ubuntu-latest
+    name: Go Mod Tidy
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ needs.get-go-version.outputs.go-version }}
+      - run: go mod tidy
+  check-lint:
+    needs:
+      - get-go-version
+    runs-on: ubuntu-latest
+    name: Lint check
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ needs.get-go-version.outputs.go-version }}
+      - uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.47.3
+          only-new-issues: true
+  check-fmt:
+    needs:
+      - get-go-version
+    runs-on: ubuntu-latest
+    name: Gofmt check
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ needs.get-go-version.outputs.go-version }}
+      - run: |
+          go fmt ./...
+          echo "==> Checking that code complies with go fmt requirements..."
+          git diff --exit-code; if [ $$? -eq 1 ]; then \
+          echo "Found files that are not fmt'ed."; \
+          echo "You can use the command: \`go fmt ./...\` to reformat code."; \
+          exit 1; \
+          fi
+  check-generate:
+    needs:
+      - get-go-version
+    runs-on: ubuntu-latest
+    name: Generate check
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ needs.get-go-version.outputs.go-version }}
+      - run: |
+          export PATH=$PATH:$(go env GOPATH)/bin
+          make generate

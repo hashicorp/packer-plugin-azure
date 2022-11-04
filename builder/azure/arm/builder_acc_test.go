@@ -89,9 +89,7 @@ func TestBuilderAcc_ManagedDisk_Windows_Build_Resource_Group_Additional_Disk(t *
 
 func TestBuilderAcc_ManagedDisk_Windows_DeviceLogin(t *testing.T) {
 	if os.Getenv(DeviceLoginAcceptanceTest) == "" {
-		t.Skip(fmt.Sprintf(
-			"Device Login Acceptance tests skipped unless env '%s' set, as its requires manual step during execution",
-			DeviceLoginAcceptanceTest))
+		t.Skipf("Device Login Acceptance tests skipped unless env '%s' set, as its requires manual step during execution", DeviceLoginAcceptanceTest)
 		return
 	}
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
@@ -127,9 +125,7 @@ func TestBuilderAcc_ManagedDisk_Linux(t *testing.T) {
 
 func TestBuilderAcc_ManagedDisk_Linux_DeviceLogin(t *testing.T) {
 	if os.Getenv(DeviceLoginAcceptanceTest) == "" {
-		t.Skip(fmt.Sprintf(
-			"Device Login Acceptance tests skipped unless env '%s' set, as its requires manual step during execution",
-			DeviceLoginAcceptanceTest))
+		t.Skipf("Device Login Acceptance tests skipped unless env '%s' set, as its requires manual step during execution", DeviceLoginAcceptanceTest)
 		return
 	}
 	acctest.TestPlugin(t, &acctest.PluginTestCase{

@@ -5,7 +5,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-01-01/network"
 )
 
-// ///////////////////////////////////////////////
 // Template
 type Template struct {
 	Schema         *string                `json:"$schema"`
@@ -15,14 +14,12 @@ type Template struct {
 	Resources      []*Resource            `json:"resources"`
 }
 
-// ///////////////////////////////////////////////
 // Template > Parameters
 type Parameters struct {
 	Type         *string `json:"type"`
 	DefaultValue *string `json:"defaultValue,omitempty"`
 }
 
-// ///////////////////////////////////////////////
 // Template > Resource
 type Resource struct {
 	ApiVersion *string            `json:"apiVersion"`
@@ -76,7 +73,6 @@ type StorageProfileUnion struct {
 	DataDisks      *[]DataDiskUnion        `json:"dataDisks,omitempty"`
 }
 
-// ///////////////////////////////////////////////
 // Template > Resource > Properties
 type Properties struct {
 	AccessPolicies               *[]AccessPolicies                   `json:"accessPolicies,omitempty"`

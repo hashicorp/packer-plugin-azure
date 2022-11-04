@@ -1,0 +1,38 @@
+#
+# This GitHub action runs Packer go tests across
+# Windows runners.
+#
+
+name: "Go Test Windows"
+
+on: [ push ]
+
+permissions:
+  contents: read
+
+jobs:
+  get-go-version:
+    runs-on: ubuntu-latest
+    outputs:
+      go-version: ${{ steps.get-go-version.outputs.go-version }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: 'Determine Go version'
+        id: get-go-version
+        run: |
+          echo "Found Go $(cat .go-version)"
+          echo "go-version=$(cat .go-version)" >> $GITHUB_OUTPUT
+  windows-go-tests:
+    needs:
+      - get-go-version
+    runs-on: windows-latest
+    name: Windows Go tests
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ needs.get-go-version.outputs.go-version }}
+      - run: |
+          echo "Testing with Go ${{ needs.get-go-version.outputs.go-version }}"
+          go test -race -count 1 ./... -timeout=3m
+
