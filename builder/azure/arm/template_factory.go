@@ -3,6 +3,7 @@ package arm
 import (
 	"crypto/rsa"
 	"encoding/json"
+	"errors"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
@@ -22,7 +23,11 @@ func GetCommunicatorSpecificKeyVaultDeployment(config *Config) (*resources.Deplo
 		if err != nil {
 			return nil, err.(error)
 		}
-		pk, _ := privateKey.(*rsa.PrivateKey)
+		pk, ok := privateKey.(*rsa.PrivateKey)
+		if !ok {
+			//https://learn.microsoft.com/en-us/azure/virtual-machines/windows/connect-ssh?tabs=azurecli#supported-ssh-key-formats
+			return nil, errors.New("Provided private key must be in RSA format to use for SSH on Windows on Azure")
+		}
 		secret, err := config.formatCertificateForKeyVault(pk)
 		if err != nil {
 			return nil, err.(error)
