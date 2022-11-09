@@ -21,7 +21,7 @@ require (
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/mitchellh/reflectwalk v1.0.0
 	github.com/stretchr/testify v1.7.0
-	github.com/zclconf/go-cty v1.10.0
+	github.com/zclconf/go-cty v1.12.1
 	golang.org/x/crypto v0.0.0-20220517005047-85d78b3ac167
 )
 
