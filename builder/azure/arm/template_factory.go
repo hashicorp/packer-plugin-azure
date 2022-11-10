@@ -198,6 +198,13 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 		}
 	}
 
+	if config.LicenseType != "" {
+		err = builder.SetLicenseType(config.LicenseType)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	err = builder.SetTags(&config.AzureTags)
 	if err != nil {
 		return nil, err

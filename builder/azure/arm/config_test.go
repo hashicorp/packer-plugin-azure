@@ -2439,3 +2439,108 @@ func TestConfigShouldAcceptValidCustomResourceBuildPrefix(t *testing.T) {
 		}
 	}
 }
+
+func TestConfigShouldNormalizeLicenseTypeCase(t *testing.T) {
+	config := map[string]string{
+		"capture_name_prefix":    "ignore",
+		"capture_container_name": "ignore",
+		"location":               "ignore",
+		"image_url":              "ignore",
+		"storage_account":        "ignore",
+		"resource_group_name":    "ignore",
+		"subscription_id":        "ignore",
+		"communicator":           "none",
+	}
+
+	test_inputs := map[string]map[string][]string{
+		constants.Target_Linux: {
+			constants.License_RHEL: {"rhel_byos", "rHEL_byos"},
+			constants.License_SUSE: {"sles_byos", "sLes_BYoS"},
+		},
+		constants.Target_Windows: {
+			constants.License_Windows_Client: {"windows_client", "WINdOWS_CLIenT"},
+			constants.License_Windows_Server: {"windows_server", "WINdOWS_SErVER"},
+		},
+	}
+
+	for os_type, license_types := range test_inputs {
+		for expected, v := range license_types {
+			for _, license_type := range v {
+				config["license_type"] = license_type
+				config["os_type"] = os_type
+				var c Config
+				_, err := c.Prepare(config, getPackerConfiguration())
+				if err != nil {
+					t.Fatalf("Expected config to accept the value %q, but it did not", license_type)
+				}
+
+				if c.LicenseType != expected {
+					t.Fatalf("Expected config to normalize the value %q to %q, but it did not", license_type, expected)
+				}
+			}
+		}
+	}
+}
+
+func TestConfigShouldValidateLicenseType(t *testing.T) {
+	config := map[string]string{
+		"capture_name_prefix":    "ignore",
+		"capture_container_name": "ignore",
+		"location":               "ignore",
+		"image_url":              "ignore",
+		"storage_account":        "ignore",
+		"resource_group_name":    "ignore",
+		"subscription_id":        "ignore",
+		"communicator":           "none",
+	}
+
+	good_inputs := map[string]map[string][]string{
+		constants.Target_Linux: {
+			constants.License_RHEL: {"rhel_byos", "rHEL_byos"},
+			constants.License_SUSE: {"sles_byos", "sLes_BYoS"},
+		},
+		constants.Target_Windows: {
+			constants.License_Windows_Client: {"windows_client", "WINdOWS_CLIenT"},
+			constants.License_Windows_Server: {"windows_server", "WINdOWS_SErVER"},
+		},
+	}
+
+	for os_type, license_types := range good_inputs {
+		for _, v := range license_types {
+			for _, license_type := range v {
+				config["license_type"] = license_type
+				config["os_type"] = os_type
+				var c Config
+				_, err := c.Prepare(config, getPackerConfiguration())
+				if err != nil {
+					t.Fatalf("Expected config to accept the value %q, but it did not", license_type)
+				}
+			}
+		}
+	}
+
+	bad_inputs := map[string]map[string][]string{
+		constants.Target_Linux: {
+			constants.License_RHEL: {"windows_client", "windows"},
+			constants.License_SUSE: {"WINdOWS_CLIenT", "server"},
+		},
+		constants.Target_Windows: {
+			constants.License_Windows_Client: {"sles_byos", "rHEL"},
+			constants.License_Windows_Server: {"rhel_byos", "sLes"},
+		},
+	}
+
+	for os_type, license_types := range bad_inputs {
+		for _, v := range license_types {
+			for _, license_type := range v {
+				config["license_type"] = license_type
+				config["os_type"] = os_type
+				var c Config
+				_, err := c.Prepare(config, getPackerConfiguration())
+				if err == nil {
+					t.Fatalf("Expected config to not accept the value %q for os_type %q, but it did", license_type, os_type)
+				}
+			}
+		}
+	}
+}
