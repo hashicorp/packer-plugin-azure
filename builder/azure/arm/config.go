@@ -1279,7 +1279,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 			} else if strings.EqualFold(c.LicenseType, constants.License_Windows_Server) {
 				c.LicenseType = constants.License_Windows_Server
 			} else {
-				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The license_type %q is invalid for os_type %q", c.LicenseType, c.OSType))
+				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The license_type %q is invalid for Windows, use Windows_Client or Windows_Server", c.LicenseType))
 			}
 		}
 	}
