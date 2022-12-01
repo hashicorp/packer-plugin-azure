@@ -1271,7 +1271,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 			} else if strings.EqualFold(c.LicenseType, constants.License_SUSE) {
 				c.LicenseType = constants.License_SUSE
 			} else {
-				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The license_type %q is invalid for os_type %q", c.LicenseType, c.OSType))
+				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The license_type %q is invalid for Linux, only RHEL_BYOS or SLES_BYOS are supported", c.LicenseType))
 			}
 		} else if c.OSType == constants.Target_Windows {
 			if strings.EqualFold(c.LicenseType, constants.License_Windows_Client) {
