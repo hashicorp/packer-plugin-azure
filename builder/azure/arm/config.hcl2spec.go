@@ -3,6 +3,7 @@
 package arm
 
 import (
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/zclconf/go-cty/cty"
@@ -50,6 +51,7 @@ type FlatConfig struct {
 	CustomManagedImageResourceGroupName        *string                            `mapstructure:"custom_managed_image_resource_group_name" required:"true" cty:"custom_managed_image_resource_group_name" hcl:"custom_managed_image_resource_group_name"`
 	Location                                   *string                            `mapstructure:"location" cty:"location" hcl:"location"`
 	VMSize                                     *string                            `mapstructure:"vm_size" required:"false" cty:"vm_size" hcl:"vm_size"`
+	Spot                                       *FlatSpot                          `mapstructure:"spot" required:"false" cty:"spot" hcl:"spot"`
 	ManagedImageResourceGroupName              *string                            `mapstructure:"managed_image_resource_group_name" cty:"managed_image_resource_group_name" hcl:"managed_image_resource_group_name"`
 	ManagedImageName                           *string                            `mapstructure:"managed_image_name" cty:"managed_image_name" hcl:"managed_image_name"`
 	ManagedImageStorageAccountType             *string                            `mapstructure:"managed_image_storage_account_type" required:"false" cty:"managed_image_storage_account_type" hcl:"managed_image_storage_account_type"`
@@ -188,6 +190,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"custom_managed_image_resource_group_name":         &hcldec.AttrSpec{Name: "custom_managed_image_resource_group_name", Type: cty.String, Required: false},
 		"location":                                         &hcldec.AttrSpec{Name: "location", Type: cty.String, Required: false},
 		"vm_size":                                          &hcldec.AttrSpec{Name: "vm_size", Type: cty.String, Required: false},
+		"spot":                                             &hcldec.BlockSpec{TypeName: "spot", Nested: hcldec.ObjectSpec((*FlatSpot)(nil).HCL2Spec())},
 		"managed_image_resource_group_name":                &hcldec.AttrSpec{Name: "managed_image_resource_group_name", Type: cty.String, Required: false},
 		"managed_image_name":                               &hcldec.AttrSpec{Name: "managed_image_name", Type: cty.String, Required: false},
 		"managed_image_storage_account_type":               &hcldec.AttrSpec{Name: "managed_image_storage_account_type", Type: cty.String, Required: false},
@@ -372,6 +375,31 @@ func (*FlatSharedImageGalleryDestination) HCL2Spec() map[string]hcldec.Spec {
 		"image_version":        &hcldec.AttrSpec{Name: "image_version", Type: cty.String, Required: false},
 		"replication_regions":  &hcldec.AttrSpec{Name: "replication_regions", Type: cty.List(cty.String), Required: false},
 		"storage_account_type": &hcldec.AttrSpec{Name: "storage_account_type", Type: cty.String, Required: false},
+	}
+	return s
+}
+
+// FlatSpot is an auto-generated flat version of Spot.
+// Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
+type FlatSpot struct {
+	EvictionPolicy *compute.VirtualMachineEvictionPolicyTypes `mapstructure:"eviction_policy" cty:"eviction_policy" hcl:"eviction_policy"`
+	MaxPrice       *float32                                   `mapstructure:"max_price" cty:"max_price" hcl:"max_price"`
+}
+
+// FlatMapstructure returns a new FlatSpot.
+// FlatSpot is an auto-generated flat version of Spot.
+// Where the contents a fields with a `mapstructure:,squash` tag are bubbled up.
+func (*Spot) FlatMapstructure() interface{ HCL2Spec() map[string]hcldec.Spec } {
+	return new(FlatSpot)
+}
+
+// HCL2Spec returns the hcl spec of a Spot.
+// This spec is used by HCL to read the fields of Spot.
+// The decoded values from this spec will then be applied to a FlatSpot.
+func (*FlatSpot) HCL2Spec() map[string]hcldec.Spec {
+	s := map[string]hcldec.Spec{
+		"eviction_policy": &hcldec.AttrSpec{Name: "eviction_policy", Type: cty.String, Required: false},
+		"max_price":       &hcldec.AttrSpec{Name: "max_price", Type: cty.Number, Required: false},
 	}
 	return s
 }
