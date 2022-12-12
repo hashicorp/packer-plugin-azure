@@ -330,6 +330,22 @@ func (s *TemplateBuilder) SetAdditionalDisks(diskSizeGB []int32, dataDiskname st
 	return nil
 }
 
+func (s *TemplateBuilder) SetSpot(policy compute.VirtualMachineEvictionPolicyTypes, price float32) error {
+	resource, err := s.getResourceByType(resourceVirtualMachine)
+	if err != nil {
+		return err
+	}
+
+	resource.Properties.Priority = to.StringPtr("Spot")
+	resource.Properties.EvictionPolicy = &policy
+
+	if price == 0 {
+		price = -1
+	}
+	resource.Properties.BillingProfile = &BillingProfile{MaxPrice: price}
+	return nil
+}
+
 func (s *TemplateBuilder) SetCustomData(customData string) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
@@ -575,7 +591,6 @@ func (s *TemplateBuilder) createNsgResource(srcIpAddresses []string, port int) (
 //
 //  1. The SDK defines no types for a Key Vault
 //  2. The Key Vault template is relatively simple, and is static.
-//
 const KeyVault = `{
   "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json",
   "contentVersion": "1.0.0.0",
@@ -690,7 +705,7 @@ const BasicTemplate = `{
   },
   "variables": {
     "addressPrefix": "10.0.0.0/16",
-    "apiVersion": "2017-03-30",
+    "apiVersion": "2019-03-01",
     "managedDiskApiVersion": "2017-03-30",
     "networkInterfacesApiVersion": "2017-04-01",
     "publicIPAddressApiVersion": "2017-04-01",

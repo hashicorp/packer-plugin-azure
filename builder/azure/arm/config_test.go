@@ -2439,3 +2439,97 @@ func TestConfigShouldAcceptValidCustomResourceBuildPrefix(t *testing.T) {
 		}
 	}
 }
+
+func TestConfigSpot(t *testing.T) {
+	config := map[string]interface{}{
+		"capture_container_name": "ignore",
+		"capture_name_prefix":    "ignore",
+		"image_publisher":        "ignore",
+		"image_offer":            "ignore",
+		"image_sku":              "ignore",
+		"location":               "ignore",
+		"storage_account":        "ignore",
+		"resource_group_name":    "ignore",
+		"subscription_id":        "ignore",
+		"os_type":                constants.Target_Linux,
+		"communicator":           "none",
+		"spot": map[string]interface{}{
+			"eviction_policy": "Deallocate",
+		},
+	}
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal("expected config to accept spot settings", err)
+	}
+}
+
+func TestConfigSpotInvalidEvictionPolicy(t *testing.T) {
+	config := map[string]interface{}{
+		"capture_container_name": "ignore",
+		"capture_name_prefix":    "ignore",
+		"image_publisher":        "ignore",
+		"image_offer":            "ignore",
+		"image_sku":              "ignore",
+		"location":               "ignore",
+		"storage_account":        "ignore",
+		"resource_group_name":    "ignore",
+		"subscription_id":        "ignore",
+		"os_type":                constants.Target_Linux,
+		"communicator":           "none",
+		"spot": map[string]interface{}{
+			"eviction_policy": "test",
+		},
+	}
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("expected config to not accept spot settings", err)
+	}
+}
+
+func TestConfigSpotEmptyEvictionPolicy(t *testing.T) {
+	config := map[string]interface{}{
+		"capture_container_name": "ignore",
+		"capture_name_prefix":    "ignore",
+		"image_publisher":        "ignore",
+		"image_offer":            "ignore",
+		"image_sku":              "ignore",
+		"location":               "ignore",
+		"storage_account":        "ignore",
+		"resource_group_name":    "ignore",
+		"subscription_id":        "ignore",
+		"os_type":                constants.Target_Linux,
+		"communicator":           "none",
+		"spot":                   map[string]interface{}{},
+	}
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal("expected config to accept spot settings", err)
+	}
+}
+
+func TestConfigSpotEmptyEvictionPolicyMaxPriceSet(t *testing.T) {
+	config := map[string]interface{}{
+		"capture_container_name": "ignore",
+		"capture_name_prefix":    "ignore",
+		"image_publisher":        "ignore",
+		"image_offer":            "ignore",
+		"image_sku":              "ignore",
+		"location":               "ignore",
+		"storage_account":        "ignore",
+		"resource_group_name":    "ignore",
+		"subscription_id":        "ignore",
+		"os_type":                constants.Target_Linux,
+		"communicator":           "none",
+		"spot": map[string]interface{}{
+			"max_price": 100,
+		},
+	}
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("expected config to not accept spot settings", err)
+	}
+}

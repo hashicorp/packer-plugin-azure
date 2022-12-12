@@ -1,5 +1,5 @@
 //go:generate packer-sdc struct-markdown
-//go:generate packer-sdc mapstructure-to-hcl2 -type Config,SharedImageGallery,SharedImageGalleryDestination,PlanInformation
+//go:generate packer-sdc mapstructure-to-hcl2 -type Config,SharedImageGallery,SharedImageGalleryDestination,PlanInformation,Spot
 
 package arm
 
@@ -103,6 +103,13 @@ type SharedImageGalleryDestination struct {
 	// Specify a storage account type for the Shared Image Gallery Image Version.
 	// Defaults to `Standard_LRS`. Accepted values are `Standard_LRS`, `Standard_ZRS` and `Premium_LRS`
 	SigDestinationStorageAccountType string `mapstructure:"storage_account_type"`
+}
+
+type Spot struct {
+	// Specify eviction policy for spot instance: "Deallocate" or "Delete". If this is set, a spot instance will be used.
+	EvictionPolicy compute.VirtualMachineEvictionPolicyTypes `mapstructure:"eviction_policy"`
+	// How much should the VM cost maximally per hour. Specify -1 (or do not specify) to not evict based on price.
+	MaxPrice float32 `mapstructure:"max_price"`
 }
 
 type Config struct {
@@ -266,6 +273,9 @@ type Config struct {
 	// CLI example `az vm list-sizes --location westus`
 	VMSize string `mapstructure:"vm_size" required:"false"`
 
+	// If set use a spot instance during build; spot configuration settings only apply to the virtual machine launched by Packer and will not be persisted on the resulting image artifact.
+	Spot Spot `mapstructure:"spot" required:"false"`
+
 	// Specify the managed image resource group name where the result of the
 	// Packer build will be saved. The resource group must already exist. If
 	// this value is set, the value managed_image_name must also be set. See
@@ -306,7 +316,7 @@ type Config struct {
 	AzureTags map[string]string `mapstructure:"azure_tags" required:"false"`
 	// Same as [`azure_tags`](#azure_tags) but defined as a singular repeatable block
 	// containing a `name` and a `value` field. In HCL2 mode the
-	// [`dynamic_block`](/docs/templates/hcl_templates/expressions#dynamic-blocks)
+	// [`dynamic_block`](/packer/docs/templates/hcl_templates/expressions#dynamic-blocks)
 	// will allow you to create those programatically.
 	AzureTag config.NameValues `mapstructure:"azure_tag" required:"false"`
 	// Resource group under which the final artifact will be stored.
@@ -1216,6 +1226,18 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("An os_type must be specified"))
 	} else {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The os_type %q is invalid", c.OSType))
+	}
+
+	/////////////////////////////////////////////
+	// Storage
+	if c.Spot.EvictionPolicy != "" {
+		if c.Spot.EvictionPolicy != compute.VirtualMachineEvictionPolicyTypesDelete && c.Spot.EvictionPolicy != compute.VirtualMachineEvictionPolicyTypesDeallocate {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The spot.eviction_policy %q is invalid, eviction_policy must be %q, %q, or unset", c.Spot.EvictionPolicy, compute.VirtualMachineEvictionPolicyTypesDelete, compute.VirtualMachineEvictionPolicyTypesDeallocate))
+		}
+	} else {
+		if c.Spot.MaxPrice != 0 {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Setting a spot.max_price without an spot.eviction_policy is invalid, eviction_policy must be %q or %q if max_price is set", compute.VirtualMachineEvictionPolicyTypesDelete, compute.VirtualMachineEvictionPolicyTypesDeallocate))
+		}
 	}
 
 	/////////////////////////////////////////////

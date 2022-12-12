@@ -111,6 +111,8 @@
   
   CLI example `az vm list-sizes --location westus`
 
+- `spot` (Spot) - If set use a spot instance during build; spot configuration settings only apply to the virtual machine launched by Packer and will not be persisted on the resulting image artifact.
+
 - `managed_image_resource_group_name` (string) - Specify the managed image resource group name where the result of the
   Packer build will be saved. The resource group must already exist. If
   this value is set, the value managed_image_name must also be set. See
@@ -150,7 +152,7 @@
 
 - `azure_tag` ([]{name string, value string}) - Same as [`azure_tags`](#azure_tags) but defined as a singular repeatable block
   containing a `name` and a `value` field. In HCL2 mode the
-  [`dynamic_block`](/docs/templates/hcl_templates/expressions#dynamic-blocks)
+  [`dynamic_block`](/packer/docs/templates/hcl_templates/expressions#dynamic-blocks)
   will allow you to create those programatically.
 
 - `resource_group_name` (string) - Resource group under which the final artifact will be stored.

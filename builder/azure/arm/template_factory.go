@@ -4,11 +4,10 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
-
-	"fmt"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/template"
@@ -164,6 +163,13 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 	if len(config.AdditionalDiskSize) > 0 {
 		isManaged := config.CustomManagedImageName != "" || (config.ManagedImageName != "" && config.ImagePublisher != "") || config.SharedGallery.Subscription != ""
 		err = builder.SetAdditionalDisks(config.AdditionalDiskSize, config.tmpDataDiskName, isManaged, config.diskCachingType)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if config.Spot.EvictionPolicy != "" {
+		err = builder.SetSpot(config.Spot.EvictionPolicy, config.Spot.MaxPrice)
 		if err != nil {
 			return nil, err
 		}
