@@ -19,7 +19,7 @@ func GetCommunicatorSpecificKeyVaultDeployment(config *Config) (*resources.Deplo
 	if config.Comm.Type == "ssh" {
 		privateKey, err := ssh.ParseRawPrivateKey(config.Comm.SSHPrivateKey)
 		if err != nil {
-			return nil, err.(error)
+			return nil, err
 		}
 		pk, ok := privateKey.(*rsa.PrivateKey)
 		if !ok {
@@ -28,7 +28,7 @@ func GetCommunicatorSpecificKeyVaultDeployment(config *Config) (*resources.Deplo
 		}
 		secret, err := config.formatCertificateForKeyVault(pk)
 		if err != nil {
-			return nil, err.(error)
+			return nil, err
 		}
 		return GetKeyVaultDeployment(config, secret)
 	} else {
@@ -176,6 +176,13 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 	if len(config.AdditionalDiskSize) > 0 {
 		isManaged := config.CustomManagedImageName != "" || (config.ManagedImageName != "" && config.ImagePublisher != "") || config.SharedGallery.Subscription != ""
 		err = builder.SetAdditionalDisks(config.AdditionalDiskSize, config.tmpDataDiskName, isManaged, config.diskCachingType)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if config.Spot.EvictionPolicy != "" {
+		err = builder.SetSpot(config.Spot.EvictionPolicy, config.Spot.MaxPrice)
 		if err != nil {
 			return nil, err
 		}

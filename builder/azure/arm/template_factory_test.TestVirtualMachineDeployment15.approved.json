@@ -110,11 +110,15 @@
       "location": "[variables('location')]",
       "name": "[parameters('vmName')]",
       "properties": {
+        "billingProfile": {
+          "maxPrice": 100
+        },
         "diagnosticsProfile": {
           "bootDiagnostics": {
             "enabled": false
           }
         },
+        "evictionPolicy": "Deallocate",
         "hardwareProfile": {
           "vmSize": "[parameters('vmSize')]"
         },
@@ -140,21 +144,21 @@
             }
           }
         },
+        "priority": "Spot",
         "storageProfile": {
           "imageReference": {
-            "offer": "--image-offer--",
-            "publisher": "--image-publisher--",
-            "sku": "--image-sku--",
-            "version": "--version--"
+            "offer": "ignored00",
+            "publisher": "ignored00",
+            "sku": "ignored00",
+            "version": "latest"
           },
           "osDisk": {
             "caching": "ReadWrite",
             "createOption": "FromImage",
-            "managedDisk": {
-              "storageAccountType": "Standard_LRS"
-            },
             "name": "[parameters('osDiskName')]",
-            "osType": "Linux"
+            "vhd": {
+              "uri": "[concat(parameters('storageAccountBlobEndpoint'),variables('vmStorageAccountContainerName'),'/', parameters('osDiskName'),'.vhd')]"
+            }
           }
         }
       },

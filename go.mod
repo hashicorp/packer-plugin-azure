@@ -1,6 +1,6 @@
 module github.com/hashicorp/packer-plugin-azure
 
-go 1.17
+go 1.18
 
 require (
 	github.com/Azure/azure-sdk-for-go v64.0.0+incompatible
@@ -16,7 +16,7 @@ require (
 	github.com/google/go-cmp v0.5.6
 	github.com/hashicorp/go-azure-helpers v0.16.5
 	github.com/hashicorp/hcl/v2 v2.13.0
-	github.com/hashicorp/packer-plugin-sdk v0.3.1
+	github.com/hashicorp/packer-plugin-sdk v0.3.2
 	github.com/masterzen/winrm v0.0.0-20210623064412-3b76017826b0
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/mitchellh/reflectwalk v1.0.0
