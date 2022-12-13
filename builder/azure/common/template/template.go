@@ -101,11 +101,13 @@ type Properties struct {
 	Priority                     *string                                    `json:"priority,omitempty"`
 	EvictionPolicy               *compute.VirtualMachineEvictionPolicyTypes `json:"evictionPolicy,omitempty"`
 	BillingProfile               *BillingProfile                            `json:"billingProfile,omitempty"`
-	Publisher                    *string                                    `json:"publisher,omitempty"`
-	Type                         *string                                    `json:"type,omitempty"`
-	TypeHandlerVersion           *string                                    `json:"typeHandlerVersion,omitempty"`
-	AutoUpgradeMinorVersion      *bool                                      `json:"autoUpgradeMinorVersion,omitempty"`
-	Settings                     *CustomScriptSettings                      `json:"settings,omitempty"`
+
+	//CustomScript extension related properties
+	Publisher               *string               `json:"publisher,omitempty"`
+	Type                    *string               `json:"type,omitempty"`
+	TypeHandlerVersion      *string               `json:"typeHandlerVersion,omitempty"`
+	AutoUpgradeMinorVersion *bool                 `json:"autoUpgradeMinorVersion,omitempty"`
+	Settings                *CustomScriptSettings `json:"settings,omitempty"`
 }
 
 type CustomScriptSettings struct {
