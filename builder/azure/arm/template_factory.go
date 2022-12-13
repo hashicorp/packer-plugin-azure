@@ -20,7 +20,7 @@ func GetCommunicatorSpecificKeyVaultDeployment(config *Config) (*resources.Deplo
 	if config.Comm.Type == "ssh" {
 		privateKey, err := ssh.ParseRawPrivateKey(config.Comm.SSHPrivateKey)
 		if err != nil {
-			return nil, err.(error)
+			return nil, err
 		}
 		pk, ok := privateKey.(*rsa.PrivateKey)
 		if !ok {
@@ -29,7 +29,7 @@ func GetCommunicatorSpecificKeyVaultDeployment(config *Config) (*resources.Deplo
 		}
 		secret, err := config.formatCertificateForKeyVault(pk)
 		if err != nil {
-			return nil, err.(error)
+			return nil, err
 		}
 		return GetKeyVaultDeployment(config, secret)
 	} else {
