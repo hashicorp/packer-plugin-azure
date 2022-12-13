@@ -88,6 +88,7 @@ type Properties struct {
 	EnableSoftDelete             *string                             `json:"enableSoftDelete,omitempty"`
 	HardwareProfile              *compute.HardwareProfile            `json:"hardwareProfile,omitempty"`
 	IPConfigurations             *[]network.IPConfiguration          `json:"ipConfigurations,omitempty"`
+	LicenseType                  *string                             `json:"licenseType,omitempty"`
 	NetworkProfile               *compute.NetworkProfile             `json:"networkProfile,omitempty"`
 	OsProfile                    *compute.OSProfile                  `json:"osProfile,omitempty"`
 	PublicIPAllocatedMethod      *network.IPAllocationMethod         `json:"publicIPAllocationMethod,omitempty"`

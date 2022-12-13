@@ -5,6 +5,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	approvaltests "github.com/approvals/go-approval-tests"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 )
 
 // Ensure that a Linux template is configured as expected.
@@ -323,6 +324,49 @@ func TestSetIdentity00(t *testing.T) {
 	}
 
 	if err = testSubject.SetIdentity([]string{"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg1/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id"}); err != nil {
+		t.Fatal(err)
+	}
+
+	doc, err := testSubject.ToJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
+}
+
+// Test with no license type
+func TestLicenseType00(t *testing.T) {
+	testSubject, err := NewTemplateBuilder(BasicTemplate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = testSubject.BuildLinux("--test-ssh-authorized-key--", true); err != nil {
+		t.Fatal(err)
+	}
+
+	doc, err := testSubject.ToJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
+}
+
+// Test with specified license type
+func TestLicenseType01(t *testing.T) {
+	testSubject, err := NewTemplateBuilder(BasicTemplate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = testSubject.BuildLinux("--test-ssh-authorized-key--", true); err != nil {
+		t.Fatal(err)
+	}
+
+	err = testSubject.SetLicenseType(constants.License_SUSE)
+	if err != nil {
 		t.Fatal(err)
 	}
 

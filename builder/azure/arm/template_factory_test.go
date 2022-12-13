@@ -589,6 +589,37 @@ func TestKeyVaultDeployment02(t *testing.T) {
 	}
 }
 
+// Ensure no licenseType is set when not specified in config
+func TestVirtualMachineDeploymentLicenseType01(t *testing.T) {
+	var c Config
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+// Ensure licenseType is set if specifed in config
+func TestVirtualMachineDeploymentLicenseType02(t *testing.T) {
+	var c Config
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.LicenseType = constants.License_Windows_Server
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
 // Ensure the KeyVault template is correct when tags are supplied.
 func TestKeyVaultDeployment03(t *testing.T) {
 	tags := map[string]interface{}{

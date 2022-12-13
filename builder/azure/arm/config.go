@@ -499,6 +499,25 @@ type Config struct {
 	// `custom_resource_build_prefix` + resourcetype + 5 character random alphanumeric string
 	CustomResourcePrefix string `mapstructure:"custom_resource_build_prefix" required:"false"`
 
+	// Specify a license type for the VM to enable Azure Hybrid Benefit. If not set, Pay-As-You-Go license
+	// model (default) will be used. Valid values are:
+	//
+	// For Windows:
+	//
+	// - `Windows_Client`
+	// - `Windows_Server`
+	//
+	// For Linux:
+	//
+	// - `RHEL_BYOS`
+	// - `SLES_BYOS`
+	//
+	// Refer to the following documentation for more information about Hybrid Benefit:
+	// [Windows](https://learn.microsoft.com/en-us/azure/virtual-machines/windows/hybrid-use-benefit-licensing)
+	// or
+	// [Linux](https://learn.microsoft.com/en-us/azure/virtual-machines/linux/azure-hybrid-benefit-linux)
+	LicenseType string `mapstructure:"license_type" required:"false"`
+
 	// Runtime Values
 	UserName               string `mapstructure-to-hcl2:",skip"`
 	Password               string `mapstructure-to-hcl2:",skip"`
@@ -1264,6 +1283,30 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		c.diskCachingType = compute.CachingTypesReadWrite
 	default:
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The disk_caching_type %q is invalid", c.DiskCachingType))
+	}
+
+	/////////////////////////////////////////////
+	// License Type (Azure Hybrid Benefit)
+	if c.LicenseType != "" {
+		// Assumes OS is case-sensitive match as it has already been
+		// normalized earlier in function
+		if c.OSType == constants.Target_Linux {
+			if strings.EqualFold(c.LicenseType, constants.License_RHEL) {
+				c.LicenseType = constants.License_RHEL
+			} else if strings.EqualFold(c.LicenseType, constants.License_SUSE) {
+				c.LicenseType = constants.License_SUSE
+			} else {
+				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The license_type %q is invalid for Linux, only RHEL_BYOS or SLES_BYOS are supported", c.LicenseType))
+			}
+		} else if c.OSType == constants.Target_Windows {
+			if strings.EqualFold(c.LicenseType, constants.License_Windows_Client) {
+				c.LicenseType = constants.License_Windows_Client
+			} else if strings.EqualFold(c.LicenseType, constants.License_Windows_Server) {
+				c.LicenseType = constants.License_Windows_Server
+			} else {
+				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The license_type %q is invalid for Windows, use Windows_Client or Windows_Server", c.LicenseType))
+			}
+		}
 	}
 }
 
