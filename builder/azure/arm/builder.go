@@ -2,6 +2,7 @@ package arm
 
 import (
 	"context"
+	"crypto/rsa"
 	"errors"
 	"fmt"
 	"log"
@@ -23,6 +24,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/multistep/commonsteps"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
+	"golang.org/x/crypto/ssh"
 )
 
 var ErrNoImage = errors.New("failed to find shared image gallery id in state")
@@ -248,11 +250,26 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		if b.config.BuildKeyVaultName == "" {
 			keyVaultDeploymentName := b.stateBag.Get(constants.ArmKeyVaultDeploymentName).(string)
 			steps = append(steps,
-				NewStepValidateTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetKeyVaultDeployment),
-				NewStepDeployTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetKeyVaultDeployment),
+				NewStepValidateTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetCommunicatorSpecificKeyVaultDeployment),
+				NewStepDeployTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetCommunicatorSpecificKeyVaultDeployment),
 			)
+		} else if b.config.Comm.Type == "winrm" {
+			steps = append(steps, NewStepCertificateInKeyVault(&azureClient.VaultClient, ui, &b.config, b.config.winrmCertificate))
 		} else {
-			steps = append(steps, NewStepCertificateInKeyVault(&azureClient.VaultClient, ui, &b.config))
+			privateKey, err := ssh.ParseRawPrivateKey(b.config.Comm.SSHPrivateKey)
+			if err != nil {
+				return nil, err
+			}
+			pk, ok := privateKey.(*rsa.PrivateKey)
+			if !ok {
+				//https://learn.microsoft.com/en-us/azure/virtual-machines/windows/connect-ssh?tabs=azurecli#supported-ssh-key-formats
+				return nil, errors.New("Provided private key must be in RSA format to use for SSH on Windows on Azure")
+			}
+			secret, err := b.config.formatCertificateForKeyVault(pk)
+			if err != nil {
+				return nil, err
+			}
+			steps = append(steps, NewStepCertificateInKeyVault(&azureClient.VaultClient, ui, &b.config, secret))
 		}
 		steps = append(steps,
 			NewStepGetCertificate(azureClient, ui),
@@ -260,18 +277,33 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			NewStepValidateTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),
-			&communicator.StepConnectWinRM{
-				Config: &b.config.Comm,
-				Host: func(stateBag multistep.StateBag) (string, error) {
-					return stateBag.Get(constants.SSHHost).(string), nil
+		)
+
+		if b.config.Comm.Type == "ssh" {
+			steps = append(steps,
+				&communicator.StepConnectSSH{
+					Config:    &b.config.Comm,
+					Host:      lin.SSHHost,
+					SSHConfig: b.config.Comm.SSHConfigFunc(),
 				},
-				WinRMConfig: func(multistep.StateBag) (*communicator.WinRMConfig, error) {
-					return &communicator.WinRMConfig{
-						Username: b.config.UserName,
-						Password: b.config.Password,
-					}, nil
+			)
+		} else {
+			steps = append(steps,
+				&communicator.StepConnectWinRM{
+					Config: &b.config.Comm,
+					Host: func(stateBag multistep.StateBag) (string, error) {
+						return stateBag.Get(constants.SSHHost).(string), nil
+					},
+					WinRMConfig: func(multistep.StateBag) (*communicator.WinRMConfig, error) {
+						return &communicator.WinRMConfig{
+							Username: b.config.UserName,
+							Password: b.config.Password,
+						}, nil
+					},
 				},
-			},
+			)
+		}
+		steps = append(steps,
 			&commonsteps.StepProvision{},
 			NewStepGetOSDisk(azureClient, ui),
 			NewStepGetAdditionalDisks(azureClient, ui),

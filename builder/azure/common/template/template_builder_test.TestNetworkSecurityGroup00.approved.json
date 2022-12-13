@@ -195,7 +195,7 @@
   ],
   "variables": {
     "addressPrefix": "10.0.0.0/16",
-    "apiVersion": "2017-03-30",
+    "apiVersion": "2019-03-01",
     "location": "[resourceGroup().location]",
     "managedDiskApiVersion": "2017-03-30",
     "networkInterfacesApiVersion": "2017-04-01",

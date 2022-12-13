@@ -129,32 +129,37 @@
           "adminPassword": "[parameters('adminPassword')]",
           "adminUsername": "[parameters('adminUsername')]",
           "computerName": "[parameters('vmName')]",
-          "linuxConfiguration": {
-            "ssh": {
-              "publicKeys": [
+          "secrets": [
+            {
+              "sourceVault": {
+                "id": "[resourceId(resourceGroup().name, 'Microsoft.KeyVault/vaults', '--test-key-vault-name')]"
+              },
+              "vaultCertificates": [
                 {
-                  "keyData": "",
-                  "path": "[variables('sshKeyPath')]"
+                  "certificateStore": "My",
+                  "certificateUrl": "--test-ssh-certificate-url--"
                 }
               ]
             }
+          ],
+          "windowsConfiguration": {
+            "provisionVMAgent": true
           }
         },
         "storageProfile": {
           "imageReference": {
-            "offer": "--image-offer--",
-            "publisher": "--image-publisher--",
-            "sku": "--image-sku--",
-            "version": "--version--"
+            "offer": "WindowsServer",
+            "publisher": "MicrosoftWindowsServer",
+            "sku": "2012-R2-Datacenter",
+            "version": "latest"
           },
           "osDisk": {
             "caching": "ReadWrite",
             "createOption": "FromImage",
-            "managedDisk": {
-              "storageAccountType": "Standard_LRS"
-            },
             "name": "[parameters('osDiskName')]",
-            "osType": "Linux"
+            "vhd": {
+              "uri": "[concat(parameters('storageAccountBlobEndpoint'),variables('vmStorageAccountContainerName'),'/', parameters('osDiskName'),'.vhd')]"
+            }
           }
         }
       },

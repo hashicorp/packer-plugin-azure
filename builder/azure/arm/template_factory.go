@@ -1,24 +1,47 @@
 package arm
 
 import (
+	"crypto/rsa"
 	"encoding/json"
+	"errors"
+	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
 
-	"fmt"
-
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/template"
+	"golang.org/x/crypto/ssh"
 )
 
 type templateFactoryFunc func(*Config) (*resources.Deployment, error)
 
-func GetKeyVaultDeployment(config *Config) (*resources.Deployment, error) {
+func GetCommunicatorSpecificKeyVaultDeployment(config *Config) (*resources.Deployment, error) {
+	if config.Comm.Type == "ssh" {
+		privateKey, err := ssh.ParseRawPrivateKey(config.Comm.SSHPrivateKey)
+		if err != nil {
+			return nil, err
+		}
+		pk, ok := privateKey.(*rsa.PrivateKey)
+		if !ok {
+			//https://learn.microsoft.com/en-us/azure/virtual-machines/windows/connect-ssh?tabs=azurecli#supported-ssh-key-formats
+			return nil, errors.New("Provided private key must be in RSA format to use for SSH on Windows on Azure")
+		}
+		secret, err := config.formatCertificateForKeyVault(pk)
+		if err != nil {
+			return nil, err
+		}
+		return GetKeyVaultDeployment(config, secret)
+	} else {
+		return GetKeyVaultDeployment(config, config.winrmCertificate)
+	}
+}
+
+func GetKeyVaultDeployment(config *Config, secretValue string) (*resources.Deployment, error) {
 	params := &template.TemplateParameters{
 		KeyVaultName:        &template.TemplateParameter{Value: config.tmpKeyVaultName},
 		KeyVaultSKU:         &template.TemplateParameter{Value: config.BuildKeyVaultSKU},
-		KeyVaultSecretValue: &template.TemplateParameter{Value: config.winrmCertificate},
+		KeyVaultSecretValue: &template.TemplateParameter{Value: secretValue},
 		ObjectId:            &template.TemplateParameter{Value: config.ClientConfig.ObjectID},
 		TenantId:            &template.TemplateParameter{Value: config.ClientConfig.TenantID},
 	}
@@ -61,7 +84,7 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 		}
 	case constants.Target_Windows:
 		osType = compute.OperatingSystemTypesWindows
-		err = builder.BuildWindows(config.tmpKeyVaultName, config.tmpWinRMCertificateUrl)
+		err = builder.BuildWindows(config.Comm.Type, config.tmpKeyVaultName, config.tmpWinRMCertificateUrl)
 		if err != nil {
 			return nil, err
 		}
@@ -140,6 +163,13 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 	if len(config.AdditionalDiskSize) > 0 {
 		isManaged := config.CustomManagedImageName != "" || (config.ManagedImageName != "" && config.ImagePublisher != "") || config.SharedGallery.Subscription != ""
 		err = builder.SetAdditionalDisks(config.AdditionalDiskSize, config.tmpDataDiskName, isManaged, config.diskCachingType)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if config.Spot.EvictionPolicy != "" {
+		err = builder.SetSpot(config.Spot.EvictionPolicy, config.Spot.MaxPrice)
 		if err != nil {
 			return nil, err
 		}

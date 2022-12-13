@@ -480,6 +480,27 @@ func TestVirtualMachineDeployment14(t *testing.T) {
 	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
+// Ensure the VM template is correct when using a spot VM.
+func TestVirtualMachineDeployment15(t *testing.T) {
+	m := getArmBuilderConfiguration()
+	m["spot"] = map[string]interface{}{
+		"eviction_policy": "Deallocate",
+		"max_price":       100,
+	}
+
+	var c Config
+	_, err := c.Prepare(m, getPackerConfiguration(), getPackerSSHPasswordCommunicatorConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
 // Ensure the link values are not set, and the concrete values are set.
 func TestKeyVaultDeployment00(t *testing.T) {
 	var c Config
@@ -487,7 +508,7 @@ func TestKeyVaultDeployment00(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetKeyVaultDeployment(&c)
+	deployment, err := GetKeyVaultDeployment(&c, "secret")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -520,7 +541,7 @@ func TestKeyVaultDeployment01(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetKeyVaultDeployment(&c)
+	deployment, err := GetKeyVaultDeployment(&c, "secret")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -538,7 +559,7 @@ func TestKeyVaultDeployment02(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetKeyVaultDeployment(&c)
+	deployment, err := GetKeyVaultDeployment(&c, c.winrmCertificate)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -614,7 +635,7 @@ func TestKeyVaultDeployment03(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetKeyVaultDeployment(&c)
+	deployment, err := GetKeyVaultDeployment(&c, c.winrmCertificate)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -11,18 +11,20 @@ import (
 )
 
 type StepCertificateInKeyVault struct {
-	config *Config
-	client common.AZVaultClientIface
-	say    func(message string)
-	error  func(e error)
+	config      *Config
+	client      common.AZVaultClientIface
+	say         func(message string)
+	error       func(e error)
+	certificate string
 }
 
-func NewStepCertificateInKeyVault(cli common.AZVaultClientIface, ui packersdk.Ui, config *Config) *StepCertificateInKeyVault {
+func NewStepCertificateInKeyVault(cli common.AZVaultClientIface, ui packersdk.Ui, config *Config, certificate string) *StepCertificateInKeyVault {
 	var step = &StepCertificateInKeyVault{
-		client: cli,
-		config: config,
-		say:    func(message string) { ui.Say(message) },
-		error:  func(e error) { ui.Error(e.Error()) },
+		client:      cli,
+		config:      config,
+		say:         func(message string) { ui.Say(message) },
+		error:       func(e error) { ui.Error(e.Error()) },
+		certificate: certificate,
 	}
 
 	return step
@@ -32,7 +34,7 @@ func (s *StepCertificateInKeyVault) Run(ctx context.Context, state multistep.Sta
 	s.say("Setting the certificate in the KeyVault...")
 	var keyVaultName = state.Get(constants.ArmKeyVaultName).(string)
 
-	err := s.client.SetSecret(keyVaultName, DefaultSecretName, s.config.winrmCertificate)
+	err := s.client.SetSecret(keyVaultName, DefaultSecretName, s.certificate)
 	if err != nil {
 		s.error(fmt.Errorf("Error setting winrm cert in custom keyvault: %s", err))
 		return multistep.ActionHalt

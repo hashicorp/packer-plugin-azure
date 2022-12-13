@@ -72,13 +72,14 @@ func (s *TemplateBuilder) BuildLinux(sshAuthorizedKey string, disablePasswordAut
 	return nil
 }
 
-func (s *TemplateBuilder) BuildWindows(keyVaultName, winRMCertificateUrl string) error {
+func (s *TemplateBuilder) BuildWindows(communicatorType string, keyVaultName string, certificateUrl string) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
 	}
 
 	profile := resource.Properties.OsProfile
+	s.osType = compute.OperatingSystemTypesWindows
 
 	profile.Secrets = &[]compute.VaultSecretGroup{
 		{
@@ -88,10 +89,17 @@ func (s *TemplateBuilder) BuildWindows(keyVaultName, winRMCertificateUrl string)
 			VaultCertificates: &[]compute.VaultCertificate{
 				{
 					CertificateStore: to.StringPtr("My"),
-					CertificateURL:   to.StringPtr(winRMCertificateUrl),
+					CertificateURL:   to.StringPtr(certificateUrl),
 				},
 			},
 		},
+	}
+
+	if communicatorType == "ssh" {
+		profile.WindowsConfiguration = &compute.WindowsConfiguration{
+			ProvisionVMAgent: to.BoolPtr(true),
+		}
+		return nil
 	}
 
 	profile.WindowsConfiguration = &compute.WindowsConfiguration{
@@ -100,13 +108,12 @@ func (s *TemplateBuilder) BuildWindows(keyVaultName, winRMCertificateUrl string)
 			Listeners: &[]compute.WinRMListener{
 				{
 					Protocol:       "https",
-					CertificateURL: to.StringPtr(winRMCertificateUrl),
+					CertificateURL: to.StringPtr(certificateUrl),
 				},
 			},
 		},
 	}
 
-	s.osType = compute.OperatingSystemTypesWindows
 	return nil
 }
 
@@ -320,6 +327,22 @@ func (s *TemplateBuilder) SetAdditionalDisks(diskSizeGB []int32, dataDiskname st
 		}
 	}
 	profile.DataDisks = &dataDisks
+	return nil
+}
+
+func (s *TemplateBuilder) SetSpot(policy compute.VirtualMachineEvictionPolicyTypes, price float32) error {
+	resource, err := s.getResourceByType(resourceVirtualMachine)
+	if err != nil {
+		return err
+	}
+
+	resource.Properties.Priority = to.StringPtr("Spot")
+	resource.Properties.EvictionPolicy = &policy
+
+	if price == 0 {
+		price = -1
+	}
+	resource.Properties.BillingProfile = &BillingProfile{MaxPrice: price}
 	return nil
 }
 
@@ -693,7 +716,7 @@ const BasicTemplate = `{
   },
   "variables": {
     "addressPrefix": "10.0.0.0/16",
-    "apiVersion": "2017-03-30",
+    "apiVersion": "2019-03-01",
     "managedDiskApiVersion": "2017-03-30",
     "networkInterfacesApiVersion": "2017-04-01",
     "publicIPAddressApiVersion": "2017-04-01",
