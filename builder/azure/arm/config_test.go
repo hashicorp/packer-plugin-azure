@@ -2440,7 +2440,6 @@ func TestConfigShouldAcceptValidCustomResourceBuildPrefix(t *testing.T) {
 	}
 }
 
-
 func TestConfigShouldNormalizeLicenseTypeCase(t *testing.T) {
 	config := map[string]string{
 		"capture_name_prefix":    "ignore",
@@ -2543,7 +2542,7 @@ func TestConfigShouldValidateLicenseType(t *testing.T) {
 				}
 			}
 		}
-  }
+	}
 }
 
 func TestConfigSpot(t *testing.T) {
