@@ -100,7 +100,7 @@ func TestBuildWindows00(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = testSubject.BuildWindows("--test-key-vault-name", "--test-winrm-certificate-url--")
+	err = testSubject.BuildWindows("winrm", "--test-key-vault-name", "--test-winrm-certificate-url--")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestBuildWindows01(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = testSubject.BuildWindows("--test-key-vault-name", "--test-winrm-certificate-url--")
+	err = testSubject.BuildWindows("winrm", "--test-key-vault-name", "--test-winrm-certificate-url--")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,12 +155,38 @@ func TestBuildWindows02(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = testSubject.BuildWindows("--test-key-vault-name", "--test-winrm-certificate-url--")
+	err = testSubject.BuildWindows("winrm", "--test-key-vault-name", "--test-winrm-certificate-url--")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	err = testSubject.SetAdditionalDisks([]int32{32, 64}, "datadisk", false, compute.CachingTypesReadWrite)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	doc, err := testSubject.ToJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
+}
+
+// Ensure that a Windows template is configured as expected.
+//   - Include SSH configuration.
+func TestBuildWindows03(t *testing.T) {
+	testSubject, err := NewTemplateBuilder(BasicTemplate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = testSubject.BuildWindows("ssh", "--test-key-vault-name", "--test-ssh-certificate-url--")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = testSubject.SetMarketPlaceImage("MicrosoftWindowsServer", "WindowsServer", "2012-R2-Datacenter", "latest", compute.CachingTypesReadWrite)
 	if err != nil {
 		t.Fatal(err)
 	}

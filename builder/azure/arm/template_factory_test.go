@@ -508,7 +508,7 @@ func TestKeyVaultDeployment00(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetKeyVaultDeployment(&c)
+	deployment, err := GetKeyVaultDeployment(&c, "secret")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -541,7 +541,7 @@ func TestKeyVaultDeployment01(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetKeyVaultDeployment(&c)
+	deployment, err := GetKeyVaultDeployment(&c, "secret")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -559,7 +559,7 @@ func TestKeyVaultDeployment02(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetKeyVaultDeployment(&c)
+	deployment, err := GetKeyVaultDeployment(&c, c.winrmCertificate)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -604,7 +604,7 @@ func TestKeyVaultDeployment03(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetKeyVaultDeployment(&c)
+	deployment, err := GetKeyVaultDeployment(&c, c.winrmCertificate)
 	if err != nil {
 		t.Fatal(err)
 	}
