@@ -661,7 +661,7 @@ const KeyVault = `{
 
 // adapted from https://github.com/Azure/azure-quickstart-templates/blob/b78db5d27fd6344656ebdd30f74eee5d22f40dde/application-workloads/ros/ros-vm-windows/nestedtemplates/customScriptExtension.json
 const CustomScript = `{
-    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "$schema": "https://schema.management.azure.com/schemas/2022-08-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
         "vmName": {
