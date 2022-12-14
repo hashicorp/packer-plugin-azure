@@ -32,6 +32,7 @@ type Resource struct {
 	Tags       *map[string]string `json:"tags,omitempty"`
 	Resources  *[]Resource        `json:"resources,omitempty"`
 	Identity   *Identity          `json:"identity,omitempty"`
+	Condition  *string            `json:"condition,omitempty"`
 }
 
 type Plan struct {
