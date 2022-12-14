@@ -79,29 +79,29 @@ type BillingProfile struct {
 
 // Template > Resource > Properties
 type Properties struct {
-	AccessPolicies               *[]AccessPolicies                          `json:"accessPolicies,omitempty"`
-	AddressSpace                 *network.AddressSpace                      `json:"addressSpace,omitempty"`
-	DiagnosticsProfile           *compute.DiagnosticsProfile                `json:"diagnosticsProfile,omitempty"`
-	DNSSettings                  *network.PublicIPAddressDNSSettings        `json:"dnsSettings,omitempty"`
-	EnabledForDeployment         *string                                    `json:"enabledForDeployment,omitempty"`
-	EnabledForTemplateDeployment *string                                    `json:"enabledForTemplateDeployment,omitempty"`
-	EnableSoftDelete             *string                                    `json:"enableSoftDelete,omitempty"`
-	HardwareProfile              *compute.HardwareProfile                   `json:"hardwareProfile,omitempty"`
-	IPConfigurations             *[]network.IPConfiguration                 `json:"ipConfigurations,omitempty"`
-	NetworkProfile               *compute.NetworkProfile                    `json:"networkProfile,omitempty"`
-	OsProfile                    *compute.OSProfile                         `json:"osProfile,omitempty"`
-	PublicIPAllocatedMethod      *network.IPAllocationMethod                `json:"publicIPAllocationMethod,omitempty"`
-	Sku                          *Sku                                       `json:"sku,omitempty"`
-	UserData                     *string                                    `json:"userData,omitempty"`
-	StorageProfile               *StorageProfileUnion                       `json:"storageProfile,omitempty"`
-	Subnets                      *[]network.Subnet                          `json:"subnets,omitempty"`
-	SecurityRules                *[]network.SecurityRule                    `json:"securityRules,omitempty"`
-	TenantId                     *string                                    `json:"tenantId,omitempty"`
-	Value                        *string                                    `json:"value,omitempty"`
-	Priority                     *string                                    `json:"priority,omitempty"`
-	EvictionPolicy               *compute.VirtualMachineEvictionPolicyTypes `json:"evictionPolicy,omitempty"`
-	BillingProfile               *BillingProfile                            `json:"billingProfile,omitempty"`
-
+	AccessPolicies               *[]AccessPolicies                   `json:"accessPolicies,omitempty"`
+	AddressSpace                 *network.AddressSpace               `json:"addressSpace,omitempty"`
+	DiagnosticsProfile           *compute.DiagnosticsProfile         `json:"diagnosticsProfile,omitempty"`
+	DNSSettings                  *network.PublicIPAddressDNSSettings `json:"dnsSettings,omitempty"`
+	EnabledForDeployment         *string                             `json:"enabledForDeployment,omitempty"`
+	EnabledForTemplateDeployment *string                             `json:"enabledForTemplateDeployment,omitempty"`
+	EnableSoftDelete             *string                             `json:"enableSoftDelete,omitempty"`
+	HardwareProfile              *compute.HardwareProfile            `json:"hardwareProfile,omitempty"`
+	IPConfigurations             *[]network.IPConfiguration          `json:"ipConfigurations,omitempty"`
+	LicenseType                  *string                             `json:"licenseType,omitempty"`
+	NetworkProfile               *compute.NetworkProfile             `json:"networkProfile,omitempty"`
+	OsProfile                    *compute.OSProfile                  `json:"osProfile,omitempty"`
+	PublicIPAllocatedMethod      *network.IPAllocationMethod         `json:"publicIPAllocationMethod,omitempty"`
+	Sku                          *Sku                                `json:"sku,omitempty"`
+	UserData                     *string                             `json:"userData,omitempty"`
+	StorageProfile *StorageProfileUnion                              `json:"storageProfile,omitempty"`
+	Subnets        *[]network.Subnet                                 `json:"subnets,omitempty"`
+	SecurityRules  *[]network.SecurityRule                           `json:"securityRules,omitempty"`
+	TenantId       *string                                           `json:"tenantId,omitempty"`
+	Value          *string                                           `json:"value,omitempty"`
+	Priority       *string                                           `json:"priority,omitempty"`
+	EvictionPolicy *compute.VirtualMachineEvictionPolicyTypes        `json:"evictionPolicy,omitempty"`
+	BillingProfile *BillingProfile                                   `json:"billingProfile,omitempty"`
 	//CustomScript extension related properties
 	Publisher               *string               `json:"publisher,omitempty"`
 	Type                    *string               `json:"type,omitempty"`

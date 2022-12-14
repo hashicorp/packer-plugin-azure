@@ -339,6 +339,22 @@
   this will set the prefix for the resources. The actuall resource names will be
   `custom_resource_build_prefix` + resourcetype + 5 character random alphanumeric string
 
+- `license_type` (string) - Specify a license type for the build VM to enable Azure Hybrid Benefit. If not set, Pay-As-You-Go license.
+  model (default) will be used. Valid values are:
+  
+  For Windows:
+  - Windows_Client
+  - Windows_Server
+  
+  For Linux:
+  - RHEL_BYOS
+  - SLES_BYOS
+  
+  Refer to the following documentation for more information about Hybrid Benefit:
+  [Windows](https://learn.microsoft.com/en-us/azure/virtual-machines/windows/hybrid-use-benefit-licensing)
+  or
+  [Linux](https://learn.microsoft.com/en-us/azure/virtual-machines/linux/azure-hybrid-benefit-linux)
+
 - `async_resourcegroup_delete` (bool) - If you want packer to delete the
   temporary resource group asynchronously set this value. It's a boolean
   value and defaults to false. Important Setting this true means that

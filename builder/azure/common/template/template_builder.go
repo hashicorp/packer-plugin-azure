@@ -473,6 +473,17 @@ func (s *TemplateBuilder) SetBootDiagnostics(diagSTG string) error {
 	return nil
 }
 
+func (s *TemplateBuilder) SetLicenseType(licenseType string) error {
+	resource, err := s.getResourceByType(resourceVirtualMachine)
+	if err != nil {
+		return err
+	}
+
+	resource.Properties.LicenseType = to.StringPtr(licenseType)
+
+	return nil
+}
+
 func (s *TemplateBuilder) ToJSON() (*string, error) {
 	bs, err := json.MarshalIndent(s.template, jsonPrefix, jsonIndent)
 
