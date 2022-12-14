@@ -838,7 +838,7 @@ const BasicTemplate = `{
       }
     },
     {
-      "condition": "[not(empty(parameters('customScriptCommandToExecute')))]",
+      "condition": "[not(empty(parameters('commandToExecute')))]",
       "apiVersion": "2022-08-01",
       "name": "[concat(parameters('vmName'), '/extension-customscript')]",
       "type": "Microsoft.Compute/virtualMachines/extensions",
