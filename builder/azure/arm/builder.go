@@ -279,14 +279,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),
 		)
 
-		if b.config.CustomScript != "" {
-			customScriptDeploymentName := b.stateBag.Get(constants.ArmCustomScriptDeploymentName).(string)
-			steps = append(steps,
-				NewStepValidateTemplate(azureClient, ui, &b.config, customScriptDeploymentName, GetCustomScriptDeployment),
-				NewStepDeployTemplate(azureClient, ui, &b.config, customScriptDeploymentName, GetCustomScriptDeployment),
-			)
-		}
-
 		if b.config.Comm.Type == "ssh" {
 			steps = append(steps,
 				&communicator.StepConnectSSH{
@@ -476,9 +468,6 @@ func (b *Builder) configureStateBag(stateBag multistep.StateBag) {
 
 	if b.config.OSType == constants.Target_Windows && b.config.BuildKeyVaultName == "" {
 		stateBag.Put(constants.ArmKeyVaultDeploymentName, fmt.Sprintf("kv%s", b.config.tmpDeploymentName))
-	}
-	if b.config.OSType == constants.Target_Windows && b.config.CustomScript != "" {
-		stateBag.Put(constants.ArmCustomScriptDeploymentName, fmt.Sprintf("cs%s", b.config.tmpDeploymentName))
 	}
 
 	stateBag.Put(constants.ArmKeyVaultName, b.config.tmpKeyVaultName)

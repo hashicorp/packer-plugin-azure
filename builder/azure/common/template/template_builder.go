@@ -659,43 +659,6 @@ const KeyVault = `{
   ]
 }`
 
-// adapted from https://github.com/Azure/azure-quickstart-templates/blob/b78db5d27fd6344656ebdd30f74eee5d22f40dde/application-workloads/ros/ros-vm-windows/nestedtemplates/customScriptExtension.json
-const CustomScript = `{
-    "$schema": "https://schema.management.azure.com/schemas/2022-08-01/deploymentTemplate.json#",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-        "vmName": {
-            "metadata": {
-                "description": "The name of the vm"
-            },
-            "type": "string"
-        },
-        "commandToExecute": {
-            "type": "string"
-        }
-    },
-    "variables": {
-        "location": "[resourceGroup().location]"
-    },
-    "resources": [
-        {
-            "type": "Microsoft.Compute/virtualMachines/extensions",
-            "apiVersion": "2019-12-01",
-            "name": "[concat(parameters('vmName'), '/extension-customscript')]",
-            "location": "[variables('location')]",
-            "properties": {
-                "publisher": "Microsoft.Compute",
-                "type": "CustomScriptExtension",
-                "typeHandlerVersion": "1.8",
-                "autoUpgradeMinorVersion": true,
-                "settings": {
-                    "commandToExecute": "[parameters('commandToExecute')]"
-                }
-            }
-        }
-    ]
-}`
-
 const BasicTemplate = `{
   "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json",
   "contentVersion": "1.0.0.0",
@@ -709,24 +672,24 @@ const BasicTemplate = `{
     "dnsNameForPublicIP": {
       "type": "string"
     },
-	"nicName": {
+    "nicName": {
       "type": "string"
-	},
+    },
     "osDiskName": {
       "type": "string"
     },
     "publicIPAddressName": {
       "type": "string"
-	},
-	"subnetName": {
+    },
+    "subnetName": {
       "type": "string"
-	},
+    },
     "storageAccountBlobEndpoint": {
       "type": "string"
     },
-	"virtualNetworkName": {
+    "virtualNetworkName": {
       "type": "string"
-	},
+    },
     "nsgName": {
       "type": "string"
     },
@@ -735,10 +698,13 @@ const BasicTemplate = `{
     },
     "vmName": {
       "type": "string"
-	},
-	"dataDiskName": {
-		"type": "string"
-	}
+    },
+    "dataDiskName": {
+      "type": "string"
+    },
+    "commandToExecute": {
+      "type": "string"
+    }
   },
   "variables": {
     "addressPrefix": "10.0.0.0/16",
@@ -855,10 +821,29 @@ const BasicTemplate = `{
         },
         "diagnosticsProfile": {
           "bootDiagnostics": {
-             "enabled": false
+            "enabled": false
           }
         }
       }
+    },
+    {
+      "condition": "[not(empty(parameters('customScriptCommandToExecute')))]",
+      "apiVersion": "2022-08-01",
+      "name": "[concat(parameters('vmName'), '/extension-customscript')]",
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "location": "[variables('location')]",
+      "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.8",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "commandToExecute": "[parameters('commandToExecute')]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines/', parameters('vmName'))]"
+      ]
     }
   ]
 }`

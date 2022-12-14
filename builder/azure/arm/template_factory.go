@@ -52,20 +52,6 @@ func GetKeyVaultDeployment(config *Config, secretValue string) (*resources.Deplo
 	return createDeploymentParameters(*doc, params)
 }
 
-func GetCustomScriptDeployment(config *Config) (*resources.Deployment, error) {
-	params := &template.TemplateParameters{
-		CommandToExecute: &template.TemplateParameter{Value: config.CustomScript},
-		VMName:           &template.TemplateParameter{Value: config.tmpComputeName},
-	}
-
-	builder, err := template.NewTemplateBuilder(template.CustomScript)
-	if err != nil {
-		return nil, err
-	}
-	doc, _ := builder.ToJSON()
-	return createDeploymentParameters(*doc, params)
-}
-
 func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) {
 	params := &template.TemplateParameters{
 		AdminUsername:              &template.TemplateParameter{Value: config.UserName},
@@ -81,6 +67,7 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 		NsgName:                    &template.TemplateParameter{Value: config.tmpNsgName},
 		VMSize:                     &template.TemplateParameter{Value: config.VMSize},
 		VMName:                     &template.TemplateParameter{Value: config.tmpComputeName},
+		CommandToExecute:           &template.TemplateParameter{Value: config.CustomScript},
 	}
 
 	builder, err := template.NewTemplateBuilder(template.BasicTemplate)
