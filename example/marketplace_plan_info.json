@@ -18,6 +18,7 @@
     "image_publisher": "bitnami",
     "image_offer": "rabbitmq",
     "image_sku": "rabbitmq",
+    "image_version": "latest",
 
     "azure_tags": {
         "dept": "engineering",

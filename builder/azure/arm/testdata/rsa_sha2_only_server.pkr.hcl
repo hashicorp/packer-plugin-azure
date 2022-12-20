@@ -26,6 +26,8 @@ source "azure-arm" "ubuntu2204" {
   image_publisher = "canonical"
   image_offer     = "0001-com-ubuntu-server-jammy-daily"
   image_sku       = "22_04-daily-lts"
+  image_versio    = "latest"
+  image_version   = "latest"
 
   location = "West US2"
   vm_size  = "Standard_DS2_v2"

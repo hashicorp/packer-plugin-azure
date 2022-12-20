@@ -15,6 +15,7 @@
     "image_publisher": "Canonical",
     "image_offer": "UbuntuServer",
     "image_sku": "16.04-LTS",
+    "image_version": "latest",
 
     "managed_image_resource_group_name": "packertest",
     "managed_image_name": "MyUbuntuImage",

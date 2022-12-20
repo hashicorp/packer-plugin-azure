@@ -380,6 +380,7 @@ func testBuilderUserDataLinux(userdata string) string {
 	  "image_publisher": "Canonical",
 	  "image_offer": "UbuntuServer",
 	  "image_sku": "16.04-LTS",
+	  "image_version": "latest",
 	  "user_data_file": "%s",
 
 	  "location": "South Central US",
@@ -415,6 +416,7 @@ const testBuilderAccManagedDiskWindows = `
 	  "image_publisher": "MicrosoftWindowsServer",
 	  "image_offer": "WindowsServer",
 	  "image_sku": "2012-R2-Datacenter",
+	  "image_version": "latest",
 
 	  "communicator": "winrm",
 	  "winrm_use_ssl": "true",
@@ -451,6 +453,7 @@ const testBuilderAccManagedDiskWindowsBuildResourceGroup = `
 	  "image_publisher": "MicrosoftWindowsServer",
 	  "image_offer": "WindowsServer",
 	  "image_sku": "2012-R2-Datacenter",
+	  "image_version": "latest",
 
 	  "communicator": "winrm",
 	  "winrm_use_ssl": "true",
@@ -486,6 +489,7 @@ const testBuilderAccManagedDiskWindowsBuildResourceGroupAdditionalDisk = `
 	  "image_publisher": "MicrosoftWindowsServer",
 	  "image_offer": "WindowsServer",
 	  "image_sku": "2012-R2-Datacenter",
+	  "image_version": "latest",
 
 	  "communicator": "winrm",
 	  "winrm_use_ssl": "true",
@@ -551,6 +555,7 @@ const testBuilderAccManagedDiskLinux = `
 	  "image_publisher": "Canonical",
 	  "image_offer": "UbuntuServer",
 	  "image_sku": "16.04-LTS",
+	  "image_version": "latest",
 
 	  "location": "South Central US",
 	  "vm_size": "Standard_DS2_v2",
@@ -579,6 +584,7 @@ const testBuilderAccManagedDiskLinuxDeviceLogin = `
 	  "image_publisher": "Canonical",
 	  "image_offer": "UbuntuServer",
 	  "image_sku": "16.04-LTS",
+	  "image_version": "latest",
 	  "async_resourcegroup_delete": "true",
 
 	  "location": "South Central US",
@@ -611,6 +617,7 @@ const testBuilderAccBlobWindows = `
 	  "image_publisher": "MicrosoftWindowsServer",
 	  "image_offer": "WindowsServer",
 	  "image_sku": "2012-R2-Datacenter",
+	  "image_version": "latest",
 
 	  "communicator": "winrm",
 	  "winrm_use_ssl": "true",
@@ -648,6 +655,7 @@ const testBuilderAccBlobLinux = `
 	  "image_publisher": "Canonical",
 	  "image_offer": "UbuntuServer",
 	  "image_sku": "16.04-LTS",
+	  "image_version": "latest",
 
 	  "location": "South Central US",
 	  "vm_size": "Standard_DS2_v2"
@@ -670,6 +678,7 @@ const testBuilderAccManagedDiskLinuxAzureCLI = `
 	  "image_publisher": "Canonical",
 	  "image_offer": "UbuntuServer",
 	  "image_sku": "16.04-LTS",
+	  "image_version": "latest",
 
 	  "location": "South Central US",
 	  "vm_size": "Standard_DS2_v2",

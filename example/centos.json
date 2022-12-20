@@ -2,11 +2,11 @@
   "variables": {
     "client_id": "{{env `ARM_CLIENT_ID`}}",
     "client_secret": "{{env `ARM_CLIENT_SECRET`}}",
-    "subscription_id": "{{env `ARM_SUBSCRIPTION_ID`}}",
-    "tenant_id": "{{env `ARM_TENANT_ID`}}",
+    "resource_group": "{{env `ARM_RESOURCE_GROUP_NAME`}}",
     "ssh_user": "centos",
     "ssh_pass": "{{env `ARM_SSH_PASS`}}",
-    "resource_group": "{{env `ARM_RESOURCE_GROUP_NAME`}}"
+    "subscription_id": "{{env `ARM_SUBSCRIPTION_ID`}}",
+    "tenant_id": "{{env `ARM_TENANT_ID`}}"
   },
   "builders": [{
     "type": "azure-arm",

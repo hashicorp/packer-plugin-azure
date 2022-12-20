@@ -91,6 +91,7 @@ const testBuilderAccManagedDiskWindows = `
 	  "image_publisher": "MicrosoftWindowsServer",
 	  "image_offer": "WindowsServer",
 	  "image_sku": "2012-R2-Datacenter",
+	  "image_version": "latest",
 
 	  "communicator": "winrm",
 	  "winrm_use_ssl": "true",
@@ -130,6 +131,7 @@ const testBuilderAccManagedDiskLinux = `
 	  "image_publisher": "Canonical",
 	  "image_offer": "UbuntuServer",
 	  "image_sku": "16.04-LTS",
+	  "image_version": "latest",
 
 	  "location": "South Central US",
 	  "vm_size": "Standard_DS2_v2",
