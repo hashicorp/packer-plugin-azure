@@ -79,6 +79,9 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 
 	switch config.OSType {
 	case constants.Target_Linux:
+		if config.CustomScript != "" {
+			return nil, fmt.Errorf("CustomScript was set, but this build targets Linux; CustomScript is only supported for Windows")
+		}
 		err = builder.BuildLinux(config.sshAuthorizedKey, config.Comm.SSHPassword == "") // if ssh password is not explicitly specified, disable password auth
 		if err != nil {
 			return nil, err
