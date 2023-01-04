@@ -407,7 +407,6 @@ type Config struct {
 	// See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/extensions/custom-script-windows)
 	// to learn more.
 	CustomScript string `mapstructure:"custom_script" required:"false"`
-	customScript string
 	// Used for creating images from Marketplace images. Please refer to
 	// [Deploy an image with Marketplace
 	// terms](https://aka.ms/azuremarketplaceapideployment) for more details.
@@ -711,11 +710,6 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		return nil, err
 	}
 
-	err = setCustomScript(c)
-	if err != nil {
-		return nil, err
-	}
-
 	// NOTE: if the user did not specify a communicator, then default to both
 	// SSH and WinRM.  This is for backwards compatibility because the code did
 	// not specifically force the user to set a communicator.
@@ -902,15 +896,6 @@ func setUserData(c *Config) error {
 	}
 
 	c.userData = c.UserData
-	return nil
-}
-
-func setCustomScript(c *Config) error {
-	if c.CustomScript == "" {
-		return nil
-	}
-
-	c.customScript = c.CustomScript
 	return nil
 }
 
