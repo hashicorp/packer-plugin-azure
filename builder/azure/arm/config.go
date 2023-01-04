@@ -403,7 +403,7 @@ type Config struct {
 	UserData string `mapstructure:"user_data" required:"false"`
 
 	// Specify a command to inject into the CustomScriptExtension, to run on startup
-	// before the communicator attempts to connect
+	// on Windows builds, before the communicator attempts to connect
 	// See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/extensions/custom-script-windows)
 	// to learn more.
 	CustomScript string `mapstructure:"custom_script" required:"false"`
