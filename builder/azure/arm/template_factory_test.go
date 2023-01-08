@@ -690,3 +690,21 @@ func TestPlanInfo02(t *testing.T) {
 
 	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
+
+func TestTrustedLaunch01(t *testing.T) {
+	m := getArmBuilderConfiguration()
+	m["secure_boot_enabled"] = "true"
+	m["vtpm_enabled"] = "true"
+
+	var c Config
+	_, err := c.Prepare(m, getPackerConfiguration(), getPackerSSHPasswordCommunicatorConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
