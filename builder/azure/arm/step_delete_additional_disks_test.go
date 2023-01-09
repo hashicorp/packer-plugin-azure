@@ -145,11 +145,12 @@ func TestStepDeleteAdditionalDiskShouldFailIfVHDNameIsTooShort(t *testing.T) {
 	}
 }
 
-func TestStepDeleteAdditionalDiskShouldPassIfManagedDiskInTempResourceGroup(t *testing.T) {
+func TestStepDeleteAdditionalDiskShouldPassForManagedImages(t *testing.T) {
 	var testSubject = &StepDeleteAdditionalDisk{
-		delete: func(string, string) error { return nil },
-		say:    func(message string) {},
-		error:  func(e error) {},
+		delete:        func(string, string) error { return nil },
+		say:           func(message string) {},
+		error:         func(e error) {},
+		deleteManaged: func(context.Context, string, string) error { return nil },
 	}
 
 	stateBag := new(multistep.BasicStateBag)
