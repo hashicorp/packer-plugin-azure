@@ -231,6 +231,13 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 		}
 	}
 
+	if config.BuildDiskEncryptionSetId != "" {
+		err = builder.SetDiskEncryptionSetID(config.BuildDiskEncryptionSetId)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	err = builder.SetTags(&config.AzureTags)
 	if err != nil {
 		return nil, err
