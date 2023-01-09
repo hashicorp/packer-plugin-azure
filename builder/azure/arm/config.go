@@ -401,6 +401,12 @@ type Config struct {
 	// See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/user-data)
 	// to learn more about user data.
 	UserData string `mapstructure:"user_data" required:"false"`
+
+	// Specify a command to inject into the CustomScriptExtension, to run on startup
+	// on Windows builds, before the communicator attempts to connect
+	// See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/extensions/custom-script-windows)
+	// to learn more.
+	CustomScript string `mapstructure:"custom_script" required:"false"`
 	// Used for creating images from Marketplace images. Please refer to
 	// [Deploy an image with Marketplace
 	// terms](https://aka.ms/azuremarketplaceapideployment) for more details.

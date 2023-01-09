@@ -8,6 +8,9 @@
     "adminUsername": {
       "type": "string"
     },
+    "commandToExecute": {
+      "type": "string"
+    },
     "dataDiskName": {
       "type": "string"
     },
@@ -187,6 +190,31 @@
         "PlanPublisher": "planPublisher00"
       },
       "type": "Microsoft.Compute/virtualMachines"
+    },
+    {
+      "apiVersion": "2022-08-01",
+      "condition": "[not(empty(parameters('commandToExecute')))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines/', parameters('vmName'))]"
+      ],
+      "location": "[variables('location')]",
+      "name": "[concat(parameters('vmName'), '/extension-customscript')]",
+      "properties": {
+        "autoUpgradeMinorVersion": true,
+        "publisher": "Microsoft.Compute",
+        "settings": {
+          "commandToExecute": "[parameters('commandToExecute')]"
+        },
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.8"
+      },
+      "tags": {
+        "PlanInfo": "planName00",
+        "PlanProduct": "planProduct00",
+        "PlanPromotionCode": "",
+        "PlanPublisher": "planPublisher00"
+      },
+      "type": "Microsoft.Compute/virtualMachines/extensions"
     }
   ],
   "variables": {

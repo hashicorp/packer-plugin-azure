@@ -20,6 +20,7 @@ type TemplateParameter struct {
 type TemplateParameters struct {
 	AdminUsername              *TemplateParameter `json:"adminUsername,omitempty"`
 	AdminPassword              *TemplateParameter `json:"adminPassword,omitempty"`
+	CommandToExecute           *TemplateParameter `json:"commandToExecute,omitempty"`
 	DnsNameForPublicIP         *TemplateParameter `json:"dnsNameForPublicIP,omitempty"`
 	KeyVaultName               *TemplateParameter `json:"keyVaultName,omitempty"`
 	KeyVaultSKU                *TemplateParameter `json:"keyVaultSKU,omitempty"`
