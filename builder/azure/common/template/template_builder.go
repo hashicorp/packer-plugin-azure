@@ -307,15 +307,20 @@ func (s *TemplateBuilder) SetDiskEncryptionSetID(diskEncryptionSetID string) err
 	}
 
 	profile := resource.Properties.StorageProfile
-	if profile.OsDisk.ManagedDisk == nil {
-		profile.OsDisk.ManagedDisk = &ManagedDisk{}
-	}
+	// TODO I think I can remove this, just leaving it here for now in case I actually need it
+	//if profile.OsDisk.ManagedDisk == nil {
+	//	profile.OsDisk.ManagedDisk = &ManagedDisk{}
+	//}
 	profile.OsDisk.ManagedDisk.DiskEncryptionSet = &compute.DiskEncryptionSetParameters{
 		ID: &diskEncryptionSetID,
 	}
 
 	if profile.DataDisks != nil {
-
+		for _, dataDisk := range *profile.DataDisks {
+			dataDisk.ManagedDisk.DiskEncryptionSet = &compute.DiskEncryptionSetParameters{
+				ID: &diskEncryptionSetID,
+			}
+		}
 	}
 
 	return nil

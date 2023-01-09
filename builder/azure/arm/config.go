@@ -344,7 +344,8 @@ type Config struct {
 	// Specify the KeyVault SKU to create during the build. Valid values are
 	// standard or premium. The default value is standard.
 	BuildKeyVaultSKU string `mapstructure:"build_key_vault_sku"`
-	// WIP
+
+	// Specify the Disk Encryption Set ID to use to encrypt the OS and data disks created with the VM during the build
 	BuildDiskEncryptionSetId string `mapstructure:"build_disk_encryption_set_id"`
 
 	storageAccountBlobEndpoint string
