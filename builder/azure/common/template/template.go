@@ -41,6 +41,14 @@ type Plan struct {
 	PromotionCode *string `json:"promotionCode,omitempty"`
 }
 
+type ManagedDisk struct {
+	StorageAccountType compute.StorageAccountTypes          `json:"storageAccountType,omitempty"`
+	DiskEncryptionSet  *compute.DiskEncryptionSetParameters `json:"diskEncryptionSet,omitempty"`
+	SecurityProfile    *compute.VMDiskSecurityProfile       `json:"securityProfile,omitempty"`
+	// ID - Resource Id
+	ID *string `json:"id,omitempty"`
+}
+
 type OSDiskUnion struct {
 	OsType       compute.OperatingSystemTypes      `json:"osType,omitempty"`
 	OsState      compute.OperatingSystemStateTypes `json:"osState,omitempty"`
@@ -51,19 +59,19 @@ type OSDiskUnion struct {
 	Caching      compute.CachingTypes              `json:"caching,omitempty"`
 	CreateOption compute.DiskCreateOptionTypes     `json:"createOption,omitempty"`
 	DiskSizeGB   *int32                            `json:"diskSizeGB,omitempty"`
-	ManagedDisk  *compute.ManagedDiskParameters    `json:"managedDisk,omitempty"`
+	ManagedDisk  *ManagedDisk                      `json:"managedDisk,omitempty"`
 }
 
 type DataDiskUnion struct {
-	Lun          *int                           `json:"lun,omitempty"`
-	BlobURI      *string                        `json:"blobUri,omitempty"`
-	Name         *string                        `json:"name,omitempty"`
-	Vhd          *compute.VirtualHardDisk       `json:"vhd,omitempty"`
-	Image        *compute.VirtualHardDisk       `json:"image,omitempty"`
-	Caching      compute.CachingTypes           `json:"caching,omitempty"`
-	CreateOption compute.DiskCreateOptionTypes  `json:"createOption,omitempty"`
-	DiskSizeGB   *int32                         `json:"diskSizeGB,omitempty"`
-	ManagedDisk  *compute.ManagedDiskParameters `json:"managedDisk,omitempty"`
+	Lun          *int                          `json:"lun,omitempty"`
+	BlobURI      *string                       `json:"blobUri,omitempty"`
+	Name         *string                       `json:"name,omitempty"`
+	Vhd          *compute.VirtualHardDisk      `json:"vhd,omitempty"`
+	Image        *compute.VirtualHardDisk      `json:"image,omitempty"`
+	Caching      compute.CachingTypes          `json:"caching,omitempty"`
+	CreateOption compute.DiskCreateOptionTypes `json:"createOption,omitempty"`
+	DiskSizeGB   *int32                        `json:"diskSizeGB,omitempty"`
+	ManagedDisk  *ManagedDisk                  `json:"managedDisk,omitempty"`
 }
 
 // Union of the StorageProfile and ImageStorageProfile types.

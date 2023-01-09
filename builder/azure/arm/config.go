@@ -343,7 +343,10 @@ type Config struct {
 	BuildKeyVaultName string `mapstructure:"build_key_vault_name"`
 	// Specify the KeyVault SKU to create during the build. Valid values are
 	// standard or premium. The default value is standard.
-	BuildKeyVaultSKU           string `mapstructure:"build_key_vault_sku"`
+	BuildKeyVaultSKU string `mapstructure:"build_key_vault_sku"`
+	// WIP
+	BuildDiskEncryptionSetId string `mapstructure:"build_disk_encryption_set_id"`
+
 	storageAccountBlobEndpoint string
 	// This value allows you to
 	// set a virtual_network_name and obtain a public IP. If this value is not

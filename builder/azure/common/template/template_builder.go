@@ -154,7 +154,7 @@ func (s *TemplateBuilder) SetManagedDiskUrl(managedImageId string, storageAccoun
 	profile.OsDisk.CreateOption = compute.DiskCreateOptionTypesFromImage
 	profile.OsDisk.Vhd = nil
 	profile.OsDisk.Caching = cachingType
-	profile.OsDisk.ManagedDisk = &compute.ManagedDiskParameters{
+	profile.OsDisk.ManagedDisk = &ManagedDisk{
 		StorageAccountType: storageAccountType,
 	}
 
@@ -178,7 +178,7 @@ func (s *TemplateBuilder) SetManagedMarketplaceImage(location, publisher, offer,
 	profile.OsDisk.CreateOption = compute.DiskCreateOptionTypesFromImage
 	profile.OsDisk.Vhd = nil
 	profile.OsDisk.Caching = cachingType
-	profile.OsDisk.ManagedDisk = &compute.ManagedDiskParameters{
+	profile.OsDisk.ManagedDisk = &ManagedDisk{
 		StorageAccountType: storageAccountType,
 	}
 
@@ -296,6 +296,27 @@ func (s *TemplateBuilder) SetOSDiskSizeGB(diskSizeGB int32) error {
 
 	profile := resource.Properties.StorageProfile
 	profile.OsDisk.DiskSizeGB = to.Int32Ptr(diskSizeGB)
+
+	return nil
+}
+
+func (s *TemplateBuilder) SetDiskEncryptionSetID(diskEncryptionSetID string) error {
+	resource, err := s.getResourceByType(resourceVirtualMachine)
+	if err != nil {
+		return err
+	}
+
+	profile := resource.Properties.StorageProfile
+	if profile.OsDisk.ManagedDisk == nil {
+		profile.OsDisk.ManagedDisk = &ManagedDisk{}
+	}
+	profile.OsDisk.ManagedDisk.DiskEncryptionSet = &compute.DiskEncryptionSetParameters{
+		ID: &diskEncryptionSetID,
+	}
+
+	if profile.DataDisks != nil {
+
+	}
 
 	return nil
 }
@@ -716,7 +737,7 @@ const BasicTemplate = `{
   },
   "variables": {
     "addressPrefix": "10.0.0.0/16",
-    "apiVersion": "2019-03-01",
+    "apiVersion": "2021-11-01",
     "managedDiskApiVersion": "2017-03-30",
     "networkInterfacesApiVersion": "2017-04-01",
     "publicIPAddressApiVersion": "2017-04-01",
