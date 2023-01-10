@@ -20,7 +20,7 @@ type StepDeployTemplate struct {
 	deploy           func(ctx context.Context, resourceGroupName string, deploymentName string) error
 	delete           func(ctx context.Context, deploymentName, resourceGroupName string) error
 	disk             func(ctx context.Context, resourceGroupName string, computeName string) (string, string, error)
-	deleteDisk       func(ctx context.Context, imageType string, imageName string, resourceGroupName string) error
+	deleteDisk       func(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool) error
 	deleteDeployment func(ctx context.Context, state multistep.StateBag) error
 	say              func(message string)
 	error            func(e error)
@@ -75,6 +75,7 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 	// Get image disk details before deleting the image; otherwise we won't be able to
 	// delete the disk as the image request will return a 404
 	computeName := state.Get(constants.ArmComputeName).(string)
+	isManagedDisk := state.Get(constants.ArmIsManagedImage).(bool)
 	imageType, imageName, err := s.disk(context.TODO(), resourceGroupName, computeName)
 
 	if err != nil && !strings.Contains(err.Error(), "ResourceNotFound") {
@@ -94,11 +95,24 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 	}
 	if !state.Get(constants.ArmKeepOSDisk).(bool) {
 		ui.Say(fmt.Sprintf(" Deleting -> %s : '%s'", imageType, imageName))
-		err = s.deleteDisk(context.TODO(), imageType, imageName, resourceGroupName)
+		err = s.deleteDisk(context.TODO(), imageName, resourceGroupName, isManagedDisk)
 		if err != nil {
 			ui.Error(fmt.Sprintf("Error deleting resource.  Please delete manually.\n\n"+
 				"Name: %s\n"+
 				"Error: %s", imageName, err))
+		}
+	}
+
+	var dataDisks []string
+	if disks := state.Get(constants.ArmAdditionalDiskVhds); disks != nil {
+		dataDisks = disks.([]string)
+	}
+	for i, additionaldisk := range dataDisks {
+		s.say(fmt.Sprintf(" Deleting Additional Disk -> %d: '%s'", i+1, additionaldisk))
+
+		err := s.deleteImage(context.TODO(), additionaldisk, resourceGroupName, isManagedDisk)
+		if err != nil {
+			s.say("Failed to delete the managed Additional Disk!")
 		}
 	}
 }
@@ -201,9 +215,9 @@ func deleteResource(ctx context.Context, client *AzureClient, resourceType strin
 	return nil
 }
 
-func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageType string, imageName string, resourceGroupName string) error {
+func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool) error {
 	// Managed disk
-	if imageType == "Microsoft.Compute/disks" {
+	if isManagedDisk {
 		xs := strings.Split(imageName, "/")
 		diskName := xs[len(xs)-1]
 		f, err := s.client.DisksClient.Delete(ctx, resourceGroupName, diskName)
