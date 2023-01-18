@@ -80,9 +80,11 @@ you should specify `subscription_id`, `client_id` and one of `client_secret`,
 
 ### Azure ARM builder specific options
 
-The Azure builder can create either a VHD or a managed image. If you are
-creating a VHD, you **must** start with a VHD. Likewise, if you want to create
+The Azure builder can create either a VHD, managed image or create a Shared Image Gallery.
+If you are creating a VHD, you **must** start with a VHD. Likewise, if you want to create
 a managed image you **must** start with a managed image.
+Managed images can also be published to shared image galleries,
+but a managed image definition is not required to publish to a gallery.
 
 ### Required:
 

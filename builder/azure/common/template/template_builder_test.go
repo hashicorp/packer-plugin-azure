@@ -131,7 +131,7 @@ func TestBuildWindows01(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = testSubject.SetManagedMarketplaceImage("MicrosoftWindowsServer", "WindowsServer", "2012-R2-Datacenter", "latest", "2015-1", "1", "Premium_LRS", compute.CachingTypesReadWrite)
+	err = testSubject.SetManagedMarketplaceImage("WindowsServer", "2012-R2-Datacenter", "latest", "2015-1", "Premium_LRS", compute.CachingTypesReadWrite)
 	if err != nil {
 		t.Fatal(err)
 	}

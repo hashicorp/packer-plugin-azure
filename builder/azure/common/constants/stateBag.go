@@ -38,6 +38,7 @@ const (
 	ArmIsExistingResourceGroup                                 string = "arm.IsExistingResourceGroup"
 	ArmIsExistingKeyVault                                      string = "arm.IsExistingKeyVault"
 	ArmIsManagedImage                                          string = "arm.IsManagedImage"
+	ArmIsSIGImage                                              string = "arm.IsSIGImage"
 	ArmManagedImageResourceGroupName                           string = "arm.ManagedImageResourceGroupName"
 	ArmManagedImageName                                        string = "arm.ManagedImageName"
 	ArmManagedImageSigPublishResourceGroup                     string = "arm.ManagedImageSigPublishResourceGroup"

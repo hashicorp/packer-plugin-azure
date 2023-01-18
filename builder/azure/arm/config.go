@@ -577,6 +577,10 @@ func (c *Config) isManagedImage() bool {
 	return c.ManagedImageName != ""
 }
 
+func (c *Config) isPublishToSIG() bool {
+	return c.SharedGalleryDestination.SigDestinationGalleryName != ""
+}
+
 func (c *Config) toVirtualMachineCaptureParameters() *compute.VirtualMachineCaptureParameters {
 	return &compute.VirtualMachineCaptureParameters{
 		DestinationContainerName: &c.CaptureContainerName,
@@ -980,12 +984,12 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	/////////////////////////////////////////////
 	// Capture
-	if c.CaptureContainerName == "" && c.ManagedImageName == "" {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_container_name or managed_image_name must be specified"))
+	if c.CaptureContainerName == "" && c.ManagedImageName == "" && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_container_name, managed_image_name or shared_image_gallery_destination must be specified"))
 	}
 
-	if c.CaptureNamePrefix == "" && c.ManagedImageResourceGroupName == "" {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_name_prefix or managed_image_resource_group_name must be specified"))
+	if c.CaptureNamePrefix == "" && c.ManagedImageResourceGroupName == "" && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_name_prefix, managed_image_resource_group_name or shared_image_gallery_destination must be specified"))
 	}
 
 	if (c.CaptureNamePrefix != "" || c.CaptureContainerName != "") && (c.ManagedImageResourceGroupName != "" || c.ManagedImageName != "") {
@@ -1111,15 +1115,15 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		return (a || b) && !(a && b)
 	}
 
-	if !xor((c.StorageAccount != "" || c.ResourceGroupName != ""), (c.ManagedImageName != "" || c.ManagedImageResourceGroupName != "")) {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Specify either a VHD (storage_account and resource_group_name) or Managed Image (managed_image_resource_group_name and managed_image_name) output"))
+	if !xor(c.StorageAccount != "" || c.ResourceGroupName != "", c.ManagedImageName != "" || c.ManagedImageResourceGroupName != "" || c.SharedGalleryDestination.SigDestinationGalleryName != "") {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Specify either a VHD (storage_account and resource_group_name), a Managed Image (managed_image_resource_group_name and managed_image_name) or a Shared Image Gallery (shared_image_gallery_destination) output (Managed Images can also be published to Shared Image Galleries)"))
 	}
 
 	if !xor(c.Location != "", c.BuildResourceGroupName != "") {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Specify either a location to create the resource group in or an existing build_resource_group_name, but not both."))
 	}
 
-	if c.ManagedImageName == "" && c.ManagedImageResourceGroupName == "" {
+	if c.ManagedImageName == "" && c.ManagedImageResourceGroupName == "" && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
 		if c.StorageAccount == "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A storage_account must be specified"))
 		}
@@ -1152,7 +1156,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 	}
 
-	if c.ManagedImageName != "" && c.ManagedImageResourceGroupName != "" && c.SharedGalleryDestination.SigDestinationGalleryName != "" {
+	if c.SharedGalleryDestination.SigDestinationGalleryName != "" {
 		if c.SharedGalleryDestination.SigDestinationResourceGroup == "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A resource_group must be specified for shared_image_gallery_destination"))
 		}
@@ -1161,9 +1165,6 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 		if c.SharedGalleryDestination.SigDestinationImageVersion == "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("An image_version must be specified for shared_image_gallery_destination"))
-		}
-		if len(c.SharedGalleryDestination.SigDestinationReplicationRegions) == 0 {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A list of replication_regions must be specified for shared_image_gallery_destination"))
 		}
 		if c.SharedGalleryDestination.SigDestinationSubscription == "" {
 			c.SharedGalleryDestination.SigDestinationSubscription = c.ClientConfig.SubscriptionID

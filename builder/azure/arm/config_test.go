@@ -1253,6 +1253,33 @@ func TestConfigShouldAcceptManagedImageOSDiskSnapshotNameAndManagedImageDataDisk
 	}
 }
 
+func TestConfigShouldAcceptAbsentManagedImageButPresentSharedImageGalleryDestination(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":     "ignore",
+		"image_publisher": "ignore",
+		"image_sku":       "ignore",
+		"location":        "ignore",
+		"subscription_id": "ignore",
+		"communicator":    "none",
+		// Does not matter for this test case, just pick one.
+		"os_type": constants.Target_Linux,
+
+		"shared_image_gallery_destination": map[string]string{
+			"resource_group":      "ignore",
+			"gallery_name":        "ignore",
+			"image_name":          "ignore",
+			"image_version":       "ignore",
+			"replication_regions": "ignore",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("expected config to accept platform managed image build: %v", err)
+	}
+}
+
 func TestConfigShouldRejectManagedImageOSDiskSnapshotNameAndManagedImageDataDiskSnapshotPrefixWithCaptureContainerName(t *testing.T) {
 	config := map[string]interface{}{
 		"image_offer":                         "ignore",

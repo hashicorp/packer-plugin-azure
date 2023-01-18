@@ -161,7 +161,7 @@ func (s *TemplateBuilder) SetManagedDiskUrl(managedImageId string, storageAccoun
 	return nil
 }
 
-func (s *TemplateBuilder) SetManagedMarketplaceImage(location, publisher, offer, sku, version, imageID string, storageAccountType compute.StorageAccountTypes, cachingType compute.CachingTypes) error {
+func (s *TemplateBuilder) SetManagedMarketplaceImage(publisher, offer, sku, version string, storageAccountType compute.StorageAccountTypes, cachingType compute.CachingTypes) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
