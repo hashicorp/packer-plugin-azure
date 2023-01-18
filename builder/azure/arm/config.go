@@ -1116,7 +1116,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	}
 
 	if !xor(c.StorageAccount != "" || c.ResourceGroupName != "", c.ManagedImageName != "" || c.ManagedImageResourceGroupName != "" || c.SharedGalleryDestination.SigDestinationGalleryName != "") {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Specify either only a VHD (storage_account and resource_group_name), or either a Managed Image (managed_image_resource_group_name and managed_image_name) or a Shared Image Gallery (shared_image_gallery_destination) output"))
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Specify either a VHD (storage_account and resource_group_name), a Managed Image (managed_image_resource_group_name and managed_image_name) or a Shared Image Gallery (shared_image_gallery_destination) output (Managed Images can also be published to Shared Image Galleries)"))
 	}
 
 	if !xor(c.Location != "", c.BuildResourceGroupName != "") {

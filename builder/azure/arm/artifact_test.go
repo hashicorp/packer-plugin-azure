@@ -232,6 +232,84 @@ ManagedImageSharedImageGalleryId: fakeSharedImageGallery
 	}
 }
 
+func TestArtifactIDManagedImageWithSharedImageGalleryWithoutManagedImage_PARMetadata(t *testing.T) {
+
+	fakeGalleryResourceGroup := "fakeResourceGroup"
+	fakeGalleryName := "fakeName"
+	fakeGalleryImageName := "fakeGalleryImageName"
+	fakeGalleryImageVersion := "fakeGalleryImageVersion"
+	fakeGalleryReplicationRegions := []string{"fake-region-1", "fake-region-2"}
+
+	stateData := map[string]interface{}{
+		// Previous Artifact code base used these state key from generated_data; providing duplicate info with empty strings.
+		"generated_data": map[string]interface{}{
+			"SharedImageGalleryName":               "",
+			"SharedImageGalleryImageName":          "",
+			"SharedImageGalleryImageVersion":       "",
+			"SharedImageGalleryResourceGroup":      "",
+			"SharedImageGalleryReplicationRegions": []string{},
+		},
+	}
+
+	stateData[constants.ArmManagedImageSigPublishResourceGroup] = fakeGalleryResourceGroup
+	stateData[constants.ArmManagedImageSharedGalleryName] = fakeGalleryName
+	stateData[constants.ArmManagedImageSharedGalleryImageName] = fakeGalleryImageName
+	stateData[constants.ArmManagedImageSharedGalleryImageVersion] = fakeGalleryImageVersion
+	stateData[constants.ArmManagedImageSharedGalleryReplicationRegions] = fakeGalleryReplicationRegions
+
+	artifact, err := NewSharedImageArtifact("Linux", "fakeSharedImageGallery", "fakeLocation", stateData)
+	if err != nil {
+		t.Fatalf("err=%s", err)
+	}
+
+	expected := `Azure.ResourceManagement.VMImage:
+
+OSType: Linux
+ManagedImageSharedImageGalleryId: fakeSharedImageGallery
+SharedImageGalleryResourceGroup: fakeResourceGroup
+SharedImageGalleryName: fakeName
+SharedImageGalleryImageName: fakeGalleryImageName
+SharedImageGalleryImageVersion: fakeGalleryImageVersion
+SharedImageGalleryReplicatedRegions: fake-region-1, fake-region-2
+`
+
+	result := artifact.String()
+	if result != expected {
+		t.Fatalf("bad: %s", result)
+	}
+
+	hcpImage := artifact.State(registryimage.ArtifactStateURI)
+	if hcpImage == nil {
+		t.Fatalf("Bad: HCP Packer registry image data was nil")
+	}
+
+	var image registryimage.Image
+	err = mapstructure.Decode(hcpImage, &image)
+	if err != nil {
+		t.Errorf("Bad: unexpected error when trying to decode state into registryimage.Image %v", err)
+	}
+
+	expectedSIGLabels := []string{
+		"sig_resource_group",
+		"sig_name",
+		"sig_image_name",
+		"sig_image_version",
+		"sig_replicated_regions",
+	}
+	for _, key := range expectedSIGLabels {
+		key := key
+		v, ok := image.Labels[key]
+		if !ok {
+			t.Errorf("expected labels to have %q but no entry was found", key)
+		}
+		if v == "" {
+			t.Errorf("expected labels[%q] to have a non-empty string value, but got %#v", key, v)
+		}
+	}
+	if artifact.SharedImageGalleryLocation != "fakeLocation" {
+		t.Errorf("expected fakeLocation got %s", artifact.SharedImageGalleryLocation)
+	}
+}
 func TestArtifactIDManagedImageWithSharedImageGallery_PARMetadata(t *testing.T) {
 
 	fakeGalleryResourceGroup := "fakeResourceGroup"

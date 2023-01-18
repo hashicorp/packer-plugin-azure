@@ -618,5 +618,5 @@ func (b *Builder) sharedImageArtifact(stateData map[string]interface{}) (*Artifa
 		return nil, ErrNoImage
 	}
 
-	return NewSharedImageArtifact(b.config.OSType, destinationSharedImageGalleryId, stateData)
+	return NewSharedImageArtifact(b.config.OSType, destinationSharedImageGalleryId, b.config.Location, stateData)
 }

@@ -39,8 +39,11 @@ type Artifact struct {
 	ManagedImageId                     string
 	ManagedImageOSDiskSnapshotName     string
 	ManagedImageDataDiskSnapshotPrefix string
+
+	// Shared Image Gallery
 	// ARM resource id for Shared Image Gallery
 	ManagedImageSharedImageGalleryId string
+	SharedImageGalleryLocation       string
 
 	// Additional Disks
 	AdditionalDisks *[]AdditionalDiskArtifact
@@ -100,11 +103,12 @@ func NewManagedImageArtifactWithSIGAsDestination(osType, resourceGroup, name, lo
 	}, nil
 }
 
-func NewSharedImageArtifact(osType, destinationSharedImageGalleryId string, generatedData map[string]interface{}) (*Artifact, error) {
+func NewSharedImageArtifact(osType, destinationSharedImageGalleryId string, location string, generatedData map[string]interface{}) (*Artifact, error) {
 	return &Artifact{
 		OSType:                           osType,
 		ManagedImageSharedImageGalleryId: destinationSharedImageGalleryId,
 		StateData:                        generatedData,
+		SharedImageGalleryLocation:       location,
 	}, nil
 }
 
@@ -308,6 +312,7 @@ func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
 		}
 	}
 
+	// If image is captured as a managed image
 	if a.isManagedImage() {
 		id := a.ManagedImageId
 		location := a.ManagedImageLocation
@@ -331,6 +336,19 @@ func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
 		return img
 	}
 
+	if a.isPublishedToSIG() {
+		img, _ := registryimage.FromArtifact(a,
+			registryimage.WithID(a.ManagedImageSharedImageGalleryId),
+			registryimage.WithRegion(a.SharedImageGalleryLocation),
+			registryimage.WithProvider("azure"),
+			registryimage.WithSourceID(sourceID),
+			registryimage.SetLabels(labels),
+		)
+
+		return img
+	}
+
+	// If image is a legacy VHD
 	labels["storage_account_location"] = a.StorageAccountLocation
 	labels["template_uri"] = a.TemplateUri
 
