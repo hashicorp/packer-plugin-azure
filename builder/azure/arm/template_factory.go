@@ -156,6 +156,13 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 		}
 	}
 
+	if config.BuildDiskEncryptionSetId != "" {
+		err = builder.SetDiskEncryptionSetID(config.BuildDiskEncryptionSetId)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if len(config.AdditionalDiskSize) > 0 {
 		isManaged := config.CustomManagedImageName != "" || (config.ManagedImageName != "" && config.ImagePublisher != "") || config.SharedGallery.Subscription != ""
 		err = builder.SetAdditionalDisks(config.AdditionalDiskSize, config.tmpDataDiskName, isManaged, config.diskCachingType)
@@ -226,13 +233,6 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 
 	if config.LicenseType != "" {
 		err = builder.SetLicenseType(config.LicenseType)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if config.BuildDiskEncryptionSetId != "" {
-		err = builder.SetDiskEncryptionSetID(config.BuildDiskEncryptionSetId)
 		if err != nil {
 			return nil, err
 		}
