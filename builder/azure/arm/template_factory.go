@@ -156,8 +156,8 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 		}
 	}
 
-	if config.BuildDiskEncryptionSetId != "" {
-		err = builder.SetDiskEncryptionSetID(config.BuildDiskEncryptionSetId)
+	if config.DiskEncryptionSetId != "" {
+		err = builder.SetDiskEncryptionSetID(config.DiskEncryptionSetId)
 		if err != nil {
 			return nil, err
 		}

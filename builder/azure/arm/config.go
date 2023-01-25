@@ -346,7 +346,7 @@ type Config struct {
 	BuildKeyVaultSKU string `mapstructure:"build_key_vault_sku"`
 
 	// Specify the Disk Encryption Set ID to use to encrypt the OS and data disks created with the VM during the build
-	BuildDiskEncryptionSetId string `mapstructure:"build_disk_encryption_set_id"`
+	DiskEncryptionSetId string `mapstructure:"disk_encryption_set_id"`
 
 	storageAccountBlobEndpoint string
 	// This value allows you to
@@ -1053,6 +1053,10 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	if isImageUrl && c.ManagedImageResourceGroupName != "" {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A managed image must be created from a managed image, it cannot be created from a VHD."))
+	}
+
+	if (c.CaptureContainerName != "" || c.CaptureNamePrefix != "") && c.DiskEncryptionSetId != "" {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Setting a disk encryption set ID is not allowed when building a VHD, only when creating a Managed Image or publishing to a Shared Image Gallery"))
 	}
 
 	if c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.DirectSharedGalleryImageID != "" {
