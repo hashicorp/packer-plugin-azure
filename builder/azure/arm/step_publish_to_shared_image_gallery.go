@@ -122,8 +122,6 @@ func (s *StepPublishToSharedImageGallery) publishToSig(ctx context.Context, sour
 			},
 		},
 	}
-	targetRegions := *galleryImageVersion.GalleryImageVersionProperties.PublishingProfile.TargetRegions
-	s.say(fmt.Sprintf("%s", &targetRegions[0].Encryption.OsDiskImage.DiskEncryptionSetID))
 	f, err := s.client.GalleryImageVersionsClient.CreateOrUpdate(ctx, sharedImageGallery.SigDestinationResourceGroup, sharedImageGallery.SigDestinationGalleryName, sharedImageGallery.SigDestinationImageName, sharedImageGallery.SigDestinationImageVersion, galleryImageVersion)
 
 	if err != nil {
