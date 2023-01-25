@@ -182,15 +182,18 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 		miSigReplicaCount = constants.SharedImageGalleryImageVersionDefaultMaxReplicaCount
 	}
 
-	buildDiskEncryptionSetId := stateBag.Get(constants.ArmBuildDiskEncryptionSetId).(string)
+	var diskEncryptionSetId string
+	if _, ok := stateBag.GetOk(constants.ArmBuildDiskEncryptionSetId); ok {
+		diskEncryptionSetId = stateBag.Get(constants.ArmBuildDiskEncryptionSetId).(string)
+	}
 
 	s.say(fmt.Sprintf(" -> Source ID used for SIG publish        : '%s'", sourceID))
 	s.say(fmt.Sprintf(" -> SIG publish resource group            : '%s'", sharedImageGallery.SigDestinationResourceGroup))
 	s.say(fmt.Sprintf(" -> SIG gallery name                      : '%s'", sharedImageGallery.SigDestinationGalleryName))
 	s.say(fmt.Sprintf(" -> SIG image name                        : '%s'", sharedImageGallery.SigDestinationImageName))
 	s.say(fmt.Sprintf(" -> SIG image version                     : '%s'", sharedImageGallery.SigDestinationImageVersion))
-	if buildDiskEncryptionSetId != "" {
-		s.say(fmt.Sprintf(" -> SIG Encryption Set : %s", buildDiskEncryptionSetId))
+	if diskEncryptionSetId != "" {
+		s.say(fmt.Sprintf(" -> SIG Encryption Set : %s", diskEncryptionSetId))
 	}
 	s.say(fmt.Sprintf(" -> SIG replication regions               : '%v'", sharedImageGallery.SigDestinationReplicationRegions))
 	s.say(fmt.Sprintf(" -> SIG storage account type              : '%s'", sharedImageGallery.SigDestinationStorageAccountType))
@@ -198,7 +201,7 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 	s.say(fmt.Sprintf(" -> SIG image version exclude from latest : '%t'", miSGImageVersionExcludeFromLatest))
 	s.say(fmt.Sprintf(" -> SIG replica count [1, 100]            : '%d'", miSigReplicaCount))
 
-	createdGalleryImageVersionID, err := s.publish(ctx, sourceID, sharedImageGallery, miSGImageVersionEndOfLifeDate, miSGImageVersionExcludeFromLatest, miSigReplicaCount, location, buildDiskEncryptionSetId, tags)
+	createdGalleryImageVersionID, err := s.publish(ctx, sourceID, sharedImageGallery, miSGImageVersionEndOfLifeDate, miSGImageVersionExcludeFromLatest, miSigReplicaCount, location, diskEncryptionSetId, tags)
 
 	if err != nil {
 		stateBag.Put(constants.Error, err)
