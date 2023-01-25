@@ -164,8 +164,8 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 	}
 
 	if len(config.AdditionalDiskSize) > 0 {
-		isManaged := config.CustomManagedImageName != "" || (config.ManagedImageName != "" && config.ImagePublisher != "") || config.SharedGallery.Subscription != ""
-		err = builder.SetAdditionalDisks(config.AdditionalDiskSize, config.tmpDataDiskName, isManaged, config.diskCachingType)
+		isLegacyVHD := config.CustomManagedImageName == "" && config.ManagedImageName == "" && config.ImagePublisher == "" && config.SharedGalleryDestination.SigDestinationGalleryName == "")
+		err = builder.SetAdditionalDisks(config.AdditionalDiskSize, config.tmpDataDiskName, isLegacyVHD, config.diskCachingType)
 		if err != nil {
 			return nil, err
 		}

@@ -314,7 +314,7 @@ func (s *TemplateBuilder) SetDiskEncryptionSetID(diskEncryptionSetID string) err
 	return nil
 }
 
-func (s *TemplateBuilder) SetAdditionalDisks(diskSizeGB []int32, dataDiskname string, isManaged bool, cachingType compute.CachingTypes) error {
+func (s *TemplateBuilder) SetAdditionalDisks(diskSizeGB []int32, dataDiskname string, isLegacyVHD bool, cachingType compute.CachingTypes) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
@@ -330,12 +330,9 @@ func (s *TemplateBuilder) SetAdditionalDisks(diskSizeGB []int32, dataDiskname st
 		dataDisks[i].Name = to.StringPtr(fmt.Sprintf("[concat(parameters('dataDiskName'),'-%d')]", i+1))
 		dataDisks[i].CreateOption = "Empty"
 		dataDisks[i].Caching = cachingType
-		if isManaged {
+		if !isLegacyVHD {
 			dataDisks[i].Vhd = nil
 			dataDisks[i].ManagedDisk = profile.OsDisk.ManagedDisk
-			if dataDisks[i].ManagedDisk.DiskEncryptionSet.ID == nil {
-				panic("yarp")
-			}
 		} else {
 			dataDisks[i].Vhd = &compute.VirtualHardDisk{
 				URI: to.StringPtr(fmt.Sprintf("[concat(parameters('storageAccountBlobEndpoint'),variables('vmStorageAccountContainerName'),'/',parameters('dataDiskName'),'-%d','.vhd')]", i+1)),
