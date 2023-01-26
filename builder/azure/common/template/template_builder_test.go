@@ -200,6 +200,39 @@ func TestBuildWindows03(t *testing.T) {
 	approvaltests.VerifyJSONBytes(t, []byte(*doc))
 }
 
+// Windows build with additional disk for an managed build
+func TestBuildEncryptedWindows(t *testing.T) {
+	testSubject, err := NewTemplateBuilder(BasicTemplate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = testSubject.BuildWindows("winrm", "--test-key-vault-name", "--test-winrm-certificate-url--")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = testSubject.SetManagedMarketplaceImage("WindowsServer", "2012-R2-Datacenter", "latest", "2015-1", "Premium_LRS", compute.CachingTypesReadWrite)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = testSubject.SetDiskEncryptionSetID("encrypted")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = testSubject.SetAdditionalDisks([]int32{32, 64}, "datadisk", false, compute.CachingTypesReadWrite)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	doc, err := testSubject.ToJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
+}
+
 // Shared Image Gallery Build
 func TestSharedImageGallery00(t *testing.T) {
 	testSubject, err := NewTemplateBuilder(BasicTemplate)
