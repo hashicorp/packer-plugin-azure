@@ -238,10 +238,10 @@
   See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/user-data)
   to learn more about user data.
 
-- `custom_script` (string) - Specify a command to inject into the CustomScriptExtension, to run on startup
-  on Windows builds, before the communicator attempts to connect
-  See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/extensions/custom-script-windows)
-  to learn more.
+- `custom_script` (string) - ```hcl2
+   custom_script   = "powershell -ExecutionPolicy Unrestricted -NoProfile -NonInteractive -Command \"$userData = (Invoke-RestMethod -Headers @{Metadata=$true} -Method GET -Uri http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01$([char]38)format=text); $contents = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($userData)); set-content -path c:\\Windows\\Temp\\userdata.ps1 -value $contents; . c:\\Windows\\Temp\\userdata.ps1;\""
+   user_data_file  = "./scripts/userdata.ps1"
+   ```
 
 - `plan_info` (PlanInformation) - Used for creating images from Marketplace images. Please refer to
   [Deploy an image with Marketplace
