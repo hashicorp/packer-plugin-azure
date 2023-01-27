@@ -346,6 +346,8 @@ type Config struct {
 	BuildKeyVaultSKU string `mapstructure:"build_key_vault_sku"`
 
 	// Specify the Disk Encryption Set ID to use to encrypt the OS and data disks created with the VM during the build
+	// Only supported when publishing to Shared Image Galleries, without a managed image
+	// https://learn.microsoft.com/en-us/azure/virtual-machines/image-version-encryption
 	DiskEncryptionSetId string `mapstructure:"disk_encryption_set_id"`
 
 	storageAccountBlobEndpoint string
