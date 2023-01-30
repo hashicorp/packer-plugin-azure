@@ -347,6 +347,7 @@ type Config struct {
 
 	// Specify the Disk Encryption Set ID to use to encrypt the OS and data disks created with the VM during the build
 	// Only supported when publishing to Shared Image Galleries, without a managed image
+	// The disk encryption set ID can be found in the properties tab of a disk encryption set on the Azure Portal, and is labeled as its resource ID
 	// https://learn.microsoft.com/en-us/azure/virtual-machines/image-version-encryption
 	DiskEncryptionSetId string `mapstructure:"disk_encryption_set_id"`
 
