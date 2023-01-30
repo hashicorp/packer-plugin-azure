@@ -56,4 +56,5 @@ const (
 	ArmManagedImageOSDiskSnapshotName                          string = "arm.ManagedImageOSDiskSnapshotName"
 	ArmManagedImageDataDiskSnapshotPrefix                      string = "arm.ManagedImageDataDiskSnapshotPrefix"
 	ArmKeepOSDisk                                              string = "arm.KeepOSDisk"
+	ArmBuildDiskEncryptionSetId                                string = "arm.ArmBuildDiskEncryptionSetId"
 )

@@ -180,6 +180,11 @@
 - `build_key_vault_sku` (string) - Specify the KeyVault SKU to create during the build. Valid values are
   standard or premium. The default value is standard.
 
+- `disk_encryption_set_id` (string) - Specify the Disk Encryption Set ID to use to encrypt the OS and data disks created with the VM during the build
+  Only supported when publishing to Shared Image Galleries, without a managed image
+  The disk encryption set ID can be found in the properties tab of a disk encryption set on the Azure Portal, and is labeled as its resource ID
+  https://learn.microsoft.com/en-us/azure/virtual-machines/image-version-encryption
+
 - `private_virtual_network_with_public_ip` (bool) - This value allows you to
   set a virtual_network_name and obtain a public IP. If this value is not
   set and virtual_network_name is defined Packer is only allowed to be
@@ -234,17 +239,16 @@
   See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/user-data)
   to learn more about user data.
 
-- `custom_script` (string) - Specify a command to inject into the CustomScriptExtension, to run on startup
+- `custom_script` (string) - Used for running a script on VM provision during the image build
+  The following example executes the contents of the file specified by `user_data_file`:
+   ```hcl2
+   custom_script   = "powershell -ExecutionPolicy Unrestricted -NoProfile -NonInteractive -Command \"$userData = (Invoke-RestMethod -Headers @{Metadata=$true} -Method GET -Uri http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01$([char]38)format=text); $contents = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($userData)); set-content -path c:\\Windows\\Temp\\userdata.ps1 -value $contents; . c:\\Windows\\Temp\\userdata.ps1;\""
+   user_data_file  = "./scripts/userdata.ps1"
+   ```
+  Specify a command to inject into the CustomScriptExtension, to run on startup
   on Windows builds, before the communicator attempts to connect
   See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/extensions/custom-script-windows)
   to learn more.
-
-  The following example executes the contents of the file specified by `user_data_file`:
-
-  ```hcl2
-  custom_script   = "powershell -ExecutionPolicy Unrestricted -NoProfile -NonInteractive -Command \"$userData = (Invoke-RestMethod -Headers @{Metadata=$true} -Method GET -Uri http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01$([char]38)format=text); $contents = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($userData)); set-content -path c:\\Windows\\Temp\\userdata.ps1 -value $contents; . c:\\Windows\\Temp\\userdata.ps1;\""
-  user_data_file  = "./scripts/userdata.ps1"
-  ```
 
 - `plan_info` (PlanInformation) - Used for creating images from Marketplace images. Please refer to
   [Deploy an image with Marketplace
@@ -339,16 +343,16 @@
   this will set the prefix for the resources. The actuall resource names will be
   `custom_resource_build_prefix` + resourcetype + 5 character random alphanumeric string
 
-- `license_type` (string) - Specify a license type for the build VM to enable Azure Hybrid Benefit. If not set, Pay-As-You-Go license.
+- `license_type` (string) - Specify a license type for the build VM to enable Azure Hybrid Benefit. If not set, Pay-As-You-Go license
   model (default) will be used. Valid values are:
   
   For Windows:
-  - Windows_Client
-  - Windows_Server
+  - `Windows_Client`
+  - `Windows_Server`
   
   For Linux:
-  - RHEL_BYOS
-  - SLES_BYOS
+  - `RHEL_BYOS`
+  - `SLES_BYOS`
   
   Refer to the following documentation for more information about Hybrid Benefit:
   [Windows](https://learn.microsoft.com/en-us/azure/virtual-machines/windows/hybrid-use-benefit-licensing)

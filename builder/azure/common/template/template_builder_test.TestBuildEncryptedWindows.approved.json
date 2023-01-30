@@ -115,8 +115,7 @@
       "properties": {
         "diagnosticsProfile": {
           "bootDiagnostics": {
-            "enabled": true,
-            "storageUri": "https://diagstgaccnt.blob.core.windows.net"
+            "enabled": false
           }
         },
         "hardwareProfile": {
@@ -130,32 +129,80 @@
           ]
         },
         "osProfile": {
+          "adminPassword": "[parameters('adminPassword')]",
           "adminUsername": "[parameters('adminUsername')]",
           "computerName": "[parameters('vmName')]",
-          "linuxConfiguration": {
-            "disablePasswordAuthentication": true,
-            "ssh": {
-              "publicKeys": [
+          "secrets": [
+            {
+              "sourceVault": {
+                "id": "[resourceId(resourceGroup().name, 'Microsoft.KeyVault/vaults', '--test-key-vault-name')]"
+              },
+              "vaultCertificates": [
                 {
-                  "keyData": "",
-                  "path": "[variables('sshKeyPath')]"
+                  "certificateStore": "My",
+                  "certificateUrl": "--test-winrm-certificate-url--"
+                }
+              ]
+            }
+          ],
+          "windowsConfiguration": {
+            "provisionVMAgent": true,
+            "winRM": {
+              "listeners": [
+                {
+                  "certificateUrl": "--test-winrm-certificate-url--",
+                  "protocol": "https"
                 }
               ]
             }
           }
         },
         "storageProfile": {
+          "dataDisks": [
+            {
+              "caching": "ReadWrite",
+              "createOption": "Empty",
+              "diskSizeGB": 32,
+              "lun": 0,
+              "managedDisk": {
+                "diskEncryptionSet": {
+                  "id": "encrypted"
+                },
+                "storageAccountType": "Premium_LRS"
+              },
+              "name": "[concat(parameters('dataDiskName'),'-1')]"
+            },
+            {
+              "caching": "ReadWrite",
+              "createOption": "Empty",
+              "diskSizeGB": 64,
+              "lun": 1,
+              "managedDisk": {
+                "diskEncryptionSet": {
+                  "id": "encrypted"
+                },
+                "storageAccountType": "Premium_LRS"
+              },
+              "name": "[concat(parameters('dataDiskName'),'-2')]"
+            }
+          ],
           "imageReference": {
-            "id": ""
+            "offer": "2012-R2-Datacenter",
+            "publisher": "WindowsServer",
+            "sku": "latest",
+            "version": "2015-1"
           },
           "osDisk": {
             "caching": "ReadWrite",
             "createOption": "FromImage",
             "managedDisk": {
-              "storageAccountType": "Standard_LRS"
+              "diskEncryptionSet": {
+                "id": "encrypted"
+              },
+              "storageAccountType": "Premium_LRS"
             },
             "name": "[parameters('osDiskName')]",
-            "osType": "Linux"
+            "osType": "Windows"
           }
         }
       },

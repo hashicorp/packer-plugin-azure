@@ -83,7 +83,6 @@ const testBuilderAccManagedDiskWindows = `
       "lab_name": "packer-acceptance-test",
 	  "lab_resource_group_name":  "packer-acceptance-test",
 	  "lab_virtual_network_name": "dtlpacker-acceptance-test",
-
 	  "managed_image_resource_group_name": "packer-acceptance-test",
 	  "managed_image_name": "testBuilderAccManagedDiskWindows-{{timestamp}}",
 
@@ -92,6 +91,7 @@ const testBuilderAccManagedDiskWindows = `
 	  "image_offer": "WindowsServer",
 	  "image_sku": "2012-R2-Datacenter",
 
+	  "polling_duration_timeout": "25m",
 	  "communicator": "winrm",
 	  "winrm_use_ssl": "true",
 	  "winrm_insecure": "true",
@@ -134,6 +134,7 @@ const testBuilderAccManagedDiskLinux = `
 	  "location": "South Central US",
 	  "vm_size": "Standard_DS2_v2",
 
+	  "polling_duration_timeout": "25m",
 
       "dtl_artifacts": [{
         "artifact_name": "linux-apt-package",

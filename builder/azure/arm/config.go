@@ -343,7 +343,14 @@ type Config struct {
 	BuildKeyVaultName string `mapstructure:"build_key_vault_name"`
 	// Specify the KeyVault SKU to create during the build. Valid values are
 	// standard or premium. The default value is standard.
-	BuildKeyVaultSKU           string `mapstructure:"build_key_vault_sku"`
+	BuildKeyVaultSKU string `mapstructure:"build_key_vault_sku"`
+
+	// Specify the Disk Encryption Set ID to use to encrypt the OS and data disks created with the VM during the build
+	// Only supported when publishing to Shared Image Galleries, without a managed image
+	// The disk encryption set ID can be found in the properties tab of a disk encryption set on the Azure Portal, and is labeled as its resource ID
+	// https://learn.microsoft.com/en-us/azure/virtual-machines/image-version-encryption
+	DiskEncryptionSetId string `mapstructure:"disk_encryption_set_id"`
+
 	storageAccountBlobEndpoint string
 	// This value allows you to
 	// set a virtual_network_name and obtain a public IP. If this value is not
@@ -402,11 +409,18 @@ type Config struct {
 	// to learn more about user data.
 	UserData string `mapstructure:"user_data" required:"false"`
 
+	// Used for running a script on VM provision during the image build
+	// The following example executes the contents of the file specified by `user_data_file`:
+	//  ```hcl2
+	//  custom_script   = "powershell -ExecutionPolicy Unrestricted -NoProfile -NonInteractive -Command \"$userData = (Invoke-RestMethod -Headers @{Metadata=$true} -Method GET -Uri http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01$([char]38)format=text); $contents = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($userData)); set-content -path c:\\Windows\\Temp\\userdata.ps1 -value $contents; . c:\\Windows\\Temp\\userdata.ps1;\""
+	//  user_data_file  = "./scripts/userdata.ps1"
+	//  ```
 	// Specify a command to inject into the CustomScriptExtension, to run on startup
 	// on Windows builds, before the communicator attempts to connect
 	// See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/extensions/custom-script-windows)
 	// to learn more.
 	CustomScript string `mapstructure:"custom_script" required:"false"`
+
 	// Used for creating images from Marketplace images. Please refer to
 	// [Deploy an image with Marketplace
 	// terms](https://aka.ms/azuremarketplaceapideployment) for more details.
@@ -505,16 +519,14 @@ type Config struct {
 	// `custom_resource_build_prefix` + resourcetype + 5 character random alphanumeric string
 	CustomResourcePrefix string `mapstructure:"custom_resource_build_prefix" required:"false"`
 
-	// Specify a license type for the VM to enable Azure Hybrid Benefit. If not set, Pay-As-You-Go license
+	// Specify a license type for the build VM to enable Azure Hybrid Benefit. If not set, Pay-As-You-Go license
 	// model (default) will be used. Valid values are:
 	//
 	// For Windows:
-	//
 	// - `Windows_Client`
 	// - `Windows_Server`
 	//
 	// For Linux:
-	//
 	// - `RHEL_BYOS`
 	// - `SLES_BYOS`
 	//
@@ -1049,6 +1061,10 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	if isImageUrl && c.ManagedImageResourceGroupName != "" {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A managed image must be created from a managed image, it cannot be created from a VHD."))
+	}
+
+	if (c.CaptureContainerName != "" || c.CaptureNamePrefix != "" || c.ManagedImageName != "") && c.DiskEncryptionSetId != "" {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Setting a disk encryption set ID is not allowed when building a VHD or creating a Managed Image, only when publishing directly to Shared Image Gallery"))
 	}
 
 	if c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.DirectSharedGalleryImageID != "" {

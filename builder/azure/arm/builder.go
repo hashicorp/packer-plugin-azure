@@ -182,6 +182,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	deploymentName := b.stateBag.Get(constants.ArmDeploymentName).(string)
 
+	if b.config.DiskEncryptionSetId != "" {
+		b.stateBag.Put(constants.ArmBuildDiskEncryptionSetId, b.config.DiskEncryptionSetId)
+	}
 	// Validate that Shared Gallery Image exists before publishing to SIG
 	if b.config.isPublishToSIG() {
 		_, err = azureClient.GalleryImagesClient.Get(ctx, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
