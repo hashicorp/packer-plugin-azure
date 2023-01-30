@@ -408,18 +408,18 @@ type Config struct {
 	// to learn more about user data.
 	UserData string `mapstructure:"user_data" required:"false"`
 
-	// Specify a command to inject into the CustomScriptExtension, to run on startup
-	// on Windows builds, before the communicator attempts to connect
-	// See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/extensions/custom-script-windows)
-	// to learn more.
-
+	// Used for running a script on VM provision during the image build
 	// The following example executes the contents of the file specified by `user_data_file`:
-
 	//  ```hcl2
 	//  custom_script   = "powershell -ExecutionPolicy Unrestricted -NoProfile -NonInteractive -Command \"$userData = (Invoke-RestMethod -Headers @{Metadata=$true} -Method GET -Uri http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01$([char]38)format=text); $contents = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($userData)); set-content -path c:\\Windows\\Temp\\userdata.ps1 -value $contents; . c:\\Windows\\Temp\\userdata.ps1;\""
 	//  user_data_file  = "./scripts/userdata.ps1"
 	//  ```
+	// Specify a command to inject into the CustomScriptExtension, to run on startup
+	// on Windows builds, before the communicator attempts to connect
+	// See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/extensions/custom-script-windows)
+	// to learn more.
 	CustomScript string `mapstructure:"custom_script" required:"false"`
+
 	// Used for creating images from Marketplace images. Please refer to
 	// [Deploy an image with Marketplace
 	// terms](https://aka.ms/azuremarketplaceapideployment) for more details.
@@ -518,16 +518,14 @@ type Config struct {
 	// `custom_resource_build_prefix` + resourcetype + 5 character random alphanumeric string
 	CustomResourcePrefix string `mapstructure:"custom_resource_build_prefix" required:"false"`
 
-	// Specify a license type for the VM to enable Azure Hybrid Benefit. If not set, Pay-As-You-Go license
+	// Specify a license type for the build VM to enable Azure Hybrid Benefit. If not set, Pay-As-You-Go license
 	// model (default) will be used. Valid values are:
 	//
 	// For Windows:
-	//
 	// - `Windows_Client`
 	// - `Windows_Server`
 	//
 	// For Linux:
-	//
 	// - `RHEL_BYOS`
 	// - `SLES_BYOS`
 	//
