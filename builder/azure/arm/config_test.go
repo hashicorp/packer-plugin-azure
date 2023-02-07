@@ -72,8 +72,8 @@ func TestConfigUserNameOverride(t *testing.T) {
 	if c.Password != c.tmpAdminPassword {
 		t.Errorf("Expected 'Password' to be set to generated password, but found %q!", c.Password)
 	}
-	if c.Comm.SSHPassword != "" {
-		t.Errorf("Expected 'c.Comm.SSHPassword' to be empty, but found %q!", c.Comm.SSHPassword)
+	if c.Comm.SSHPassword != c.tmpAdminPassword {
+		t.Errorf("Expected 'c.Comm.SSHPassword' to set to generated password, but found %q!", c.Comm.SSHPassword)
 	}
 	if c.UserName != "override_username" {
 		t.Errorf("Expected 'UserName' to be set to 'override_username', but found %q!", c.UserName)

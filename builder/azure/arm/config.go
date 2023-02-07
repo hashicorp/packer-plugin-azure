@@ -861,6 +861,9 @@ func setUserNamePassword(c *Config) error {
 	}
 
 	if c.Comm.Type == "ssh" {
+		if c.Comm.SSHPassword == "" {
+			c.Comm.SSHPassword = c.Password
+		}
 		return nil
 	}
 
