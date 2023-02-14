@@ -1068,6 +1068,10 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A managed image must be created from a managed image, it cannot be created from a VHD."))
 	}
 
+	if (c.SecureBootEnabled || c.VTpmEnabled) && isCustomManagedImage {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A managed image can not set SecureBoot or VTpm, these features are only supported when directly publishing to a Shared Image Gallery"))
+	}
+
 	if (c.CaptureContainerName != "" || c.CaptureNamePrefix != "" || c.ManagedImageName != "") && c.DiskEncryptionSetId != "" {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Setting a disk encryption set ID is not allowed when building a VHD or creating a Managed Image, only when publishing directly to Shared Image Gallery"))
 	}
