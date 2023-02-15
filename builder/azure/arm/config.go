@@ -1068,7 +1068,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A managed image must be created from a managed image, it cannot be created from a VHD."))
 	}
 
-	if (c.SecureBootEnabled || c.VTpmEnabled) && (c.ManagedImageName != "" && c.ManagedImageResourceGroupName != "") {
+	if (c.SecureBootEnabled || c.VTpmEnabled) && (c.ManagedImageName != "" || c.ManagedImageResourceGroupName != "") {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A managed image (managed_image_name, managed_image_resource_group_name) can not set SecureBoot or VTpm, these features are only supported when directly publishing to a Shared Image Gallery"))
 	}
 
