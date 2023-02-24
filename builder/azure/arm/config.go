@@ -535,6 +535,11 @@ type Config struct {
 	// or
 	// [Linux](https://learn.microsoft.com/en-us/azure/virtual-machines/linux/azure-hybrid-benefit-linux)
 	LicenseType string `mapstructure:"license_type" required:"false"`
+	// Specifies if Secure Boot and Trusted Launch is enabled for the Virtual Machine.
+	SecureBootEnabled bool `mapstructure:"secure_boot_enabled" required:"false"`
+
+	// Specifies if vTPM (virtual Trusted Platform Module) and Trusted Launch is enabled for the Virtual Machine.
+	VTpmEnabled bool `mapstructure:"vtpm_enabled" required:"false"`
 
 	// Runtime Values
 	UserName               string `mapstructure-to-hcl2:",skip"`
@@ -1061,6 +1066,10 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	if isImageUrl && c.ManagedImageResourceGroupName != "" {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A managed image must be created from a managed image, it cannot be created from a VHD."))
+	}
+
+	if (c.SecureBootEnabled || c.VTpmEnabled) && (c.ManagedImageName != "" || c.ManagedImageResourceGroupName != "") {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A managed image (managed_image_name, managed_image_resource_group_name) can not set SecureBoot or VTpm, these features are only supported when directly publishing to a Shared Image Gallery"))
 	}
 
 	if (c.CaptureContainerName != "" || c.CaptureNamePrefix != "" || c.ManagedImageName != "") && c.DiskEncryptionSetId != "" {

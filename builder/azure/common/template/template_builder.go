@@ -498,6 +498,22 @@ func (s *TemplateBuilder) SetLicenseType(licenseType string) error {
 	return nil
 }
 
+func (s *TemplateBuilder) SetSecurityProfile(secureBootEnabled bool, vtpmEnabled bool) error {
+	s.setVariable("apiVersion", "2020-12-01") // Required for Trusted Launch
+	resource, err := s.getResourceByType(resourceVirtualMachine)
+	if err != nil {
+		return err
+	}
+
+	resource.Properties.SecurityProfile = &compute.SecurityProfile{}
+	resource.Properties.SecurityProfile.UefiSettings = &compute.UefiSettings{}
+	resource.Properties.SecurityProfile.SecurityType = compute.SecurityTypesTrustedLaunch
+	resource.Properties.SecurityProfile.UefiSettings.SecureBootEnabled = to.BoolPtr(secureBootEnabled)
+	resource.Properties.SecurityProfile.UefiSettings.VTpmEnabled = to.BoolPtr(vtpmEnabled)
+
+	return nil
+}
+
 func (s *TemplateBuilder) ToJSON() (*string, error) {
 	bs, err := json.MarshalIndent(s.template, jsonPrefix, jsonIndent)
 
