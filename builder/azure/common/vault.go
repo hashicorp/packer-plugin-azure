@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 // NOTE: vault APIs do not yet exist in the SDK, but once they do this code
 // should be removed.
 

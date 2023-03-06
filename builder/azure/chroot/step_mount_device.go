@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package chroot
 
 // mostly borrowed from ./builder/amazon/chroot/step_mount_device.go

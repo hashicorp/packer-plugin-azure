@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 source "azure-arm" "centos" {
   client_id                         = "${var.client_id}"
   client_secret                     = "${var.client_secret}"
