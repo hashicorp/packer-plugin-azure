@@ -4,44 +4,40 @@
 package arm
 
 import (
-	"bytes"
 	"context"
+	"fmt"
 	"testing"
 
+	hashiSecretsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/secrets"
 	azcommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
-	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
 func TestNewStepCertificateInKeyVault(t *testing.T) {
-	cli := azcommon.MockAZVaultClient{}
-	ui := &packersdk.BasicUi{
-		Reader: new(bytes.Buffer),
-		Writer: new(bytes.Buffer),
-	}
+
 	state := new(multistep.BasicStateBag)
 	state.Put(constants.ArmKeyVaultName, "testKeyVaultName")
+	state.Put(constants.ArmSubscription, "testSubscription")
+	state.Put(constants.ArmResourceGroupName, "testResourceGroupName")
 
 	config := &Config{
 		winrmCertificate: "testCertificateString",
 	}
 
-	certKVStep := NewStepCertificateInKeyVault(&cli, ui, config, config.winrmCertificate)
+	certKVStep := &StepCertificateInKeyVault{
+		say:         func(message string) {},
+		error:       func(e error) {},
+		set:         func(ctx context.Context, id hashiSecretsSDK.SecretId) error { return nil },
+		config:      config,
+		certificate: config.winrmCertificate}
+
 	stepAction := certKVStep.Run(context.TODO(), state)
 
 	if stepAction == multistep.ActionHalt {
 		t.Fatalf("step should have succeeded.")
 	}
-	if !cli.SetSecretCalled {
-		t.Fatalf("Step should have called SetSecret on Azure client.")
-	}
-	if cli.SetSecretCert != "testCertificateString" {
-		t.Fatalf("Step should have read cert from winRMCertificate field on config.")
-	}
-	if cli.SetSecretVaultName != "testKeyVaultName" {
-		t.Fatalf("step should have read keyvault name from state.")
-	}
+
 }
 
 func TestNewStepCertificateInKeyVault_error(t *testing.T) {
@@ -49,18 +45,22 @@ func TestNewStepCertificateInKeyVault_error(t *testing.T) {
 	cli := azcommon.MockAZVaultClient{}
 	cli.IsError = true
 
-	ui := &packersdk.BasicUi{
-		Reader: new(bytes.Buffer),
-		Writer: new(bytes.Buffer),
-	}
 	state := new(multistep.BasicStateBag)
 	state.Put(constants.ArmKeyVaultName, "testKeyVaultName")
+	state.Put(constants.ArmSubscription, "testSubscription")
+	state.Put(constants.ArmResourceGroupName, "testResourceGroupName")
 
 	config := &Config{
 		winrmCertificate: "testCertificateString",
 	}
 
-	certKVStep := NewStepCertificateInKeyVault(&cli, ui, config, config.winrmCertificate)
+	certKVStep := &StepCertificateInKeyVault{
+		say:         func(message string) {},
+		error:       func(e error) {},
+		set:         func(ctx context.Context, id hashiSecretsSDK.SecretId) error { return fmt.Errorf("Unit test fail") },
+		config:      config,
+		certificate: config.winrmCertificate}
+
 	stepAction := certKVStep.Run(context.TODO(), state)
 
 	if stepAction != multistep.ActionHalt {

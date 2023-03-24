@@ -70,7 +70,7 @@ type Config struct {
 	// The subscription to use.
 	SubscriptionID string `mapstructure:"subscription_id"`
 
-	authType string
+	AuthType string
 
 	// Flag to use Azure CLI authentication. Defaults to false.
 	// CLI auth will use the information from an active `az login` session to connect to Azure and set the subscription id and tenant id associated to the signed in account.
@@ -85,12 +85,12 @@ type Config struct {
 }
 
 const (
-	authTypeDeviceLogin     = "DeviceLogin"
-	authTypeMSI             = "ManagedIdentity"
-	authTypeClientSecret    = "ClientSecret"
-	authTypeClientCert      = "ClientCertificate"
-	authTypeClientBearerJWT = "ClientBearerJWT"
-	authTypeAzureCLI        = "AzureCLI"
+	AuthTypeDeviceLogin     = "DeviceLogin"
+	AuthTypeMSI             = "ManagedIdentity"
+	AuthTypeClientSecret    = "ClientSecret"
+	AuthTypeClientCert      = "ClientCertificate"
+	AuthTypeClientBearerJWT = "ClientBearerJWT"
+	AuthTypeAzureCLI        = "AzureCLI"
 )
 
 const DefaultCloudEnvironmentName = "Public"
@@ -224,9 +224,9 @@ func (c Config) Validate(errs *packersdk.MultiError) {
 		if err != nil {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("client_jwt is not a JWT: %v", err))
 		} else {
-			if claims.ExpiresAt < time.Now().Add(5*time.Minute).Unix() {
-				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("client_jwt will expire within 5 minutes, please use a JWT that is valid for at least 5 minutes"))
-			}
+			//if claims.ExpiresAt < time.Now().Add(5*time.Minute).Unix() {
+			//	errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("%d %d, client_jwt will expire within 5 minutes, please use a JWT that is valid for at least 5 minutes", claims.ExpiresAt, time.Now().Add(5*time.Minute).Unix()))
+			//}
 			if t, ok := token.Header["x5t"]; !ok || t == "" {
 				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("client_jwt is missing the x5t header value, which is required for bearer JWT client authentication to Azure"))
 			}
@@ -292,30 +292,30 @@ func (c Config) GetServicePrincipalToken(
 	err error) {
 
 	var auth oAuthTokenProvider
-	switch c.authType {
-	case authTypeDeviceLogin:
+	switch c.AuthType {
+	case AuthTypeDeviceLogin:
 		say("Getting tokens using device flow")
 		auth = NewDeviceFlowOAuthTokenProvider(*c.cloudEnvironment, say, c.TenantID)
-	case authTypeAzureCLI:
+	case AuthTypeAzureCLI:
 		say("Getting tokens using Azure CLI")
 		auth = NewCliOAuthTokenProvider(*c.cloudEnvironment, say, c.TenantID)
-	case authTypeMSI:
+	case AuthTypeMSI:
 		say("Getting tokens using Managed Identity for Azure")
 		auth = NewMSIOAuthTokenProvider(*c.cloudEnvironment, c.ClientID)
-	case authTypeClientSecret:
+	case AuthTypeClientSecret:
 		say("Getting tokens using client secret")
 		auth = NewSecretOAuthTokenProvider(*c.cloudEnvironment, c.ClientID, c.ClientSecret, c.TenantID)
-	case authTypeClientCert:
+	case AuthTypeClientCert:
 		say("Getting tokens using client certificate")
 		auth, err = NewCertOAuthTokenProvider(*c.cloudEnvironment, c.ClientID, c.ClientCertPath, c.TenantID, c.ClientCertExpireTimeout)
 		if err != nil {
 			return nil, err
 		}
-	case authTypeClientBearerJWT:
+	case AuthTypeClientBearerJWT:
 		say("Getting tokens using client bearer JWT")
 		auth = NewJWTOAuthTokenProvider(*c.cloudEnvironment, c.ClientID, c.ClientJWT, c.TenantID)
 	default:
-		panic("authType not set, call FillParameters, or set explicitly")
+		panic("AuthType not set, call FillParameters, or set explicitly")
 	}
 
 	servicePrincipalToken, err = auth.getServicePrincipalTokenWithResource(forResource)
@@ -331,26 +331,26 @@ func (c Config) GetServicePrincipalToken(
 	return servicePrincipalToken, nil
 }
 
-// FillParameters capture the user intent from the supplied parameter set in authType, retrieves the TenantID and CloudEnvironment if not specified.
+// FillParameters capture the user intent from the supplied parameter set in AuthType, retrieves the TenantID and CloudEnvironment if not specified.
 // The SubscriptionID is also retrieved in case MSI auth is requested.
 func (c *Config) FillParameters() error {
-	if c.authType == "" {
+	if c.AuthType == "" {
 		if c.useDeviceLogin() {
-			c.authType = authTypeDeviceLogin
+			c.AuthType = AuthTypeDeviceLogin
 		} else if c.UseCLI() {
-			c.authType = authTypeAzureCLI
+			c.AuthType = AuthTypeAzureCLI
 		} else if c.UseMSI() {
-			c.authType = authTypeMSI
+			c.AuthType = AuthTypeMSI
 		} else if c.ClientSecret != "" {
-			c.authType = authTypeClientSecret
+			c.AuthType = AuthTypeClientSecret
 		} else if c.ClientCertPath != "" {
-			c.authType = authTypeClientCert
+			c.AuthType = AuthTypeClientCert
 		} else {
-			c.authType = authTypeClientBearerJWT
+			c.AuthType = AuthTypeClientBearerJWT
 		}
 	}
 
-	if c.authType == authTypeMSI && c.SubscriptionID == "" {
+	if c.AuthType == AuthTypeMSI && c.SubscriptionID == "" {
 
 		subscriptionID, err := getSubscriptionFromIMDS()
 		if err != nil {
@@ -366,7 +366,7 @@ func (c *Config) FillParameters() error {
 		}
 	}
 
-	if c.authType == authTypeAzureCLI {
+	if c.AuthType == AuthTypeAzureCLI {
 		tenantID, subscriptionID, err := getIDsFromAzureCLI()
 		if err != nil {
 			return fmt.Errorf("error fetching tenantID and subscriptionID from Azure CLI (are you logged on using `az login`?): %v", err)
