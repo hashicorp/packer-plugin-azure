@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
+	hashiAzureSDKCompute "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/version"
 	"github.com/hashicorp/packer-plugin-sdk/useragent"
@@ -46,7 +47,7 @@ type AzureClient struct {
 	compute.VirtualMachinesClient
 	common.VaultClient
 	armStorage.AccountsClient
-	compute.DisksClient
+	hashiAzureSDKCompute.DisksClient
 	compute.SnapshotsClient
 	compute.GalleryImageVersionsClient
 	compute.GalleryImagesClient
@@ -153,11 +154,11 @@ func NewAzureClient(subscriptionID, sigSubscriptionID, resourceGroupName, storag
 	azureClient.DeploymentOperationsClient.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.DeploymentOperationsClient.UserAgent)
 	azureClient.DeploymentOperationsClient.Client.PollingDuration = pollingDuration
 
-	azureClient.DisksClient = compute.NewDisksClientWithBaseURI(cloud.ResourceManagerEndpoint, subscriptionID)
-	azureClient.DisksClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
-	azureClient.DisksClient.RequestInspector = withInspection(maxlen)
-	azureClient.DisksClient.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.DisksClient.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.DisksClient.UserAgent)
+	azureClient.DisksClient = hashiAzureSDKCompute.NewDisksClientWithBaseURI(cloud.ResourceManagerEndpoint)
+	azureClient.DisksClient.Client.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
+	azureClient.DisksClient.Client.RequestInspector = withInspection(maxlen)
+	azureClient.DisksClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
+	azureClient.DisksClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.DisksClient.Client.UserAgent)
 	azureClient.DisksClient.Client.PollingDuration = pollingDuration
 
 	azureClient.GroupsClient = resources.NewGroupsClientWithBaseURI(cloud.ResourceManagerEndpoint, subscriptionID)

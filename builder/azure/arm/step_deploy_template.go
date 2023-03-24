@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -23,7 +24,7 @@ type StepDeployTemplate struct {
 	deploy           func(ctx context.Context, resourceGroupName string, deploymentName string) error
 	delete           func(ctx context.Context, deploymentName, resourceGroupName string) error
 	disk             func(ctx context.Context, resourceGroupName string, computeName string) (string, string, error)
-	deleteDisk       func(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool) error
+	deleteDisk       func(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool, subscriptionId string) error
 	deleteDeployment func(ctx context.Context, state multistep.StateBag) error
 	say              func(message string)
 	error            func(e error)
@@ -96,9 +97,10 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 			"Error: %s", computeName, err))
 		return
 	}
+	subscriptionId := state.Get(constants.ArmSubscription).(string)
 	if !state.Get(constants.ArmKeepOSDisk).(bool) {
 		ui.Say(fmt.Sprintf(" Deleting -> %s : '%s'", imageType, imageName))
-		err = s.deleteDisk(context.TODO(), imageName, resourceGroupName, isManagedDisk)
+		err = s.deleteDisk(context.TODO(), imageName, resourceGroupName, isManagedDisk, subscriptionId)
 		if err != nil {
 			ui.Error(fmt.Sprintf("Error deleting resource.  Please delete manually.\n\n"+
 				"Name: %s\n"+
@@ -113,7 +115,7 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 	for i, additionaldisk := range dataDisks {
 		s.say(fmt.Sprintf(" Deleting Additional Disk -> %d: '%s'", i+1, additionaldisk))
 
-		err := s.deleteImage(context.TODO(), additionaldisk, resourceGroupName, isManagedDisk)
+		err := s.deleteImage(context.TODO(), additionaldisk, resourceGroupName, isManagedDisk, subscriptionId)
 		if err != nil {
 			s.say("Failed to delete the managed Additional Disk!")
 		}
@@ -218,16 +220,16 @@ func deleteResource(ctx context.Context, client *AzureClient, resourceType strin
 	return nil
 }
 
-func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool) error {
+func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool, subscriptionId string) error {
 	// Managed disk
 	if isManagedDisk {
 		xs := strings.Split(imageName, "/")
 		diskName := xs[len(xs)-1]
-		f, err := s.client.DisksClient.Delete(ctx, resourceGroupName, diskName)
-		if err == nil {
-			err = f.WaitForCompletionRef(ctx, s.client.DisksClient.Client)
+		diskId := disks.NewDiskID(subscriptionId, resourceGroupName, diskName)
+
+		if err := s.client.DeleteThenPoll(ctx, diskId); err != nil {
+			return err
 		}
-		return err
 	}
 
 	// VHD image

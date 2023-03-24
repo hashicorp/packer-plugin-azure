@@ -79,7 +79,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if b.config.isPublishToSIG() {
 		b.stateBag.Put(constants.ArmManagedImageSubscription, b.config.ClientConfig.SubscriptionID)
 	}
-
+	b.stateBag.Put(constants.ArmSubscription, b.config.ClientConfig.SubscriptionID)
 	log.Print(":: Configuration")
 	packerAzureCommon.DumpConfig(&b.config, func(s string) { log.Print(s) })
 
