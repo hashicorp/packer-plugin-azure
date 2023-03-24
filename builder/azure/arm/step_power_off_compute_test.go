@@ -14,7 +14,7 @@ import (
 
 func TestStepPowerOffComputeShouldFailIfPowerOffFails(t *testing.T) {
 	var testSubject = &StepPowerOffCompute{
-		powerOff: func(context.Context, string, string) error { return fmt.Errorf("!! Unit Test FAIL !!") },
+		powerOff: func(context.Context, string, string, string) error { return fmt.Errorf("!! Unit Test FAIL !!") },
 		say:      func(message string) {},
 		error:    func(e error) {},
 	}
@@ -33,7 +33,7 @@ func TestStepPowerOffComputeShouldFailIfPowerOffFails(t *testing.T) {
 
 func TestStepPowerOffComputeShouldPassIfPowerOffPasses(t *testing.T) {
 	var testSubject = &StepPowerOffCompute{
-		powerOff: func(context.Context, string, string) error { return nil },
+		powerOff: func(context.Context, string, string, string) error { return nil },
 		say:      func(message string) {},
 		error:    func(e error) {},
 	}
@@ -53,11 +53,13 @@ func TestStepPowerOffComputeShouldPassIfPowerOffPasses(t *testing.T) {
 func TestStepPowerOffComputeShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 	var actualResourceGroupName string
 	var actualComputeName string
+	var actualSubscriptionId string
 
 	var testSubject = &StepPowerOffCompute{
-		powerOff: func(ctx context.Context, resourceGroupName string, computeName string) error {
+		powerOff: func(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) error {
 			actualResourceGroupName = resourceGroupName
 			actualComputeName = computeName
+			actualSubscriptionId = subscriptionId
 
 			return nil
 		},
@@ -74,6 +76,7 @@ func TestStepPowerOffComputeShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 
 	var expectedComputeName = stateBag.Get(constants.ArmComputeName).(string)
 	var expectedResourceGroupName = stateBag.Get(constants.ArmResourceGroupName).(string)
+	var expectedSubscriptionId = stateBag.Get(constants.ArmSubscription).(string)
 
 	if actualComputeName != expectedComputeName {
 		t.Fatal("Expected the step to source 'constants.ArmResourceGroupName' from the state bag, but it did not.")
@@ -82,6 +85,10 @@ func TestStepPowerOffComputeShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 	if actualResourceGroupName != expectedResourceGroupName {
 		t.Fatal("Expected the step to source 'constants.ArmResourceGroupName' from the state bag, but it did not.")
 	}
+
+	if actualSubscriptionId != expectedSubscriptionId {
+		t.Fatal("Expected the step to source 'constants.ArmSubscription' from the state bag, but it did not.")
+	}
 }
 
 func createTestStateBagStepPowerOffCompute() multistep.StateBag {
@@ -89,6 +96,6 @@ func createTestStateBagStepPowerOffCompute() multistep.StateBag {
 
 	stateBag.Put(constants.ArmComputeName, "Unit Test: ComputeName")
 	stateBag.Put(constants.ArmResourceGroupName, "Unit Test: ResourceGroupName")
-
+	stateBag.Put(constants.ArmSubscription, "UnitTest: SubscriptionId")
 	return stateBag
 }

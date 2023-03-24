@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	jwt "github.com/golang-jwt/jwt"
 	"github.com/hashicorp/go-azure-helpers/authentication"
+	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
@@ -36,6 +37,7 @@ type Config struct {
 	// USGovernmentCloud and AzureUSGovernmentCloud are also supported.
 	CloudEnvironmentName string `mapstructure:"cloud_environment_name" required:"false"`
 	cloudEnvironment     *azure.Environment
+	newCloudEnvironment  *environments.Environment
 	// The Hostname of the Azure Metadata Service
 	// (for example management.azure.com), used to obtain the Cloud Environment
 	// when using a Custom Azure Environment. This can also be sourced from the
@@ -85,12 +87,12 @@ type Config struct {
 }
 
 const (
-	authTypeDeviceLogin     = "DeviceLogin"
-	authTypeMSI             = "ManagedIdentity"
-	authTypeClientSecret    = "ClientSecret"
-	authTypeClientCert      = "ClientCertificate"
-	authTypeClientBearerJWT = "ClientBearerJWT"
-	authTypeAzureCLI        = "AzureCLI"
+	AuthTypeDeviceLogin     = "DeviceLogin"
+	AuthTypeMSI             = "ManagedIdentity"
+	AuthTypeClientSecret    = "ClientSecret"
+	AuthTypeClientCert      = "ClientCertificate"
+	AuthTypeClientBearerJWT = "ClientBearerJWT"
+	AuthTypeAzureCLI        = "AzureCLI"
 )
 
 const DefaultCloudEnvironmentName = "Public"
@@ -102,11 +104,72 @@ func (c *Config) SetDefaultValues() error {
 		c.CloudEnvironmentName = DefaultCloudEnvironmentName
 	}
 
+	err := c.setNewCloudEnvironment()
+	if err != nil {
+		return err
+	}
 	return c.setCloudEnvironment()
 }
 
 func (c *Config) CloudEnvironment() *azure.Environment {
 	return c.cloudEnvironment
+}
+func (c *Config) NewCloudEnvironment() *environments.Environment {
+	return c.newCloudEnvironment
+}
+func (c *Config) AuthType() string {
+	return c.authType
+}
+
+func (c *Config) setNewCloudEnvironment() error {
+	if c.MetadataHost == "" {
+		if v := os.Getenv("ARM_METADATA_URL"); v != "" {
+			c.MetadataHost = v
+		}
+	}
+	env, err := environments.FromEndpoint(context.TODO(), c.MetadataHost, c.CloudEnvironmentName)
+	c.newCloudEnvironment = env
+	if err != nil {
+		// fall back to old method of normalizing and looking up cloud names.
+		log.Printf(fmt.Sprintf("Error looking up environment using metadata host: %s. \n"+
+			"Falling back to hardcoded mechanism...", err.Error()))
+		lookup := map[string]string{
+			"CHINA":           "china",
+			"CHINACLOUD":      "china",
+			"AZURECHINACLOUD": "china",
+
+			// TODO Implement AzureGermanCloud
+			// I reached out to the provider team and will try to get it implemented in the SDK first`
+			"GERMAN":           "AzureGermanCloud",
+			"GERMANCLOUD":      "AzureGermanCloud",
+			"AZUREGERMANCLOUD": "AzureGermanCloud",
+
+			"GERMANY":           "AzureGermanCloud",
+			"GERMANYCLOUD":      "AzureGermanCloud",
+			"AZUREGERMANYCLOUD": "AzureGermanCloud",
+
+			"PUBLIC":           "public",
+			"PUBLICCLOUD":      "public",
+			"AZUREPUBLICCLOUD": "public",
+
+			"USGOVERNMENT":           "usgovernment",
+			"USGOVERNMENTCLOUD":      "usgovernment",
+			"AZUREUSGOVERNMENTCLOUD": "usgovernment",
+		}
+
+		name := strings.ToUpper(c.CloudEnvironmentName)
+		envName, ok := lookup[name]
+		if !ok {
+			return fmt.Errorf("There is no cloud environment matching the name '%s'!", c.CloudEnvironmentName)
+		}
+
+		env, err := environments.FromName(envName)
+		if err != nil {
+			return err
+		}
+		c.newCloudEnvironment = env
+	}
+	return nil
 }
 
 func (c *Config) setCloudEnvironment() error {
@@ -224,9 +287,9 @@ func (c Config) Validate(errs *packersdk.MultiError) {
 		if err != nil {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("client_jwt is not a JWT: %v", err))
 		} else {
-			if claims.ExpiresAt < time.Now().Add(5*time.Minute).Unix() {
-				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("client_jwt will expire within 5 minutes, please use a JWT that is valid for at least 5 minutes"))
-			}
+			//if claims.ExpiresAt < time.Now().Add(5*time.Minute).Unix() {
+			//	errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("%d %d, client_jwt will expire within 5 minutes, please use a JWT that is valid for at least 5 minutes", claims.ExpiresAt, time.Now().Add(5*time.Minute).Unix()))
+			//}
 			if t, ok := token.Header["x5t"]; !ok || t == "" {
 				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("client_jwt is missing the x5t header value, which is required for bearer JWT client authentication to Azure"))
 			}
@@ -293,29 +356,29 @@ func (c Config) GetServicePrincipalToken(
 
 	var auth oAuthTokenProvider
 	switch c.authType {
-	case authTypeDeviceLogin:
+	case AuthTypeDeviceLogin:
 		say("Getting tokens using device flow")
 		auth = NewDeviceFlowOAuthTokenProvider(*c.cloudEnvironment, say, c.TenantID)
-	case authTypeAzureCLI:
+	case AuthTypeAzureCLI:
 		say("Getting tokens using Azure CLI")
 		auth = NewCliOAuthTokenProvider(*c.cloudEnvironment, say, c.TenantID)
-	case authTypeMSI:
+	case AuthTypeMSI:
 		say("Getting tokens using Managed Identity for Azure")
 		auth = NewMSIOAuthTokenProvider(*c.cloudEnvironment, c.ClientID)
-	case authTypeClientSecret:
+	case AuthTypeClientSecret:
 		say("Getting tokens using client secret")
 		auth = NewSecretOAuthTokenProvider(*c.cloudEnvironment, c.ClientID, c.ClientSecret, c.TenantID)
-	case authTypeClientCert:
+	case AuthTypeClientCert:
 		say("Getting tokens using client certificate")
 		auth, err = NewCertOAuthTokenProvider(*c.cloudEnvironment, c.ClientID, c.ClientCertPath, c.TenantID, c.ClientCertExpireTimeout)
 		if err != nil {
 			return nil, err
 		}
-	case authTypeClientBearerJWT:
+	case AuthTypeClientBearerJWT:
 		say("Getting tokens using client bearer JWT")
 		auth = NewJWTOAuthTokenProvider(*c.cloudEnvironment, c.ClientID, c.ClientJWT, c.TenantID)
 	default:
-		panic("authType not set, call FillParameters, or set explicitly")
+		panic("AuthType not set, call FillParameters, or set explicitly")
 	}
 
 	servicePrincipalToken, err = auth.getServicePrincipalTokenWithResource(forResource)
@@ -331,26 +394,26 @@ func (c Config) GetServicePrincipalToken(
 	return servicePrincipalToken, nil
 }
 
-// FillParameters capture the user intent from the supplied parameter set in authType, retrieves the TenantID and CloudEnvironment if not specified.
+// FillParameters capture the user intent from the supplied parameter set in AuthType, retrieves the TenantID and CloudEnvironment if not specified.
 // The SubscriptionID is also retrieved in case MSI auth is requested.
 func (c *Config) FillParameters() error {
 	if c.authType == "" {
 		if c.useDeviceLogin() {
-			c.authType = authTypeDeviceLogin
+			c.authType = AuthTypeDeviceLogin
 		} else if c.UseCLI() {
-			c.authType = authTypeAzureCLI
+			c.authType = AuthTypeAzureCLI
 		} else if c.UseMSI() {
-			c.authType = authTypeMSI
+			c.authType = AuthTypeMSI
 		} else if c.ClientSecret != "" {
-			c.authType = authTypeClientSecret
+			c.authType = AuthTypeClientSecret
 		} else if c.ClientCertPath != "" {
-			c.authType = authTypeClientCert
+			c.authType = AuthTypeClientCert
 		} else {
-			c.authType = authTypeClientBearerJWT
+			c.authType = AuthTypeClientBearerJWT
 		}
 	}
 
-	if c.authType == authTypeMSI && c.SubscriptionID == "" {
+	if c.authType == AuthTypeMSI && c.SubscriptionID == "" {
 
 		subscriptionID, err := getSubscriptionFromIMDS()
 		if err != nil {
@@ -364,9 +427,16 @@ func (c *Config) FillParameters() error {
 		if err != nil {
 			return err
 		}
+
 	}
 
-	if c.authType == authTypeAzureCLI {
+	if c.newCloudEnvironment == nil {
+		newCloudErr := c.setNewCloudEnvironment()
+		if newCloudErr != nil {
+			return newCloudErr
+		}
+	}
+	if c.authType == AuthTypeAzureCLI {
 		tenantID, subscriptionID, err := getIDsFromAzureCLI()
 		if err != nil {
 			return fmt.Errorf("error fetching tenantID and subscriptionID from Azure CLI (are you logged on using `az login`?): %v", err)

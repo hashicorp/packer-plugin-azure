@@ -14,7 +14,7 @@ import (
 
 func TestStepSnapshotDataDisksShouldFailIfSnapshotFails(t *testing.T) {
 	var testSubject = &StepSnapshotDataDisks{
-		create: func(context.Context, string, string, string, map[string]*string, string) error {
+		create: func(context.Context, string, string, string, string, map[string]string, string) error {
 			return fmt.Errorf("!! Unit Test FAIL !!")
 		},
 		say:    func(message string) {},
@@ -36,7 +36,7 @@ func TestStepSnapshotDataDisksShouldFailIfSnapshotFails(t *testing.T) {
 
 func TestStepSnapshotDataDisksShouldNotExecute(t *testing.T) {
 	var testSubject = &StepSnapshotDataDisks{
-		create: func(context.Context, string, string, string, map[string]*string, string) error {
+		create: func(context.Context, string, string, string, string, map[string]string, string) error {
 			return fmt.Errorf("!! Unit Test FAIL !!")
 		},
 		say:    func(message string) {},
@@ -52,7 +52,7 @@ func TestStepSnapshotDataDisksShouldNotExecute(t *testing.T) {
 
 func TestStepSnapshotDataDisksShouldPassIfSnapshotPasses(t *testing.T) {
 	var testSubject = &StepSnapshotDataDisks{
-		create: func(context.Context, string, string, string, map[string]*string, string) error {
+		create: func(context.Context, string, string, string, string, map[string]string, string) error {
 			return nil
 		},
 		say:    func(message string) {},
@@ -82,10 +82,15 @@ func createTestStateBagStepSnapshotDataDisks() multistep.StateBag {
 	tags := map[string]*string{
 		"tag01": &value,
 	}
+	newSDKTags := map[string]string{
+		"tag02:": value,
+	}
 	stateBag.Put(constants.ArmTags, tags)
+	stateBag.Put(constants.ArmNewSDKTags, newSDKTags)
 
 	stateBag.Put(constants.ArmAdditionalDiskVhds, []string{"subscriptions/123-456-789/resourceGroups/existingresourcegroup/providers/Microsoft.Compute/disks/osdisk"})
 	stateBag.Put(constants.ArmManagedImageDataDiskSnapshotPrefix, "Unit Test: ManagedImageDataDiskSnapshotPrefix")
+	stateBag.Put(constants.ArmSubscription, "Unit Test: SubscriptionId")
 
 	return stateBag
 }

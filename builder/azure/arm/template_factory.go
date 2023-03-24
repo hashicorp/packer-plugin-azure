@@ -9,17 +9,16 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
-	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
-
+	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/template"
 	"golang.org/x/crypto/ssh"
 )
 
-type templateFactoryFunc func(*Config) (*resources.Deployment, error)
+type templateFactoryFunc func(*Config) (*deployments.Deployment, error)
 
-func GetCommunicatorSpecificKeyVaultDeployment(config *Config) (*resources.Deployment, error) {
+func GetCommunicatorSpecificKeyVaultDeployment(config *Config) (*deployments.Deployment, error) {
 	if config.Comm.Type == "ssh" {
 		privateKey, err := ssh.ParseRawPrivateKey(config.Comm.SSHPrivateKey)
 		if err != nil {
@@ -40,7 +39,7 @@ func GetCommunicatorSpecificKeyVaultDeployment(config *Config) (*resources.Deplo
 	}
 }
 
-func GetKeyVaultDeployment(config *Config, secretValue string) (*resources.Deployment, error) {
+func GetKeyVaultDeployment(config *Config, secretValue string) (*deployments.Deployment, error) {
 	params := &template.TemplateParameters{
 		KeyVaultName:        &template.TemplateParameter{Value: config.tmpKeyVaultName},
 		KeyVaultSKU:         &template.TemplateParameter{Value: config.BuildKeyVaultSKU},
@@ -56,7 +55,7 @@ func GetKeyVaultDeployment(config *Config, secretValue string) (*resources.Deplo
 	return createDeploymentParameters(*doc, params)
 }
 
-func GetSpecializedVirtualMachineDeployment(config *Config) (*resources.Deployment, error) {
+func GetSpecializedVirtualMachineDeployment(config *Config) (*deployments.Deployment, error) {
 	builder, err := GetVirtualMachineTemplateBuilder(config)
 	if err != nil {
 		return nil, err
@@ -86,7 +85,7 @@ func GetSpecializedVirtualMachineDeployment(config *Config) (*resources.Deployme
 	return createDeploymentParameters(*doc, params)
 }
 
-func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) {
+func GetVirtualMachineDeployment(config *Config) (*deployments.Deployment, error) {
 	builder, err := GetVirtualMachineTemplateBuilder(config)
 	if err != nil {
 		return nil, err
@@ -117,7 +116,7 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 	if err != nil {
 		return nil, err
 	}
-	osType := compute.OperatingSystemTypesLinux
+	osType := hashiVMSDK.OperatingSystemTypesLinux
 
 	switch config.OSType {
 	case constants.Target_Linux:
@@ -129,7 +128,7 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 			return nil, err
 		}
 	case constants.Target_Windows:
-		osType = compute.OperatingSystemTypesWindows
+		osType = hashiVMSDK.OperatingSystemTypesWindows
 		err = builder.BuildWindows(config.Comm.Type, config.tmpKeyVaultName, config.tmpWinRMCertificateUrl)
 		if err != nil {
 			return nil, err
@@ -286,8 +285,8 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 	return builder, nil
 }
 
-func createDeploymentParameters(doc string, parameters *template.TemplateParameters) (*resources.Deployment, error) {
-	var template map[string]interface{}
+func createDeploymentParameters(doc string, parameters *template.TemplateParameters) (*deployments.Deployment, error) {
+	var template interface{}
 	err := json.Unmarshal(([]byte)(doc), &template)
 	if err != nil {
 		return nil, err
@@ -298,15 +297,15 @@ func createDeploymentParameters(doc string, parameters *template.TemplateParamet
 		return nil, err
 	}
 
-	var templateParameters map[string]interface{}
+	var templateParameters interface{}
 	err = json.Unmarshal(bs, &templateParameters)
 	if err != nil {
 		return nil, err
 	}
 
-	return &resources.Deployment{
-		Properties: &resources.DeploymentProperties{
-			Mode:       resources.Incremental,
+	return &deployments.Deployment{
+		Properties: deployments.DeploymentProperties{
+			Mode:       deployments.DeploymentModeIncremental,
 			Template:   &template,
 			Parameters: &templateParameters,
 		},

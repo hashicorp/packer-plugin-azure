@@ -1,6 +1,3 @@
-// Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
-
 package arm
 
 import (
@@ -9,7 +6,7 @@ import (
 	"log"
 	"regexp"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
+	hashiGalleryImageVersionsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
@@ -19,7 +16,7 @@ type StepGetSourceImageName struct {
 	client            *AzureClient
 	config            *Config
 	GeneratedData     *packerbuilderdata.GeneratedData
-	getGalleryVersion func(context.Context) (compute.GalleryImageVersion, error)
+	getGalleryVersion func(context.Context) (*hashiGalleryImageVersionsSDK.GalleryImageVersion, error)
 	say               func(message string)
 	error             func(e error)
 }
@@ -60,16 +57,15 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 			return multistep.ActionContinue
 		}
 
-		if image.GalleryImageVersionProperties != nil && image.GalleryImageVersionProperties.StorageProfile != nil &&
-			image.GalleryImageVersionProperties.StorageProfile.Source != nil && image.GalleryImageVersionProperties.StorageProfile.Source.ID != nil {
+		if image.Properties != nil &&
+			image.Properties.StorageProfile.Source != nil && image.Properties.StorageProfile.Source.Id != nil {
 
 			// Shared Image Galleries can be created in two different ways
 			// Either directly from a VM (in the builder this means not setting managed_image_name), for these types of images we set the artifact ID as the Gallery Image ID
 			// Or through an intermediate managed image. in which case we use that managed image as the artifact ID.
 
 			// First check if the parent Gallery Image Version source ID is a managed image, if so we use that as our source image name
-			parentSourceID := *image.GalleryImageVersionProperties.StorageProfile.Source.ID
-
+			parentSourceID := *image.Properties.StorageProfile.Source.Id
 			isSIGSourcedFromManagedImage, _ := regexp.MatchString("/subscriptions/[^/]*/resourceGroups/[^/]*/providers/Microsoft.Compute/images/[^/]*$", parentSourceID)
 
 			if isSIGSourcedFromManagedImage {
@@ -78,8 +74,8 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 				return multistep.ActionContinue
 			} else {
 				// If the Gallery Image Version was not sourced from a Managed Image, that means it was captured directly from a VM, so we just use the gallery ID itself as the source image
-				s.say(fmt.Sprintf(" -> SourceImageName: '%s'", *image.ID))
-				s.GeneratedData.Put("SourceImageName", *image.ID)
+				s.say(fmt.Sprintf(" -> SourceImageName: '%s'", *image.Id))
+				s.GeneratedData.Put("SourceImageName", *image.Id)
 				return multistep.ActionContinue
 			}
 
@@ -103,12 +99,15 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 	return multistep.ActionContinue
 }
 
-func (s *StepGetSourceImageName) GetGalleryImageVersion(ctx context.Context) (compute.GalleryImageVersion, error) {
+func (s *StepGetSourceImageName) GetGalleryImageVersion(ctx context.Context) (*hashiGalleryImageVersionsSDK.GalleryImageVersion, error) {
 	client := s.client.GalleryImageVersionsClient
-	client.SubscriptionID = s.config.SharedGallery.Subscription
 
-	return client.Get(ctx, s.config.SharedGallery.ResourceGroup,
-		s.config.SharedGallery.GalleryName, s.config.SharedGallery.ImageName, s.config.SharedGallery.ImageVersion, "")
+	galleryVersionId := hashiGalleryImageVersionsSDK.NewImageVersionID(s.config.SharedGallery.Subscription, s.config.SharedGallery.ResourceGroup, s.config.SharedGallery.GalleryName, s.config.SharedGallery.ImageName, s.config.SharedGallery.ImageVersion)
+	result, err := client.Get(ctx, galleryVersionId, hashiGalleryImageVersionsSDK.DefaultGetOperationOptions())
+	if err != nil {
+		return nil, err
+	}
+	return result.Model, nil
 }
 
 func (*StepGetSourceImageName) Cleanup(multistep.StateBag) {

@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
 	approvaltests "github.com/approvals/go-approval-tests"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/template"
 )
@@ -26,8 +26,8 @@ func TestVirtualMachineDeployment00(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if deployment.Properties.Mode != resources.Incremental {
-		t.Errorf("Expected deployment.Properties.Mode to be %s, but got %s", resources.Incremental, deployment.Properties.Mode)
+	if deployment.Properties.Mode != deployments.DeploymentModeIncremental {
+		t.Errorf("Expected deployment.Properties.Mode to be %s, but got %s", deployments.DeploymentModeIncremental, deployment.Properties.Mode)
 	}
 
 	if deployment.Properties.ParametersLink != nil {
@@ -533,8 +533,8 @@ func TestKeyVaultDeployment00(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if deployment.Properties.Mode != resources.Incremental {
-		t.Errorf("Expected deployment.Properties.Mode to be %s, but got %s", resources.Incremental, deployment.Properties.Mode)
+	if deployment.Properties.Mode != deployments.DeploymentModeIncremental {
+		t.Errorf("Expected deployment.Properties.Mode to be %s, but got %s", deployments.DeploymentModeIncremental, deployment.Properties.Mode)
 	}
 
 	if deployment.Properties.ParametersLink != nil {

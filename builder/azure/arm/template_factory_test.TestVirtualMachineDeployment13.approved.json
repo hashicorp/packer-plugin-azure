@@ -130,7 +130,7 @@
               "listeners": [
                 {
                   "certificateUrl": "",
-                  "protocol": "https"
+                  "protocol": "Https"
                 }
               ]
             }

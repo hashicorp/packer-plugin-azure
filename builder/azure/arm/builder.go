@@ -14,11 +14,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
-	armstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2017-10-01/storage"
-	"github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/golang-jwt/jwt"
+	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	hashiGalleryImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
+	hashiStorageAccountsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/storage/2022-09-01/storageaccounts"
+
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	packerAzureCommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
@@ -40,8 +40,7 @@ type Builder struct {
 }
 
 const (
-	DefaultSasBlobContainer = "system/Microsoft.Compute"
-	DefaultSecretName       = "packerKeyVaultSecret"
+	DefaultSecretName = "packerKeyVaultSecret"
 )
 
 func (b *Builder) ConfigSpec() hcldec.ObjectSpec { return b.config.FlatMapstructure().HCL2Spec() }
@@ -66,7 +65,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	ui.Say("Running builder ...")
 
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithTimeout(ctx, time.Minute*60)
 	defer cancel()
 
 	// FillParameters function captures authType and sets defaults.
@@ -81,28 +80,34 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		b.stateBag.Put(constants.ArmManagedImageSubscription, b.config.ClientConfig.SubscriptionID)
 	}
 
+	b.stateBag.Put(constants.ArmSubscription, b.config.ClientConfig.SubscriptionID)
+
 	log.Print(":: Configuration")
 	packerAzureCommon.DumpConfig(&b.config, func(s string) { log.Print(s) })
 
 	b.stateBag.Put("hook", hook)
 	b.stateBag.Put(constants.Ui, ui)
 
-	spnCloud, spnKeyVault, err := b.getServicePrincipalTokens(ui.Say)
-	if err != nil {
-		return nil, err
+	// Pass in relevant auth information for hashicorp/go-azure-sdk
+	authOptions := NewSDKAuthOptions{
+		AuthType:       b.config.ClientConfig.AuthType(),
+		ClientID:       b.config.ClientConfig.ClientID,
+		ClientSecret:   b.config.ClientConfig.ClientSecret,
+		ClientJWT:      b.config.ClientConfig.ClientJWT,
+		ClientCertPath: b.config.ClientConfig.ClientCertPath,
+		TenantID:       b.config.ClientConfig.TenantID,
+		SubscriptionID: b.config.ClientConfig.SubscriptionID,
 	}
 
 	ui.Message("Creating Azure Resource Manager (ARM) client ...")
-	azureClient, err := NewAzureClient(
-		b.config.ClientConfig.SubscriptionID,
-		b.config.SharedGalleryDestination.SigDestinationSubscription,
-		b.config.ResourceGroupName,
-		b.config.StorageAccount,
-		b.config.ClientConfig.CloudEnvironment(),
+	azureClient, objectID, err := NewAzureClient(
+		ctx,
+		(b.config.ResourceGroupName != "" || b.config.StorageAccount != ""),
+		b.config.ClientConfig.NewCloudEnvironment(),
 		b.config.SharedGalleryTimeout,
 		b.config.PollingDurationTimeout,
-		spnCloud,
-		spnKeyVault)
+		authOptions,
+	)
 
 	if err != nil {
 		return nil, err
@@ -112,10 +117,11 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if err := resolver.Resolve(&b.config); err != nil {
 		return nil, err
 	}
+
 	if b.config.ClientConfig.ObjectID == "" {
-		b.config.ClientConfig.ObjectID = getObjectIdFromToken(ui, spnCloud)
+		b.config.ClientConfig.ObjectID = *objectID
 	} else {
-		ui.Message("You have provided Object_ID which is no longer needed, azure packer builder determines this dynamically from the authentication token")
+		ui.Message("You have provided Object_ID which is no longer needed, Azure Packer ARM builder determines this automatically using the Azure Access Token")
 	}
 
 	if b.config.ClientConfig.ObjectID == "" && b.config.OSType != constants.Target_Linux {
@@ -123,20 +129,19 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	}
 
 	if b.config.isManagedImage() {
-		_, err := azureClient.GroupsClient.Get(ctx, b.config.ManagedImageResourceGroupName)
+		groupId := commonids.NewResourceGroupID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName)
+		_, err := azureClient.ResourceGroupsClient.Get(ctx, groupId)
 		if err != nil {
 			return nil, fmt.Errorf("Cannot locate the managed image resource group %s.", b.config.ManagedImageResourceGroupName)
 		}
 
 		// If a managed image already exists it cannot be overwritten.
-		_, err = azureClient.ImagesClient.Get(ctx, b.config.ManagedImageResourceGroupName, b.config.ManagedImageName, "")
+		imageId := hashiImagesSDK.NewImageID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName, b.config.ManagedImageName)
+		_, err = azureClient.ImagesClient.Get(ctx, imageId, hashiImagesSDK.DefaultGetOperationOptions())
 		if err == nil {
 			if b.config.PackerForce {
 				ui.Say(fmt.Sprintf("the managed image named %s already exists, but deleting it due to -force flag", b.config.ManagedImageName))
-				f, err := azureClient.ImagesClient.Delete(ctx, b.config.ManagedImageResourceGroupName, b.config.ManagedImageName)
-				if err == nil {
-					err = f.WaitForCompletionRef(ctx, azureClient.ImagesClient.Client)
-				}
+				err := azureClient.ImagesClient.DeleteThenPoll(ctx, imageId)
 				if err != nil {
 					return nil, fmt.Errorf("failed to delete the managed image named %s : %s", b.config.ManagedImageName, azureClient.LastError.Error())
 				}
@@ -150,25 +155,26 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	}
 
 	if b.config.BuildResourceGroupName != "" {
-		group, err := azureClient.GroupsClient.Get(ctx, b.config.BuildResourceGroupName)
+		buildGroupId := commonids.NewResourceGroupID(b.config.ClientConfig.SubscriptionID, b.config.BuildResourceGroupName)
+		group, err := azureClient.ResourceGroupsClient.Get(ctx, buildGroupId)
 		if err != nil {
 			return nil, fmt.Errorf("Cannot locate the existing build resource resource group %s.", b.config.BuildResourceGroupName)
 		}
 
-		b.config.Location = *group.Location
+		b.config.Location = group.Model.Location
 	}
 
 	b.config.validateLocationZoneResiliency(ui.Say)
 
 	if b.config.StorageAccount != "" {
-		account, err := b.getBlobAccount(ctx, azureClient, b.config.ResourceGroupName, b.config.StorageAccount)
+		account, err := b.getBlobAccount(ctx, azureClient, b.config.ClientConfig.SubscriptionID, b.config.ResourceGroupName, b.config.StorageAccount)
 		if err != nil {
 			return nil, err
 		}
-		b.config.storageAccountBlobEndpoint = *account.AccountProperties.PrimaryEndpoints.Blob
+		b.config.storageAccountBlobEndpoint = *account.Properties.PrimaryEndpoints.Blob
 
-		if !equalLocation(*account.Location, b.config.Location) {
-			return nil, fmt.Errorf("The storage account is located in %s, but the build will take place in %s. The locations must be identical", *account.Location, b.config.Location)
+		if !equalLocation(account.Location, b.config.Location) {
+			return nil, fmt.Errorf("The storage account is located in %s, but the build will take place in %s. The locations must be identical", account.Location, b.config.Location)
 		}
 	}
 
@@ -190,7 +196,13 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	}
 	// Validate that Shared Gallery Image exists before publishing to SIG
 	if b.config.isPublishToSIG() {
-		_, err = azureClient.GalleryImagesClient.Get(ctx, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
+		sigSubscriptionID := b.config.SharedGalleryDestination.SigDestinationSubscription
+		if sigSubscriptionID == "" {
+			sigSubscriptionID = b.stateBag.Get(constants.ArmSubscription).(string)
+		}
+		b.stateBag.Put(constants.ArmSharedImageGalleryDestinationSubscription, sigSubscriptionID)
+		galleryId := hashiGalleryImagesSDK.NewGalleryImageID(sigSubscriptionID, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
+		_, err = azureClient.GalleryImagesClient.Get(ctx, galleryId)
 		if err != nil {
 			return nil, fmt.Errorf("the Shared Gallery Image '%s' to which to publish the managed image version to does not exist in the resource group '%s' or does not contain managed image '%s'", b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationImageName)
 		}
@@ -215,12 +227,15 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	sourceImageSpecialized := false
 	if b.config.SharedGallery.GalleryName != "" {
 		client := azureClient.GalleryImagesClient
-		client.SubscriptionID = b.config.SharedGallery.Subscription
-		galleryImage, err := client.Get(ctx, b.config.SharedGallery.ResourceGroup, b.config.SharedGallery.GalleryName, b.config.SharedGallery.ImageName)
+		id := hashiGalleryImagesSDK.NewGalleryImageID(b.config.SharedGallery.Subscription, b.config.SharedGallery.ResourceGroup, b.config.SharedGallery.GalleryName, b.config.SharedGallery.ImageName)
+		galleryImage, err := client.Get(ctx, id)
 		if err != nil {
 			return nil, fmt.Errorf("the parent Shared Gallery Image '%s' from which to source the managed image version to does not exist in the resource group '%s' or does not contain managed image '%s'", b.config.SharedGallery.GalleryName, b.config.SharedGallery.ResourceGroup, b.config.SharedGallery.ImageName)
 		}
-		if galleryImage.OsState == compute.OperatingSystemStateTypesSpecialized {
+		if galleryImage.Model == nil {
+			return nil, fmt.Errorf("SDK returned empty model for gallery image")
+		}
+		if galleryImage.Model.Properties.OsState == hashiGalleryImagesSDK.OperatingSystemStateTypesSpecialized {
 			sourceImageSpecialized = true
 		}
 	}
@@ -265,7 +280,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				NewStepDeployTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetCommunicatorSpecificKeyVaultDeployment, KeyVaultTemplate),
 			)
 		} else if b.config.Comm.Type == "winrm" {
-			steps = append(steps, NewStepCertificateInKeyVault(&azureClient.VaultClient, ui, &b.config, b.config.winrmCertificate))
+			steps = append(steps, NewStepCertificateInKeyVault(azureClient, ui, &b.config, b.config.winrmCertificate))
 		} else {
 			privateKey, err := ssh.ParseRawPrivateKey(b.config.Comm.SSHPrivateKey)
 			if err != nil {
@@ -280,7 +295,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			if err != nil {
 				return nil, err
 			}
-			steps = append(steps, NewStepCertificateInKeyVault(&azureClient.VaultClient, ui, &b.config, secret))
+			steps = append(steps, NewStepCertificateInKeyVault(azureClient, ui, &b.config, secret))
 		}
 		steps = append(steps,
 			NewStepGetCertificate(azureClient, ui),
@@ -368,15 +383,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		return nil, nil
 	}
 
-	getSasUrlFunc := func(name string) string {
-		blob := azureClient.BlobStorageClient.GetContainerReference(DefaultSasBlobContainer).GetBlobReference(name)
-		options := storage.BlobSASOptions{}
-		options.BlobServiceSASPermissions.Read = true
-		options.Expiry = time.Now().AddDate(0, 1, 0).UTC() // one month
-		sasUrl, _ := blob.GetSASURI(options)
-		return sasUrl
-	}
-
 	stateData := map[string]interface{}{"generated_data": b.stateBag.Get("generated_data")}
 	if b.config.isManagedImage() {
 		managedImageID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/images/%s",
@@ -396,8 +402,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				b.config.ManagedImageDataDiskSnapshotPrefix,
 				stateData,
 				b.stateBag.Get(constants.ArmKeepOSDisk).(bool),
-				template.(*CaptureTemplate),
-				getSasUrlFunc)
+				template.(*CaptureTemplate))
 		}
 
 		return NewManagedImageArtifact(b.config.OSType,
@@ -409,8 +414,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			b.config.ManagedImageDataDiskSnapshotPrefix,
 			stateData,
 			b.stateBag.Get(constants.ArmKeepOSDisk).(bool),
-			nil,
-			getSasUrlFunc)
+			nil)
 	}
 
 	if b.config.isPublishToSIG() {
@@ -420,7 +424,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if template, ok := b.stateBag.GetOk(constants.ArmCaptureTemplate); ok {
 		return NewArtifact(
 			template.(*CaptureTemplate),
-			getSasUrlFunc,
 			b.config.OSType,
 			stateData)
 	}
@@ -465,19 +468,21 @@ func canonicalizeLocation(location string) string {
 	return strings.Replace(location, " ", "", -1)
 }
 
-func (b *Builder) getBlobAccount(ctx context.Context, client *AzureClient, resourceGroupName string, storageAccountName string) (*armstorage.Account, error) {
-	account, err := client.AccountsClient.GetProperties(ctx, resourceGroupName, storageAccountName)
+func (b *Builder) getBlobAccount(ctx context.Context, client *AzureClient, subscriptionId string, resourceGroupName string, storageAccountName string) (*hashiStorageAccountsSDK.StorageAccount, error) {
+	id := hashiStorageAccountsSDK.NewStorageAccountID(subscriptionId, resourceGroupName, storageAccountName)
+	account, err := client.StorageAccountsClient.GetProperties(ctx, id, hashiStorageAccountsSDK.DefaultGetPropertiesOperationOptions())
 	if err != nil {
 		return nil, err
 	}
 
-	return &account, err
+	return account.Model, err
 }
 
 func (b *Builder) configureStateBag(stateBag multistep.StateBag) {
 	stateBag.Put(constants.AuthorizedKey, b.config.sshAuthorizedKey)
 
 	stateBag.Put(constants.ArmTags, packerAzureCommon.MapToAzureTags(b.config.AzureTags))
+	stateBag.Put(constants.ArmNewSDKTags, b.config.AzureTags)
 	stateBag.Put(constants.ArmComputeName, b.config.tmpComputeName)
 	stateBag.Put(constants.ArmDeploymentName, b.config.tmpDeploymentName)
 
@@ -539,32 +544,11 @@ func (b *Builder) setRuntimeParameters(stateBag multistep.StateBag) {
 }
 
 func (b *Builder) setTemplateParameters(stateBag multistep.StateBag) {
-	stateBag.Put(constants.ArmVirtualMachineCaptureParameters, b.config.toVirtualMachineCaptureParameters())
+	stateBag.Put(constants.ArmNewVirtualMachineCaptureParameters, b.config.toVirtualMachineCaptureParameters())
 }
 
 func (b *Builder) setImageParameters(stateBag multistep.StateBag) {
 	stateBag.Put(constants.ArmImageParameters, b.config.toImageParameters())
-}
-
-func (b *Builder) getServicePrincipalTokens(say func(string)) (*adal.ServicePrincipalToken, *adal.ServicePrincipalToken, error) {
-	return b.config.ClientConfig.GetServicePrincipalTokens(say)
-}
-
-func getObjectIdFromToken(ui packersdk.Ui, token *adal.ServicePrincipalToken) string {
-	claims := jwt.MapClaims{}
-	var p jwt.Parser
-
-	var err error
-
-	_, _, err = p.ParseUnverified(token.OAuthToken(), claims)
-
-	if err != nil {
-		ui.Error(fmt.Sprintf("Failed to parse the token,Error: %s", err.Error()))
-		return ""
-	}
-
-	oid, _ := claims["oid"].(string)
-	return oid
 }
 
 func normalizeAzureRegion(name string) string {
