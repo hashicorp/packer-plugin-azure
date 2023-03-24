@@ -81,10 +81,10 @@ func TestResourceResolverSetVirtualNetworkResourceGroupName(t *testing.T) {
 func newTestResourceResolver() resourceResolver {
 	return resourceResolver{
 		client: nil,
-		findVirtualNetworkResourceGroup: func(*AzureClient, string) (string, error) {
+		findVirtualNetworkResourceGroup: func(*AzureClient, string, string) (string, error) {
 			return "findVirtualNetworkResourceGroup is mocked", nil
 		},
-		findVirtualNetworkSubnet: func(*AzureClient, string, string) (string, error) {
+		findVirtualNetworkSubnet: func(*AzureClient, string, string, string) (string, error) {
 			return "findVirtualNetworkSubnet is mocked", nil
 		},
 	}

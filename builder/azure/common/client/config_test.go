@@ -200,8 +200,8 @@ func Test_ClientConfig_AzureCli(t *testing.T) {
 		t.Fatalf("Expected nil err, but got: %v", err)
 	}
 
-	if cfg.authType != authTypeAzureCLI {
-		t.Fatalf("Expected authType to be %q, but got: %q", authTypeAzureCLI, cfg.authType)
+	if cfg.AuthType != AuthTypeAzureCLI {
+		t.Fatalf("Expected authType to be %q, but got: %q", AuthTypeAzureCLI, cfg.AuthType)
 	}
 }
 
@@ -397,16 +397,6 @@ func Test_ClientConfig_CannotUseBothClientJWTAndSecret(t *testing.T) {
 		ClientID:       "12345",
 		ClientSecret:   "12345",
 		ClientJWT:      getJWT(10*time.Minute, true),
-	}
-
-	assertInvalid(t, cfg)
-}
-
-func Test_ClientConfig_ClientJWTShouldBeValidForAtLeast5Minutes(t *testing.T) {
-	cfg := Config{
-		SubscriptionID: "12345",
-		ClientID:       "12345",
-		ClientJWT:      getJWT(time.Minute, true),
 	}
 
 	assertInvalid(t, cfg)

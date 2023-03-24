@@ -36,7 +36,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
+	hashiGalleryImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
+	hashiGalleryImageVersionsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
@@ -56,6 +57,7 @@ func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG(t *testing.T) {
 		Setup: func() error {
 			createSharedImageGalleryDefinition(t, CreateSharedImageGalleryDefinitionParameters{
 				galleryImageName: "arm-linux-specialized-sig",
+				subscriptionId:   os.Getenv("ARM_SUBSCRIPTION_ID"),
 				imageSku:         "22_04-lts-arm64",
 				imageOffer:       "0001-com-ubuntu-server-jammy",
 				imagePublisher:   "canonical",
@@ -75,7 +77,7 @@ func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG(t *testing.T) {
 			return nil
 		},
 		Teardown: func() error {
-			deleteSharedImageGalleryDefinition(t, "arm-linux-specialized-sig")
+			deleteSharedImageGalleryDefinition(t, os.Getenv("ARM_SUBSCRIPTION_ID"), "arm-linux-specialized-sig")
 			return nil
 		},
 	})
@@ -110,7 +112,7 @@ func TestBuilderAcc_SharedImageGallery_WindowsSIG(t *testing.T) {
 			return nil
 		},
 		Teardown: func() error {
-			deleteSharedImageGalleryDefinition(t, "windows-sig")
+			deleteSharedImageGalleryDefinition(t, os.Getenv("ARM_SUBSCRIPTION_ID"), "windows-sig")
 			return nil
 		},
 	})
@@ -330,6 +332,7 @@ func TestBuilderAcc_rsaSHA2OnlyServer(t *testing.T) {
 
 type CreateSharedImageGalleryDefinitionParameters struct {
 	galleryImageName string
+	subscriptionId   string
 	imageSku         string
 	imageOffer       string
 	imagePublisher   string
@@ -346,10 +349,14 @@ func createTestAzureClient(t *testing.T) AzureClient {
 	// Use CLI auth for our test client
 	b.config.ClientConfig.UseAzureCLIAuth = true
 	_ = b.config.ClientConfig.FillParameters()
-	spnCloud, spnKeyVault, err := b.getServicePrincipalTokens(ui.Say)
-	if err != nil {
-		t.Fatalf("failed getting azure tokens: %s", err)
+	authOptions := NewSDKAuthOptions{
+		AuthType:       b.config.ClientConfig.AuthType,
+		ClientID:       b.config.ClientConfig.ClientID,
+		ClientSecret:   b.config.ClientConfig.ClientSecret,
+		TenantID:       b.config.ClientConfig.TenantID,
+		SubscriptionID: b.config.ClientConfig.SubscriptionID,
 	}
+	ui.Message("Creating test Azure Resource Manager (ARM) client ...")
 	azureClient, err := NewAzureClient(
 		b.config.ClientConfig.SubscriptionID,
 		b.config.SharedGalleryDestination.SigDestinationSubscription,
@@ -358,8 +365,7 @@ func createTestAzureClient(t *testing.T) AzureClient {
 		b.config.ClientConfig.CloudEnvironment(),
 		b.config.SharedGalleryTimeout,
 		b.config.PollingDurationTimeout,
-		spnCloud,
-		spnKeyVault)
+		authOptions)
 	if err != nil {
 		t.Fatalf("failed to create test azure client: %s", err)
 	}
@@ -368,54 +374,48 @@ func createTestAzureClient(t *testing.T) AzureClient {
 
 func createSharedImageGalleryDefinition(t *testing.T, params CreateSharedImageGalleryDefinitionParameters) {
 	azureClient := createTestAzureClient(t)
-	osType := compute.OperatingSystemTypesLinux
+	osType := hashiGalleryImagesSDK.OperatingSystemTypesLinux
 	if params.isWindows {
-		osType = compute.OperatingSystemTypesWindows
+		osType = hashiGalleryImagesSDK.OperatingSystemTypesWindows
 	}
-	osState := compute.OperatingSystemStateTypesGeneralized
+	osState := hashiGalleryImagesSDK.OperatingSystemStateTypesGeneralized
 	if params.specialized {
-		osState = compute.OperatingSystemStateTypesSpecialized
+		osState = hashiGalleryImagesSDK.OperatingSystemStateTypesSpecialized
 	}
-	osArch := compute.ArchitectureArm64
+	osArch := hashiGalleryImagesSDK.ArchitectureArmSixFour
 	if params.isX64 {
-		osArch = compute.ArchitectureX64
+		osArch = hashiGalleryImagesSDK.ArchitectureXSixFour
 	}
-	hyperVGeneration := compute.HyperVGenerationV1
+	hyperVGeneration := hashiGalleryImagesSDK.HyperVGenerationVOne
 	if params.useGenTwoVM {
-		hyperVGeneration = compute.HyperVGenerationV2
+		hyperVGeneration = hashiGalleryImagesSDK.HyperVGenerationVTwo
 	}
 	location := "southcentralus"
-	future, err := azureClient.GalleryImagesClient.CreateOrUpdate(context.TODO(), "packer-acceptance-test", "acctestgallery", params.galleryImageName, compute.GalleryImage{
-		GalleryImageProperties: &compute.GalleryImageProperties{
+	galleryId := hashiGalleryImagesSDK.NewGalleryImageID(params.subscriptionId, "packer-acceptance-test", "acctestgallery", params.galleryImageName)
+	_, err := azureClient.GalleryImagesClient.CreateOrUpdate(context.TODO(), galleryId, hashiGalleryImagesSDK.GalleryImage{
+		Properties: &hashiGalleryImagesSDK.GalleryImageProperties{
 			OsType:           osType,
 			OsState:          osState,
-			Architecture:     osArch,
-			HyperVGeneration: hyperVGeneration,
-			Identifier: &compute.GalleryImageIdentifier{
-				Publisher: &params.imagePublisher,
-				Offer:     &params.imageOffer,
-				Sku:       &params.imageSku,
+			Architecture:     &osArch,
+			HyperVGeneration: &hyperVGeneration,
+			Identifier: hashiGalleryImagesSDK.GalleryImageIdentifier{
+				Publisher: params.imagePublisher,
+				Offer:     params.imageOffer,
+				Sku:       params.imageSku,
 			},
 		},
-		Location: &location,
+		Location: location,
 	})
 
 	if err != nil {
 		t.Fatalf("failed to create Gallery %s: %s", params.galleryImageName, err)
 	}
-	err = future.WaitForCompletionRef(context.TODO(), azureClient.GalleryImagesClient.Client)
-	if err != nil {
-		t.Fatalf("failed to create Gallery %s: %s", params.galleryImageName, err)
-	}
 }
 
-func deleteSharedImageGalleryDefinition(t *testing.T, galleryImageName string) {
+func deleteSharedImageGalleryDefinition(t *testing.T, subscriptionId, galleryImageName string) {
 	azureClient := createTestAzureClient(t)
-	versionFuture, err := azureClient.GalleryImageVersionsClient.Delete(context.TODO(), "packer-acceptance-test", "acctestgallery", galleryImageName, "1.0.0")
-	if err != nil {
-		t.Fatalf("failed to delete Gallery %s: %s", galleryImageName, err)
-	}
-	err = versionFuture.WaitForCompletionRef(context.TODO(), azureClient.GalleryImageVersionsClient.Client)
+	galleryVersionId := hashiGalleryImageVersionsSDK.NewImageVersionID(subscriptionId, "packer-acceptance-test", "acctestgallery", galleryImageName, "1.0.0")
+	err := azureClient.GalleryImageVersionsClient.DeleteThenPoll(context.TODO(), galleryVersionId)
 	if err != nil {
 		t.Fatalf("failed to delete Gallery %s: %s", galleryImageName, err)
 	}
@@ -424,17 +424,16 @@ func deleteSharedImageGalleryDefinition(t *testing.T, galleryImageName string) {
 		RetryDelay: (&retry.Backoff{InitialBackoff: 10 * time.Second, MaxBackoff: 60 * time.Second, Multiplier: 2}).Linear,
 	}
 	err = retryConfig.Run(context.TODO(), func(ctx context.Context) error {
-		galleryFuture, err := azureClient.GalleryImagesClient.Delete(context.TODO(), "packer-acceptance-test", "acctestgallery", galleryImageName)
+		galleryId := hashiGalleryImagesSDK.NewGalleryImageID(subscriptionId, "packer-acceptance-test", "acctestgallery", galleryImageName)
+		err := azureClient.GalleryImagesClient.DeleteThenPoll(context.TODO(), galleryId)
 		if err != nil {
 			return err
 		}
-		err = galleryFuture.WaitForCompletionRef(context.TODO(), azureClient.GalleryImagesClient.Client)
-		return err
+		return nil
 	})
 	if err != nil {
 		t.Fatalf("failed to delete Gallery %s: %s", galleryImageName, err)
 	}
-
 }
 
 func testUi() *packersdk.BasicUi {

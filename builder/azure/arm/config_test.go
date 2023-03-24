@@ -1097,7 +1097,7 @@ func TestConfigZoneResilientShouldDefaultToFalse(t *testing.T) {
 	}
 
 	p := c.toImageParameters()
-	if *p.ImageProperties.StorageProfile.ZoneResilient {
+	if *p.Properties.StorageProfile.ZoneResilient {
 		t.Fatal("expected zone resilient default to be false")
 	}
 }
@@ -1121,7 +1121,7 @@ func TestConfigZoneResilientSetFromConfig(t *testing.T) {
 	}
 
 	p := c.toImageParameters()
-	if *p.ImageProperties.StorageProfile.ZoneResilient == false {
+	if *p.Properties.StorageProfile.ZoneResilient == false {
 		t.Fatal("expected managed image zone resilient to be true from config")
 	}
 }
