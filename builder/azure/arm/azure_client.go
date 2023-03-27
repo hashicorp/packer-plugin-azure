@@ -8,11 +8,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"net/http"
-	"net/url"
 	"os"
 	"strconv"
 	"time"
+
+	"net/http"
+	"net/url"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2018-02-14/keyvault"
@@ -24,6 +25,9 @@ import (
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	hashiAzureSDKCompute "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
+	"github.com/hashicorp/go-azure-sdk/sdk/auth"
+	authWrapper "github.com/hashicorp/go-azure-sdk/sdk/auth/autorest"
+	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/version"
 	"github.com/hashicorp/packer-plugin-sdk/useragent"
@@ -154,8 +158,12 @@ func NewAzureClient(subscriptionID, sigSubscriptionID, resourceGroupName, storag
 	azureClient.DeploymentOperationsClient.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.DeploymentOperationsClient.UserAgent)
 	azureClient.DeploymentOperationsClient.Client.PollingDuration = pollingDuration
 
+	authorizer, err := buildAuthorizer(context.TODO())
+	if err != nil {
+		return nil, err
+	}
 	azureClient.DisksClient = hashiAzureSDKCompute.NewDisksClientWithBaseURI(cloud.ResourceManagerEndpoint)
-	azureClient.DisksClient.Client.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
+	azureClient.DisksClient.Client.Authorizer = authWrapper.AutorestAuthorizer(authorizer)
 	azureClient.DisksClient.Client.RequestInspector = withInspection(maxlen)
 	azureClient.DisksClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
 	azureClient.DisksClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.DisksClient.Client.UserAgent)
@@ -311,4 +319,17 @@ func getInspectorMaxLength() int64 {
 	}
 
 	return i
+}
+
+func buildAuthorizer(ctx context.Context) (auth.Authorizer, error) {
+	env := environments.AzurePublic()
+	authConfig := auth.Credentials{
+		Environment:                       *env,
+		EnableAuthenticatingUsingAzureCLI: true,
+	}
+	authorizer, err := auth.NewAuthorizerFromCredentials(ctx, authConfig, env.MicrosoftGraph)
+	if err != nil {
+		return nil, fmt.Errorf("building authorizer from credentials: %+v", err)
+	}
+	return authorizer, nil
 }
