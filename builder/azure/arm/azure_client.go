@@ -327,7 +327,7 @@ func buildAuthorizer(ctx context.Context) (auth.Authorizer, error) {
 		Environment:                       *env,
 		EnableAuthenticatingUsingAzureCLI: true,
 	}
-	authorizer, err := auth.NewAuthorizerFromCredentials(ctx, authConfig, env.MicrosoftGraph)
+	authorizer, err := auth.NewAuthorizerFromCredentials(ctx, authConfig, env.ResourceManager)
 	if err != nil {
 		return nil, fmt.Errorf("building authorizer from credentials: %+v", err)
 	}

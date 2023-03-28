@@ -230,6 +230,7 @@ func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, 
 		if err := s.client.DeleteThenPoll(ctx, diskId); err != nil {
 			return err
 		}
+		return nil
 	}
 
 	// VHD image
