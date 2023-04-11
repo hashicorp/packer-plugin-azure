@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -22,8 +23,8 @@ import (
 type StepDeployTemplate struct {
 	client           *AzureClient
 	deploy           func(ctx context.Context, resourceGroupName string, deploymentName string) error
-	delete           func(ctx context.Context, deploymentName, resourceGroupName string) error
-	disk             func(ctx context.Context, resourceGroupName string, computeName string) (string, string, error)
+	delete           func(ctx context.Context, subscriptionId, deploymentName, resourceGroupName string) error
+	disk             func(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (string, string, error)
 	deleteDisk       func(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool, subscriptionId string) error
 	deleteDeployment func(ctx context.Context, state multistep.StateBag) error
 	say              func(message string)
@@ -76,16 +77,17 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 
 	deploymentName := s.name
 	resourceGroupName := state.Get(constants.ArmResourceGroupName).(string)
+	subscriptionId := state.Get(constants.ArmSubscription).(string)
 	// Get image disk details before deleting the image; otherwise we won't be able to
 	// delete the disk as the image request will return a 404
 	computeName := state.Get(constants.ArmComputeName).(string)
 	isManagedDisk := state.Get(constants.ArmIsManagedImage).(bool)
-	imageType, imageName, err := s.disk(context.TODO(), resourceGroupName, computeName)
+	imageType, imageName, err := s.disk(context.TODO(), subscriptionId, resourceGroupName, computeName)
 
 	if err != nil && !strings.Contains(err.Error(), "ResourceNotFound") {
 		ui.Error(fmt.Sprintf("Could not retrieve OS Image details: %s", err))
 	}
-	err = s.delete(context.TODO(), deploymentName, resourceGroupName)
+	err = s.delete(context.TODO(), subscriptionId, deploymentName, resourceGroupName)
 	if err != nil {
 		s.reportIfError(err, resourceGroupName)
 	}
@@ -97,7 +99,6 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 			"Error: %s", computeName, err))
 		return
 	}
-	subscriptionId := state.Get(constants.ArmSubscription).(string)
 	if !state.Get(constants.ArmKeepOSDisk).(bool) {
 		ui.Say(fmt.Sprintf(" Deleting -> %s : '%s'", imageType, imageName))
 		err = s.deleteDisk(context.TODO(), imageName, resourceGroupName, isManagedDisk, subscriptionId)
@@ -156,39 +157,45 @@ func (s *StepDeployTemplate) deleteDeploymentObject(ctx context.Context, state m
 	return f.WaitForCompletionRef(ctx, s.client.DeploymentsClient.Client)
 }
 
-func (s *StepDeployTemplate) getImageDetails(ctx context.Context, resourceGroupName string, computeName string) (string, string, error) {
+func (s *StepDeployTemplate) getImageDetails(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (string, string, error) {
 	//We can't depend on constants.ArmOSDiskVhd being set
 	var imageName, imageType string
-	vm, err := s.client.VirtualMachinesClient.Get(ctx, resourceGroupName, computeName, "")
+	vmID := hashiVMSDK.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)
+	vm, err := s.client.VirtualMachinesClient.Get(ctx, vmID, hashiVMSDK.DefaultGetOperationOptions())
 	if err != nil {
 		return imageName, imageType, err
 	}
-
-	if vm.StorageProfile.OsDisk.Vhd != nil {
+	if err != nil {
+		s.say(s.client.LastError.Error())
+		return "", "", err
+	}
+	if model := vm.Model; model == nil {
+		return "", "", errors.New("TODO")
+	}
+	if vm.Model.Properties.StorageProfile.OsDisk.Vhd != nil {
 		imageType = "image"
-		imageName = *vm.StorageProfile.OsDisk.Vhd.URI
+		imageName = *vm.Model.Properties.StorageProfile.OsDisk.Vhd.Uri
 		return imageType, imageName, nil
 	}
 
-	if vm.StorageProfile.OsDisk.ManagedDisk.ID == nil {
+	if vm.Model.Properties.StorageProfile.OsDisk.ManagedDisk.Id == nil {
 		return "", "", fmt.Errorf("unable to obtain a OS disk for %q, please check that the instance has been created", computeName)
 	}
 
 	imageType = "Microsoft.Compute/disks"
-	imageName = *vm.StorageProfile.OsDisk.ManagedDisk.ID
+	imageName = *vm.Model.Properties.StorageProfile.OsDisk.ManagedDisk.Id
 
 	return imageType, imageName, nil
 }
 
-func deleteResource(ctx context.Context, client *AzureClient, resourceType string, resourceName string, resourceGroupName string) error {
+func deleteResource(ctx context.Context, client *AzureClient, subscriptionId string, resourceType string, resourceName string, resourceGroupName string) error {
 	switch resourceType {
 	case "Microsoft.Compute/virtualMachines":
-		forcedelete := false
-		f, err := client.VirtualMachinesClient.Delete(ctx, resourceGroupName, resourceName, &forcedelete)
-		if err == nil {
-			err = f.WaitForCompletionRef(ctx, client.VirtualMachinesClient.Client)
+		vmID := hashiVMSDK.NewVirtualMachineID(subscriptionId, resourceGroupName, resourceName)
+		// TODO don't rely on default operations, set hard delete to false
+		if err := client.VirtualMachinesClient.DeleteThenPoll(ctx, vmID, hashiVMSDK.DefaultDeleteOperationOptions()); err != nil {
+			return err
 		}
-		return err
 	case "Microsoft.KeyVault/vaults":
 		_, err := client.VaultClientDelete.Delete(ctx, resourceGroupName, resourceName)
 		return err
@@ -227,7 +234,7 @@ func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, 
 		diskName := xs[len(xs)-1]
 		diskId := disks.NewDiskID(subscriptionId, resourceGroupName, diskName)
 
-		if err := s.client.DeleteThenPoll(ctx, diskId); err != nil {
+		if err := s.client.DisksClient.DeleteThenPoll(ctx, diskId); err != nil {
 			return err
 		}
 		return nil
@@ -255,7 +262,7 @@ func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, 
 	return blob.Delete(nil)
 }
 
-func (s *StepDeployTemplate) deleteDeploymentResources(ctx context.Context, deploymentName, resourceGroupName string) error {
+func (s *StepDeployTemplate) deleteDeploymentResources(ctx context.Context, subscriptionId, deploymentName, resourceGroupName string) error {
 	var maxResources int32 = 50
 	deploymentOperations, err := s.client.DeploymentOperationsClient.ListComplete(ctx, resourceGroupName, deploymentName, &maxResources)
 	if err != nil {
@@ -298,6 +305,7 @@ func (s *StepDeployTemplate) deleteDeploymentResources(ctx context.Context, depl
 			err = retryConfig.Run(ctx, func(ctx context.Context) error {
 				s.say(fmt.Sprintf("Attempting deletion -> %s : '%s'", resourceType, resourceName))
 				err := deleteResource(ctx, s.client,
+					subscriptionId,
 					resourceType,
 					resourceName,
 					resourceGroupName)
