@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
+	hashiGallerySDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2021-07-01/galleryimages"
 	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	hashiDisksSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
@@ -57,7 +58,7 @@ type AzureClient struct {
 	hashiDisksSDK.DisksClient
 	hashiSnapshotsSDK.SnapshotsClient
 	compute.GalleryImageVersionsClient
-	compute.GalleryImagesClient
+	hashiGallerySDK.GalleryImagesClient
 
 	InspectorMaxLength int
 	Template           *CaptureTemplate
@@ -209,7 +210,7 @@ func NewAzureClient(subscriptionID, sigSubscriptionID, resourceGroupName, storag
 	azureClient.SubnetsClient.Client.PollingDuration = pollingDuration
 
 	azureClient.VirtualNetworksClient = network.NewVirtualNetworksClientWithBaseURI(cloud.ResourceManagerEndpoint, subscriptionID)
-	azureClient.VirtualNetworksClient.Authorizer = authWrapper.AutorestAuthorizer(authorizer)
+	azureClient.VirtualNetworksClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
 	azureClient.VirtualNetworksClient.RequestInspector = withInspection(maxlen)
 	azureClient.VirtualNetworksClient.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
 	azureClient.VirtualNetworksClient.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.VirtualNetworksClient.UserAgent)
@@ -229,14 +230,14 @@ func NewAzureClient(subscriptionID, sigSubscriptionID, resourceGroupName, storag
 	azureClient.PublicIPAddressesClient.Client.PollingDuration = pollingDuration
 
 	azureClient.VirtualMachinesClient = hashiVMSDK.NewVirtualMachinesClientWithBaseURI(cloud.ResourceManagerEndpoint)
-	azureClient.VirtualMachinesClient.Client.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
+	azureClient.VirtualMachinesClient.Client.Authorizer = authWrapper.AutorestAuthorizer(authorizer)
 	azureClient.VirtualMachinesClient.Client.RequestInspector = withInspection(maxlen)
 	azureClient.VirtualMachinesClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), templateCapture(azureClient), errorCapture(azureClient))
 	azureClient.VirtualMachinesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.VirtualMachinesClient.Client.UserAgent)
 	azureClient.VirtualMachinesClient.Client.PollingDuration = pollingDuration
 
 	azureClient.SnapshotsClient = hashiSnapshotsSDK.NewSnapshotsClientWithBaseURI(cloud.ResourceManagerEndpoint)
-	azureClient.SnapshotsClient.Client.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
+	azureClient.SnapshotsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(authorizer)
 	azureClient.SnapshotsClient.Client.RequestInspector = withInspection(maxlen)
 	azureClient.SnapshotsClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
 	azureClient.SnapshotsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.SnapshotsClient.Client.UserAgent)
@@ -259,15 +260,13 @@ func NewAzureClient(subscriptionID, sigSubscriptionID, resourceGroupName, storag
 		azureClient.GalleryImageVersionsClient.SubscriptionID = sigSubscriptionID
 	}
 
-	azureClient.GalleryImagesClient = compute.NewGalleryImagesClientWithBaseURI(cloud.ResourceManagerEndpoint, subscriptionID)
-	azureClient.GalleryImagesClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
-	azureClient.GalleryImagesClient.RequestInspector = withInspection(maxlen)
-	azureClient.GalleryImagesClient.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.GalleryImagesClient.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.GalleryImagesClient.Client.UserAgent)
-	azureClient.GalleryImagesClient.PollingDuration = pollingDuration
-	if sigSubscriptionID != "" {
-		azureClient.GalleryImagesClient.SubscriptionID = sigSubscriptionID
-	}
+	azureClient.GalleryImagesClient = hashiGallerySDK.NewGalleryImagesClientWithBaseURI(cloud.ResourceManagerEndpoint)
+	azureClient.GalleryImagesClient.Client.Authorizer = authWrapper.AutorestAuthorizer(authorizer)
+	azureClient.GalleryImagesClient.Client.RequestInspector = withInspection(maxlen)
+	azureClient.GalleryImagesClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
+	azureClient.GalleryImagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.GalleryImagesClient.Client.UserAgent)
+	azureClient.GalleryImagesClient.Client.PollingDuration = pollingDuration
+
 	keyVaultURL, err := url.Parse(cloud.KeyVaultEndpoint)
 	if err != nil {
 		return nil, err

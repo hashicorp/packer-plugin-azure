@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/golang-jwt/jwt"
+	hashiGalleryImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2021-07-01/galleryimages"
 	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	packerAzureCommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
@@ -200,12 +201,16 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	}
 	// Validate that Shared Gallery Image exists before publishing to SIG
 	if b.config.isPublishToSIG() {
-		_, err = azureClient.GalleryImagesClient.Get(ctx, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
+		managedImageLocation := normalizeAzureRegion(b.config.Location)
+		id := hashiGalleryImagesSDK.NewImageID(b.config.SharedGalleryDestination.SigDestinationSubscription, managedImageLocation, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
+
+		_, err := azureClient.GalleryImagesClient.Get(ctx, id)
+		//	_, err = azureClient.GalleryImagesClient.Get(ctx, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
 		if err != nil {
+			panic(err)
 			return nil, fmt.Errorf("the Shared Gallery Image '%s' to which to publish the managed image version to does not exist in the resource group '%s' or does not contain managed image '%s'", b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationImageName)
 		}
 		// SIG requires that replication regions include the region in which the Managed Image resides
-		managedImageLocation := normalizeAzureRegion(b.stateBag.Get(constants.ArmLocation).(string))
 		foundMandatoryReplicationRegion := false
 		var normalizedReplicationRegions []string
 		for _, region := range b.config.SharedGalleryDestination.SigDestinationReplicationRegions {
