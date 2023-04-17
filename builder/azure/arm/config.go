@@ -25,6 +25,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
+	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/masterzen/winrm"
 
 	azcommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
@@ -609,18 +610,18 @@ func (c *Config) toVirtualMachineCaptureParameters() *compute.VirtualMachineCapt
 	}
 }
 
-func (c *Config) toImageParameters() *compute.Image {
-	return &compute.Image{
-		ImageProperties: &compute.ImageProperties{
-			SourceVirtualMachine: &compute.SubResource{
-				ID: to.StringPtr(c.toVMID()),
+func (c *Config) toImageParameters() *hashiImagesSDK.Image {
+	return &hashiImagesSDK.Image{
+		Properties: &hashiImagesSDK.ImageProperties{
+			SourceVirtualMachine: &hashiImagesSDK.SubResource{
+				Id: to.StringPtr(c.toVMID()),
 			},
-			StorageProfile: &compute.ImageStorageProfile{
+			StorageProfile: &hashiImagesSDK.ImageStorageProfile{
 				ZoneResilient: to.BoolPtr(c.ManagedImageZoneResilient),
 			},
 		},
-		Location: to.StringPtr(c.Location),
-		Tags:     azcommon.MapToAzureTags(c.AzureTags),
+		Location: *to.StringPtr(c.Location),
+		Tags:     &c.AzureTags,
 	}
 }
 

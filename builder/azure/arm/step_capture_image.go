@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
+	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -18,7 +19,7 @@ type StepCaptureImage struct {
 	client              *AzureClient
 	generalizeVM        func(vmId hashiVMSDK.VirtualMachineId) error
 	captureVhd          func(ctx context.Context, vmId hashiVMSDK.VirtualMachineId, parameters *compute.VirtualMachineCaptureParameters) error
-	captureManagedImage func(ctx context.Context, resourceGroupName string, imageName string, parameters *compute.Image) error
+	captureManagedImage func(ctx context.Context, subscriptionId string, resourceGroupName string, imageName string, parameters *hashiImagesSDK.Image) error
 	get                 func(client *AzureClient) *CaptureTemplate
 	say                 func(message string)
 	error               func(e error)
@@ -53,12 +54,13 @@ func (s *StepCaptureImage) generalize(vmId hashiVMSDK.VirtualMachineId) error {
 	return err
 }
 
-func (s *StepCaptureImage) captureImageFromVM(ctx context.Context, resourceGroupName string, imageName string, image *compute.Image) error {
-	f, err := s.client.ImagesClient.CreateOrUpdate(ctx, resourceGroupName, imageName, *image)
+func (s *StepCaptureImage) captureImageFromVM(ctx context.Context, subscriptionId string, resourceGroupName string, imageName string, image *hashiImagesSDK.Image) error {
+	id := hashiImagesSDK.NewImageID(subscriptionId, resourceGroupName, imageName)
+	err := s.client.ImagesClient.CreateOrUpdateThenPoll(ctx, id, *image)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 	}
-	return f.WaitForCompletionRef(ctx, s.client.ImagesClient.Client)
+	return err
 }
 
 func (s *StepCaptureImage) captureImage(ctx context.Context, vmId hashiVMSDK.VirtualMachineId, parameters *compute.VirtualMachineCaptureParameters) error {
@@ -83,7 +85,7 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 	var location = state.Get(constants.ArmLocation).(string)
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
 	var vmCaptureParameters = state.Get(constants.ArmVirtualMachineCaptureParameters).(*compute.VirtualMachineCaptureParameters)
-	var imageParameters = state.Get(constants.ArmImageParameters).(*compute.Image)
+	var imageParameters = state.Get(constants.ArmImageParameters).(*hashiImagesSDK.Image)
 	var subscriptionId = state.Get(constants.ArmSubscription).(string)
 	var isManagedImage = state.Get(constants.ArmIsManagedImage).(bool)
 	var isSIGImage = state.Get(constants.ArmIsSIGImage).(bool)
@@ -104,7 +106,7 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 			s.say(fmt.Sprintf(" -> Image ResourceGroupName   : '%s'", targetManagedImageResourceGroupName))
 			s.say(fmt.Sprintf(" -> Image Name                : '%s'", targetManagedImageName))
 			s.say(fmt.Sprintf(" -> Image Location            : '%s'", targetManagedImageLocation))
-			err = s.captureManagedImage(ctx, targetManagedImageResourceGroupName, targetManagedImageName, imageParameters)
+			err = s.captureManagedImage(ctx, subscriptionId, targetManagedImageResourceGroupName, targetManagedImageName, imageParameters)
 		} else if isSIGImage {
 			// It's possible to create SIG image
 			return multistep.ActionContinue

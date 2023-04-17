@@ -16,7 +16,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
+	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 )
 
 type resourceResolver struct {
@@ -50,12 +51,12 @@ func (s *resourceResolver) Resolve(c *Config) error {
 	}
 
 	if s.shouldResolveManagedImageName(c) {
-		image, err := findManagedImageByName(s.client, c.CustomManagedImageName, c.CustomManagedImageResourceGroupName)
+		image, err := findManagedImageByName(s.client, c.CustomManagedImageName, c.ClientConfig.SubscriptionID, c.CustomManagedImageResourceGroupName)
 		if err != nil {
 			return err
 		}
 
-		c.customManagedImageID = *image.ID
+		c.customManagedImageID = *image.Id
 	}
 
 	return nil
@@ -75,19 +76,16 @@ func getResourceGroupNameFromId(id string) string {
 	return xs[4]
 }
 
-func findManagedImageByName(client *AzureClient, name, resourceGroupName string) (*compute.Image, error) {
-	images, err := client.ImagesClient.ListByResourceGroupComplete(context.TODO(), resourceGroupName)
+func findManagedImageByName(client *AzureClient, name, subscriptionId, resourceGroupName string) (*hashiImagesSDK.Image, error) {
+	id := commonids.NewResourceGroupID(subscriptionId, resourceGroupName)
+	images, err := client.ImagesClient.ListByResourceGroupComplete(context.TODO(), id)
 	if err != nil {
 		return nil, err
 	}
 
-	for images.NotDone() {
-		image := images.Value()
+	for _, image := range images.Items {
 		if strings.EqualFold(name, *image.Name) {
 			return &image, nil
-		}
-		if err = images.Next(); err != nil {
-			return nil, err
 		}
 	}
 

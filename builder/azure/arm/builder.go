@@ -18,7 +18,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/golang-jwt/jwt"
-	hashiGallerySDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2021-07-01/galleryimages"
+	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	packerAzureCommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
@@ -80,7 +80,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if b.config.isPublishToSIG() {
 		b.stateBag.Put(constants.ArmManagedImageSubscription, b.config.ClientConfig.SubscriptionID)
 	}
+
 	b.stateBag.Put(constants.ArmSubscription, b.config.ClientConfig.SubscriptionID)
+
 	log.Print(":: Configuration")
 	packerAzureCommon.DumpConfig(&b.config, func(s string) { log.Print(s) })
 
@@ -92,6 +94,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if err != nil {
 		return nil, err
 	}
+
 	authOptions := NewSDKAuthOptions{
 		AuthType:       b.config.ClientConfig.AuthType,
 		ClientID:       b.config.ClientConfig.ClientID,
@@ -99,6 +102,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		TenantID:       b.config.ClientConfig.TenantID,
 		SubscriptionID: b.config.ClientConfig.SubscriptionID,
 	}
+
 	ui.Message("Creating Azure Resource Manager (ARM) client ...")
 	azureClient, err := NewAzureClient(
 		b.config.ClientConfig.SubscriptionID,
@@ -137,14 +141,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		}
 
 		// If a managed image already exists it cannot be overwritten.
-		_, err = azureClient.ImagesClient.Get(ctx, b.config.ManagedImageResourceGroupName, b.config.ManagedImageName, "")
+		id := hashiImagesSDK.NewImageID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName, b.config.ManagedImageName)
+		_, err = azureClient.ImagesClient.Get(ctx, id, hashiImagesSDK.DefaultGetOperationOptions())
 		if err == nil {
 			if b.config.PackerForce {
 				ui.Say(fmt.Sprintf("the managed image named %s already exists, but deleting it due to -force flag", b.config.ManagedImageName))
-				f, err := azureClient.ImagesClient.Delete(ctx, b.config.ManagedImageResourceGroupName, b.config.ManagedImageName)
-				if err == nil {
-					err = f.WaitForCompletionRef(ctx, azureClient.ImagesClient.Client)
-				}
+				err := azureClient.ImagesClient.DeleteThenPoll(ctx, id)
 				if err != nil {
 					return nil, fmt.Errorf("failed to delete the managed image named %s : %s", b.config.ManagedImageName, azureClient.LastError.Error())
 				}
@@ -198,7 +200,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	}
 	// Validate that Shared Gallery Image exists before publishing to SIG
 	if b.config.isPublishToSIG() {
-		galleryId := galleryimages.NewImageID(b.config.SharedGalleryDestination.SigDestinationImageName, "locationValue", "sharedGalleryValue", "imageValue")
 		_, err = azureClient.GalleryImagesClient.Get(ctx, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
 		if err != nil {
 			return nil, fmt.Errorf("the Shared Gallery Image '%s' to which to publish the managed image version to does not exist in the resource group '%s' or does not contain managed image '%s'", b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationImageName)
@@ -482,6 +483,7 @@ func (b *Builder) configureStateBag(stateBag multistep.StateBag) {
 	stateBag.Put(constants.AuthorizedKey, b.config.sshAuthorizedKey)
 
 	stateBag.Put(constants.ArmTags, packerAzureCommon.MapToAzureTags(b.config.AzureTags))
+	stateBag.Put(constants.ArmNewSDKTags, b.config.AzureTags)
 	stateBag.Put(constants.ArmComputeName, b.config.tmpComputeName)
 	stateBag.Put(constants.ArmDeploymentName, b.config.tmpDeploymentName)
 
