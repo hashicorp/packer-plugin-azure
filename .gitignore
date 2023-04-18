@@ -2,3 +2,4 @@ main
 dist/*
 packer-plugin-azure
 .docs
+crash.log
