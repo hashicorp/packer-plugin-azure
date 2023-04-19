@@ -69,7 +69,6 @@ func (s *StepCaptureImage) captureImage(ctx context.Context, resourceGroupName s
 }
 
 func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	s.say("Generalizing machine ...")
 
 	var computeName = state.Get(constants.ArmComputeName).(string)
 	var location = state.Get(constants.ArmLocation).(string)
@@ -79,12 +78,18 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 
 	var isManagedImage = state.Get(constants.ArmIsManagedImage).(bool)
 	var isSIGImage = state.Get(constants.ArmIsSIGImage).(bool)
-
+	var skipGeneralization = state.Get(constants.ArmSharedImageGalleryDestinationSkipGeneralization).(bool)
 	s.say(fmt.Sprintf(" -> Compute ResourceGroupName : '%s'", resourceGroupName))
 	s.say(fmt.Sprintf(" -> Compute Name              : '%s'", computeName))
 	s.say(fmt.Sprintf(" -> Compute Location          : '%s'", location))
 
-	err := s.generalizeVM(resourceGroupName, computeName)
+	var err error
+	if skipGeneralization && !isManagedImage && isSIGImage {
+		s.say("Skipping generalization of Compute Gallery Image")
+	} else {
+		s.say("Generalizing machine ...")
+		err = s.generalizeVM(resourceGroupName, computeName)
+	}
 
 	if err == nil {
 		if isManagedImage {
