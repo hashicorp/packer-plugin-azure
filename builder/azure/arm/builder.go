@@ -512,6 +512,8 @@ func (b *Builder) configureStateBag(stateBag multistep.StateBag) {
 	stateBag.Put(constants.ArmKeepOSDisk, b.config.KeepOSDisk)
 
 	stateBag.Put(constants.ArmIsSIGImage, b.config.isPublishToSIG())
+	// Set SkipGeneralization as false so that we can pull it from the state later even if we're not publishing to SIG
+	stateBag.Put(constants.ArmSharedImageGalleryDestinationSkipGeneralization, false)
 	if b.config.isPublishToSIG() {
 		stateBag.Put(constants.ArmManagedImageSigPublishResourceGroup, b.config.SharedGalleryDestination.SigDestinationResourceGroup)
 		stateBag.Put(constants.ArmManagedImageSharedGalleryName, b.config.SharedGalleryDestination.SigDestinationGalleryName)
