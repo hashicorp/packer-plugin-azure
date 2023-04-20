@@ -65,6 +65,66 @@ func TestStepCaptureImageShouldPassIfCapturePasses(t *testing.T) {
 	}
 }
 
+func TestStepCaptureImageShouldCallGeneralizeIfSkipGeneralizationIsFalse(t *testing.T) {
+	generalizeCount := 0
+	var testSubject = &StepCaptureImage{
+		captureVhd: func(context.Context, string, string, *compute.VirtualMachineCaptureParameters) error { return nil },
+		generalizeVM: func(string, string) error {
+			generalizeCount++
+			return nil
+		},
+		get: func(client *AzureClient) *CaptureTemplate {
+			return nil
+		},
+		say:   func(message string) {},
+		error: func(e error) {},
+	}
+
+	stateBag := createTestStateBagStepCaptureImage()
+	stateBag.Put(constants.ArmSharedImageGalleryDestinationSkipGeneralization, false)
+	var result = testSubject.Run(context.Background(), stateBag)
+	if result != multistep.ActionContinue {
+		t.Fatalf("Expected the step to return 'ActionContinue', but got '%d'.", result)
+	}
+
+	if _, ok := stateBag.GetOk(constants.Error); ok == true {
+		t.Fatalf("Expected the step to not set stateBag['%s'], but it was.", constants.Error)
+	}
+	if generalizeCount != 1 {
+		t.Fatalf("Expected generalize to be called 1, was called %d times", generalizeCount)
+	}
+}
+
+func TestStepCaptureImageShouldNotCallGeneralizeIfSkipGeneralizationIsTrue(t *testing.T) {
+	generalizeCount := 0
+	var testSubject = &StepCaptureImage{
+		captureVhd: func(context.Context, string, string, *compute.VirtualMachineCaptureParameters) error { return nil },
+		generalizeVM: func(string, string) error {
+			generalizeCount++
+			return nil
+		},
+		get: func(client *AzureClient) *CaptureTemplate {
+			return nil
+		},
+		say:   func(message string) {},
+		error: func(e error) {},
+	}
+
+	stateBag := createTestStateBagStepCaptureImage()
+	stateBag.Put(constants.ArmSharedImageGalleryDestinationSkipGeneralization, true)
+	var result = testSubject.Run(context.Background(), stateBag)
+	if result != multistep.ActionContinue {
+		t.Fatalf("Expected the step to return 'ActionContinue', but got '%d'.", result)
+	}
+
+	if _, ok := stateBag.GetOk(constants.Error); ok == true {
+		t.Fatalf("Expected the step to not set stateBag['%s'], but it was.", constants.Error)
+	}
+	if generalizeCount != 0 {
+		t.Fatalf("Expected generalize to not be called, was called %d times", generalizeCount)
+	}
+}
+
 func TestStepCaptureImageShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 	cancelCh := make(chan<- struct{})
 	defer close(cancelCh)

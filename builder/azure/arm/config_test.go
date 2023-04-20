@@ -1380,6 +1380,36 @@ func TestConfigShouldRejectVTPMWhenPublishingToAManagedImage(t *testing.T) {
 	}
 }
 
+func TestConfigShouldRejectSkipGeneralizeMWhenPublishingToAManagedImage(t *testing.T) {
+	expectedErrorMessage := "A managed image (managed_image_name, managed_image_resource_group_name) can not be Specialized (shared_image_gallery_destination.skip_generalization can not be set), Specialized images are only supported when directly publishing to a Shared Image Gallery"
+	config := map[string]interface{}{
+		"image_offer":                       "ignore",
+		"image_publisher":                   "ignore",
+		"image_sku":                         "ignore",
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"communicator":                      "none",
+		"managed_image_resource_group_name": "ignore",
+		"managed_image_name":                "ignore",
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group":      "ignore",
+			"gallery_name":        "ignore",
+			"image_name":          "ignore",
+			"image_version":       "1.0.0",
+			"skip_generalization": "true",
+		},
+		// Does not matter for this test case, just pick one.
+		"os_type": constants.Target_Linux,
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("expected config to reject managed image with secure boot, secure boot is only allowed when direct publishing to SIG")
+	} else if !strings.Contains(err.Error(), expectedErrorMessage) {
+		t.Fatalf("unexpected rejection reason, expected %s to contain %s", err.Error(), expectedErrorMessage)
+	}
+}
 func TestConfigShouldAcceptPlatformManagedImageBuild(t *testing.T) {
 	config := map[string]interface{}{
 		"image_offer":                       "ignore",

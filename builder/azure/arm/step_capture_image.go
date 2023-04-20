@@ -84,7 +84,7 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 	s.say(fmt.Sprintf(" -> Compute Location          : '%s'", location))
 
 	var err error
-	if skipGeneralization && !isManagedImage && isSIGImage {
+	if skipGeneralization {
 		s.say("Skipping generalization of Compute Gallery Image")
 	} else {
 		s.say("Generalizing machine ...")
