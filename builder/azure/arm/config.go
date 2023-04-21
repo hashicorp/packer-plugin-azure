@@ -106,7 +106,8 @@ type SharedImageGalleryDestination struct {
 	// Specify a storage account type for the Shared Image Gallery Image Version.
 	// Defaults to `Standard_LRS`. Accepted values are `Standard_LRS`, `Standard_ZRS` and `Premium_LRS`
 	SigDestinationStorageAccountType string `mapstructure:"storage_account_type"`
-	SigDestinationSkipGeneralization bool   `mapstructure:"skip_generalization"`
+	// Set to true if publishing to a Specialized Gallery, this skips a call to set the resulting VM's OS state as Generalized
+	SigDestinationSkipGeneralization bool `mapstructure:"skip_generalization"`
 }
 
 type Spot struct {
