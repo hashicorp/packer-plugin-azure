@@ -19,27 +19,29 @@ import (
 )
 
 type StepDeployTemplate struct {
-	client           *AzureClient
-	deploy           func(ctx context.Context, resourceGroupName string, deploymentName string) error
-	delete           func(ctx context.Context, deploymentName, resourceGroupName string) error
-	disk             func(ctx context.Context, resourceGroupName string, computeName string) (string, string, error)
-	deleteDisk       func(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool) error
-	deleteDeployment func(ctx context.Context, state multistep.StateBag) error
-	say              func(message string)
-	error            func(e error)
-	config           *Config
-	factory          templateFactoryFunc
-	name             string
+	client                     *AzureClient
+	deploy                     func(ctx context.Context, resourceGroupName string, deploymentName string) error
+	delete                     func(ctx context.Context, deploymentName, resourceGroupName string) error
+	disk                       func(ctx context.Context, resourceGroupName string, computeName string) (string, string, error)
+	deleteDisk                 func(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool) error
+	deleteDeployment           func(ctx context.Context, state multistep.StateBag) error
+	say                        func(message string)
+	error                      func(e error)
+	config                     *Config
+	factory                    templateFactoryFunc
+	name                       string
+	isVirtualMachineDeployment bool
 }
 
-func NewStepDeployTemplate(client *AzureClient, ui packersdk.Ui, config *Config, deploymentName string, factory templateFactoryFunc) *StepDeployTemplate {
+func NewStepDeployTemplate(client *AzureClient, ui packersdk.Ui, config *Config, deploymentName string, factory templateFactoryFunc, isVirtualMachineDeployment bool) *StepDeployTemplate {
 	var step = &StepDeployTemplate{
-		client:  client,
-		say:     func(message string) { ui.Say(message) },
-		error:   func(e error) { ui.Error(e.Error()) },
-		config:  config,
-		factory: factory,
-		name:    deploymentName,
+		client:                     client,
+		say:                        func(message string) { ui.Say(message) },
+		error:                      func(e error) { ui.Error(e.Error()) },
+		config:                     config,
+		factory:                    factory,
+		name:                       deploymentName,
+		isVirtualMachineDeployment: isVirtualMachineDeployment,
 	}
 
 	step.deploy = step.deployTemplate
@@ -71,53 +73,61 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 	}()
 
 	ui := state.Get("ui").(packersdk.Ui)
-	ui.Say("\nDeleting individual resources ...")
-
 	deploymentName := s.name
 	resourceGroupName := state.Get(constants.ArmResourceGroupName).(string)
-	// Get image disk details before deleting the image; otherwise we won't be able to
-	// delete the disk as the image request will return a 404
-	computeName := state.Get(constants.ArmComputeName).(string)
-	isManagedDisk := state.Get(constants.ArmIsManagedImage).(bool)
-	imageType, imageName, err := s.disk(context.TODO(), resourceGroupName, computeName)
-
-	if err != nil && !strings.Contains(err.Error(), "ResourceNotFound") {
-		ui.Error(fmt.Sprintf("Could not retrieve OS Image details: %s", err))
-	}
-	err = s.delete(context.TODO(), deploymentName, resourceGroupName)
-	if err != nil {
-		s.reportIfError(err, resourceGroupName)
-	}
-
-	// The disk was not found on the VM, this is an error.
-	if imageType == "" && imageName == "" {
-		ui.Error(fmt.Sprintf("Failed to find temporary OS disk on VM.  Please delete manually.\n\n"+
-			"VM Name: %s\n"+
-			"Error: %s", computeName, err))
-		return
-	}
-	if !state.Get(constants.ArmKeepOSDisk).(bool) {
-		ui.Say(fmt.Sprintf(" Deleting -> %s : '%s'", imageType, imageName))
-		err = s.deleteDisk(context.TODO(), imageName, resourceGroupName, isManagedDisk)
+	if s.isVirtualMachineDeployment {
+		ui.Say("\nDeleting Virtual Machine deployment and its attatched resources...")
+		// Get image disk details before deleting the image; otherwise we won't be able to
+		// delete the disk as the image request will return a 404
+		computeName := state.Get(constants.ArmComputeName).(string)
+		isManagedDisk := state.Get(constants.ArmIsManagedImage).(bool)
+		imageType, imageName, err := s.disk(context.TODO(), resourceGroupName, computeName)
 		if err != nil {
-			ui.Error(fmt.Sprintf("Error deleting resource.  Please delete manually.\n\n"+
-				"Name: %s\n"+
-				"Error: %s", imageName, err))
+			ui.Error(fmt.Sprintf("Could not retrieve OS Image details: %s", err))
 		}
-	}
-
-	var dataDisks []string
-	if disks := state.Get(constants.ArmAdditionalDiskVhds); disks != nil {
-		dataDisks = disks.([]string)
-	}
-	for i, additionaldisk := range dataDisks {
-		s.say(fmt.Sprintf(" Deleting Additional Disk -> %d: '%s'", i+1, additionaldisk))
-
-		err := s.deleteImage(context.TODO(), additionaldisk, resourceGroupName, isManagedDisk)
+		err = s.delete(context.TODO(), deploymentName, resourceGroupName)
 		if err != nil {
-			s.say("Failed to delete the managed Additional Disk!")
+			s.reportIfError(err, resourceGroupName)
 		}
+		// The disk was not found on the VM, this is an error.
+		if imageType == "" && imageName == "" {
+			ui.Error(fmt.Sprintf("Failed to find temporary OS disk on VM.  Please delete manually.\n\n"+
+				"VM Name: %s\n"+
+				"Error: %s", computeName, err))
+			return
+		}
+		if !state.Get(constants.ArmKeepOSDisk).(bool) {
+			ui.Say(fmt.Sprintf(" Deleting -> %s : '%s'", imageType, imageName))
+			err = s.deleteDisk(context.TODO(), imageName, resourceGroupName, isManagedDisk)
+			if err != nil {
+				ui.Error(fmt.Sprintf("Error deleting resource.  Please delete manually.\n\n"+
+					"Name: %s\n"+
+					"Error: %s", imageName, err))
+			}
+		}
+
+		var dataDisks []string
+		if disks := state.Get(constants.ArmAdditionalDiskVhds); disks != nil {
+			dataDisks = disks.([]string)
+		}
+		for i, additionaldisk := range dataDisks {
+			s.say(fmt.Sprintf(" Deleting Additional Disk -> %d: '%s'", i+1, additionaldisk))
+
+			err := s.deleteImage(context.TODO(), additionaldisk, resourceGroupName, isManagedDisk)
+			if err != nil {
+				s.say("Failed to delete the managed Additional Disk!")
+			}
+		}
+
+	} else {
+		ui.Say("\nDeleting KeyVault created during build")
+		err := s.delete(context.TODO(), deploymentName, resourceGroupName)
+		if err != nil {
+			s.reportIfError(err, resourceGroupName)
+		}
+
 	}
+
 }
 
 func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupName string, deploymentName string) error {
@@ -299,9 +309,9 @@ func (s *StepDeployTemplate) deleteDeploymentResources(ctx context.Context, depl
 					resourceName,
 					resourceGroupName)
 				if err != nil {
-					s.say(fmt.Sprintf("Error deleting resource. Will retry.\n"+
-						"Name: %s\n"+
-						"Error: %s\n", resourceName, err.Error()))
+					s.say(fmt.Sprintf("Couldn't delete %s resource. Will retry.\n"+
+						"Name: %s",
+						resourceType, resourceName))
 				}
 				return err
 			})
