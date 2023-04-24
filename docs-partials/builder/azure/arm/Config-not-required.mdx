@@ -112,6 +112,26 @@
   CLI example `az vm list-sizes --location westus`
 
 - `spot` (Spot) - If set use a spot instance during build; spot configuration settings only apply to the virtual machine launched by Packer and will not be persisted on the resulting image artifact.
+  
+  Following is an example.
+  
+  In JSON
+  
+  ```json
+  "spot": {
+      "eviction_policy": "Delete",
+  	   "max_price": "0.4",
+  }
+  ```
+  
+  In HCL2
+  
+  ```hcl
+  spot {
+      eviction_policy = "Delete"
+      max_price = "0.4"
+  }
+  ```
 
 - `managed_image_resource_group_name` (string) - Specify the managed image resource group name where the result of the
   Packer build will be saved. The resource group must already exist. If
