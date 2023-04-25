@@ -64,9 +64,10 @@ func TestStepDeployTemplateShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 
 			return nil
 		},
-		say:   func(message string) {},
-		error: func(e error) {},
-		name:  "--deployment-name--",
+		say:          func(message string) {},
+		error:        func(e error) {},
+		name:         "--deployment-name--",
+		templateType: VirtualMachineTemplate,
 	}
 
 	stateBag := createTestStateBagStepValidateTemplate()
@@ -89,9 +90,10 @@ func TestStepDeployTemplateShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 
 func TestStepDeployTemplateDeleteImageShouldFailWhenImageUrlCannotBeParsed(t *testing.T) {
 	var testSubject = &StepDeployTemplate{
-		say:   func(message string) {},
-		error: func(e error) {},
-		name:  "--deployment-name--",
+		say:          func(message string) {},
+		error:        func(e error) {},
+		name:         "--deployment-name--",
+		templateType: VirtualMachineTemplate,
 	}
 	// Invalid URL per https://golang.org/src/net/url/url_test.go
 	err := testSubject.deleteImage(context.TODO(), "http://[fe80::1%en0]/", "Unit Test: ResourceGroupName", false)
@@ -102,9 +104,10 @@ func TestStepDeployTemplateDeleteImageShouldFailWhenImageUrlCannotBeParsed(t *te
 
 func TestStepDeployTemplateDeleteImageShouldFailWithInvalidImage(t *testing.T) {
 	var testSubject = &StepDeployTemplate{
-		say:   func(message string) {},
-		error: func(e error) {},
-		name:  "--deployment-name--",
+		say:          func(message string) {},
+		error:        func(e error) {},
+		name:         "--deployment-name--",
+		templateType: VirtualMachineTemplate,
 	}
 	err := testSubject.deleteImage(context.TODO(), "storage.blob.core.windows.net/abc", "Unit Test: ResourceGroupName", false)
 	if err == nil {
@@ -114,7 +117,7 @@ func TestStepDeployTemplateDeleteImageShouldFailWithInvalidImage(t *testing.T) {
 
 func TestStepDeployTemplateCleanupShouldDeleteManagedOSImageInExistingResourceGroup(t *testing.T) {
 	var deleteDiskCounter = 0
-	var testSubject = createTestStepDeployTemplateDeleteOSImage(&deleteDiskCounter)
+	var testSubject = createTestStepDeployTemplateDeleteOSImage(&deleteDiskCounter, VirtualMachineTemplate)
 
 	stateBag := createTestStateBagStepDeployTemplate()
 	stateBag.Put(constants.ArmIsManagedImage, true)
@@ -132,7 +135,7 @@ func TestStepDeployTemplateCleanupShouldDeleteManagedOSImageInExistingResourceGr
 
 func TestStepDeployTemplateCleanupShouldDeleteManagedOSImageInTemporaryResourceGroup(t *testing.T) {
 	var deleteDiskCounter = 0
-	var testSubject = createTestStepDeployTemplateDeleteOSImage(&deleteDiskCounter)
+	var testSubject = createTestStepDeployTemplateDeleteOSImage(&deleteDiskCounter, VirtualMachineTemplate)
 
 	stateBag := createTestStateBagStepDeployTemplate()
 	stateBag.Put(constants.ArmIsManagedImage, true)
@@ -150,7 +153,7 @@ func TestStepDeployTemplateCleanupShouldDeleteManagedOSImageInTemporaryResourceG
 
 func TestStepDeployTemplateCleanupShouldDeleteVHDOSImageInExistingResourceGroup(t *testing.T) {
 	var deleteDiskCounter = 0
-	var testSubject = createTestStepDeployTemplateDeleteOSImage(&deleteDiskCounter)
+	var testSubject = createTestStepDeployTemplateDeleteOSImage(&deleteDiskCounter, VirtualMachineTemplate)
 
 	stateBag := createTestStateBagStepDeployTemplate()
 	stateBag.Put(constants.ArmIsManagedImage, false)
@@ -168,7 +171,7 @@ func TestStepDeployTemplateCleanupShouldDeleteVHDOSImageInExistingResourceGroup(
 
 func TestStepDeployTemplateCleanupShouldVHDOSImageInTemporaryResourceGroup(t *testing.T) {
 	var deleteDiskCounter = 0
-	var testSubject = createTestStepDeployTemplateDeleteOSImage(&deleteDiskCounter)
+	var testSubject = createTestStepDeployTemplateDeleteOSImage(&deleteDiskCounter, VirtualMachineTemplate)
 
 	stateBag := createTestStateBagStepDeployTemplate()
 	stateBag.Put(constants.ArmIsManagedImage, false)
@@ -184,6 +187,24 @@ func TestStepDeployTemplateCleanupShouldVHDOSImageInTemporaryResourceGroup(t *te
 	}
 }
 
+func TestStepDeployTemplateCleanupShouldNotDeleteDiskForKeyVaultDeployments(t *testing.T) {
+	var deleteDiskCounter = 0
+	var testSubject = createTestStepDeployTemplateDeleteOSImage(&deleteDiskCounter, KeyVaultTemplate)
+
+	stateBag := createTestStateBagStepDeployTemplate()
+	stateBag.Put(constants.ArmIsManagedImage, false)
+	stateBag.Put(constants.ArmIsSIGImage, false)
+	stateBag.Put(constants.ArmIsExistingResourceGroup, true)
+	stateBag.Put(constants.ArmIsResourceGroupCreated, true)
+	stateBag.Put(constants.ArmKeepOSDisk, false)
+	stateBag.Put("ui", packersdk.TestUi(t))
+
+	testSubject.Cleanup(stateBag)
+	if deleteDiskCounter != 0 {
+		t.Fatalf("Expected DeployTemplate Cleanup to not invoke deleteDisk, but invoked %d times", deleteDiskCounter)
+	}
+}
+
 func createTestStateBagStepDeployTemplate() multistep.StateBag {
 	stateBag := new(multistep.BasicStateBag)
 
@@ -194,7 +215,7 @@ func createTestStateBagStepDeployTemplate() multistep.StateBag {
 	return stateBag
 }
 
-func createTestStepDeployTemplateDeleteOSImage(deleteDiskCounter *int) *StepDeployTemplate {
+func createTestStepDeployTemplateDeleteOSImage(deleteDiskCounter *int, templateType DeploymentTemplateType) *StepDeployTemplate {
 	return &StepDeployTemplate{
 		deploy: func(context.Context, string, string) error { return nil },
 		say:    func(message string) {},
@@ -212,5 +233,6 @@ func createTestStepDeployTemplateDeleteOSImage(deleteDiskCounter *int) *StepDepl
 		deleteDeployment: func(ctx context.Context, state multistep.StateBag) error {
 			return nil
 		},
+		templateType: templateType,
 	}
 }

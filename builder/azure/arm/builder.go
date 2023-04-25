@@ -225,7 +225,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			},
 			NewStepCreateResourceGroup(azureClient, ui),
 			NewStepValidateTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
-			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
+			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment, VirtualMachineTemplate),
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),
 			&communicator.StepConnectSSH{
 				Config:    &b.config.Comm,
@@ -257,7 +257,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			keyVaultDeploymentName := b.stateBag.Get(constants.ArmKeyVaultDeploymentName).(string)
 			steps = append(steps,
 				NewStepValidateTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetCommunicatorSpecificKeyVaultDeployment),
-				NewStepDeployTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetCommunicatorSpecificKeyVaultDeployment),
+				NewStepDeployTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetCommunicatorSpecificKeyVaultDeployment, KeyVaultTemplate),
 			)
 		} else if b.config.Comm.Type == "winrm" {
 			steps = append(steps, NewStepCertificateInKeyVault(&azureClient.VaultClient, ui, &b.config, b.config.winrmCertificate))
@@ -281,7 +281,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			NewStepGetCertificate(azureClient, ui),
 			NewStepSetCertificate(&b.config, ui),
 			NewStepValidateTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
-			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
+			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment, VirtualMachineTemplate),
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),
 		)
 
