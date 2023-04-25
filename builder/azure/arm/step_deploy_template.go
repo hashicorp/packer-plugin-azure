@@ -18,30 +18,37 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/retry"
 )
 
+type DeploymentTemplateType int
+
+const (
+	VirtualMachineTemplate DeploymentTemplateType = iota
+	KeyVaultTemplate
+)
+
 type StepDeployTemplate struct {
-	client                     *AzureClient
-	deploy                     func(ctx context.Context, resourceGroupName string, deploymentName string) error
-	delete                     func(ctx context.Context, deploymentName, resourceGroupName string) error
-	disk                       func(ctx context.Context, resourceGroupName string, computeName string) (string, string, error)
-	deleteDisk                 func(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool) error
-	deleteDeployment           func(ctx context.Context, state multistep.StateBag) error
-	say                        func(message string)
-	error                      func(e error)
-	config                     *Config
-	factory                    templateFactoryFunc
-	name                       string
-	isVirtualMachineDeployment bool
+	client           *AzureClient
+	deploy           func(ctx context.Context, resourceGroupName string, deploymentName string) error
+	delete           func(ctx context.Context, deploymentName, resourceGroupName string) error
+	disk             func(ctx context.Context, resourceGroupName string, computeName string) (string, string, error)
+	deleteDisk       func(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool) error
+	deleteDeployment func(ctx context.Context, state multistep.StateBag) error
+	say              func(message string)
+	error            func(e error)
+	config           *Config
+	factory          templateFactoryFunc
+	name             string
+	templateType     DeploymentTemplateType
 }
 
-func NewStepDeployTemplate(client *AzureClient, ui packersdk.Ui, config *Config, deploymentName string, factory templateFactoryFunc, isVirtualMachineDeployment bool) *StepDeployTemplate {
+func NewStepDeployTemplate(client *AzureClient, ui packersdk.Ui, config *Config, deploymentName string, factory templateFactoryFunc, templateType DeploymentTemplateType) *StepDeployTemplate {
 	var step = &StepDeployTemplate{
-		client:                     client,
-		say:                        func(message string) { ui.Say(message) },
-		error:                      func(e error) { ui.Error(e.Error()) },
-		config:                     config,
-		factory:                    factory,
-		name:                       deploymentName,
-		isVirtualMachineDeployment: isVirtualMachineDeployment,
+		client:       client,
+		say:          func(message string) { ui.Say(message) },
+		error:        func(e error) { ui.Error(e.Error()) },
+		config:       config,
+		factory:      factory,
+		name:         deploymentName,
+		templateType: templateType,
 	}
 
 	step.deploy = step.deployTemplate
@@ -75,7 +82,14 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 	ui := state.Get("ui").(packersdk.Ui)
 	deploymentName := s.name
 	resourceGroupName := state.Get(constants.ArmResourceGroupName).(string)
-	if s.isVirtualMachineDeployment {
+	if s.templateType == KeyVaultTemplate {
+		ui.Say("\nDeleting KeyVault created during build")
+		err := s.delete(context.TODO(), deploymentName, resourceGroupName)
+		if err != nil {
+			s.reportIfError(err, resourceGroupName)
+		}
+
+	} else {
 		ui.Say("\nDeleting Virtual Machine deployment and its attatched resources...")
 		// Get image disk details before deleting the image; otherwise we won't be able to
 		// delete the disk as the image request will return a 404
@@ -119,15 +133,7 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 			}
 		}
 
-	} else {
-		ui.Say("\nDeleting KeyVault created during build")
-		err := s.delete(context.TODO(), deploymentName, resourceGroupName)
-		if err != nil {
-			s.reportIfError(err, resourceGroupName)
-		}
-
 	}
-
 }
 
 func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupName string, deploymentName string) error {
