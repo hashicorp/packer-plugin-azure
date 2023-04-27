@@ -65,7 +65,7 @@ func TestStepCaptureImageShouldPassIfCapturePasses(t *testing.T) {
 	}
 }
 
-func TestStepCaptureImageShouldCallGeneralizeIfSkipGeneralizationIsFalse(t *testing.T) {
+func TestStepCaptureImageShouldCallGeneralizeIfSpecializedIsFalse(t *testing.T) {
 	generalizeCount := 0
 	var testSubject = &StepCaptureImage{
 		captureVhd: func(context.Context, string, string, *compute.VirtualMachineCaptureParameters) error { return nil },
@@ -81,7 +81,7 @@ func TestStepCaptureImageShouldCallGeneralizeIfSkipGeneralizationIsFalse(t *test
 	}
 
 	stateBag := createTestStateBagStepCaptureImage()
-	stateBag.Put(constants.ArmSharedImageGalleryDestinationSkipGeneralization, false)
+	stateBag.Put(constants.ArmSharedImageGalleryDestinationSpecialized, false)
 	var result = testSubject.Run(context.Background(), stateBag)
 	if result != multistep.ActionContinue {
 		t.Fatalf("Expected the step to return 'ActionContinue', but got '%d'.", result)
@@ -95,7 +95,7 @@ func TestStepCaptureImageShouldCallGeneralizeIfSkipGeneralizationIsFalse(t *test
 	}
 }
 
-func TestStepCaptureImageShouldNotCallGeneralizeIfSkipGeneralizationIsTrue(t *testing.T) {
+func TestStepCaptureImageShouldNotCallGeneralizeIfSpecializedIsTrue(t *testing.T) {
 	generalizeCount := 0
 	var testSubject = &StepCaptureImage{
 		captureVhd: func(context.Context, string, string, *compute.VirtualMachineCaptureParameters) error { return nil },
@@ -111,7 +111,7 @@ func TestStepCaptureImageShouldNotCallGeneralizeIfSkipGeneralizationIsTrue(t *te
 	}
 
 	stateBag := createTestStateBagStepCaptureImage()
-	stateBag.Put(constants.ArmSharedImageGalleryDestinationSkipGeneralization, true)
+	stateBag.Put(constants.ArmSharedImageGalleryDestinationSpecialized, true)
 	var result = testSubject.Run(context.Background(), stateBag)
 	if result != multistep.ActionContinue {
 		t.Fatalf("Expected the step to return 'ActionContinue', but got '%d'.", result)
@@ -196,7 +196,7 @@ func createTestStateBagStepCaptureImage() multistep.StateBag {
 	stateBag.Put(constants.ArmManagedImageName, "")
 	stateBag.Put(constants.ArmImageParameters, &compute.Image{})
 	stateBag.Put(constants.ArmIsSIGImage, false)
-	stateBag.Put(constants.ArmSharedImageGalleryDestinationSkipGeneralization, false)
+	stateBag.Put(constants.ArmSharedImageGalleryDestinationSpecialized, false)
 
 	return stateBag
 }
