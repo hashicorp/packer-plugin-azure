@@ -364,7 +364,7 @@ type FlatSharedImageGalleryDestination struct {
 	SigDestinationImageVersion       *string  `mapstructure:"image_version" cty:"image_version" hcl:"image_version"`
 	SigDestinationReplicationRegions []string `mapstructure:"replication_regions" cty:"replication_regions" hcl:"replication_regions"`
 	SigDestinationStorageAccountType *string  `mapstructure:"storage_account_type" cty:"storage_account_type" hcl:"storage_account_type"`
-	SigDestinationSkipGeneralization *bool    `mapstructure:"skip_generalization" cty:"skip_generalization" hcl:"skip_generalization"`
+	SigDestinationSpecialized        *bool    `mapstructure:"specialized" cty:"specialized" hcl:"specialized"`
 }
 
 // FlatMapstructure returns a new FlatSharedImageGalleryDestination.
@@ -386,7 +386,7 @@ func (*FlatSharedImageGalleryDestination) HCL2Spec() map[string]hcldec.Spec {
 		"image_version":        &hcldec.AttrSpec{Name: "image_version", Type: cty.String, Required: false},
 		"replication_regions":  &hcldec.AttrSpec{Name: "replication_regions", Type: cty.List(cty.String), Required: false},
 		"storage_account_type": &hcldec.AttrSpec{Name: "storage_account_type", Type: cty.String, Required: false},
-		"skip_generalization":  &hcldec.AttrSpec{Name: "skip_generalization", Type: cty.Bool, Required: false},
+		"specialized":          &hcldec.AttrSpec{Name: "specialized", Type: cty.Bool, Required: false},
 	}
 	return s
 }

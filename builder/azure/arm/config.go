@@ -106,8 +106,8 @@ type SharedImageGalleryDestination struct {
 	// Specify a storage account type for the Shared Image Gallery Image Version.
 	// Defaults to `Standard_LRS`. Accepted values are `Standard_LRS`, `Standard_ZRS` and `Premium_LRS`
 	SigDestinationStorageAccountType string `mapstructure:"storage_account_type"`
-	// Set to true if publishing to a Specialized Gallery, this skips a call to set the resulting VM's OS state as Generalized
-	SigDestinationSkipGeneralization bool `mapstructure:"skip_generalization"`
+	// Set to true if publishing to a Specialized Gallery, this skips a call to set the build VM's OS state as Generalized
+	SigDestinationSpecialized bool `mapstructure:"specialized"`
 }
 
 type Spot struct {
@@ -1100,8 +1100,8 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		if c.SecureBootEnabled || c.VTpmEnabled {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A managed image (managed_image_name, managed_image_resource_group_name) can not set SecureBoot or VTpm, these features are only supported when directly publishing to a Shared Image Gallery"))
 		}
-		if c.SharedGalleryDestination.SigDestinationSkipGeneralization {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A managed image (managed_image_name, managed_image_resource_group_name) can not be Specialized (shared_image_gallery_destination.skip_generalization can not be set), Specialized images are only supported when directly publishing to a Shared Image Gallery"))
+		if c.SharedGalleryDestination.SigDestinationSpecialized {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A managed image (managed_image_name, managed_image_resource_group_name) can not be Specialized (shared_image_gallery_destination.specialized can not be set), Specialized images are only supported when directly publishing to a Shared Image Gallery"))
 		}
 	}
 

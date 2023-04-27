@@ -1380,8 +1380,8 @@ func TestConfigShouldRejectVTPMWhenPublishingToAManagedImage(t *testing.T) {
 	}
 }
 
-func TestConfigShouldRejectSkipGeneralizeWhenPublishingManagedImage(t *testing.T) {
-	expectedErrorMessage := "A managed image (managed_image_name, managed_image_resource_group_name) can not be Specialized (shared_image_gallery_destination.skip_generalization can not be set), Specialized images are only supported when directly publishing to a Shared Image Gallery"
+func TestConfigShouldRejectSpecializedWhenPublishingManagedImage(t *testing.T) {
+	expectedErrorMessage := "A managed image (managed_image_name, managed_image_resource_group_name) can not be Specialized (shared_image_gallery_destination.specialized can not be set), Specialized images are only supported when directly publishing to a Shared Image Gallery"
 	config := map[string]interface{}{
 		"image_offer":                       "ignore",
 		"image_publisher":                   "ignore",
@@ -1392,11 +1392,11 @@ func TestConfigShouldRejectSkipGeneralizeWhenPublishingManagedImage(t *testing.T
 		"managed_image_resource_group_name": "ignore",
 		"managed_image_name":                "ignore",
 		"shared_image_gallery_destination": map[string]interface{}{
-			"resource_group":      "ignore",
-			"gallery_name":        "ignore",
-			"image_name":          "ignore",
-			"image_version":       "1.0.0",
-			"skip_generalization": "true",
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.0",
+			"specialized":    "true",
 		},
 		// Does not matter for this test case, just pick one.
 		"os_type": constants.Target_Linux,
