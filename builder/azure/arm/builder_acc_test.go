@@ -46,6 +46,39 @@ import (
 
 const DeviceLoginAcceptanceTest = "DEVICELOGIN_TEST"
 
+func TestBuilderAcc_WindowsSIG(t *testing.T) {
+	b := Builder{}
+	_, _, _ = b.Prepare()
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-windows-sig",
+		Type:     "azure-arm",
+		Template: testBuilderAccSIGDiskWindows,
+		Setup: func() error {
+			createSharedImageGalleryDefinition(t, &b, CreateSharedImageGalleryDefinitionParameters{
+				galleryImageName: "windows-sig",
+				imageSku:         "2012-R2-Datacenter",
+				imageOffer:       "WindowsServer",
+				imagePublisher:   "MicrosoftWindowsServer",
+				isX64:            true,
+				isWindows:        true,
+			})
+			return nil
+		},
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
+		Teardown: func() error {
+			deleteSharedImageGalleryDefinition(t, &b, "windows-sig")
+			return nil
+		},
+	})
+}
+
 func TestBuilderAcc_ManagedDisk_Windows(t *testing.T) {
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-managedisk-windows",
@@ -278,14 +311,14 @@ type CreateSharedImageGalleryDefinitionParameters struct {
 	specialized      bool
 }
 
-func CreateSharedImageGalleryDefinition(t *testing.T, b *Builder, params CreateSharedImageGalleryDefinitionParameters) {
+func createSharedImageGalleryDefinition(t *testing.T, b *Builder, params CreateSharedImageGalleryDefinitionParameters) {
 	ui := testUi()
 	ui.Message("Creating test Azure Resource Manager (ARM) client ...")
+	b.config.ClientConfig.FillParameters()
 	spnCloud, spnKeyVault, err := b.getServicePrincipalTokens(ui.Say)
 	if err != nil {
 		t.Fatalf("failed getting azure tokens: %s", err)
 	}
-
 	azureClient, err := NewAzureClient(
 		b.config.ClientConfig.SubscriptionID,
 		b.config.SharedGalleryDestination.SigDestinationSubscription,
@@ -334,6 +367,37 @@ func CreateSharedImageGalleryDefinition(t *testing.T, b *Builder, params CreateS
 	if err != nil {
 		t.Fatalf("failed to create Gallery %s: %s", params.galleryImageName, err)
 	}
+}
+
+func deleteSharedImageGalleryDefinition(t *testing.T, b *Builder, galleryImageName string) {
+	ui := testUi()
+	ui.Message("Creating test Azure Resource Manager (ARM) client ...")
+	spnCloud, spnKeyVault, err := b.getServicePrincipalTokens(ui.Say)
+	if err != nil {
+		t.Fatalf("failed getting azure tokens: %s", err)
+	}
+
+	azureClient, err := NewAzureClient(
+		b.config.ClientConfig.SubscriptionID,
+		b.config.SharedGalleryDestination.SigDestinationSubscription,
+		b.config.ResourceGroupName,
+		b.config.StorageAccount,
+		b.config.ClientConfig.CloudEnvironment(),
+		b.config.SharedGalleryTimeout,
+		b.config.PollingDurationTimeout,
+		spnCloud,
+		spnKeyVault)
+
+	if err != nil {
+		t.Fatalf("failed to create azure client: %s", err)
+	}
+
+	_, err = azureClient.GalleryImagesClient.Delete(nil, "packer-acceptance-test", "acctestgallery", galleryImageName)
+
+	if err != nil {
+		t.Fatalf("failed to delete Gallery %s: %s", galleryImageName, err)
+	}
+
 }
 
 // Following functions are left in as they are part of newer Packer plugin acceptance testing framework
@@ -487,6 +551,42 @@ const testBuilderAccManagedDiskWindows = `
 	  "managed_image_resource_group_name": "packer-acceptance-test",
 	  "managed_image_name": "testBuilderAccManagedDiskWindows-{{timestamp}}",
 
+	  "os_type": "Windows",
+	  "image_publisher": "MicrosoftWindowsServer",
+	  "image_offer": "WindowsServer",
+	  "image_sku": "2012-R2-Datacenter",
+
+	  "communicator": "winrm",
+	  "winrm_use_ssl": "true",
+	  "winrm_insecure": "true",
+	  "winrm_timeout": "3m",
+	  "winrm_username": "packer",
+	  "async_resourcegroup_delete": "true",
+
+	  "location": "South Central US",
+	  "vm_size": "Standard_DS2_v2"
+	}]
+}
+`
+
+const testBuilderAccSIGDiskWindows = `
+{
+	"variables": {
+	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
+	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
+	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}"
+	},
+	"builders": [{
+	  "type": "azure-arm",
+
+	  "client_id": "{{user ` + "`client_id`" + `}}",
+	  "client_secret": "{{user ` + "`client_secret`" + `}}",
+	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
+	  "shared_image_gallery_destination": {
+		"image_name": "windows",
+		"gallery_name": "packeracctest",
+		"image_version": "1.0.0"
+	  },
 	  "os_type": "Windows",
 	  "image_publisher": "MicrosoftWindowsServer",
 	  "image_offer": "WindowsServer",
