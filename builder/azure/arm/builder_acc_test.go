@@ -16,6 +16,9 @@ package arm
 // storage account referred to in the above variable should
 // be inside this resource group and in "South Central US" as well.
 //
+// There should be a shared image gallery inside of the resource group
+// it should be called `acctestgallery`
+//
 // In addition, the PACKER_ACC variable should also be set to
 // a non-empty value to enable Packer acceptance tests and the
 // options "-v -timeout 90m" should be provided to the test
@@ -34,6 +37,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
@@ -263,9 +267,78 @@ func TestBuilderAcc_rsaSHA2OnlyServer(t *testing.T) {
 	})
 }
 
-//Following functions are left in as they are part of newer Packer plugin acceptance testing framework
-//See https://github.com/hashicorp/packer-plugin-azure/pull/200#discussion_r879529490
-//nolint
+type CreateSharedImageGalleryDefinitionParameters struct {
+	galleryImageName string
+	imageSku         string
+	imageOffer       string
+	imagePublisher   string
+	isX64            bool
+	isWindows        bool
+	useGenTwoVM      bool
+	specialized      bool
+}
+
+func CreateSharedImageGalleryDefinition(t *testing.T, b *Builder, params CreateSharedImageGalleryDefinitionParameters) {
+	ui := testUi()
+	ui.Message("Creating test Azure Resource Manager (ARM) client ...")
+	spnCloud, spnKeyVault, err := b.getServicePrincipalTokens(ui.Say)
+	if err != nil {
+		t.Fatalf("failed getting azure tokens: %s", err)
+	}
+
+	azureClient, err := NewAzureClient(
+		b.config.ClientConfig.SubscriptionID,
+		b.config.SharedGalleryDestination.SigDestinationSubscription,
+		b.config.ResourceGroupName,
+		b.config.StorageAccount,
+		b.config.ClientConfig.CloudEnvironment(),
+		b.config.SharedGalleryTimeout,
+		b.config.PollingDurationTimeout,
+		spnCloud,
+		spnKeyVault)
+
+	if err != nil {
+		t.Fatalf("failed to create azure client: %s", err)
+	}
+
+	osType := compute.OperatingSystemTypesLinux
+	if params.isWindows {
+		osType = compute.OperatingSystemTypesWindows
+	}
+	osState := compute.OperatingSystemStateTypesGeneralized
+	if params.specialized {
+		osState = compute.OperatingSystemStateTypesSpecialized
+	}
+	osArch := compute.ArchitectureArm64
+	if params.isX64 {
+		osArch = compute.ArchitectureX64
+	}
+	hyperVGeneration := compute.HyperVGenerationV1
+	if params.useGenTwoVM {
+		hyperVGeneration = compute.HyperVGenerationV2
+	}
+	_, err = azureClient.GalleryImagesClient.CreateOrUpdate(nil, "packer-acceptance-test", "acctestgallery", params.galleryImageName, compute.GalleryImage{
+		GalleryImageProperties: &compute.GalleryImageProperties{
+			OsType:           osType,
+			OsState:          osState,
+			Architecture:     osArch,
+			HyperVGeneration: hyperVGeneration,
+			Identifier: &compute.GalleryImageIdentifier{
+				Publisher: &params.imagePublisher,
+				Offer:     &params.imageOffer,
+				Sku:       &params.imageSku,
+			},
+		},
+	})
+
+	if err != nil {
+		t.Fatalf("failed to create Gallery %s: %s", params.galleryImageName, err)
+	}
+}
+
+// Following functions are left in as they are part of newer Packer plugin acceptance testing framework
+// See https://github.com/hashicorp/packer-plugin-azure/pull/200#discussion_r879529490
+// nolint
 func testAuthPreCheck(t *testing.T) {
 	_, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
@@ -273,7 +346,7 @@ func testAuthPreCheck(t *testing.T) {
 	}
 }
 
-//nolint
+// nolint
 func checkTemporaryGroupDeleted(t *testing.T, b *Builder) {
 	ui := testUi()
 
@@ -305,7 +378,7 @@ func checkTemporaryGroupDeleted(t *testing.T, b *Builder) {
 	}
 }
 
-//nolint
+// nolint
 func checkUnmanagedVHDDeleted(t *testing.T, b *Builder) {
 	ui := testUi()
 
@@ -343,13 +416,13 @@ func checkUnmanagedVHDDeleted(t *testing.T, b *Builder) {
 	}
 }
 
-//nolint
+// nolint
 func resourceNotFound(err error) bool {
 	derr := autorest.DetailedError{}
 	return errors.As(err, &derr) && derr.StatusCode == 404
 }
 
-//nolint
+// nolint
 func testUi() *packersdk.BasicUi {
 	return &packersdk.BasicUi{
 		Reader:      new(bytes.Buffer),
