@@ -17,7 +17,7 @@ package arm
 // be inside this resource group and in "South Central US" as well.
 //
 // There should be a shared image gallery inside of the resource group
-// it should be called `acctestgallery`
+// it should be called `acctestgallery` in "South Central US" as well.
 //
 // In addition, the PACKER_ACC variable should also be set to
 // a non-empty value to enable Packer acceptance tests and the
@@ -29,17 +29,14 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"strings"
 	"testing"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
@@ -49,12 +46,13 @@ const DeviceLoginAcceptanceTest = "DEVICELOGIN_TEST"
 func TestBuilderAcc_WindowsSIG(t *testing.T) {
 	b := Builder{}
 	_, _, _ = b.Prepare()
+	azureClient := createTestAzureClient(t)
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-windows-sig",
 		Type:     "azure-arm",
 		Template: testBuilderAccSIGDiskWindows,
 		Setup: func() error {
-			createSharedImageGalleryDefinition(t, &b, CreateSharedImageGalleryDefinitionParameters{
+			createSharedImageGalleryDefinition(t, azureClient, CreateSharedImageGalleryDefinitionParameters{
 				galleryImageName: "windows-sig",
 				imageSku:         "2012-R2-Datacenter",
 				imageOffer:       "WindowsServer",
@@ -73,7 +71,7 @@ func TestBuilderAcc_WindowsSIG(t *testing.T) {
 			return nil
 		},
 		Teardown: func() error {
-			deleteSharedImageGalleryDefinition(t, &b, "windows-sig")
+			deleteSharedImageGalleryDefinition(t, azureClient, "windows-sig")
 			return nil
 		},
 	})
@@ -201,10 +199,6 @@ func TestBuilderAcc_ManagedDisk_Linux_AzureCLI(t *testing.T) {
 			}
 			return nil
 		},
-		//Check: func([]packersdk.Artifact) error {
-		//checkTemporaryGroupDeleted(t, &b)
-		//return nil
-		//},
 	})
 }
 
@@ -225,8 +219,6 @@ func TestBuilderAcc_Blob_Windows(t *testing.T) {
 }
 
 func TestBuilderAcc_Blob_Linux(t *testing.T) {
-	b := Builder{}
-	_, _, _ = b.Prepare()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-blob-linux",
 		Type:     "azure-arm",
@@ -239,16 +231,10 @@ func TestBuilderAcc_Blob_Linux(t *testing.T) {
 			}
 			return nil
 		},
-		//Check: func([]packersdk.Artifact) error {
-		//checkUnmanagedVHDDeleted(t, &b)
-		//return nil
-		//},
 	})
 }
 
 func TestBuilderUserData_Linux(t *testing.T) {
-	b := Builder{}
-	_, _, _ = b.Prepare()
 	tmpfile, err := ioutil.TempFile("", "userdata")
 	if err != nil {
 		t.Fatalf("failed creating tempfile: %s", err)
@@ -282,9 +268,6 @@ func TestBuilderUserData_Linux(t *testing.T) {
 var rsaSHA2OnlyTemplate []byte
 
 func TestBuilderAcc_rsaSHA2OnlyServer(t *testing.T) {
-	b := Builder{}
-	_, _, _ = b.Prepare()
-
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-ubuntu-jammy-linux",
 		Type:     "azure-arm",
@@ -311,9 +294,12 @@ type CreateSharedImageGalleryDefinitionParameters struct {
 	specialized      bool
 }
 
-func createSharedImageGalleryDefinition(t *testing.T, b *Builder, params CreateSharedImageGalleryDefinitionParameters) {
+func createTestAzureClient(t *testing.T) AzureClient {
+	b := Builder{}
+	_, _, _ = b.Prepare()
 	ui := testUi()
-	ui.Message("Creating test Azure Resource Manager (ARM) client ...")
+	// Use CLI auth for our test client
+	b.config.ClientConfig.UseAzureCLIAuth = true
 	b.config.ClientConfig.FillParameters()
 	spnCloud, spnKeyVault, err := b.getServicePrincipalTokens(ui.Say)
 	if err != nil {
@@ -329,11 +315,13 @@ func createSharedImageGalleryDefinition(t *testing.T, b *Builder, params CreateS
 		b.config.PollingDurationTimeout,
 		spnCloud,
 		spnKeyVault)
-
 	if err != nil {
 		t.Fatalf("failed to create azure client: %s", err)
 	}
+	return *azureClient
+}
 
+func createSharedImageGalleryDefinition(t *testing.T, azureClient AzureClient, params CreateSharedImageGalleryDefinitionParameters) {
 	osType := compute.OperatingSystemTypesLinux
 	if params.isWindows {
 		osType = compute.OperatingSystemTypesWindows
@@ -350,7 +338,8 @@ func createSharedImageGalleryDefinition(t *testing.T, b *Builder, params CreateS
 	if params.useGenTwoVM {
 		hyperVGeneration = compute.HyperVGenerationV2
 	}
-	_, err = azureClient.GalleryImagesClient.CreateOrUpdate(nil, "packer-acceptance-test", "acctestgallery", params.galleryImageName, compute.GalleryImage{
+	location := "southcentralus"
+	future, err := azureClient.GalleryImagesClient.CreateOrUpdate(context.TODO(), "packer-acceptance-test", "acctestgallery", params.galleryImageName, compute.GalleryImage{
 		GalleryImageProperties: &compute.GalleryImageProperties{
 			OsType:           osType,
 			OsState:          osState,
@@ -362,131 +351,40 @@ func createSharedImageGalleryDefinition(t *testing.T, b *Builder, params CreateS
 				Sku:       &params.imageSku,
 			},
 		},
+		Location: &location,
 	})
 
 	if err != nil {
 		t.Fatalf("failed to create Gallery %s: %s", params.galleryImageName, err)
 	}
+	err = future.WaitForCompletionRef(context.TODO(), azureClient.GalleryImagesClient.Client)
+	if err != nil {
+		t.Fatalf("failed to create Gallery %s: %s", params.galleryImageName, err)
+	}
 }
 
-func deleteSharedImageGalleryDefinition(t *testing.T, b *Builder, galleryImageName string) {
-	ui := testUi()
-	ui.Message("Creating test Azure Resource Manager (ARM) client ...")
-	spnCloud, spnKeyVault, err := b.getServicePrincipalTokens(ui.Say)
+func deleteSharedImageGalleryDefinition(t *testing.T, azureClient AzureClient, galleryImageName string) {
+	versionFuture, err := azureClient.GalleryImageVersionsClient.Delete(context.TODO(), "packer-acceptance-test", "acctestgallery", galleryImageName, "1.0.0")
 	if err != nil {
-		t.Fatalf("failed getting azure tokens: %s", err)
+		t.Fatalf("failed to delete Gallery %s: %s", galleryImageName, err)
 	}
-
-	azureClient, err := NewAzureClient(
-		b.config.ClientConfig.SubscriptionID,
-		b.config.SharedGalleryDestination.SigDestinationSubscription,
-		b.config.ResourceGroupName,
-		b.config.StorageAccount,
-		b.config.ClientConfig.CloudEnvironment(),
-		b.config.SharedGalleryTimeout,
-		b.config.PollingDurationTimeout,
-		spnCloud,
-		spnKeyVault)
-
+	err = versionFuture.WaitForCompletionRef(context.TODO(), azureClient.GalleryImageVersionsClient.Client)
 	if err != nil {
-		t.Fatalf("failed to create azure client: %s", err)
+		t.Fatalf("failed to delete Gallery %s: %s", galleryImageName, err)
 	}
-
-	_, err = azureClient.GalleryImagesClient.Delete(nil, "packer-acceptance-test", "acctestgallery", galleryImageName)
-
+	// WaitForCompletionRef is unreliable
+	time.Sleep(5000)
+	galleryFuture, err := azureClient.GalleryImagesClient.Delete(context.TODO(), "packer-acceptance-test", "acctestgallery", galleryImageName)
+	if err != nil {
+		t.Fatalf("failed to delete Gallery %s: %s", galleryImageName, err)
+	}
+	err = galleryFuture.WaitForCompletionRef(context.TODO(), azureClient.GalleryImagesClient.Client)
 	if err != nil {
 		t.Fatalf("failed to delete Gallery %s: %s", galleryImageName, err)
 	}
 
 }
 
-// Following functions are left in as they are part of newer Packer plugin acceptance testing framework
-// See https://github.com/hashicorp/packer-plugin-azure/pull/200#discussion_r879529490
-// nolint
-func testAuthPreCheck(t *testing.T) {
-	_, err := auth.NewAuthorizerFromEnvironment()
-	if err != nil {
-		t.Fatalf("failed to auth to azure: %s", err)
-	}
-}
-
-// nolint
-func checkTemporaryGroupDeleted(t *testing.T, b *Builder) {
-	ui := testUi()
-
-	spnCloud, spnKeyVault, err := b.getServicePrincipalTokens(ui.Say)
-	if err != nil {
-		t.Fatalf("failed getting azure tokens: %s", err)
-	}
-
-	ui.Message("Creating test Azure Resource Manager (ARM) client ...")
-	azureClient, err := NewAzureClient(
-		b.config.ClientConfig.SubscriptionID,
-		b.config.SharedGalleryDestination.SigDestinationSubscription,
-		b.config.ResourceGroupName,
-		b.config.StorageAccount,
-		b.config.ClientConfig.CloudEnvironment(),
-		b.config.SharedGalleryTimeout,
-		b.config.PollingDurationTimeout,
-		spnCloud,
-		spnKeyVault)
-
-	if err != nil {
-		t.Fatalf("failed to create azure client: %s", err)
-	}
-
-	// Validate resource group has been deleted
-	_, err = azureClient.GroupsClient.Get(context.Background(), b.config.tmpResourceGroupName)
-	if err == nil || !resourceNotFound(err) {
-		t.Fatalf("failed validating resource group deletion: %s", err)
-	}
-}
-
-// nolint
-func checkUnmanagedVHDDeleted(t *testing.T, b *Builder) {
-	ui := testUi()
-
-	spnCloud, spnKeyVault, err := b.getServicePrincipalTokens(ui.Say)
-	if err != nil {
-		t.Fatalf("failed getting azure tokens: %s", err)
-	}
-
-	azureClient, err := NewAzureClient(
-		b.config.ClientConfig.SubscriptionID,
-		b.config.SharedGalleryDestination.SigDestinationSubscription,
-		b.config.ResourceGroupName,
-		b.config.StorageAccount,
-		b.config.ClientConfig.CloudEnvironment(),
-		b.config.SharedGalleryTimeout,
-		b.config.PollingDurationTimeout,
-		spnCloud,
-		spnKeyVault)
-
-	if err != nil {
-		t.Fatalf("failed to create azure client: %s", err)
-	}
-
-	// validate temporary os blob was deleted
-	blob := azureClient.BlobStorageClient.GetContainerReference("images").GetBlobReference(b.config.tmpOSDiskName)
-	_, err = blob.BreakLease(nil)
-	if err != nil && !strings.Contains(err.Error(), "BlobNotFound") {
-		t.Fatalf("failed validating deletion of unmanaged vhd: %s", err)
-	}
-
-	// Validate resource group has been deleted
-	_, err = azureClient.GroupsClient.Get(context.Background(), b.config.tmpResourceGroupName)
-	if err == nil || !resourceNotFound(err) {
-		t.Fatalf("failed validating resource group deletion: %s", err)
-	}
-}
-
-// nolint
-func resourceNotFound(err error) bool {
-	derr := autorest.DetailedError{}
-	return errors.As(err, &derr) && derr.StatusCode == 404
-}
-
-// nolint
 func testUi() *packersdk.BasicUi {
 	return &packersdk.BasicUi{
 		Reader:      new(bytes.Buffer),
@@ -583,9 +481,10 @@ const testBuilderAccSIGDiskWindows = `
 	  "client_secret": "{{user ` + "`client_secret`" + `}}",
 	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
 	  "shared_image_gallery_destination": {
-		"image_name": "windows",
-		"gallery_name": "packeracctest",
-		"image_version": "1.0.0"
+		"image_name": "windows-sig",
+		"gallery_name": "acctestgallery",
+		"image_version": "1.0.0",
+		"resource_group": "packer-acceptance-test"
 	  },
 	  "os_type": "Windows",
 	  "image_publisher": "MicrosoftWindowsServer",
