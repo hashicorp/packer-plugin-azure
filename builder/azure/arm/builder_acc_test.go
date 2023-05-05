@@ -44,15 +44,12 @@ import (
 const DeviceLoginAcceptanceTest = "DEVICELOGIN_TEST"
 
 func TestBuilderAcc_WindowsSIG(t *testing.T) {
-	b := Builder{}
-	_, _, _ = b.Prepare()
-	azureClient := createTestAzureClient(t)
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-windows-sig",
 		Type:     "azure-arm",
 		Template: testBuilderAccSIGDiskWindows,
 		Setup: func() error {
-			createSharedImageGalleryDefinition(t, azureClient, CreateSharedImageGalleryDefinitionParameters{
+			createSharedImageGalleryDefinition(t, CreateSharedImageGalleryDefinitionParameters{
 				galleryImageName: "windows-sig",
 				imageSku:         "2012-R2-Datacenter",
 				imageOffer:       "WindowsServer",
@@ -71,7 +68,7 @@ func TestBuilderAcc_WindowsSIG(t *testing.T) {
 			return nil
 		},
 		Teardown: func() error {
-			deleteSharedImageGalleryDefinition(t, azureClient, "windows-sig")
+			deleteSharedImageGalleryDefinition(t, "windows-sig")
 			return nil
 		},
 	})
@@ -321,7 +318,8 @@ func createTestAzureClient(t *testing.T) AzureClient {
 	return *azureClient
 }
 
-func createSharedImageGalleryDefinition(t *testing.T, azureClient AzureClient, params CreateSharedImageGalleryDefinitionParameters) {
+func createSharedImageGalleryDefinition(t *testing.T, params CreateSharedImageGalleryDefinitionParameters) {
+	azureClient := createTestAzureClient(t)
 	osType := compute.OperatingSystemTypesLinux
 	if params.isWindows {
 		osType = compute.OperatingSystemTypesWindows
@@ -363,7 +361,8 @@ func createSharedImageGalleryDefinition(t *testing.T, azureClient AzureClient, p
 	}
 }
 
-func deleteSharedImageGalleryDefinition(t *testing.T, azureClient AzureClient, galleryImageName string) {
+func deleteSharedImageGalleryDefinition(t *testing.T, galleryImageName string) {
+	azureClient := createTestAzureClient(t)
 	versionFuture, err := azureClient.GalleryImageVersionsClient.Delete(context.TODO(), "packer-acceptance-test", "acctestgallery", galleryImageName, "1.0.0")
 	if err != nil {
 		t.Fatalf("failed to delete Gallery %s: %s", galleryImageName, err)
