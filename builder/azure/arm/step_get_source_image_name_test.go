@@ -54,6 +54,33 @@ func TestStepGetSourceImageName(t *testing.T) {
 			},
 			expected: "/subscriptions/1234/providers/Microsoft.Compute/locations/west/publishers/Microsoft/ArtifactTypes/vmimage/offers/Server/skus/0/versions/2019",
 		},
+		{
+			name: "SharedImageGallery",
+			config: &Config{
+				ClientConfig: client.Config{SubscriptionID: "1234"},
+				SharedGallery: SharedImageGallery{
+					GalleryName:   "test",
+					ImageName:     "image",
+					Subscription:  "1234",
+					ResourceGroup: "group",
+				},
+			},
+			expected: "/subscriptions/1234/resourceGroups/group/providers/Microsoft.Compute/galleries/test/images/image",
+		},
+		{
+			name: "SharedImageGallery with version",
+			config: &Config{
+				ClientConfig: client.Config{SubscriptionID: "1234"},
+				SharedGallery: SharedImageGallery{
+					GalleryName:   "test",
+					ImageVersion:  "2.0.0",
+					ImageName:     "image",
+					Subscription:  "1234",
+					ResourceGroup: "group",
+				},
+			},
+			expected: "/subscriptions/1234/resourceGroups/group/providers/Microsoft.Compute/galleries/test/images/image/versions/2.0.0",
+		},
 	}
 	for _, tt := range tc {
 		tt := tt

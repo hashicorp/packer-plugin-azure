@@ -605,6 +605,19 @@ type keyVaultCertificate struct {
 	Password string `json:"password,omitempty"`
 }
 
+func (c *Config) getSourceSharedImageGalleryID() string {
+	id := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/galleries/%s/images/%s",
+		c.SharedGallery.Subscription,
+		c.SharedGallery.ResourceGroup,
+		c.SharedGallery.GalleryName,
+		c.SharedGallery.ImageName)
+	if c.SharedGallery.ImageVersion != "" {
+		id += fmt.Sprintf("/versions/%s",
+			c.SharedGallery.ImageVersion)
+	}
+	return id
+}
+
 func (c *Config) toVMID() string {
 	var resourceGroupName string
 	if c.tmpResourceGroupName != "" {

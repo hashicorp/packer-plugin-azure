@@ -117,15 +117,7 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 		// TODO : Handle this error
 		_ = builder.SetManagedMarketplaceImage(config.ImagePublisher, config.ImageOffer, config.ImageSku, config.ImageVersion, config.managedImageStorageAccountType, config.diskCachingType)
 	} else if config.SharedGallery.Subscription != "" {
-		imageID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/galleries/%s/images/%s",
-			config.SharedGallery.Subscription,
-			config.SharedGallery.ResourceGroup,
-			config.SharedGallery.GalleryName,
-			config.SharedGallery.ImageName)
-		if config.SharedGallery.ImageVersion != "" {
-			imageID += fmt.Sprintf("/versions/%s",
-				config.SharedGallery.ImageVersion)
-		}
+		imageID := config.getSourceSharedImageGalleryID()
 
 		err = builder.SetSharedGalleryImage(config.Location, imageID, config.diskCachingType)
 		if err != nil {

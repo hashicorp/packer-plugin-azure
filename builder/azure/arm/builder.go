@@ -217,7 +217,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if b.config.OSType == constants.Target_Linux {
 		steps = []multistep.Step{
 			&StepGetSourceImageName{
-				client:        azureClient,
 				config:        &b.config,
 				GeneratedData: generatedData,
 				say:           func(message string) { ui.Say(message) },
@@ -245,7 +244,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	} else if b.config.OSType == constants.Target_Windows {
 		steps = []multistep.Step{
 			&StepGetSourceImageName{
-				client:        azureClient,
 				config:        &b.config,
 				GeneratedData: generatedData,
 				say:           func(message string) { ui.Say(message) },

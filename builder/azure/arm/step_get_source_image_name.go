@@ -6,14 +6,12 @@ package arm
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
 )
 
 type StepGetSourceImageName struct {
-	client        *AzureClient
 	config        *Config
 	GeneratedData *packerbuilderdata.GeneratedData
 	say           func(message string)
@@ -36,19 +34,7 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 	}
 
 	if s.config.SharedGallery.Subscription != "" {
-		client := s.client.GalleryImageVersionsClient
-		client.SubscriptionID = s.config.SharedGallery.Subscription
-
-		image, err := client.Get(ctx, s.config.SharedGallery.ResourceGroup,
-			s.config.SharedGallery.GalleryName, s.config.SharedGallery.ImageName, s.config.SharedGallery.ImageVersion, "")
-
-		if err != nil {
-			log.Println("[TRACE] unable to derive managed image URL for shared gallery version image")
-			s.GeneratedData.Put("SourceImageName", "ERR_SOURCE_IMAGE_NAME_NOT_FOUND")
-			return multistep.ActionContinue
-		}
-
-		imageID := *image.ID
+		imageID := s.config.getSourceSharedImageGalleryID()
 		s.say(fmt.Sprintf(" -> SourceImageName: '%s'", imageID))
 		s.GeneratedData.Put("SourceImageName", imageID)
 		return multistep.ActionContinue
