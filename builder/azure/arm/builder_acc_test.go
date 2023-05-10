@@ -39,15 +39,49 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
+	"github.com/hashicorp/packer-plugin-sdk/retry"
 )
 
 const DeviceLoginAcceptanceTest = "DEVICELOGIN_TEST"
+
+func TestBuilderAcc_ARM64GeneralizedLinuxSIG(t *testing.T) {
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-linux-sig",
+		Type:     "azure-arm",
+		Template: string(armLinuxGeneralizedSIGTemplate),
+		Setup: func() error {
+			createSharedImageGalleryDefinition(t, CreateSharedImageGalleryDefinitionParameters{
+				galleryImageName: "arm-linux-generalized-sig",
+				imageSku:         "22_04-lts-arm64",
+				imageOffer:       "0001-com-ubuntu-server-jammy",
+				imagePublisher:   "canonical",
+				isX64:            false,
+				isWindows:        false,
+				useGenTwoVM:      true,
+				specialized:      false,
+			})
+			return nil
+		},
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
+		Teardown: func() error {
+			deleteSharedImageGalleryDefinition(t, "arm-linux-generalized-sig")
+			return nil
+		},
+	})
+}
 
 func TestBuilderAcc_WindowsSIG(t *testing.T) {
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-windows-sig",
 		Type:     "azure-arm",
-		Template: testBuilderAccSIGDiskWindows,
+		Template: string(windowsSIGTemplate),
 		Setup: func() error {
 			createSharedImageGalleryDefinition(t, CreateSharedImageGalleryDefinitionParameters{
 				galleryImageName: "windows-sig",
@@ -264,6 +298,12 @@ func TestBuilderUserData_Linux(t *testing.T) {
 //go:embed testdata/rsa_sha2_only_server.pkr.hcl
 var rsaSHA2OnlyTemplate []byte
 
+//go:embed testdata/windows_sig.pkr.hcl
+var windowsSIGTemplate []byte
+
+//go:embed testdata/arm_linux_generalized.pkr.hcl
+var armLinuxGeneralizedSIGTemplate []byte
+
 func TestBuilderAcc_rsaSHA2OnlyServer(t *testing.T) {
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-ubuntu-jammy-linux",
@@ -297,7 +337,7 @@ func createTestAzureClient(t *testing.T) AzureClient {
 	ui := testUi()
 	// Use CLI auth for our test client
 	b.config.ClientConfig.UseAzureCLIAuth = true
-	b.config.ClientConfig.FillParameters()
+	_ = b.config.ClientConfig.FillParameters()
 	spnCloud, spnKeyVault, err := b.getServicePrincipalTokens(ui.Say)
 	if err != nil {
 		t.Fatalf("failed getting azure tokens: %s", err)
@@ -371,13 +411,18 @@ func deleteSharedImageGalleryDefinition(t *testing.T, galleryImageName string) {
 	if err != nil {
 		t.Fatalf("failed to delete Gallery %s: %s", galleryImageName, err)
 	}
-	// WaitForCompletionRef is unreliable
-	time.Sleep(5000)
-	galleryFuture, err := azureClient.GalleryImagesClient.Delete(context.TODO(), "packer-acceptance-test", "acctestgallery", galleryImageName)
-	if err != nil {
-		t.Fatalf("failed to delete Gallery %s: %s", galleryImageName, err)
+	retryConfig := retry.Config{
+		Tries:      5,
+		RetryDelay: (&retry.Backoff{InitialBackoff: 10 * time.Second, MaxBackoff: 60 * time.Second, Multiplier: 2}).Linear,
 	}
-	err = galleryFuture.WaitForCompletionRef(context.TODO(), azureClient.GalleryImagesClient.Client)
+	err = retryConfig.Run(context.TODO(), func(ctx context.Context) error {
+		galleryFuture, err := azureClient.GalleryImagesClient.Delete(context.TODO(), "packer-acceptance-test", "acctestgallery", galleryImageName)
+		if err != nil {
+			return err
+		}
+		err = galleryFuture.WaitForCompletionRef(context.TODO(), azureClient.GalleryImagesClient.Client)
+		return err
+	})
 	if err != nil {
 		t.Fatalf("failed to delete Gallery %s: %s", galleryImageName, err)
 	}
@@ -448,43 +493,6 @@ const testBuilderAccManagedDiskWindows = `
 	  "managed_image_resource_group_name": "packer-acceptance-test",
 	  "managed_image_name": "testBuilderAccManagedDiskWindows-{{timestamp}}",
 
-	  "os_type": "Windows",
-	  "image_publisher": "MicrosoftWindowsServer",
-	  "image_offer": "WindowsServer",
-	  "image_sku": "2012-R2-Datacenter",
-
-	  "communicator": "winrm",
-	  "winrm_use_ssl": "true",
-	  "winrm_insecure": "true",
-	  "winrm_timeout": "3m",
-	  "winrm_username": "packer",
-	  "async_resourcegroup_delete": "true",
-
-	  "location": "South Central US",
-	  "vm_size": "Standard_DS2_v2"
-	}]
-}
-`
-
-const testBuilderAccSIGDiskWindows = `
-{
-	"variables": {
-	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
-	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
-	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}"
-	},
-	"builders": [{
-	  "type": "azure-arm",
-
-	  "client_id": "{{user ` + "`client_id`" + `}}",
-	  "client_secret": "{{user ` + "`client_secret`" + `}}",
-	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
-	  "shared_image_gallery_destination": {
-		"image_name": "windows-sig",
-		"gallery_name": "acctestgallery",
-		"image_version": "1.0.0",
-		"resource_group": "packer-acceptance-test"
-	  },
 	  "os_type": "Windows",
 	  "image_publisher": "MicrosoftWindowsServer",
 	  "image_offer": "WindowsServer",
