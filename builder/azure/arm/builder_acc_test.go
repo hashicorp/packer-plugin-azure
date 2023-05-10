@@ -44,21 +44,21 @@ import (
 
 const DeviceLoginAcceptanceTest = "DEVICELOGIN_TEST"
 
-func TestBuilderAcc_ARM64GeneralizedLinuxSIG(t *testing.T) {
+func TestBuilderAcc_ARM64SpecializedLinuxSIG(t *testing.T) {
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
-		Name:     "test-linux-sig",
+		Name:     "test-specialized-linux-sig",
 		Type:     "azure-arm",
-		Template: string(armLinuxGeneralizedSIGTemplate),
+		Template: string(armLinuxSpecialziedSIGTemplate),
 		Setup: func() error {
 			createSharedImageGalleryDefinition(t, CreateSharedImageGalleryDefinitionParameters{
-				galleryImageName: "arm-linux-generalized-sig",
+				galleryImageName: "arm-linux-specialized-sig",
 				imageSku:         "22_04-lts-arm64",
 				imageOffer:       "0001-com-ubuntu-server-jammy",
 				imagePublisher:   "canonical",
 				isX64:            false,
 				isWindows:        false,
 				useGenTwoVM:      true,
-				specialized:      false,
+				specialized:      true,
 			})
 			return nil
 		},
@@ -71,7 +71,7 @@ func TestBuilderAcc_ARM64GeneralizedLinuxSIG(t *testing.T) {
 			return nil
 		},
 		Teardown: func() error {
-			deleteSharedImageGalleryDefinition(t, "arm-linux-generalized-sig")
+			deleteSharedImageGalleryDefinition(t, "arm-linux-specialized-sig")
 			return nil
 		},
 	})
@@ -301,8 +301,8 @@ var rsaSHA2OnlyTemplate []byte
 //go:embed testdata/windows_sig.pkr.hcl
 var windowsSIGTemplate []byte
 
-//go:embed testdata/arm_linux_generalized.pkr.hcl
-var armLinuxGeneralizedSIGTemplate []byte
+//go:embed testdata/arm_linux_specialized.pkr.hcl
+var armLinuxSpecialziedSIGTemplate []byte
 
 func TestBuilderAcc_rsaSHA2OnlyServer(t *testing.T) {
 	acctest.TestPlugin(t, &acctest.PluginTestCase{

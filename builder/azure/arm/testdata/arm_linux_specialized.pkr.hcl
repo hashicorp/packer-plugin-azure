@@ -13,7 +13,6 @@ locals { timestamp = regex_replace(timestamp(), "[- TZ:]", "") }
 source "azure-arm" "linux-sig" {
   subscription_id            = var.subscription_id
   client_id                  = var.client_id
-  async_resourcegroup_delete = true
   client_secret              = var.client_secret
   image_offer                = "0001-com-ubuntu-server-jammy"
   image_publisher            = "canonical"
@@ -23,7 +22,7 @@ source "azure-arm" "linux-sig" {
   vm_size  = "Standard_D4ps_v5"
 
   shared_image_gallery_destination {
-    image_name     = "arm-linux-generalized-sig"
+    image_name     = "arm-linux-specialized-sig"
     gallery_name   = "acctestgallery"
     image_version  = "1.0.0"
     resource_group = "packer-acceptance-test"

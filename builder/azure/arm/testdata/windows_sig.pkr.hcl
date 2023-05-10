@@ -18,7 +18,6 @@ source "azure-arm" "windows-sig" {
   winrm_use_ssl              = true
   winrm_insecure             = true
   winrm_username             = "packer"
-  async_resourcegroup_delete = true
   client_secret              = var.client_secret
 
   shared_image_gallery_destination {
