@@ -6,12 +6,15 @@ package arm
 import (
 	"context"
 	"fmt"
+	"log"
+	"regexp"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
 )
 
 type StepGetSourceImageName struct {
+	client        *AzureClient
 	config        *Config
 	GeneratedData *packerbuilderdata.GeneratedData
 	say           func(message string)
@@ -34,9 +37,36 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 	}
 
 	if s.config.SharedGallery.Subscription != "" {
-		imageID := s.config.getSourceSharedImageGalleryID()
-		s.say(fmt.Sprintf(" -> SourceImageName: '%s'", imageID))
-		s.GeneratedData.Put("SourceImageName", imageID)
+		client := s.client.GalleryImageVersionsClient
+		client.SubscriptionID = s.config.SharedGallery.Subscription
+
+		image, err := client.Get(ctx, s.config.SharedGallery.ResourceGroup,
+			s.config.SharedGallery.GalleryName, s.config.SharedGallery.ImageName, s.config.SharedGallery.ImageVersion, "")
+
+		if err != nil {
+			log.Println("[TRACE] unable to derive managed image URL for shared gallery version image")
+			s.GeneratedData.Put("SourceImageName", "ERR_SOURCE_IMAGE_NAME_NOT_FOUND")
+			return multistep.ActionContinue
+		}
+
+		if image.GalleryImageVersionProperties != nil && image.GalleryImageVersionProperties.StorageProfile != nil &&
+			image.GalleryImageVersionProperties.StorageProfile.Source != nil && image.GalleryImageVersionProperties.StorageProfile.Source.ID != nil {
+
+			sourceID := *image.GalleryImageVersionProperties.StorageProfile.Source.ID
+			isSIGSourcedFromManagedImage, _ := regexp.MatchString("/subscriptions/[^/]*/resourceGroups/[^/]*/providers/Microsoft.Compute/images/[^/]*$", sourceID)
+			// If the Source SIG Image Version does not have its StorageProfile.Source set to a Managed Image, that means the image was directly sourced from a VM
+			// Use the SIG ID itself if there isn't a managed image that the SIG was created from
+			if !isSIGSourcedFromManagedImage {
+				sourceID = *image.ID
+			}
+
+			s.say(fmt.Sprintf(" -> SourceImageName: '%s'", sourceID))
+			s.GeneratedData.Put("SourceImageName", sourceID)
+			return multistep.ActionContinue
+		}
+
+		log.Println("[TRACE] unable to identify the source image for provided gallery image version")
+		s.GeneratedData.Put("SourceImageName", "ERR_SOURCE_IMAGE_NAME_NOT_FOUND")
 		return multistep.ActionContinue
 	}
 
