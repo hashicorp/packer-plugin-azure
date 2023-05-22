@@ -85,7 +85,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	b.stateBag.Put("hook", hook)
 	b.stateBag.Put(constants.Ui, ui)
-	generatedData := &packerbuilderdata.GeneratedData{State: b.stateBag}
 
 	spnCloud, spnKeyVault, err := b.getServicePrincipalTokens(ui.Say)
 	if err != nil {
@@ -212,17 +211,11 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		}
 		b.stateBag.Put(constants.ArmManagedImageSharedGalleryReplicationRegions, b.config.SharedGalleryDestination.SigDestinationReplicationRegions)
 	}
-
+	generatedData := &packerbuilderdata.GeneratedData{State: b.stateBag}
 	var steps []multistep.Step
 	if b.config.OSType == constants.Target_Linux {
 		steps = []multistep.Step{
-			&StepGetSourceImageName{
-				client:        azureClient,
-				config:        &b.config,
-				GeneratedData: generatedData,
-				say:           func(message string) { ui.Say(message) },
-				error:         func(e error) { ui.Error(e.Error()) },
-			},
+			NewStepGetSourceImageName(azureClient, ui, &b.config, generatedData),
 			NewStepCreateResourceGroup(azureClient, ui),
 			NewStepValidateTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment, VirtualMachineTemplate),
@@ -244,13 +237,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		}
 	} else if b.config.OSType == constants.Target_Windows {
 		steps = []multistep.Step{
-			&StepGetSourceImageName{
-				client:        azureClient,
-				config:        &b.config,
-				GeneratedData: generatedData,
-				say:           func(message string) { ui.Say(message) },
-				error:         func(e error) { ui.Error(e.Error()) },
-			},
+			NewStepGetSourceImageName(azureClient, ui, &b.config, generatedData),
 			NewStepCreateResourceGroup(azureClient, ui),
 		}
 		if b.config.BuildKeyVaultName == "" {

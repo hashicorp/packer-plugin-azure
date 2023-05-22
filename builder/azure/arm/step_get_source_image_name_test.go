@@ -8,6 +8,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -21,11 +22,36 @@ func TestStepGetSourceImageName(t *testing.T) {
 	}
 	state := new(multistep.BasicStateBag)
 	genData := packerbuilderdata.GeneratedData{State: state}
+	vmSourcedSigID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/pkr-Resource-Group-blah/providers/Microsoft.Compute/virtualMachines/pkrvmexample"
+	managedImageSourcedSigID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/pkr-Resource-Group-blah/providers/Microsoft.Compute/images/exampleimage"
+	sigArtifactID := "example-sig-id"
+	vmSourcedSigImageVersion := &compute.GalleryImageVersion{
+		ID: &sigArtifactID,
+		GalleryImageVersionProperties: &compute.GalleryImageVersionProperties{
+			StorageProfile: &compute.GalleryImageVersionStorageProfile{
+				Source: &compute.GalleryArtifactVersionSource{
+					ID: &vmSourcedSigID,
+				},
+			},
+		},
+	}
+
+	managedImageSourcedSigImageVersion := &compute.GalleryImageVersion{
+		ID: &sigArtifactID,
+		GalleryImageVersionProperties: &compute.GalleryImageVersionProperties{
+			StorageProfile: &compute.GalleryImageVersionStorageProfile{
+				Source: &compute.GalleryArtifactVersionSource{
+					ID: &managedImageSourcedSigID,
+				},
+			},
+		},
+	}
 
 	tc := []struct {
-		name     string
-		config   *Config
-		expected string
+		name               string
+		config             *Config
+		expected           string
+		mockedGalleryImage *compute.GalleryImageVersion
 	}{
 		{
 			name:     "ImageUrl",
@@ -55,43 +81,47 @@ func TestStepGetSourceImageName(t *testing.T) {
 			expected: "/subscriptions/1234/providers/Microsoft.Compute/locations/west/publishers/Microsoft/ArtifactTypes/vmimage/offers/Server/skus/0/versions/2019",
 		},
 		{
-			name: "SharedImageGallery",
+			name: "SharedImageGallery - VM Sourced (direct publish to SIG)",
 			config: &Config{
 				ClientConfig: client.Config{SubscriptionID: "1234"},
 				SharedGallery: SharedImageGallery{
-					GalleryName:   "test",
-					ImageName:     "image",
-					Subscription:  "1234",
-					ResourceGroup: "group",
+					Subscription: "1234",
 				},
 			},
-			expected: "/subscriptions/1234/resourceGroups/group/providers/Microsoft.Compute/galleries/test/images/image",
+			mockedGalleryImage: vmSourcedSigImageVersion,
+			expected:           sigArtifactID,
 		},
 		{
-			name: "SharedImageGallery with version",
+			name: "SharedImageGallery - Managed Image Sourced",
 			config: &Config{
 				ClientConfig: client.Config{SubscriptionID: "1234"},
 				SharedGallery: SharedImageGallery{
-					GalleryName:   "test",
-					ImageVersion:  "2.0.0",
-					ImageName:     "image",
-					Subscription:  "1234",
-					ResourceGroup: "group",
+					Subscription: "1234",
 				},
 			},
-			expected: "/subscriptions/1234/resourceGroups/group/providers/Microsoft.Compute/galleries/test/images/image/versions/2.0.0",
+			mockedGalleryImage: managedImageSourcedSigImageVersion,
+			expected:           managedImageSourcedSigID,
 		},
 	}
 	for _, tt := range tc {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			step := &StepGetSourceImageName{
+			var step StepGetSourceImageName
+			step = StepGetSourceImageName{
 				config:        tt.config,
 				GeneratedData: &genData,
 				say:           ui.Say,
 				error:         func(e error) {},
 			}
-
+			if tt.mockedGalleryImage != nil {
+				step = StepGetSourceImageName{
+					config:            tt.config,
+					GeneratedData:     &genData,
+					say:               ui.Say,
+					error:             func(e error) {},
+					getGalleryVersion: func(ctx context.Context) (compute.GalleryImageVersion, error) { return *tt.mockedGalleryImage, nil },
+				}
+			}
 			step.Run(context.TODO(), state)
 			got := state.Get("generated_data").(map[string]interface{})
 			v, ok := got["SourceImageName"]

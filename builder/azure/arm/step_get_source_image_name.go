@@ -9,16 +9,31 @@ import (
 	"log"
 	"regexp"
 
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
+	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
 )
 
 type StepGetSourceImageName struct {
-	client        *AzureClient
-	config        *Config
-	GeneratedData *packerbuilderdata.GeneratedData
-	say           func(message string)
-	error         func(e error)
+	client            *AzureClient
+	config            *Config
+	GeneratedData     *packerbuilderdata.GeneratedData
+	getGalleryVersion func(context.Context) (compute.GalleryImageVersion, error)
+	say               func(message string)
+	error             func(e error)
+}
+
+func NewStepGetSourceImageName(client *AzureClient, ui packersdk.Ui, config *Config, GeneratedData *packerbuilderdata.GeneratedData) *StepGetSourceImageName {
+	var step = &StepGetSourceImageName{
+		client:        client,
+		say:           func(message string) { ui.Say(message) },
+		error:         func(e error) { ui.Error(e.Error()) },
+		config:        config,
+		GeneratedData: GeneratedData,
+	}
+	step.getGalleryVersion = step.GetGalleryImageVersion
+	return step
 }
 
 func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -37,12 +52,8 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 	}
 
 	if s.config.SharedGallery.Subscription != "" {
-		client := s.client.GalleryImageVersionsClient
-		client.SubscriptionID = s.config.SharedGallery.Subscription
 
-		image, err := client.Get(ctx, s.config.SharedGallery.ResourceGroup,
-			s.config.SharedGallery.GalleryName, s.config.SharedGallery.ImageName, s.config.SharedGallery.ImageVersion, "")
-
+		image, err := s.getGalleryVersion(ctx)
 		if err != nil {
 			log.Println("[TRACE] unable to derive managed image URL for shared gallery version image")
 			s.GeneratedData.Put("SourceImageName", "ERR_SOURCE_IMAGE_NAME_NOT_FOUND")
@@ -81,6 +92,14 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 	s.say(fmt.Sprintf(" -> SourceImageName: '%s'", imageID))
 	s.GeneratedData.Put("SourceImageName", imageID)
 	return multistep.ActionContinue
+}
+
+func (s *StepGetSourceImageName) GetGalleryImageVersion(ctx context.Context) (compute.GalleryImageVersion, error) {
+	client := s.client.GalleryImageVersionsClient
+	client.SubscriptionID = s.config.SharedGallery.Subscription
+
+	return client.Get(ctx, s.config.SharedGallery.ResourceGroup,
+		s.config.SharedGallery.GalleryName, s.config.SharedGallery.ImageName, s.config.SharedGallery.ImageVersion, "")
 }
 
 func (*StepGetSourceImageName) Cleanup(multistep.StateBag) {
