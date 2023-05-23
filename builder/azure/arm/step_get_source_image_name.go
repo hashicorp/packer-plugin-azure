@@ -63,17 +63,25 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 		if image.GalleryImageVersionProperties != nil && image.GalleryImageVersionProperties.StorageProfile != nil &&
 			image.GalleryImageVersionProperties.StorageProfile.Source != nil && image.GalleryImageVersionProperties.StorageProfile.Source.ID != nil {
 
-			sourceID := *image.GalleryImageVersionProperties.StorageProfile.Source.ID
-			isSIGSourcedFromManagedImage, _ := regexp.MatchString("/subscriptions/[^/]*/resourceGroups/[^/]*/providers/Microsoft.Compute/images/[^/]*$", sourceID)
-			// If the Source SIG Image Version does not have its StorageProfile.Source set to a Managed Image, that means the image was directly sourced from a VM
-			// Use the SIG ID itself if there isn't a managed image that the SIG was created from
-			if !isSIGSourcedFromManagedImage {
-				sourceID = *image.ID
+			// Shared Image Galleries can be created in two different ways
+			// Either directly from a VM (in the builder this means not setting managed_image_name), for these types of images we set the artifact ID as the Gallery Image ID
+			// Or through an intermediate managed image. in which case we use that managed image as the artifact ID.
+
+			// First check if the parent Gallery Image Version source ID is a managed image, if so we use that as our source image name
+			parentSourceID := *image.GalleryImageVersionProperties.StorageProfile.Source.ID
+			isSIGSourcedFromManagedImage, _ := regexp.MatchString("/subscriptions/[^/]*/resourceGroups/[^/]*/providers/Microsoft.Compute/images/[^/]*$", parentSourceID)
+
+			if isSIGSourcedFromManagedImage {
+				s.say(fmt.Sprintf(" -> SourceImageName: '%s'", parentSourceID))
+				s.GeneratedData.Put("SourceImageName", parentSourceID)
+				return multistep.ActionContinue
+			} else {
+				// If the Gallery Image Version was not sourced from a Managed Image, that means it was captured directly from a VM, so we just use the gallery ID itself as the source image
+				s.say(fmt.Sprintf(" -> SourceImageName: '%s'", *image.ID))
+				s.GeneratedData.Put("SourceImageName", *image.ID)
+				return multistep.ActionContinue
 			}
 
-			s.say(fmt.Sprintf(" -> SourceImageName: '%s'", sourceID))
-			s.GeneratedData.Put("SourceImageName", sourceID)
-			return multistep.ActionContinue
 		}
 
 		log.Println("[TRACE] unable to identify the source image for provided gallery image version")
