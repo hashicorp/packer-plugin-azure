@@ -1,25 +1,15 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
-
-variables {
-  subscription_id = env("ARM_SUBSCRIPTION_ID")
-  client_id       = env("ARM_CLIENT_ID")
-  client_secret   = env("ARM_CLIENT_SECRET")
-  resource_group  = env("ARM_RESOURCE_GROUP_NAME")
-}
 locals { timestamp = regex_replace(timestamp(), "[- TZ:]", "") }
 
 source "azure-arm" "windows-sig" {
-  subscription_id            = var.subscription_id
-  client_id                  = var.client_id
-  communicator               = "winrm"
-  winrm_timeout              = "5m"
-  winrm_use_ssl              = true
-  winrm_insecure             = true
-  winrm_username             = "packer"
-  client_secret              = var.client_secret
-
+  communicator       = "winrm"
+  winrm_timeout      = "5m"
+  winrm_use_ssl      = true
+  winrm_insecure     = true
+  winrm_username     = "packer"
+  use_azure_cli_auth = true
   shared_image_gallery_destination {
     image_name     = "windows-sig"
     gallery_name   = "acctestgallery"
