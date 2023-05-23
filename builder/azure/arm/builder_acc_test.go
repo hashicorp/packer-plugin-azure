@@ -45,6 +45,10 @@ import (
 const DeviceLoginAcceptanceTest = "DEVICELOGIN_TEST"
 
 func TestBuilderAcc_ARM64SpecializedLinuxSIG(t *testing.T) {
+	if os.Getenv("AZURE_CLI_AUTH") == "" {
+		t.Skip("Azure CLI Acceptance tests skipped unless env 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
+		return
+	}
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-specialized-linux-sig",
 		Type:     "azure-arm",
@@ -78,6 +82,10 @@ func TestBuilderAcc_ARM64SpecializedLinuxSIG(t *testing.T) {
 }
 
 func TestBuilderAcc_WindowsSIG(t *testing.T) {
+	if os.Getenv("AZURE_CLI_AUTH") == "" {
+		t.Skip("Azure CLI Acceptance tests skipped unless env 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
+		return
+	}
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-windows-sig",
 		Type:     "azure-arm",
@@ -353,7 +361,7 @@ func createTestAzureClient(t *testing.T) AzureClient {
 		spnCloud,
 		spnKeyVault)
 	if err != nil {
-		t.Fatalf("failed to create azure client: %s", err)
+		t.Fatalf("failed to create test azure client: %s", err)
 	}
 	return *azureClient
 }
