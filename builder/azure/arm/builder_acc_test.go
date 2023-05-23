@@ -44,7 +44,7 @@ import (
 
 const DeviceLoginAcceptanceTest = "DEVICELOGIN_TEST"
 
-func TestBuilderAcc_ARM64SpecializedLinuxSIG(t *testing.T) {
+func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG(t *testing.T) {
 	if os.Getenv("AZURE_CLI_AUTH") == "" {
 		t.Skip("Azure CLI Acceptance tests skipped unless env 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
 		return
