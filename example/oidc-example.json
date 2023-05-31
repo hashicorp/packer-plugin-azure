@@ -6,8 +6,8 @@
   },
   "builders": [{
     "type": "azure-arm",
-    "managed_image_resource_group_name": "wilkentestpkr",
-    "managed_image_name": "jennasdk",
+    "managed_image_resource_group_name": "packer-acceptance-test",
+    "managed_image_name": "oidc-example",
     "os_type": "Windows",
     "image_publisher": "MicrosoftWindowsServer",
     "image_offer": "WindowsServer",
