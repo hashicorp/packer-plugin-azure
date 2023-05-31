@@ -109,6 +109,7 @@ func (c *Config) CloudEnvironment() *azure.Environment {
 	return c.cloudEnvironment
 }
 
+// TODO I still need to port this to the new SDK
 func (c *Config) setCloudEnvironment() error {
 	// First, try using the metadata host to look up the cloud.
 	if c.MetadataHost == "" {

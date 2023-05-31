@@ -121,7 +121,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if b.config.ClientConfig.ObjectID == "" {
 		user, _, err := azureClient.MeClient.Get(ctx, odata.Query{})
 		if err != nil {
-			ui.Message("Failed to retrieve Object ID from MSGraph")
+			ui.Message(fmt.Sprintf("Failed to retrieve Object ID from MSGraph %s", err.Error()))
 		} else {
 			b.config.ClientConfig.ObjectID = *user.ID
 		}
