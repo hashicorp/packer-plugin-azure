@@ -55,6 +55,7 @@ type FlatConfig struct {
 	ObjectID                *string                `mapstructure:"object_id" cty:"object_id" hcl:"object_id"`
 	TenantID                *string                `mapstructure:"tenant_id" required:"false" cty:"tenant_id" hcl:"tenant_id"`
 	SubscriptionID          *string                `mapstructure:"subscription_id" cty:"subscription_id" hcl:"subscription_id"`
+	AuthType                *string                `cty:"auth_type" hcl:"auth_type"`
 	UseAzureCLIAuth         *bool                  `mapstructure:"use_azure_cli_auth" required:"false" cty:"use_azure_cli_auth" hcl:"use_azure_cli_auth"`
 	UseInteractiveAuth      *bool                  `mapstructure:"use_interactive_auth" required:"false" cty:"use_interactive_auth" hcl:"use_interactive_auth"`
 	DtlArtifacts            []FlatDtlArtifact      `mapstructure:"dtl_artifacts" required:"true" cty:"dtl_artifacts" hcl:"dtl_artifacts"`
@@ -96,6 +97,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"object_id":                  &hcldec.AttrSpec{Name: "object_id", Type: cty.String, Required: false},
 		"tenant_id":                  &hcldec.AttrSpec{Name: "tenant_id", Type: cty.String, Required: false},
 		"subscription_id":            &hcldec.AttrSpec{Name: "subscription_id", Type: cty.String, Required: false},
+		"auth_type":                  &hcldec.AttrSpec{Name: "auth_type", Type: cty.String, Required: false},
 		"use_azure_cli_auth":         &hcldec.AttrSpec{Name: "use_azure_cli_auth", Type: cty.Bool, Required: false},
 		"use_interactive_auth":       &hcldec.AttrSpec{Name: "use_interactive_auth", Type: cty.Bool, Required: false},
 		"dtl_artifacts":              &hcldec.BlockListSpec{TypeName: "dtl_artifacts", Nested: hcldec.ObjectSpec((*FlatDtlArtifact)(nil).HCL2Spec())},
