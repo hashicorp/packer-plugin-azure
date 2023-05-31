@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/google/go-cmp/cmp"
+	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	sdkconfig "github.com/hashicorp/packer-plugin-sdk/template/config"
 )
@@ -128,11 +128,11 @@ func TestConfigShouldBeAbleToOverrideDefaultedValues(t *testing.T) {
 		t.Errorf("Expected 'vm_size' to be set to 'override_vm_size', but found %q!", c.VMSize)
 	}
 
-	if c.managedImageStorageAccountType != compute.StorageAccountTypesPremiumLRS {
+	if c.managedImageStorageAccountType != hashiVMSDK.StorageAccountTypesPremiumLRS {
 		t.Errorf("Expected 'managed_image_storage_account_type' to be set to 'Premium_LRS', but found %q!", c.managedImageStorageAccountType)
 	}
 
-	if c.diskCachingType != compute.CachingTypesNone {
+	if c.diskCachingType != hashiVMSDK.CachingTypesNone {
 		t.Errorf("Expected 'disk_caching_type' to be set to 'None', but found %q!", c.diskCachingType)
 	}
 
@@ -633,15 +633,15 @@ func TestConfigShouldTransformToVirtualMachineCaptureParameters(t *testing.T) {
 	}
 	parameters := c.toVirtualMachineCaptureParameters()
 
-	if *parameters.DestinationContainerName != c.CaptureContainerName {
-		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", *parameters.DestinationContainerName, c.CaptureContainerName)
+	if parameters.DestinationContainerName != c.CaptureContainerName {
+		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", parameters.DestinationContainerName, c.CaptureContainerName)
 	}
 
-	if *parameters.VhdPrefix != c.CaptureNamePrefix {
-		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", *parameters.VhdPrefix, c.CaptureNamePrefix)
+	if parameters.VhdPrefix != c.CaptureNamePrefix {
+		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", parameters.VhdPrefix, c.CaptureNamePrefix)
 	}
 
-	if *parameters.OverwriteVhds != false {
+	if parameters.OverwriteVhds != false {
 		t.Error("Expected OverwriteVhds to be false, but it was not.")
 	}
 }

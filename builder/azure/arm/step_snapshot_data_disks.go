@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	hashiSnapshotsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/snapshots"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -40,10 +40,10 @@ func (s *StepSnapshotDataDisks) createDataDiskSnapshot(ctx context.Context, subs
 		Properties: &hashiSnapshotsSDK.SnapshotProperties{
 			CreationData: hashiSnapshotsSDK.CreationData{
 				CreateOption:     hashiSnapshotsSDK.DiskCreateOptionCopy,
-				SourceResourceId: to.StringPtr(srcUriVhd),
+				SourceResourceId: common.StringPtr(srcUriVhd),
 			},
 		},
-		Location: *to.StringPtr(location),
+		Location: *common.StringPtr(location),
 		Tags:     &tags,
 	}
 	id := hashiSnapshotsSDK.NewSnapshotID(subscriptionId, resourceGroupName, dstSnapshotName)

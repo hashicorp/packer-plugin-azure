@@ -3,10 +3,10 @@
 package arm
 
 import (
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/zclconf/go-cty/cty"
+	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 )
 
 // FlatConfig is an auto-generated flat version of Config.
@@ -396,7 +396,7 @@ func (*FlatSharedImageGalleryDestination) HCL2Spec() map[string]hcldec.Spec {
 // FlatSpot is an auto-generated flat version of Spot.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatSpot struct {
-	EvictionPolicy *compute.VirtualMachineEvictionPolicyTypes `mapstructure:"eviction_policy" cty:"eviction_policy" hcl:"eviction_policy"`
+	EvictionPolicy *hashiVMSDK.VirtualMachineEvictionPolicyTypes `mapstructure:"eviction_policy" cty:"eviction_policy" hcl:"eviction_policy"`
 	MaxPrice       *float32                                   `mapstructure:"max_price" cty:"max_price" hcl:"max_price"`
 }
 

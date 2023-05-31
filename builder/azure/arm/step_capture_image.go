@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
@@ -18,7 +17,7 @@ import (
 type StepCaptureImage struct {
 	client              *AzureClient
 	generalizeVM        func(vmId hashiVMSDK.VirtualMachineId) error
-	captureVhd          func(ctx context.Context, vmId hashiVMSDK.VirtualMachineId, parameters *compute.VirtualMachineCaptureParameters) error
+	captureVhd          func(ctx context.Context, vmId hashiVMSDK.VirtualMachineId, parameters *hashiVMSDK.VirtualMachineCaptureParameters) error
 	captureManagedImage func(ctx context.Context, subscriptionId string, resourceGroupName string, imageName string, parameters *hashiImagesSDK.Image) error
 	get                 func(client *AzureClient) *CaptureTemplate
 	say                 func(message string)
@@ -63,15 +62,8 @@ func (s *StepCaptureImage) captureImageFromVM(ctx context.Context, subscriptionI
 	return err
 }
 
-func (s *StepCaptureImage) captureImage(ctx context.Context, vmId hashiVMSDK.VirtualMachineId, parameters *compute.VirtualMachineCaptureParameters) error {
-
-	// TODO save these params in the new SDK type so we dont have to convert them
-	payload := hashiVMSDK.VirtualMachineCaptureParameters{
-		VhdPrefix:                *parameters.VhdPrefix,
-		DestinationContainerName: *parameters.DestinationContainerName,
-		OverwriteVhds:            *parameters.OverwriteVhds,
-	}
-	if err := s.client.VirtualMachinesClient.CaptureThenPoll(ctx, vmId, payload); err != nil {
+func (s *StepCaptureImage) captureImage(ctx context.Context, vmId hashiVMSDK.VirtualMachineId, parameters *hashiVMSDK.VirtualMachineCaptureParameters) error {
+	if err := s.client.VirtualMachinesClient.CaptureThenPoll(ctx, vmId, *parameters); err != nil {
 		s.say(s.client.LastError.Error())
 		return err
 	}
@@ -83,7 +75,7 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 	var computeName = state.Get(constants.ArmComputeName).(string)
 	var location = state.Get(constants.ArmLocation).(string)
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
-	var vmCaptureParameters = state.Get(constants.ArmVirtualMachineCaptureParameters).(*compute.VirtualMachineCaptureParameters)
+	var vmCaptureParameters = state.Get(constants.ArmNewVirtualMachineCaptureParameters).(*hashiVMSDK.VirtualMachineCaptureParameters)
 	var imageParameters = state.Get(constants.ArmImageParameters).(*hashiImagesSDK.Image)
 	var subscriptionId = state.Get(constants.ArmSubscription).(string)
 	var isManagedImage = state.Get(constants.ArmIsManagedImage).(bool)

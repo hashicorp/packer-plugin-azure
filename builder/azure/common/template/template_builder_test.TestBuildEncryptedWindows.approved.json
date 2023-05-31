@@ -151,7 +151,7 @@
               "listeners": [
                 {
                   "certificateUrl": "--test-winrm-certificate-url--",
-                  "protocol": "https"
+                  "protocol": "Https"
                 }
               ]
             }
