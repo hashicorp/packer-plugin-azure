@@ -17,6 +17,7 @@ import (
 	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	hashiGalleryImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
 	hashiStorageAccountsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/storage/2022-09-01/storageaccounts"
+	"github.com/hashicorp/go-azure-sdk/sdk/odata"
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/hcl/v2/hcldec"
@@ -117,19 +118,20 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		return nil, err
 	}
 
-	// TODO: Resolve me before merging
-	// I have no idea why we need this code, I think it might be out deprecated
-	// commenting it out and seeing what happens!
-	//
-	//if b.config.ClientConfig.ObjectID == "" {
-	//	b.config.ClientConfig.ObjectID = getObjectIdFromToken(ui, spnCloud)
-	//} else {
-	//	ui.Message("You have provided Object_ID which is no longer needed, azure packer builder determines this dynamically from the authentication token")
-	//}
+	if b.config.ClientConfig.ObjectID == "" {
+		user, _, err := azureClient.MeClient.Get(ctx, odata.Query{})
+		if err != nil {
+			ui.Message("Failed to retrieve Object ID from MSGraph")
+		} else {
+			b.config.ClientConfig.ObjectID = *user.ID
+		}
+	} else {
+		ui.Message("You have provided Object_ID which is no longer needed, Azure Packer ARM builder determines this automatically using the MSGraph API")
+	}
 
-	//if b.config.ClientConfig.ObjectID == "" && b.config.OSType != constants.Target_Linux {
-	//	return nil, fmt.Errorf("could not determine the ObjectID for the user, which is required for Windows builds")
-	//}
+	if b.config.ClientConfig.ObjectID == "" && b.config.OSType != constants.Target_Linux {
+		return nil, fmt.Errorf("could not determine the ObjectID for the user, which is required for Windows builds")
+	}
 
 	if b.config.isManagedImage() {
 		groupId := commonids.NewResourceGroupID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName)

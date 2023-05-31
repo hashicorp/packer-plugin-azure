@@ -28,6 +28,7 @@ require (
 require (
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/hashicorp/go-azure-sdk v0.20230523.1140858
+	github.com/manicminer/hamilton v0.61.0
 	github.com/mitchellh/go-homedir v1.1.0
 )
 
