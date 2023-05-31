@@ -197,7 +197,6 @@ ManagedImageId: fakeID
 ManagedImageLocation: fakeLocation
 ManagedImageOSDiskSnapshotName: fakeOsDiskSnapshotName
 OSDiskUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd
-OSDiskUriReadOnlySas: SAS-Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd
 `
 
 	result := artifact.String()
@@ -418,14 +417,8 @@ func TestArtifactString(t *testing.T) {
 	if !strings.Contains(testSubject, "OSDiskUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
 		t.Errorf("Expected String() output to contain OSDiskUri")
 	}
-	if !strings.Contains(testSubject, "OSDiskUriReadOnlySas: SAS-Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
-		t.Errorf("Expected String() output to contain OSDiskUriReadOnlySas")
-	}
 	if !strings.Contains(testSubject, "TemplateUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json") {
 		t.Errorf("Expected String() output to contain TemplateUri")
-	}
-	if !strings.Contains(testSubject, "TemplateUriReadOnlySas: SAS-Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json") {
-		t.Errorf("Expected String() output to contain TemplateUriReadOnlySas")
 	}
 	if !strings.Contains(testSubject, "StorageAccountLocation: southcentralus") {
 		t.Errorf("Expected String() output to contain StorageAccountLocation")
@@ -469,14 +462,8 @@ func TestAdditionalDiskArtifactString(t *testing.T) {
 	if !strings.Contains(testSubject, "OSDiskUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
 		t.Errorf("Expected String() output to contain OSDiskUri")
 	}
-	if !strings.Contains(testSubject, "OSDiskUriReadOnlySas: SAS-Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
-		t.Errorf("Expected String() output to contain OSDiskUriReadOnlySas")
-	}
 	if !strings.Contains(testSubject, "TemplateUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json") {
 		t.Errorf("Expected String() output to contain TemplateUri")
-	}
-	if !strings.Contains(testSubject, "TemplateUriReadOnlySas: SAS-Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json") {
-		t.Errorf("Expected String() output to contain TemplateUriReadOnlySas")
 	}
 	if !strings.Contains(testSubject, "StorageAccountLocation: southcentralus") {
 		t.Errorf("Expected String() output to contain StorageAccountLocation")
@@ -486,9 +473,6 @@ func TestAdditionalDiskArtifactString(t *testing.T) {
 	}
 	if !strings.Contains(testSubject, "AdditionalDiskUri (datadisk-1): https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-datadisk-1.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
 		t.Errorf("Expected String() output to contain AdditionalDiskUri")
-	}
-	if !strings.Contains(testSubject, "AdditionalDiskUriReadOnlySas (datadisk-1): SAS-Images/images/packer-datadisk-1.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
-		t.Errorf("Expected String() output to contain AdditionalDiskUriReadOnlySas")
 	}
 }
 

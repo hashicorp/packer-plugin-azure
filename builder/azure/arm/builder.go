@@ -528,7 +528,7 @@ func (b *Builder) setRuntimeParameters(stateBag multistep.StateBag) {
 }
 
 func (b *Builder) setTemplateParameters(stateBag multistep.StateBag) {
-	stateBag.Put(constants.ArmVirtualMachineCaptureParameters, b.config.toVirtualMachineCaptureParameters())
+	stateBag.Put(constants.ArmNewVirtualMachineCaptureParameters, b.config.toVirtualMachineCaptureParameters())
 }
 
 func (b *Builder) setImageParameters(stateBag multistep.StateBag) {

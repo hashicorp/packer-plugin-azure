@@ -23,9 +23,8 @@ import (
 
 	"github.com/hashicorp/packer-plugin-sdk/random"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
 	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/masterzen/winrm"
 
 	azcommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
@@ -113,7 +112,7 @@ type SharedImageGalleryDestination struct {
 
 type Spot struct {
 	// Specify eviction policy for spot instance: "Deallocate" or "Delete". If this is set, a spot instance will be used.
-	EvictionPolicy compute.VirtualMachineEvictionPolicyTypes `mapstructure:"eviction_policy"`
+	EvictionPolicy hashiVMSDK.VirtualMachineEvictionPolicyTypes `mapstructure:"eviction_policy"`
 	// How much should the VM cost maximally per hour. Specify -1 (or do not specify) to not evict based on price.
 	MaxPrice float32 `mapstructure:"max_price"`
 }
@@ -317,7 +316,7 @@ type Config struct {
 	// type for a managed image. Valid values are Standard_LRS and Premium_LRS.
 	// The default is Standard_LRS.
 	ManagedImageStorageAccountType string `mapstructure:"managed_image_storage_account_type" required:"false"`
-	managedImageStorageAccountType compute.StorageAccountTypes
+	managedImageStorageAccountType hashiVMSDK.StorageAccountTypes
 	// If
 	// managed_image_os_disk_snapshot_name is set, a snapshot of the OS disk
 	// is created with the same name as this value before the VM is captured.
@@ -525,7 +524,7 @@ type Config struct {
 	// Specify the disk caching type. Valid values
 	// are None, ReadOnly, and ReadWrite. The default value is ReadWrite.
 	DiskCachingType string `mapstructure:"disk_caching_type" required:"false"`
-	diskCachingType compute.CachingTypes
+	diskCachingType hashiVMSDK.CachingTypes
 	// Specify the list of IP addresses and CIDR blocks that should be
 	// allowed access to the VM. If provided, an Azure Network Security
 	// Group will be created with corresponding rules and be bound to
@@ -637,11 +636,11 @@ func (c *Config) isPublishToSIG() bool {
 	return c.SharedGalleryDestination.SigDestinationGalleryName != ""
 }
 
-func (c *Config) toVirtualMachineCaptureParameters() *compute.VirtualMachineCaptureParameters {
-	return &compute.VirtualMachineCaptureParameters{
-		DestinationContainerName: &c.CaptureContainerName,
-		VhdPrefix:                &c.CaptureNamePrefix,
-		OverwriteVhds:            to.BoolPtr(false),
+func (c *Config) toVirtualMachineCaptureParameters() *hashiVMSDK.VirtualMachineCaptureParameters {
+	return &hashiVMSDK.VirtualMachineCaptureParameters{
+		DestinationContainerName: c.CaptureContainerName,
+		VhdPrefix:                c.CaptureNamePrefix,
+		OverwriteVhds:            false,
 	}
 }
 
@@ -649,13 +648,13 @@ func (c *Config) toImageParameters() *hashiImagesSDK.Image {
 	return &hashiImagesSDK.Image{
 		Properties: &hashiImagesSDK.ImageProperties{
 			SourceVirtualMachine: &hashiImagesSDK.SubResource{
-				Id: to.StringPtr(c.toVMID()),
+				Id: azcommon.StringPtr(c.toVMID()),
 			},
 			StorageProfile: &hashiImagesSDK.ImageStorageProfile{
-				ZoneResilient: to.BoolPtr(c.ManagedImageZoneResilient),
+				ZoneResilient: azcommon.BoolPtr(c.ManagedImageZoneResilient),
 			},
 		},
-		Location: *to.StringPtr(c.Location),
+		Location: *azcommon.StringPtr(c.Location),
 		Tags:     &c.AzureTags,
 	}
 }
@@ -982,11 +981,11 @@ func provideDefaultValues(c *Config) {
 	}
 
 	if c.ManagedImageStorageAccountType == "" {
-		c.managedImageStorageAccountType = compute.StorageAccountTypesStandardLRS
+		c.managedImageStorageAccountType = hashiVMSDK.StorageAccountTypesStandardLRS
 	}
 
 	if c.DiskCachingType == "" {
-		c.diskCachingType = compute.CachingTypesReadWrite
+		c.diskCachingType = hashiVMSDK.CachingTypesReadWrite
 	}
 
 	if c.ImagePublisher != "" && c.ImageVersion == "" {
@@ -1329,22 +1328,22 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	/////////////////////////////////////////////
 	// Storage
 	if c.Spot.EvictionPolicy != "" {
-		if c.Spot.EvictionPolicy != compute.VirtualMachineEvictionPolicyTypesDelete && c.Spot.EvictionPolicy != compute.VirtualMachineEvictionPolicyTypesDeallocate {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The spot.eviction_policy %q is invalid, eviction_policy must be %q, %q, or unset", c.Spot.EvictionPolicy, compute.VirtualMachineEvictionPolicyTypesDelete, compute.VirtualMachineEvictionPolicyTypesDeallocate))
+		if c.Spot.EvictionPolicy != hashiVMSDK.VirtualMachineEvictionPolicyTypesDelete && c.Spot.EvictionPolicy != hashiVMSDK.VirtualMachineEvictionPolicyTypesDeallocate {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The spot.eviction_policy %q is invalid, eviction_policy must be %q, %q, or unset", c.Spot.EvictionPolicy, hashiVMSDK.VirtualMachineEvictionPolicyTypesDelete, hashiVMSDK.VirtualMachineEvictionPolicyTypesDeallocate))
 		}
 	} else {
 		if c.Spot.MaxPrice != 0 {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Setting a spot.max_price without an spot.eviction_policy is invalid, eviction_policy must be %q or %q if max_price is set", compute.VirtualMachineEvictionPolicyTypesDelete, compute.VirtualMachineEvictionPolicyTypesDeallocate))
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Setting a spot.max_price without an spot.eviction_policy is invalid, eviction_policy must be %q or %q if max_price is set", hashiVMSDK.VirtualMachineEvictionPolicyTypesDelete, hashiVMSDK.VirtualMachineEvictionPolicyTypesDeallocate))
 		}
 	}
 
 	/////////////////////////////////////////////
 	// Storage
 	switch c.ManagedImageStorageAccountType {
-	case "", string(compute.StorageAccountTypesStandardLRS):
-		c.managedImageStorageAccountType = compute.StorageAccountTypesStandardLRS
-	case string(compute.StorageAccountTypesPremiumLRS):
-		c.managedImageStorageAccountType = compute.StorageAccountTypesPremiumLRS
+	case "", string(hashiVMSDK.StorageAccountTypesStandardLRS):
+		c.managedImageStorageAccountType = hashiVMSDK.StorageAccountTypesStandardLRS
+	case string(hashiVMSDK.StorageAccountTypesPremiumLRS):
+		c.managedImageStorageAccountType = hashiVMSDK.StorageAccountTypesPremiumLRS
 	default:
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The managed_image_storage_account_type %q is invalid", c.ManagedImageStorageAccountType))
 	}
@@ -1354,12 +1353,12 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	}
 
 	switch c.DiskCachingType {
-	case string(compute.CachingTypesNone):
-		c.diskCachingType = compute.CachingTypesNone
-	case string(compute.CachingTypesReadOnly):
-		c.diskCachingType = compute.CachingTypesReadOnly
-	case "", string(compute.CachingTypesReadWrite):
-		c.diskCachingType = compute.CachingTypesReadWrite
+	case string(hashiVMSDK.CachingTypesNone):
+		c.diskCachingType = hashiVMSDK.CachingTypesNone
+	case string(hashiVMSDK.CachingTypesReadOnly):
+		c.diskCachingType = hashiVMSDK.CachingTypesReadOnly
+	case "", string(hashiVMSDK.CachingTypesReadWrite):
+		c.diskCachingType = hashiVMSDK.CachingTypesReadWrite
 	default:
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The disk_caching_type %q is invalid", c.DiskCachingType))
 	}

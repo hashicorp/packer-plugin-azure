@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
+	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/template"
@@ -77,7 +77,7 @@ func GetVirtualMachineDeployment(config *Config) (*deployments.Deployment, error
 	if err != nil {
 		return nil, err
 	}
-	osType := compute.OperatingSystemTypesLinux
+	osType := hashiVMSDK.OperatingSystemTypesLinux
 
 	switch config.OSType {
 	case constants.Target_Linux:
@@ -89,7 +89,7 @@ func GetVirtualMachineDeployment(config *Config) (*deployments.Deployment, error
 			return nil, err
 		}
 	case constants.Target_Windows:
-		osType = compute.OperatingSystemTypesWindows
+		osType = hashiVMSDK.OperatingSystemTypesWindows
 		err = builder.BuildWindows(config.Comm.Type, config.tmpKeyVaultName, config.tmpWinRMCertificateUrl)
 		if err != nil {
 			return nil, err

@@ -7,9 +7,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 )
@@ -97,7 +97,7 @@ func createTestStateBagStepPublishToSharedImageGallery(managed bool) multistep.S
 		stateBag.Put(constants.ArmManagedImageName, "Unit Test: ManagedImageName")
 	} else {
 		stateBag.Put(constants.ArmImageParameters, &hashiImagesSDK.Image{Properties: &hashiImagesSDK.ImageProperties{
-			SourceVirtualMachine: &hashiImagesSDK.SubResource{Id: to.StringPtr("Unit Test: VM ID")},
+			SourceVirtualMachine: &hashiImagesSDK.SubResource{Id: common.StringPtr("Unit Test: VM ID")},
 		}})
 	}
 	stateBag.Put(constants.ArmManagedImageSubscription, "Unit Test: ManagedImageSubscription")

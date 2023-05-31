@@ -37,9 +37,12 @@ const (
 	ArmDoubleResourceGroupNameSet string = "arm.DoubleResourceGroupNameSet"
 	// TODO Replace ArmTags with ArmNewSDKTags
 	// Temporary object, new SDK expects *map[string]string instead of map [string]*string
-	ArmNewSDKTags                                              string = "arm.NewSDKTags"
-	ArmStorageAccountName                                      string = "arm.StorageAccountName"
-	ArmTags                                                    string = "arm.Tags"
+	ArmNewSDKTags         string = "arm.NewSDKTags"
+	ArmStorageAccountName string = "arm.StorageAccountName"
+	ArmTags               string = "arm.Tags"
+	// TODO Replace ArmVirtualMachineCaptureParameters with ArmNewVirtualMachineCaptureParameters
+	// Temporary object, this code is shared by all three builders so we need a new object for the diff type of capture parameters
+	ArmNewVirtualMachineCaptureParameters                      string = "arm.NewVirtualMachineCaptureParameters"
 	ArmVirtualMachineCaptureParameters                         string = "arm.VirtualMachineCaptureParameters"
 	ArmIsExistingResourceGroup                                 string = "arm.IsExistingResourceGroup"
 	ArmIsExistingKeyVault                                      string = "arm.IsExistingKeyVault"

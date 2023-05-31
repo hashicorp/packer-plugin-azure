@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
@@ -17,7 +16,7 @@ import (
 
 func TestStepCaptureImageShouldFailIfCaptureFails(t *testing.T) {
 	var testSubject = &StepCaptureImage{
-		captureVhd: func(context.Context, hashiVMSDK.VirtualMachineId, *compute.VirtualMachineCaptureParameters) error {
+		captureVhd: func(context.Context, hashiVMSDK.VirtualMachineId, *hashiVMSDK.VirtualMachineCaptureParameters) error {
 			return fmt.Errorf("!! Unit Test FAIL !!")
 		},
 		generalizeVM: func(hashiVMSDK.VirtualMachineId) error {
@@ -44,7 +43,7 @@ func TestStepCaptureImageShouldFailIfCaptureFails(t *testing.T) {
 
 func TestStepCaptureImageShouldPassIfCapturePasses(t *testing.T) {
 	var testSubject = &StepCaptureImage{
-		captureVhd: func(ctx context.Context, vmId hashiVMSDK.VirtualMachineId, parameters *compute.VirtualMachineCaptureParameters) error {
+		captureVhd: func(ctx context.Context, vmId hashiVMSDK.VirtualMachineId, parameters *hashiVMSDK.VirtualMachineCaptureParameters) error {
 			return nil
 		},
 		generalizeVM: func(hashiVMSDK.VirtualMachineId) error {
@@ -72,7 +71,7 @@ func TestStepCaptureImageShouldPassIfCapturePasses(t *testing.T) {
 func TestStepCaptureImageShouldCallGeneralizeIfSpecializedIsFalse(t *testing.T) {
 	generalizeCount := 0
 	var testSubject = &StepCaptureImage{
-		captureVhd: func(context.Context, hashiVMSDK.VirtualMachineId, *compute.VirtualMachineCaptureParameters) error {
+		captureVhd: func(context.Context, hashiVMSDK.VirtualMachineId, *hashiVMSDK.VirtualMachineCaptureParameters) error {
 			return nil
 		},
 		generalizeVM: func(hashiVMSDK.VirtualMachineId) error {
@@ -104,7 +103,7 @@ func TestStepCaptureImageShouldCallGeneralizeIfSpecializedIsFalse(t *testing.T) 
 func TestStepCaptureImageShouldNotCallGeneralizeIfSpecializedIsTrue(t *testing.T) {
 	generalizeCount := 0
 	var testSubject = &StepCaptureImage{
-		captureVhd: func(context.Context, hashiVMSDK.VirtualMachineId, *compute.VirtualMachineCaptureParameters) error {
+		captureVhd: func(context.Context, hashiVMSDK.VirtualMachineId, *hashiVMSDK.VirtualMachineCaptureParameters) error {
 			return nil
 		},
 		generalizeVM: func(hashiVMSDK.VirtualMachineId) error {
@@ -139,13 +138,13 @@ func TestStepCaptureImageShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 
 	var actualResourceGroupName string
 	var actualComputeName string
-	var actualVirtualMachineCaptureParameters *compute.VirtualMachineCaptureParameters
+	var actualVirtualMachineCaptureParameters *hashiVMSDK.VirtualMachineCaptureParameters
 	actualCaptureTemplate := &CaptureTemplate{
 		Schema: "!! Unit Test !!",
 	}
 
 	var testSubject = &StepCaptureImage{
-		captureVhd: func(ctx context.Context, id hashiVMSDK.VirtualMachineId, parameters *compute.VirtualMachineCaptureParameters) error {
+		captureVhd: func(ctx context.Context, id hashiVMSDK.VirtualMachineId, parameters *hashiVMSDK.VirtualMachineCaptureParameters) error {
 			actualResourceGroupName = id.ResourceGroupName
 			actualComputeName = id.VirtualMachineName
 			actualVirtualMachineCaptureParameters = parameters
@@ -171,7 +170,7 @@ func TestStepCaptureImageShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 
 	var expectedComputeName = stateBag.Get(constants.ArmComputeName).(string)
 	var expectedResourceGroupName = stateBag.Get(constants.ArmResourceGroupName).(string)
-	var expectedVirtualMachineCaptureParameters = stateBag.Get(constants.ArmVirtualMachineCaptureParameters).(*compute.VirtualMachineCaptureParameters)
+	var expectedVirtualMachineCaptureParameters = stateBag.Get(constants.ArmNewVirtualMachineCaptureParameters).(*hashiVMSDK.VirtualMachineCaptureParameters)
 	var expectedCaptureTemplate = stateBag.Get(constants.ArmCaptureTemplate).(*CaptureTemplate)
 
 	if actualComputeName != expectedComputeName {
@@ -198,7 +197,7 @@ func createTestStateBagStepCaptureImage() multistep.StateBag {
 	stateBag.Put(constants.ArmComputeName, "Unit Test: ComputeName")
 	stateBag.Put(constants.ArmResourceGroupName, "Unit Test: ResourceGroupName")
 	stateBag.Put(constants.ArmSubscription, "Unit Test: SubscriptionId")
-	stateBag.Put(constants.ArmVirtualMachineCaptureParameters, &compute.VirtualMachineCaptureParameters{})
+	stateBag.Put(constants.ArmNewVirtualMachineCaptureParameters, &hashiVMSDK.VirtualMachineCaptureParameters{})
 
 	stateBag.Put(constants.ArmIsManagedImage, false)
 	stateBag.Put(constants.ArmManagedImageResourceGroupName, "")
