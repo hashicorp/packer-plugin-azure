@@ -101,8 +101,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	ui.Message("Creating Azure Resource Manager (ARM) client ...")
 	azureClient, err := NewAzureClient(
-		b.config.ClientConfig.SubscriptionID,
-		b.config.SharedGalleryDestination.SigDestinationSubscription,
 		b.config.ResourceGroupName,
 		b.config.StorageAccount,
 		b.config.ClientConfig.CloudEnvironment(),
@@ -205,6 +203,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		if sigSubscriptionID == "" {
 			sigSubscriptionID = b.stateBag.Get(constants.ArmSubscription).(string)
 		}
+		b.stateBag.Put(constants.ArmSharedImageGalleryDestinationSubscription, sigSubscriptionID)
 		galleryId := hashiGalleryImagesSDK.NewGalleryImageID(sigSubscriptionID, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
 		_, err = azureClient.GalleryImagesClient.Get(ctx, galleryId)
 		if err != nil {

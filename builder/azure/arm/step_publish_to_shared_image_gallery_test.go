@@ -16,7 +16,7 @@ import (
 
 func TestStepPublishToSharedImageGalleryShouldNotPublishForVhd(t *testing.T) {
 	var testSubject = &StepPublishToSharedImageGallery{
-		publish: func(context.Context, string, SharedImageGalleryDestination, string, bool, int64, string, string, map[string]string) (string, error) {
+		publish: func(context.Context, string, string, SharedImageGalleryDestination, string, bool, int64, string, string, map[string]string) (string, error) {
 			return "test", nil
 		},
 		say:   func(message string) {},
@@ -37,7 +37,7 @@ func TestStepPublishToSharedImageGalleryShouldNotPublishForVhd(t *testing.T) {
 
 func TestStepPublishToSharedImageGalleryShouldPublishForManagedImageWithSig(t *testing.T) {
 	var testSubject = &StepPublishToSharedImageGallery{
-		publish: func(context.Context, string, SharedImageGalleryDestination, string, bool, int64, string, string, map[string]string) (string, error) {
+		publish: func(context.Context, string, string, SharedImageGalleryDestination, string, bool, int64, string, string, map[string]string) (string, error) {
 			return "", nil
 		},
 		say:   func(message string) {},
@@ -58,7 +58,7 @@ func TestStepPublishToSharedImageGalleryShouldPublishForManagedImageWithSig(t *t
 
 func TestStepPublishToSharedImageGalleryShouldPublishForNonManagedImageWithSig(t *testing.T) {
 	var testSubject = &StepPublishToSharedImageGallery{
-		publish: func(context.Context, string, SharedImageGalleryDestination, string, bool, int64, string, string, map[string]string) (string, error) {
+		publish: func(context.Context, string, string, SharedImageGalleryDestination, string, bool, int64, string, string, map[string]string) (string, error) {
 			return "", nil
 		},
 		say:   func(message string) {},
@@ -101,6 +101,7 @@ func createTestStateBagStepPublishToSharedImageGallery(managed bool) multistep.S
 		}})
 	}
 	stateBag.Put(constants.ArmManagedImageSubscription, "Unit Test: ManagedImageSubscription")
+	stateBag.Put(constants.ArmSharedImageGalleryDestinationSubscription, "Unit Test: ManagedImageSubscription")
 	stateBag.Put(constants.ArmIsManagedImage, managed)
 	stateBag.Put(constants.ArmIsSIGImage, true)
 
