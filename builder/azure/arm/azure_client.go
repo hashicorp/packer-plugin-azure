@@ -147,8 +147,7 @@ type NewSDKAuthOptions struct {
 	SubscriptionID string
 }
 
-func NewAzureClient(subscriptionID, sigSubscriptionID, resourceGroupName, storageAccountName string,
-	cloud *azure.Environment, sharedGalleryTimeout time.Duration, pollingDuration time.Duration, newSdkAuthOptions NewSDKAuthOptions) (*AzureClient, error) {
+func NewAzureClient(resourceGroupName, storageAccountName string, cloud *azure.Environment, sharedGalleryTimeout time.Duration, pollingDuration time.Duration, newSdkAuthOptions NewSDKAuthOptions) (*AzureClient, error) {
 
 	var azureClient = &AzureClient{}
 
