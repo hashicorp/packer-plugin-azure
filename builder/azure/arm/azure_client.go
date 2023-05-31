@@ -36,6 +36,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 	"github.com/hashicorp/packer-plugin-azure/version"
 	"github.com/hashicorp/packer-plugin-sdk/useragent"
+	msGraphSDK "github.com/manicminer/hamilton/msgraph"
 )
 
 const (
@@ -57,7 +58,7 @@ type AzureClient struct {
 	hashiSnapshotsSDK.SnapshotsClient
 	hashiGalleryImageVersionsSDK.GalleryImageVersionsClient
 	hashiGalleryImagesSDK.GalleryImagesClient
-
+	msGraphSDK.MeClient
 	InspectorMaxLength int
 	Template           *CaptureTemplate
 	LastError          azureErrorResponse
@@ -153,70 +154,70 @@ func NewAzureClient(resourceGroupName, storageAccountName string, cloud *azure.E
 
 	maxlen := getInspectorMaxLength()
 
-	authorizer, err := buildAuthorizer(context.TODO(), newSdkAuthOptions)
+	resourceManagerAuthorizer, msGraphAuthorizer, err := buildAuthorizers(context.TODO(), newSdkAuthOptions)
 	if err != nil {
 		return nil, err
 	}
 
 	// Clients that have been ported to hashicorp/go-azure-sdk
 	azureClient.DisksClient = hashiDisksSDK.NewDisksClientWithBaseURI(cloud.ResourceManagerEndpoint)
-	azureClient.DisksClient.Client.Authorizer = authWrapper.AutorestAuthorizer(authorizer)
+	azureClient.DisksClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
 	azureClient.DisksClient.Client.RequestInspector = withInspection(maxlen)
 	azureClient.DisksClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
 	azureClient.DisksClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.DisksClient.Client.UserAgent)
 	azureClient.DisksClient.Client.PollingDuration = pollingDuration
 
 	azureClient.VirtualMachinesClient = hashiVMSDK.NewVirtualMachinesClientWithBaseURI(cloud.ResourceManagerEndpoint)
-	azureClient.VirtualMachinesClient.Client.Authorizer = authWrapper.AutorestAuthorizer(authorizer)
+	azureClient.VirtualMachinesClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
 	azureClient.VirtualMachinesClient.Client.RequestInspector = withInspection(maxlen)
 	azureClient.VirtualMachinesClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), templateCapture(azureClient), errorCapture(azureClient))
 	azureClient.VirtualMachinesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.VirtualMachinesClient.Client.UserAgent)
 	azureClient.VirtualMachinesClient.Client.PollingDuration = pollingDuration
 
 	azureClient.SnapshotsClient = hashiSnapshotsSDK.NewSnapshotsClientWithBaseURI(cloud.ResourceManagerEndpoint)
-	azureClient.SnapshotsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(authorizer)
+	azureClient.SnapshotsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
 	azureClient.SnapshotsClient.Client.RequestInspector = withInspection(maxlen)
 	azureClient.SnapshotsClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
 	azureClient.SnapshotsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.SnapshotsClient.Client.UserAgent)
 	azureClient.SnapshotsClient.Client.PollingDuration = pollingDuration
 
 	azureClient.SecretsClient = hashiSecretsSDK.NewSecretsClientWithBaseURI(cloud.ResourceManagerEndpoint)
-	azureClient.SecretsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(authorizer)
+	azureClient.SecretsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
 	azureClient.SecretsClient.Client.RequestInspector = withInspection(maxlen)
 	azureClient.SecretsClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
 	azureClient.SecretsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.SecretsClient.Client.UserAgent)
 	azureClient.SecretsClient.Client.PollingDuration = pollingDuration
 
 	azureClient.VaultsClient = hashiVaultsSDK.NewVaultsClientWithBaseURI(cloud.ResourceManagerEndpoint)
-	azureClient.VaultsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(authorizer)
+	azureClient.VaultsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
 	azureClient.VaultsClient.Client.RequestInspector = withInspection(maxlen)
 	azureClient.VaultsClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
 	azureClient.VaultsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.VaultsClient.Client.UserAgent)
 	azureClient.VaultsClient.Client.PollingDuration = pollingDuration
 
 	azureClient.DeploymentsClient = hashiDeploymentsSDK.NewDeploymentsClientWithBaseURI(cloud.ResourceManagerEndpoint)
-	azureClient.DeploymentsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(authorizer)
+	azureClient.DeploymentsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
 	azureClient.DeploymentsClient.Client.RequestInspector = withInspection(maxlen)
 	azureClient.DeploymentsClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
 	azureClient.DeploymentsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.DeploymentsClient.Client.UserAgent)
 	azureClient.DeploymentsClient.Client.PollingDuration = pollingDuration
 
 	azureClient.DeploymentOperationsClient = hashiDeploymentOperationsSDK.NewDeploymentOperationsClientWithBaseURI(cloud.ResourceManagerEndpoint)
-	azureClient.DeploymentOperationsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(authorizer)
+	azureClient.DeploymentOperationsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
 	azureClient.DeploymentOperationsClient.Client.RequestInspector = withInspection(maxlen)
 	azureClient.DeploymentOperationsClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
 	azureClient.DeploymentOperationsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.DeploymentOperationsClient.Client.UserAgent)
 	azureClient.DeploymentOperationsClient.Client.PollingDuration = pollingDuration
 
 	azureClient.ResourceGroupsClient = hashiGroupsSDK.NewResourceGroupsClientWithBaseURI(cloud.ResourceManagerEndpoint)
-	azureClient.ResourceGroupsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(authorizer)
+	azureClient.ResourceGroupsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
 	azureClient.ResourceGroupsClient.Client.RequestInspector = withInspection(maxlen)
 	azureClient.ResourceGroupsClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
 	azureClient.ResourceGroupsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.ResourceGroupsClient.Client.UserAgent)
 	azureClient.ResourceGroupsClient.Client.PollingDuration = pollingDuration
 
 	azureClient.ImagesClient = hashiImagesSDK.NewImagesClientWithBaseURI(cloud.ResourceManagerEndpoint)
-	azureClient.ImagesClient.Client.Authorizer = authWrapper.AutorestAuthorizer(authorizer)
+	azureClient.ImagesClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
 	azureClient.ImagesClient.Client.RequestInspector = withInspection(maxlen)
 	azureClient.ImagesClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
 	azureClient.ImagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.ImagesClient.Client.UserAgent)
@@ -224,7 +225,7 @@ func NewAzureClient(resourceGroupName, storageAccountName string, cloud *azure.E
 
 	// Clients that are using the existing SDK/auth logic
 	azureClient.StorageAccountsClient = hashiStorageAccountsSDK.NewStorageAccountsClientWithBaseURI(cloud.ResourceManagerEndpoint)
-	azureClient.StorageAccountsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(authorizer)
+	azureClient.StorageAccountsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
 	azureClient.StorageAccountsClient.Client.RequestInspector = withInspection(maxlen)
 	azureClient.StorageAccountsClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
 	azureClient.StorageAccountsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.StorageAccountsClient.Client.UserAgent)
@@ -232,7 +233,7 @@ func NewAzureClient(resourceGroupName, storageAccountName string, cloud *azure.E
 
 	api := environments.AzurePublic().ResourceManager
 	networkMetaClient, err := hashiNetworkMetaSDK.NewClientWithBaseURI(api, func(c *resourcemanager.Client) {
-		c.Client.Authorizer = authorizer
+		c.Client.Authorizer = resourceManagerAuthorizer
 		c.Client.UserAgent = "some-user-agent"
 	})
 	if err != nil {
@@ -241,14 +242,14 @@ func NewAzureClient(resourceGroupName, storageAccountName string, cloud *azure.E
 	azureClient.NetworkMetaClient = *networkMetaClient
 
 	azureClient.GalleryImageVersionsClient = hashiGalleryImageVersionsSDK.NewGalleryImageVersionsClientWithBaseURI(cloud.ResourceManagerEndpoint)
-	azureClient.GalleryImageVersionsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(authorizer)
+	azureClient.GalleryImageVersionsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
 	azureClient.GalleryImageVersionsClient.Client.RequestInspector = withInspection(maxlen)
 	azureClient.GalleryImageVersionsClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
 	azureClient.GalleryImageVersionsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.GalleryImageVersionsClient.Client.UserAgent)
 	azureClient.GalleryImageVersionsClient.Client.PollingDuration = sharedGalleryTimeout
 
 	azureClient.GalleryImagesClient = hashiGalleryImagesSDK.NewGalleryImagesClientWithBaseURI(cloud.ResourceManagerEndpoint)
-	azureClient.GalleryImagesClient.Client.Authorizer = authWrapper.AutorestAuthorizer(authorizer)
+	azureClient.GalleryImagesClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
 	azureClient.GalleryImagesClient.Client.RequestInspector = withInspection(maxlen)
 	azureClient.GalleryImagesClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
 	azureClient.GalleryImagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.GalleryImagesClient.Client.UserAgent)
@@ -257,12 +258,15 @@ func NewAzureClient(resourceGroupName, storageAccountName string, cloud *azure.E
 	// The Blob Client is only used for VHD builds
 	if resourceGroupName != "" && storageAccountName != "" {
 		azureClient.BlobContainersClient = hashiBlobContainersSDK.NewBlobContainersClientWithBaseURI(cloud.ResourceManagerEndpoint)
-		azureClient.BlobContainersClient.Client.Authorizer = authWrapper.AutorestAuthorizer(authorizer)
+		azureClient.BlobContainersClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
 		azureClient.BlobContainersClient.Client.RequestInspector = withInspection(maxlen)
 		azureClient.BlobContainersClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
 		azureClient.BlobContainersClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.GalleryImagesClient.Client.UserAgent)
 		azureClient.BlobContainersClient.Client.PollingDuration = pollingDuration
 	}
+
+	azureClient.MeClient = *msGraphSDK.NewMeClient()
+	azureClient.MeClient.BaseClient.Authorizer = msGraphAuthorizer
 
 	return azureClient, nil
 }
@@ -294,7 +298,8 @@ const (
 	AuthTypeAzureCLI        = "AzureCLI"
 )
 
-func buildAuthorizer(ctx context.Context, authOpts NewSDKAuthOptions) (auth.Authorizer, error) {
+// Returns Authorizers for Resource Manager and MicrosoftGraph
+func buildAuthorizers(ctx context.Context, authOpts NewSDKAuthOptions) (auth.Authorizer, auth.Authorizer, error) {
 	env := environments.AzurePublic()
 	var authConfig auth.Credentials
 	switch authOpts.AuthType {
@@ -337,9 +342,13 @@ func buildAuthorizer(ctx context.Context, authOpts NewSDKAuthOptions) (auth.Auth
 	default:
 		panic("AuthType not set")
 	}
-	authorizer, err := auth.NewAuthorizerFromCredentials(ctx, authConfig, env.ResourceManager)
+	resourceManagerAuthorizer, err := auth.NewAuthorizerFromCredentials(ctx, authConfig, env.ResourceManager)
 	if err != nil {
-		return nil, fmt.Errorf("building authorizer from credentials: %+v", err)
+		return nil, nil, fmt.Errorf("building Resource Manager authorizer from credentials: %+v", err)
 	}
-	return authorizer, nil
+	msGraphAuthorizer, err := auth.NewAuthorizerFromCredentials(ctx, authConfig, env.MicrosoftGraph)
+	if err != nil {
+		return nil, nil, fmt.Errorf("building MSGraph authorizer from credentials: %+v", err)
+	}
+	return resourceManagerAuthorizer, msGraphAuthorizer, nil
 }
