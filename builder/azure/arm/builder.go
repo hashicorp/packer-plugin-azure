@@ -17,7 +17,6 @@ import (
 	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	hashiGalleryImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
 	hashiStorageAccountsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/storage/2022-09-01/storageaccounts"
-	"github.com/hashicorp/go-azure-sdk/sdk/odata"
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/hcl/v2/hcldec"
@@ -101,7 +100,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	}
 
 	ui.Message("Creating Azure Resource Manager (ARM) client ...")
-	azureClient, err := NewAzureClient(
+	azureClient, objectID, err := NewAzureClient(
 		b.config.ResourceGroupName,
 		b.config.StorageAccount,
 		b.config.ClientConfig.CloudEnvironment(),
@@ -119,17 +118,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	}
 
 	if b.config.ClientConfig.ObjectID == "" {
-		servicePrincipals, _, err := azureClient.ServicePrincipalsClient.List(ctx, odata.Query{})
-		if err != nil {
-			ui.Message(fmt.Sprintf("Failed to retrieve Object ID from MSGraph: %s", err))
-		} else if len(*servicePrincipals) == 0 {
-			ui.Message(fmt.Sprintf("Failed to find Object ID in MSGraph"))
-		} else {
-			servicePrincipal := (*servicePrincipals)[0]
-			b.config.ClientConfig.ObjectID = *(servicePrincipal.Id)
-		}
+		b.config.ClientConfig.ObjectID = *objectID
 	} else {
-		ui.Message("You have provided Object_ID which is no longer needed, Azure Packer ARM builder determines this automatically using the MSGraph API")
+		ui.Message("You have provided Object_ID which is no longer needed, Azure Packer ARM builder determines this automatically using the Azure Access Token")
 	}
 
 	if b.config.ClientConfig.ObjectID == "" && b.config.OSType != constants.Target_Linux {

@@ -357,7 +357,7 @@ func createTestAzureClient(t *testing.T) AzureClient {
 		SubscriptionID: b.config.ClientConfig.SubscriptionID,
 	}
 	ui.Message("Creating test Azure Resource Manager (ARM) client ...")
-	azureClient, err := NewAzureClient(
+	azureClient, _, err := NewAzureClient(
 		b.config.ResourceGroupName,
 		b.config.StorageAccount,
 		b.config.ClientConfig.CloudEnvironment(),
