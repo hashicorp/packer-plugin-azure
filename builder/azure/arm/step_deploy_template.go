@@ -107,11 +107,11 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 		// delete the disk as the image request will return a 404
 		computeName := state.Get(constants.ArmComputeName).(string)
 		isManagedDisk := state.Get(constants.ArmIsManagedImage).(bool)
-		imageType, imageName, err := s.disk(context.TODO(), subscriptionId, resourceGroupName, computeName)
+		imageType, imageName, err := s.disk(ctx, subscriptionId, resourceGroupName, computeName)
 		if err != nil {
 			ui.Error(fmt.Sprintf("Could not retrieve OS Image details: %s", err))
 		}
-		err = s.delete(context.TODO(), subscriptionId, deploymentName, resourceGroupName)
+		err = s.delete(ctx, subscriptionId, deploymentName, resourceGroupName)
 		if err != nil {
 			s.reportIfError(err, resourceGroupName)
 		}
@@ -124,7 +124,7 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 		}
 		if !state.Get(constants.ArmKeepOSDisk).(bool) {
 			ui.Say(fmt.Sprintf(" Deleting -> %s : '%s'", imageType, imageName))
-			err = s.deleteDisk(context.TODO(), imageName, resourceGroupName, isManagedDisk, subscriptionId)
+			err = s.deleteDisk(ctx, imageName, resourceGroupName, isManagedDisk, subscriptionId)
 			if err != nil {
 				ui.Error(fmt.Sprintf("Error deleting resource.  Please delete manually.\n\n"+
 					"Name: %s\n"+
@@ -139,7 +139,7 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 		for i, additionaldisk := range dataDisks {
 			s.say(fmt.Sprintf(" Deleting Additional Disk -> %d: '%s'", i+1, additionaldisk))
 
-			err := s.deleteImage(context.TODO(), additionaldisk, resourceGroupName, isManagedDisk, subscriptionId)
+			err := s.deleteImage(ctx, additionaldisk, resourceGroupName, isManagedDisk, subscriptionId)
 			if err != nil {
 				s.say("Failed to delete the managed Additional Disk!")
 			}
