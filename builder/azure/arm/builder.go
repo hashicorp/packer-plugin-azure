@@ -91,7 +91,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	// Pass in relevant auth information for hashicorp/go-azure-sdk
 	authOptions := NewSDKAuthOptions{
-		AuthType:       b.config.ClientConfig.AuthType,
+		AuthType:       b.config.ClientConfig.AuthType(),
 		ClientID:       b.config.ClientConfig.ClientID,
 		ClientSecret:   b.config.ClientConfig.ClientSecret,
 		ClientJWT:      b.config.ClientConfig.ClientJWT,
@@ -119,11 +119,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	}
 
 	if b.config.ClientConfig.ObjectID == "" {
-		user, _, err := azureClient.MeClient.Get(ctx, odata.Query{})
-		if err != nil {
-			ui.Message(fmt.Sprintf("Failed to retrieve Object ID from MSGraph %s", err.Error()))
+		servicePrincipals, _, err := azureClient.ServicePrincipalsClient.List(ctx, odata.Query{})
+		if err != nil || len(*servicePrincipals) == 0 {
+			ui.Message("Failed to retrieve Object ID from MSGraph")
 		} else {
-			b.config.ClientConfig.ObjectID = *user.ID
+			servicePrincipal := (*servicePrincipals)[0]
+			b.config.ClientConfig.ObjectID = *(servicePrincipal.Id)
 		}
 	} else {
 		ui.Message("You have provided Object_ID which is no longer needed, Azure Packer ARM builder determines this automatically using the MSGraph API")

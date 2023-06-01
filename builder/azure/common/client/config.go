@@ -70,7 +70,7 @@ type Config struct {
 	// The subscription to use.
 	SubscriptionID string `mapstructure:"subscription_id"`
 
-	AuthType string
+	authType string
 
 	// Flag to use Azure CLI authentication. Defaults to false.
 	// CLI auth will use the information from an active `az login` session to connect to Azure and set the subscription id and tenant id associated to the signed in account.
@@ -107,6 +107,10 @@ func (c *Config) SetDefaultValues() error {
 
 func (c *Config) CloudEnvironment() *azure.Environment {
 	return c.cloudEnvironment
+}
+
+func (c *Config) AuthType() string {
+	return c.authType
 }
 
 // TODO I still need to port this to the new SDK
@@ -293,7 +297,7 @@ func (c Config) GetServicePrincipalToken(
 	err error) {
 
 	var auth oAuthTokenProvider
-	switch c.AuthType {
+	switch c.authType {
 	case AuthTypeDeviceLogin:
 		say("Getting tokens using device flow")
 		auth = NewDeviceFlowOAuthTokenProvider(*c.cloudEnvironment, say, c.TenantID)
@@ -335,23 +339,23 @@ func (c Config) GetServicePrincipalToken(
 // FillParameters capture the user intent from the supplied parameter set in AuthType, retrieves the TenantID and CloudEnvironment if not specified.
 // The SubscriptionID is also retrieved in case MSI auth is requested.
 func (c *Config) FillParameters() error {
-	if c.AuthType == "" {
+	if c.authType == "" {
 		if c.useDeviceLogin() {
-			c.AuthType = AuthTypeDeviceLogin
+			c.authType = AuthTypeDeviceLogin
 		} else if c.UseCLI() {
-			c.AuthType = AuthTypeAzureCLI
+			c.authType = AuthTypeAzureCLI
 		} else if c.UseMSI() {
-			c.AuthType = AuthTypeMSI
+			c.authType = AuthTypeMSI
 		} else if c.ClientSecret != "" {
-			c.AuthType = AuthTypeClientSecret
+			c.authType = AuthTypeClientSecret
 		} else if c.ClientCertPath != "" {
-			c.AuthType = AuthTypeClientCert
+			c.authType = AuthTypeClientCert
 		} else {
-			c.AuthType = AuthTypeClientBearerJWT
+			c.authType = AuthTypeClientBearerJWT
 		}
 	}
 
-	if c.AuthType == AuthTypeMSI && c.SubscriptionID == "" {
+	if c.authType == AuthTypeMSI && c.SubscriptionID == "" {
 
 		subscriptionID, err := getSubscriptionFromIMDS()
 		if err != nil {
@@ -367,7 +371,7 @@ func (c *Config) FillParameters() error {
 		}
 	}
 
-	if c.AuthType == AuthTypeAzureCLI {
+	if c.authType == AuthTypeAzureCLI {
 		tenantID, subscriptionID, err := getIDsFromAzureCLI()
 		if err != nil {
 			return fmt.Errorf("error fetching tenantID and subscriptionID from Azure CLI (are you logged on using `az login`?): %v", err)

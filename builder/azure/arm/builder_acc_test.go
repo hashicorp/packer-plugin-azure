@@ -363,7 +363,7 @@ func createTestAzureClient(t *testing.T) AzureClient {
 	b.config.ClientConfig.UseAzureCLIAuth = true
 	_ = b.config.ClientConfig.FillParameters()
 	authOptions := NewSDKAuthOptions{
-		AuthType:       b.config.ClientConfig.AuthType,
+		AuthType:       b.config.ClientConfig.AuthType(),
 		ClientID:       b.config.ClientConfig.ClientID,
 		ClientSecret:   b.config.ClientConfig.ClientSecret,
 		TenantID:       b.config.ClientConfig.TenantID,
