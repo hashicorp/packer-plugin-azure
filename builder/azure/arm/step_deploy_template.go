@@ -314,7 +314,7 @@ func (s *StepDeployTemplate) deleteDeploymentResources(ctx context.Context, subs
 			defer wg.Done()
 			retryConfig := retry.Config{
 				Tries:      10,
-				RetryDelay: (&retry.Backoff{InitialBackoff: 10 * time.Second, MaxBackoff: 600 * time.Second, Multiplier: 2}).Linear,
+				RetryDelay: (&retry.Backoff{InitialBackoff: 5 * time.Second, MaxBackoff: 60 * time.Second, Multiplier: 1.5}).Linear,
 			}
 
 			err = retryConfig.Run(ctx, func(ctx context.Context) error {
