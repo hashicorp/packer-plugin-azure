@@ -58,7 +58,7 @@ type AzureClient struct {
 	hashiSnapshotsSDK.SnapshotsClient
 	hashiGalleryImageVersionsSDK.GalleryImageVersionsClient
 	hashiGalleryImagesSDK.GalleryImagesClient
-	msGraphSDK.MeClient
+	msGraphSDK.ServicePrincipalsClient
 	InspectorMaxLength int
 	Template           *CaptureTemplate
 	LastError          azureErrorResponse
@@ -265,8 +265,8 @@ func NewAzureClient(resourceGroupName, storageAccountName string, cloud *azure.E
 		azureClient.BlobContainersClient.Client.PollingDuration = pollingDuration
 	}
 
-	azureClient.MeClient = *msGraphSDK.NewMeClient()
-	azureClient.MeClient.BaseClient.Authorizer = msGraphAuthorizer
+	azureClient.ServicePrincipalsClient = *msGraphSDK.NewServicePrincipalsClient()
+	azureClient.ServicePrincipalsClient.BaseClient.Authorizer = msGraphAuthorizer
 
 	return azureClient, nil
 }

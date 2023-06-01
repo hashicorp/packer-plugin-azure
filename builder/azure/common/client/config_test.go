@@ -200,8 +200,8 @@ func Test_ClientConfig_AzureCli(t *testing.T) {
 		t.Fatalf("Expected nil err, but got: %v", err)
 	}
 
-	if cfg.AuthType != AuthTypeAzureCLI {
-		t.Fatalf("Expected authType to be %q, but got: %q", AuthTypeAzureCLI, cfg.AuthType)
+	if cfg.AuthType() != AuthTypeAzureCLI {
+		t.Fatalf("Expected authType to be %q, but got: %q", AuthTypeAzureCLI, cfg.AuthType())
 	}
 }
 
