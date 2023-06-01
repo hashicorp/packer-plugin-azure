@@ -16,6 +16,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/golang-jwt/jwt"
 	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	hashiDisksSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
@@ -36,7 +37,6 @@ import (
 	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 	"github.com/hashicorp/packer-plugin-azure/version"
 	"github.com/hashicorp/packer-plugin-sdk/useragent"
-	msGraphSDK "github.com/manicminer/hamilton/msgraph"
 )
 
 const (
@@ -58,7 +58,6 @@ type AzureClient struct {
 	hashiSnapshotsSDK.SnapshotsClient
 	hashiGalleryImageVersionsSDK.GalleryImageVersionsClient
 	hashiGalleryImagesSDK.GalleryImagesClient
-	msGraphSDK.ServicePrincipalsClient
 	InspectorMaxLength int
 	Template           *CaptureTemplate
 	LastError          azureErrorResponse
@@ -148,15 +147,17 @@ type NewSDKAuthOptions struct {
 	SubscriptionID string
 }
 
-func NewAzureClient(resourceGroupName, storageAccountName string, cloud *azure.Environment, sharedGalleryTimeout time.Duration, pollingDuration time.Duration, newSdkAuthOptions NewSDKAuthOptions) (*AzureClient, error) {
+// Returns an Azure Client used for the Azure Resource Manager
+// Also returns the Azure object ID for the authentication method used in the build
+func NewAzureClient(resourceGroupName, storageAccountName string, cloud *azure.Environment, sharedGalleryTimeout time.Duration, pollingDuration time.Duration, newSdkAuthOptions NewSDKAuthOptions) (*AzureClient, *string, error) {
 
 	var azureClient = &AzureClient{}
 
 	maxlen := getInspectorMaxLength()
 
-	resourceManagerAuthorizer, msGraphAuthorizer, err := buildAuthorizers(context.TODO(), newSdkAuthOptions)
+	resourceManagerAuthorizer, err := buildAuthorizers(context.TODO(), newSdkAuthOptions)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Clients that have been ported to hashicorp/go-azure-sdk
@@ -237,7 +238,7 @@ func NewAzureClient(resourceGroupName, storageAccountName string, cloud *azure.E
 		c.Client.UserAgent = "some-user-agent"
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	azureClient.NetworkMetaClient = *networkMetaClient
 
@@ -265,10 +266,15 @@ func NewAzureClient(resourceGroupName, storageAccountName string, cloud *azure.E
 		azureClient.BlobContainersClient.Client.PollingDuration = pollingDuration
 	}
 
-	azureClient.ServicePrincipalsClient = *msGraphSDK.NewServicePrincipalsClient()
-	azureClient.ServicePrincipalsClient.BaseClient.Authorizer = msGraphAuthorizer
-
-	return azureClient, nil
+	token, err := resourceManagerAuthorizer.Token(context.TODO(), &http.Request{})
+	if err != nil {
+		return nil, nil, err
+	}
+	objectId, err := getObjectIdFromToken(token.AccessToken)
+	if err != nil {
+		return nil, nil, err
+	}
+	return azureClient, &objectId, nil
 }
 
 func getInspectorMaxLength() int64 {
@@ -299,7 +305,7 @@ const (
 )
 
 // Returns Authorizers for Resource Manager and MicrosoftGraph
-func buildAuthorizers(ctx context.Context, authOpts NewSDKAuthOptions) (auth.Authorizer, auth.Authorizer, error) {
+func buildAuthorizers(ctx context.Context, authOpts NewSDKAuthOptions) (auth.Authorizer, error) {
 	env := environments.AzurePublic()
 	var authConfig auth.Credentials
 	switch authOpts.AuthType {
@@ -344,11 +350,22 @@ func buildAuthorizers(ctx context.Context, authOpts NewSDKAuthOptions) (auth.Aut
 	}
 	resourceManagerAuthorizer, err := auth.NewAuthorizerFromCredentials(ctx, authConfig, env.ResourceManager)
 	if err != nil {
-		return nil, nil, fmt.Errorf("building Resource Manager authorizer from credentials: %+v", err)
+		return nil, fmt.Errorf("building Resource Manager authorizer from credentials: %+v", err)
 	}
-	msGraphAuthorizer, err := auth.NewAuthorizerFromCredentials(ctx, authConfig, env.MicrosoftGraph)
+	return resourceManagerAuthorizer, nil
+}
+
+func getObjectIdFromToken(token string) (string, error) {
+	claims := jwt.MapClaims{}
+	var p jwt.Parser
+
+	var err error
+
+	_, _, err = p.ParseUnverified(token, claims)
+
 	if err != nil {
-		return nil, nil, fmt.Errorf("building MSGraph authorizer from credentials: %+v", err)
+		return "", err
 	}
-	return resourceManagerAuthorizer, msGraphAuthorizer, nil
+	return claims["oid"].(string), nil
+
 }
