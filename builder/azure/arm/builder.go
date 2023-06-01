@@ -120,8 +120,10 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	if b.config.ClientConfig.ObjectID == "" {
 		servicePrincipals, _, err := azureClient.ServicePrincipalsClient.List(ctx, odata.Query{})
-		if err != nil || len(*servicePrincipals) == 0 {
-			ui.Message("Failed to retrieve Object ID from MSGraph")
+		if err != nil {
+			ui.Message(fmt.Sprintf("Failed to retrieve Object ID from MSGraph: %s", err))
+		} else if len(*servicePrincipals) == 0 {
+			ui.Message(fmt.Sprintf("Failed to find Object ID in MSGraph"))
 		} else {
 			servicePrincipal := (*servicePrincipals)[0]
 			b.config.ClientConfig.ObjectID = *(servicePrincipal.Id)
