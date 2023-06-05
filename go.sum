@@ -403,8 +403,8 @@ github.com/morikuni/aec v1.0.0/go.mod h1:BbKIizmSmc5MMPqRYbxO4ZU0S0+P200+tUnFx7P
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d h1:VhgPp6v9qf9Agr/56bj7Y/xa04UccTW04VP0Qed4vnQ=
 github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d/go.mod h1:YUTz3bUH2ZwIWBy3CJBeOBEugqcmXREj14T+iG/4k4U=
-github.com/nywilken/go-cty v0.0.0-20230418194721-b97b674b17ec h1:Hsy3UzHs3PAq+qs6MbRspOYxldCzbugI37i2tYSQkA8=
-github.com/nywilken/go-cty v0.0.0-20230418194721-b97b674b17ec/go.mod h1:jQhMnBcOB2DrBaV2awY4z+oSZTPc2dnnwGqYqFo86G0=
+github.com/nywilken/go-cty v1.10.1-0.20230602202310-ae904726bfe1 h1:EmpyUZXBd7sGUvOZfhb6X6BUS9iKMsjHorcizLzQtik=
+github.com/nywilken/go-cty v1.10.1-0.20230602202310-ae904726bfe1/go.mod h1:jQhMnBcOB2DrBaV2awY4z+oSZTPc2dnnwGqYqFo86G0=
 github.com/oklog/run v1.0.0/go.mod h1:dlhp/R75TPv97u0XWUtDeV/lRKWPKSdTuV0TZvrmrQA=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.10.1/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
