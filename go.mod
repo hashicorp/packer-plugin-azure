@@ -132,7 +132,7 @@ require (
 	software.sslmate.com/src/go-pkcs12 v0.2.0 // indirect
 )
 
-replace github.com/zclconf/go-cty => github.com/nywilken/go-cty v0.0.0-20230418194721-b97b674b17ec
+replace github.com/zclconf/go-cty => github.com/nywilken/go-cty v1.10.1-0.20230602202310-ae904726bfe1
 
 // Incorrect plugin registration for Azure component; see hashicorp/packer-plugin-azure/pull/73
 retract v0.0.1
