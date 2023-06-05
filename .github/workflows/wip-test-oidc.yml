@@ -49,7 +49,7 @@ jobs:
         run:  make
       
       - name: Try to run an AzureARM build with our OIDC token
-        run:  packer build -force ./example/oidc-example.json 
+        run:  packer build -force ./example/oidc-example.pkr.hcl
         env: 
           ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID}}
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID}}
