@@ -17,7 +17,7 @@ import (
 
 type StepGetCertificate struct {
 	client *AzureClient
-	get    func(subscriptionId, resourceGroupName string, keyVaultName string, secretName string) (string, error)
+	get    func(ctx context.Context, subscriptionId, resourceGroupName string, keyVaultName string, secretName string) (string, error)
 	say    func(message string)
 	error  func(e error)
 	pause  func()
@@ -35,9 +35,9 @@ func NewStepGetCertificate(client *AzureClient, ui packersdk.Ui) *StepGetCertifi
 	return step
 }
 
-func (s *StepGetCertificate) getCertificateUrl(subscriptionId string, resourceGroupName string, keyVaultName string, secretName string) (string, error) {
+func (s *StepGetCertificate) getCertificateUrl(ctx context.Context, subscriptionId string, resourceGroupName string, keyVaultName string, secretName string) (string, error) {
 	id := hashiSecretsSDK.NewSecretID(subscriptionId, resourceGroupName, keyVaultName, secretName)
-	secret, err := s.client.SecretsClient.Get(context.TODO(), id)
+	secret, err := s.client.SecretsClient.Get(ctx, id)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return "", err
@@ -63,7 +63,7 @@ func (s *StepGetCertificate) Run(ctx context.Context, state multistep.StateBag) 
 	var err error
 	var url string
 	for i := 0; i < 5; i++ {
-		url, err = s.get(subscriptionId, resourceGroupName, keyVaultName, DefaultSecretName)
+		url, err = s.get(ctx, subscriptionId, resourceGroupName, keyVaultName, DefaultSecretName)
 		if err == nil {
 			break
 		}

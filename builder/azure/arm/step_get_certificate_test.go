@@ -14,7 +14,9 @@ import (
 
 func TestStepGetCertificateShouldFailIfGetFails(t *testing.T) {
 	var testSubject = &StepGetCertificate{
-		get:   func(string, string, string, string) (string, error) { return "", fmt.Errorf("!! Unit Test FAIL !!") },
+		get: func(context.Context, string, string, string, string) (string, error) {
+			return "", fmt.Errorf("!! Unit Test FAIL !!")
+		},
 		say:   func(message string) {},
 		error: func(e error) {},
 		pause: func() {},
@@ -34,7 +36,7 @@ func TestStepGetCertificateShouldFailIfGetFails(t *testing.T) {
 
 func TestStepGetCertificateShouldPassIfGetPasses(t *testing.T) {
 	var testSubject = &StepGetCertificate{
-		get:   func(string, string, string, string) (string, error) { return "", nil },
+		get:   func(context.Context, string, string, string, string) (string, error) { return "", nil },
 		say:   func(message string) {},
 		error: func(e error) {},
 		pause: func() {},
@@ -57,7 +59,7 @@ func TestStepGetCertificateShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 	var actualSecretName string
 
 	var testSubject = &StepGetCertificate{
-		get: func(subscriptionId string, resourceGroupName string, keyVaultName string, secretName string) (string, error) {
+		get: func(ctx context.Context, subscriptionId string, resourceGroupName string, keyVaultName string, secretName string) (string, error) {
 			actualKeyVaultName = keyVaultName
 			actualSecretName = secretName
 
