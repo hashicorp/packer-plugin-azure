@@ -149,13 +149,13 @@ type NewSDKAuthOptions struct {
 
 // Returns an Azure Client used for the Azure Resource Manager
 // Also returns the Azure object ID for the authentication method used in the build
-func NewAzureClient(resourceGroupName, storageAccountName string, cloud *azure.Environment, sharedGalleryTimeout time.Duration, pollingDuration time.Duration, newSdkAuthOptions NewSDKAuthOptions) (*AzureClient, *string, error) {
+func NewAzureClient(ctx context.Context, resourceGroupName, storageAccountName string, cloud *azure.Environment, sharedGalleryTimeout time.Duration, pollingDuration time.Duration, newSdkAuthOptions NewSDKAuthOptions) (*AzureClient, *string, error) {
 
 	var azureClient = &AzureClient{}
 
 	maxlen := getInspectorMaxLength()
 
-	resourceManagerAuthorizer, err := buildAuthorizers(context.TODO(), newSdkAuthOptions)
+	resourceManagerAuthorizer, err := buildAuthorizers(ctx, newSdkAuthOptions)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -266,7 +266,7 @@ func NewAzureClient(resourceGroupName, storageAccountName string, cloud *azure.E
 		azureClient.BlobContainersClient.Client.PollingDuration = pollingDuration
 	}
 
-	token, err := resourceManagerAuthorizer.Token(context.TODO(), &http.Request{})
+	token, err := resourceManagerAuthorizer.Token(ctx, &http.Request{})
 	if err != nil {
 		return nil, nil, err
 	}

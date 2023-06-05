@@ -19,7 +19,7 @@ func TestStepCaptureImageShouldFailIfCaptureFails(t *testing.T) {
 		captureVhd: func(context.Context, hashiVMSDK.VirtualMachineId, *hashiVMSDK.VirtualMachineCaptureParameters) error {
 			return fmt.Errorf("!! Unit Test FAIL !!")
 		},
-		generalizeVM: func(hashiVMSDK.VirtualMachineId) error {
+		generalizeVM: func(context.Context, hashiVMSDK.VirtualMachineId) error {
 			return nil
 		},
 		get: func(client *AzureClient) *CaptureTemplate {
@@ -46,7 +46,7 @@ func TestStepCaptureImageShouldPassIfCapturePasses(t *testing.T) {
 		captureVhd: func(ctx context.Context, vmId hashiVMSDK.VirtualMachineId, parameters *hashiVMSDK.VirtualMachineCaptureParameters) error {
 			return nil
 		},
-		generalizeVM: func(hashiVMSDK.VirtualMachineId) error {
+		generalizeVM: func(context.Context, hashiVMSDK.VirtualMachineId) error {
 			return nil
 		},
 		get: func(client *AzureClient) *CaptureTemplate {
@@ -74,7 +74,7 @@ func TestStepCaptureImageShouldCallGeneralizeIfSpecializedIsFalse(t *testing.T) 
 		captureVhd: func(context.Context, hashiVMSDK.VirtualMachineId, *hashiVMSDK.VirtualMachineCaptureParameters) error {
 			return nil
 		},
-		generalizeVM: func(hashiVMSDK.VirtualMachineId) error {
+		generalizeVM: func(context.Context, hashiVMSDK.VirtualMachineId) error {
 			generalizeCount++
 			return nil
 		},
@@ -106,7 +106,7 @@ func TestStepCaptureImageShouldNotCallGeneralizeIfSpecializedIsTrue(t *testing.T
 		captureVhd: func(context.Context, hashiVMSDK.VirtualMachineId, *hashiVMSDK.VirtualMachineCaptureParameters) error {
 			return nil
 		},
-		generalizeVM: func(hashiVMSDK.VirtualMachineId) error {
+		generalizeVM: func(context.Context, hashiVMSDK.VirtualMachineId) error {
 			generalizeCount++
 			return nil
 		},
@@ -151,7 +151,7 @@ func TestStepCaptureImageShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 
 			return nil
 		},
-		generalizeVM: func(hashiVMSDK.VirtualMachineId) error {
+		generalizeVM: func(context.Context, hashiVMSDK.VirtualMachineId) error {
 			return nil
 		},
 		get: func(client *AzureClient) *CaptureTemplate {

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	hashiGroupsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
@@ -129,7 +130,9 @@ func (s *StepCreateResourceGroup) Cleanup(state multistep.StateBag) {
 		return
 	}
 
-	ctx := context.TODO()
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Minute*10)
+	defer cancelFunc()
+
 	resourceGroupName := state.Get(constants.ArmResourceGroupName).(string)
 	subscriptionId := state.Get(constants.ArmSubscription).(string)
 	if exists, err := s.exists(ctx, subscriptionId, resourceGroupName); !exists || err != nil {

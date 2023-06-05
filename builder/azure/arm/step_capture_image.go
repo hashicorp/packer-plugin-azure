@@ -16,7 +16,7 @@ import (
 
 type StepCaptureImage struct {
 	client              *AzureClient
-	generalizeVM        func(vmId hashiVMSDK.VirtualMachineId) error
+	generalizeVM        func(ctx context.Context, vmId hashiVMSDK.VirtualMachineId) error
 	captureVhd          func(ctx context.Context, vmId hashiVMSDK.VirtualMachineId, parameters *hashiVMSDK.VirtualMachineCaptureParameters) error
 	captureManagedImage func(ctx context.Context, subscriptionId string, resourceGroupName string, imageName string, parameters *hashiImagesSDK.Image) error
 	get                 func(client *AzureClient) *CaptureTemplate
@@ -45,8 +45,8 @@ func NewStepCaptureImage(client *AzureClient, ui packersdk.Ui) *StepCaptureImage
 	return step
 }
 
-func (s *StepCaptureImage) generalize(vmId hashiVMSDK.VirtualMachineId) error {
-	_, err := s.client.Generalize(context.TODO(), vmId)
+func (s *StepCaptureImage) generalize(ctx context.Context, vmId hashiVMSDK.VirtualMachineId) error {
+	_, err := s.client.Generalize(ctx, vmId)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 	}
@@ -91,7 +91,7 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 		s.say("Skipping generalization of Compute Gallery Image")
 	} else {
 		s.say("Generalizing machine ...")
-		err := s.generalizeVM(vmId)
+		err := s.generalizeVM(ctx, vmId)
 
 		if err == nil {
 			if isManagedImage {

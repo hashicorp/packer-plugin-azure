@@ -96,7 +96,7 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 	subscriptionId := state.Get(constants.ArmSubscription).(string)
 	if s.templateType == KeyVaultTemplate {
 		ui.Say("\nDeleting KeyVault created during build")
-		err := s.delete(context.TODO(), subscriptionId, deploymentName, resourceGroupName)
+		err := s.delete(ctx, subscriptionId, deploymentName, resourceGroupName)
 		if err != nil {
 			s.reportIfError(err, resourceGroupName)
 		}
