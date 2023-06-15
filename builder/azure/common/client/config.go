@@ -225,10 +225,6 @@ func (c *Config) setCloudEnvironment() error {
 	return nil
 }
 
-func (c Config) getEnvironmentName() (string, error) {
-	return "", nil
-}
-
 //nolint:ineffassign //this triggers a false positive because errs is passed by reference
 func (c Config) Validate(errs *packersdk.MultiError) {
 	/////////////////////////////////////////////
