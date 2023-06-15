@@ -191,10 +191,9 @@ func Test_ClientConfig_AzureCli(t *testing.T) {
 	getEnvOrSkip(t, "AZURE_CLI_AUTH")
 
 	cfg := Config{
-		UseAzureCLIAuth:  true,
-		cloudEnvironment: getCloud(),
+		UseAzureCLIAuth:     true,
+		cloudEnvironment:    getCloud(),
 		newCloudEnvironment: environments.AzurePublic(),
-
 	}
 	assertValid(t, cfg)
 
