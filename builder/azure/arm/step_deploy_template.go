@@ -19,11 +19,11 @@ import (
 	hashiVirtualNetworksSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/virtualnetworks"
 	hashiDeploymentOperationsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deploymentoperations"
 	hashiDeploymentsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
-	hashiBlobContainersSDK "github.com/hashicorp/go-azure-sdk/resource-manager/storage/2022-09-01/blobcontainers"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
+	giovanniBlobStorageSDK "github.com/tombuildsstuff/giovanni/storage/2020-08-04/blob/blobs"
 )
 
 type DeploymentTemplateType int
@@ -38,7 +38,7 @@ type StepDeployTemplate struct {
 	deploy           func(ctx context.Context, subscriptionId string, resourceGroupName string, deploymentName string) error
 	delete           func(ctx context.Context, subscriptionId, deploymentName, resourceGroupName string) error
 	disk             func(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (string, string, error)
-	deleteDisk       func(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool, subscriptionId string) error
+	deleteDisk       func(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool, subscriptionId string, storageAccountName string) error
 	deleteDeployment func(ctx context.Context, state multistep.StateBag) error
 	say              func(message string)
 	error            func(e error)
@@ -107,6 +107,8 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 		// delete the disk as the image request will return a 404
 		computeName := state.Get(constants.ArmComputeName).(string)
 		isManagedDisk := state.Get(constants.ArmIsManagedImage).(bool)
+		isSIGImage := state.Get(constants.ArmIsSIGImage).(bool)
+		armStorageAccountName := state.Get(constants.ArmStorageAccountName).(string)
 		imageType, imageName, err := s.disk(ctx, subscriptionId, resourceGroupName, computeName)
 		if err != nil {
 			ui.Error(fmt.Sprintf("Could not retrieve OS Image details: %s", err))
@@ -124,7 +126,7 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 		}
 		if !state.Get(constants.ArmKeepOSDisk).(bool) {
 			ui.Say(fmt.Sprintf(" Deleting -> %s : '%s'", imageType, imageName))
-			err = s.deleteDisk(ctx, imageName, resourceGroupName, isManagedDisk, subscriptionId)
+			err = s.deleteDisk(ctx, imageName, resourceGroupName, (isManagedDisk || isSIGImage), subscriptionId, armStorageAccountName)
 			if err != nil {
 				ui.Error(fmt.Sprintf("Error deleting resource.  Please delete manually.\n\n"+
 					"Name: %s\n"+
@@ -139,7 +141,7 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 		for i, additionaldisk := range dataDisks {
 			s.say(fmt.Sprintf(" Deleting Additional Disk -> %d: '%s'", i+1, additionaldisk))
 
-			err := s.deleteImage(ctx, additionaldisk, resourceGroupName, isManagedDisk, subscriptionId)
+			err := s.deleteImage(ctx, additionaldisk, resourceGroupName, (isManagedDisk || isSIGImage), subscriptionId, armStorageAccountName)
 			if err != nil {
 				s.say("Failed to delete the managed Additional Disk!")
 			}
@@ -240,7 +242,9 @@ func deleteResource(ctx context.Context, client *AzureClient, subscriptionId str
 	return nil
 }
 
-func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool, subscriptionId string) error {
+// TODO Let's split this into two seperate methods, right now its confusing, especially with the changes I'm making
+// deleteVHD and deleteManagedDisk, and then just check in Cleanup which function to call
+func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool, subscriptionId string, storageAccountName string) error {
 	// Managed disk
 	if isManagedDisk {
 		xs := strings.Split(imageName, "/")
@@ -259,23 +263,11 @@ func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, 
 		return err
 	}
 	xs := strings.Split(u.Path, "/")
+	var blobName = strings.Join(xs[2:], "/")
 	if len(xs) < 3 {
 		return errors.New("Unable to parse path of image " + imageName)
 	}
-	var storageAccountName = xs[1]
-	var blobName = strings.Join(xs[2:], "/")
-	blobId := hashiBlobContainersSDK.NewContainerID(subscriptionId, resourceGroupName, storageAccountName, blobName)
-	payload := hashiBlobContainersSDK.LeaseContainerRequest{
-		Action: hashiBlobContainersSDK.LeaseContainerRequestActionBreak,
-	}
-	_, err = s.client.BlobContainersClient.Lease(ctx, blobId, payload)
-
-	if err != nil && !strings.Contains(err.Error(), "LeaseNotPresentWithLeaseOperation") {
-		s.say(s.client.LastError.Error())
-		return err
-	}
-
-	_, err = s.client.BlobContainersClient.Delete(ctx, blobId)
+	_, err = s.client.GiovanniBlobClient.Delete(ctx, storageAccountName, "images", blobName, giovanniBlobStorageSDK.DeleteInput{})
 	return err
 }
 
