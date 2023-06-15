@@ -29,6 +29,7 @@ require (
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/hashicorp/go-azure-sdk v0.20230523.1140858
 	github.com/mitchellh/go-homedir v1.1.0
+	github.com/tombuildsstuff/giovanni v0.20.0
 )
 
 require (
@@ -107,7 +108,6 @@ require (
 	github.com/pkg/sftp v1.13.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
-	github.com/tombuildsstuff/giovanni v0.20.0 // indirect
 	github.com/ugorji/go/codec v1.2.6 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
