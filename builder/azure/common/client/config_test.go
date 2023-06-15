@@ -17,6 +17,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	jwt "github.com/golang-jwt/jwt"
+	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
@@ -192,6 +193,8 @@ func Test_ClientConfig_AzureCli(t *testing.T) {
 	cfg := Config{
 		UseAzureCLIAuth:  true,
 		cloudEnvironment: getCloud(),
+		newCloudEnvironment: environments.AzurePublic(),
+
 	}
 	assertValid(t, cfg)
 
