@@ -96,6 +96,7 @@ func TestBuilderAcc_SharedImageGallery_WindowsSIG(t *testing.T) {
 			createSharedImageGalleryDefinition(t, CreateSharedImageGalleryDefinitionParameters{
 				galleryImageName: "windows-sig",
 				imageSku:         "2012-R2-Datacenter",
+				subscriptionId:   os.Getenv("ARM_SUBSCRIPTION_ID"),
 				imageOffer:       "WindowsServer",
 				imagePublisher:   "MicrosoftWindowsServer",
 				isX64:            true,

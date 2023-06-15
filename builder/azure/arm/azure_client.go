@@ -29,7 +29,6 @@ import (
 	hashiDeploymentOperationsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deploymentoperations"
 	hashiDeploymentsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
 	hashiGroupsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
-	hashiBlobContainersSDK "github.com/hashicorp/go-azure-sdk/resource-manager/storage/2022-09-01/blobcontainers"
 	hashiStorageAccountsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/storage/2022-09-01/storageaccounts"
 	"github.com/hashicorp/go-azure-sdk/sdk/auth"
 	authWrapper "github.com/hashicorp/go-azure-sdk/sdk/auth/autorest"
@@ -37,6 +36,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 	"github.com/hashicorp/packer-plugin-azure/version"
 	"github.com/hashicorp/packer-plugin-sdk/useragent"
+	giovanniBlobStorageSDK "github.com/tombuildsstuff/giovanni/storage/2020-08-04/blob/blobs"
 )
 
 const (
@@ -44,7 +44,6 @@ const (
 )
 
 type AzureClient struct {
-	hashiBlobContainersSDK.BlobContainersClient
 	NetworkMetaClient hashiNetworkMetaSDK.Client
 	hashiDeploymentsSDK.DeploymentsClient
 	hashiStorageAccountsSDK.StorageAccountsClient
@@ -58,6 +57,7 @@ type AzureClient struct {
 	hashiSnapshotsSDK.SnapshotsClient
 	hashiGalleryImageVersionsSDK.GalleryImageVersionsClient
 	hashiGalleryImagesSDK.GalleryImagesClient
+	GiovanniBlobClient giovanniBlobStorageSDK.Client
 	InspectorMaxLength int
 	Template           *CaptureTemplate
 	LastError          azureErrorResponse
@@ -154,8 +154,8 @@ func NewAzureClient(ctx context.Context, resourceGroupName, storageAccountName s
 	var azureClient = &AzureClient{}
 
 	maxlen := getInspectorMaxLength()
-
-	resourceManagerAuthorizer, err := buildAuthorizers(ctx, newSdkAuthOptions)
+	env := environments.AzurePublic()
+	resourceManagerAuthorizer, err := buildResourceManagerAuthorizer(ctx, newSdkAuthOptions, *env)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -256,14 +256,18 @@ func NewAzureClient(ctx context.Context, resourceGroupName, storageAccountName s
 	azureClient.GalleryImagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.GalleryImagesClient.Client.UserAgent)
 	azureClient.GalleryImagesClient.Client.PollingDuration = pollingDuration
 
-	// The Blob Client is only used for VHD builds
+	// We only need the Blob Client to delete the OS VHD during VHD builds
 	if resourceGroupName != "" && storageAccountName != "" {
-		azureClient.BlobContainersClient = hashiBlobContainersSDK.NewBlobContainersClientWithBaseURI(cloud.ResourceManagerEndpoint)
-		azureClient.BlobContainersClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
-		azureClient.BlobContainersClient.Client.RequestInspector = withInspection(maxlen)
-		azureClient.BlobContainersClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-		azureClient.BlobContainersClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.GalleryImagesClient.Client.UserAgent)
-		azureClient.BlobContainersClient.Client.PollingDuration = pollingDuration
+		storageAccountAuthorizer, err := buildStorageAuthorizer(ctx, newSdkAuthOptions, *env)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		blobClient := giovanniBlobStorageSDK.New()
+		azureClient.GiovanniBlobClient = blobClient
+		azureClient.GiovanniBlobClient.Authorizer = authWrapper.AutorestAuthorizer(storageAccountAuthorizer)
+		azureClient.GiovanniBlobClient.Client.RequestInspector = withInspection(maxlen)
+		azureClient.GiovanniBlobClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
 	}
 
 	token, err := resourceManagerAuthorizer.Token(ctx, &http.Request{})
@@ -304,26 +308,40 @@ const (
 	AuthTypeAzureCLI        = "AzureCLI"
 )
 
-// Returns Authorizers for Resource Manager and MicrosoftGraph
-func buildAuthorizers(ctx context.Context, authOpts NewSDKAuthOptions) (auth.Authorizer, error) {
-	env := environments.AzurePublic()
+func buildResourceManagerAuthorizer(ctx context.Context, authOpts NewSDKAuthOptions, env environments.Environment) (auth.Authorizer, error) {
+	authorizer, err := buildAuthorizer(ctx, authOpts, env, env.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building Resource Manager authorizer from credentials: %+v", err)
+	}
+	return authorizer, nil
+}
+
+func buildStorageAuthorizer(ctx context.Context, authOpts NewSDKAuthOptions, env environments.Environment) (auth.Authorizer, error) {
+	authorizer, err := buildAuthorizer(ctx, authOpts, env, env.Storage)
+	if err != nil {
+		return nil, fmt.Errorf("building Storage authorizer from credentials: %+v", err)
+	}
+	return authorizer, nil
+}
+
+func buildAuthorizer(ctx context.Context, authOpts NewSDKAuthOptions, env environments.Environment, api environments.Api) (auth.Authorizer, error) {
 	var authConfig auth.Credentials
 	switch authOpts.AuthType {
 	case AuthTypeDeviceLogin:
 		panic("Not implemented currently")
 	case AuthTypeAzureCLI:
 		authConfig = auth.Credentials{
-			Environment:                       *env,
+			Environment:                       env,
 			EnableAuthenticatingUsingAzureCLI: true,
 		}
 	case AuthTypeMSI:
 		authConfig = auth.Credentials{
-			Environment:                              *env,
+			Environment:                              env,
 			EnableAuthenticatingUsingManagedIdentity: true,
 		}
 	case AuthTypeClientSecret:
 		authConfig = auth.Credentials{
-			Environment:                           *env,
+			Environment:                           env,
 			EnableAuthenticatingUsingClientSecret: true,
 			ClientID:                              authOpts.ClientID,
 			ClientSecret:                          authOpts.ClientSecret,
@@ -331,7 +349,7 @@ func buildAuthorizers(ctx context.Context, authOpts NewSDKAuthOptions) (auth.Aut
 		}
 	case AuthTypeClientCert:
 		authConfig = auth.Credentials{
-			Environment: *env,
+			Environment: env,
 			EnableAuthenticatingUsingClientCertificate: true,
 			ClientID:                  authOpts.ClientID,
 			ClientCertificatePath:     authOpts.ClientCertPath,
@@ -339,7 +357,7 @@ func buildAuthorizers(ctx context.Context, authOpts NewSDKAuthOptions) (auth.Aut
 		}
 	case AuthTypeClientBearerJWT:
 		authConfig = auth.Credentials{
-			Environment:                   *env,
+			Environment:                   env,
 			EnableAuthenticationUsingOIDC: true,
 			ClientID:                      authOpts.ClientID,
 			TenantID:                      authOpts.TenantID,
@@ -348,11 +366,12 @@ func buildAuthorizers(ctx context.Context, authOpts NewSDKAuthOptions) (auth.Aut
 	default:
 		panic("AuthType not set")
 	}
-	resourceManagerAuthorizer, err := auth.NewAuthorizerFromCredentials(ctx, authConfig, env.ResourceManager)
+	authorizer, err := auth.NewAuthorizerFromCredentials(ctx, authConfig, api)
 	if err != nil {
-		return nil, fmt.Errorf("building Resource Manager authorizer from credentials: %+v", err)
+		return nil, err
+		//fmt.Errorf("building Resource Manager authorizer from credentials: %+v", err)
 	}
-	return resourceManagerAuthorizer, nil
+	return authorizer, nil
 }
 
 func getObjectIdFromToken(token string) (string, error) {
