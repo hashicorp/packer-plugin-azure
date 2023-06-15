@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	jwt "github.com/golang-jwt/jwt"
 	"github.com/hashicorp/go-azure-helpers/authentication"
+	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
@@ -36,6 +37,7 @@ type Config struct {
 	// USGovernmentCloud and AzureUSGovernmentCloud are also supported.
 	CloudEnvironmentName string `mapstructure:"cloud_environment_name" required:"false"`
 	cloudEnvironment     *azure.Environment
+	newCloudEnvironment  *environments.Environment
 	// The Hostname of the Azure Metadata Service
 	// (for example management.azure.com), used to obtain the Cloud Environment
 	// when using a Custom Azure Environment. This can also be sourced from the
@@ -102,18 +104,74 @@ func (c *Config) SetDefaultValues() error {
 		c.CloudEnvironmentName = DefaultCloudEnvironmentName
 	}
 
+	err := c.setNewCloudEnvironment()
+	if err != nil {
+		return err
+	}
 	return c.setCloudEnvironment()
 }
 
 func (c *Config) CloudEnvironment() *azure.Environment {
 	return c.cloudEnvironment
 }
-
+func (c *Config) NewCloudEnvironment() *environments.Environment {
+	return c.newCloudEnvironment
+}
 func (c *Config) AuthType() string {
 	return c.authType
 }
 
-// TODO I still need to port this to the new SDK
+func (c *Config) setNewCloudEnvironment() error {
+	if c.MetadataHost == "" {
+		if v := os.Getenv("ARM_METADATA_URL"); v != "" {
+			c.MetadataHost = v
+		}
+	}
+	env, err := environments.FromEndpoint(context.TODO(), c.MetadataHost, c.CloudEnvironmentName)
+	c.newCloudEnvironment = env
+	if err != nil {
+		// fall back to old method of normalizing and looking up cloud names.
+		log.Printf(fmt.Sprintf("Error looking up environment using metadata host: %s. \n"+
+			"Falling back to hardcoded mechanism...", err.Error()))
+		lookup := map[string]string{
+			"CHINA":           "china",
+			"CHINACLOUD":      "china",
+			"AZURECHINACLOUD": "china",
+
+			// TODO Implement AzureGermanCloud
+			// I reached out to the provider team and will try to get it implemented in the SDK first`
+			"GERMAN":           "AzureGermanCloud",
+			"GERMANCLOUD":      "AzureGermanCloud",
+			"AZUREGERMANCLOUD": "AzureGermanCloud",
+
+			"GERMANY":           "AzureGermanCloud",
+			"GERMANYCLOUD":      "AzureGermanCloud",
+			"AZUREGERMANYCLOUD": "AzureGermanCloud",
+
+			"PUBLIC":           "public",
+			"PUBLICCLOUD":      "public",
+			"AZUREPUBLICCLOUD": "public",
+
+			"USGOVERNMENT":           "usgovernment",
+			"USGOVERNMENTCLOUD":      "usgovernment",
+			"AZUREUSGOVERNMENTCLOUD": "usgovernment",
+		}
+
+		name := strings.ToUpper(c.CloudEnvironmentName)
+		envName, ok := lookup[name]
+		if !ok {
+			return fmt.Errorf("There is no cloud environment matching the name '%s'!", c.CloudEnvironmentName)
+		}
+
+		env, err := environments.FromName(envName)
+		if err != nil {
+			return err
+		}
+		c.newCloudEnvironment = env
+	}
+	return nil
+}
+
 func (c *Config) setCloudEnvironment() error {
 	// First, try using the metadata host to look up the cloud.
 	if c.MetadataHost == "" {
@@ -165,6 +223,10 @@ func (c *Config) setCloudEnvironment() error {
 	}
 
 	return nil
+}
+
+func (c Config) getEnvironmentName() (string, error) {
+	return "", nil
 }
 
 //nolint:ineffassign //this triggers a false positive because errs is passed by reference
@@ -369,8 +431,15 @@ func (c *Config) FillParameters() error {
 		if err != nil {
 			return err
 		}
+
 	}
 
+	if c.newCloudEnvironment == nil {
+		newCloudErr := c.setNewCloudEnvironment()
+		if newCloudErr != nil {
+			return newCloudErr
+		}
+	}
 	if c.authType == AuthTypeAzureCLI {
 		tenantID, subscriptionID, err := getIDsFromAzureCLI()
 		if err != nil {
