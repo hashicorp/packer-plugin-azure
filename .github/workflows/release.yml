@@ -48,8 +48,12 @@ jobs:
       - name: Describe plugin
         id: plugin_describe
         run: echo "api_version=$(go run . describe | jq -r '.api_version')" >> "$GITHUB_OUTPUT"
-      - name: Install signore
-        uses: hashicorp/setup-signore-package@v1
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@f82d6c1c344bcacabba2c841718984797f664a6b # v4.2.0
         with:
@@ -58,6 +62,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           API_VERSION: ${{ steps.plugin_describe.outputs.api_version }}
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
           SIGNORE_CLIENT_ID: ${{ secrets.SIGNORE_CLIENT_ID }}
           SIGNORE_CLIENT_SECRET: ${{ secrets.SIGNORE_CLIENT_SECRET }}
           SIGNORE_SIGNER: ${{ secrets.SIGNORE_SIGNER }}
