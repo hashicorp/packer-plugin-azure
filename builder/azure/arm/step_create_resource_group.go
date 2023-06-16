@@ -7,8 +7,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
+	hashiGroupsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -16,10 +18,10 @@ import (
 
 type StepCreateResourceGroup struct {
 	client *AzureClient
-	create func(ctx context.Context, resourceGroupName string, location string, tags map[string]*string) error
+	create func(ctx context.Context, subscriptionId string, resourceGroupName string, location string, tags map[string]string) error
 	say    func(message string)
 	error  func(e error)
-	exists func(ctx context.Context, resourceGroupName string) (bool, error)
+	exists func(ctx context.Context, subscriptionId string, resourceGroupName string) (bool, error)
 }
 
 func NewStepCreateResourceGroup(client *AzureClient, ui packersdk.Ui) *StepCreateResourceGroup {
@@ -34,10 +36,11 @@ func NewStepCreateResourceGroup(client *AzureClient, ui packersdk.Ui) *StepCreat
 	return step
 }
 
-func (s *StepCreateResourceGroup) createResourceGroup(ctx context.Context, resourceGroupName string, location string, tags map[string]*string) error {
-	_, err := s.client.GroupsClient.CreateOrUpdate(ctx, resourceGroupName, resources.Group{
-		Location: &location,
-		Tags:     tags,
+func (s *StepCreateResourceGroup) createResourceGroup(ctx context.Context, subscriptionId string, resourceGroupName string, location string, tags map[string]string) error {
+	id := commonids.NewResourceGroupID(subscriptionId, resourceGroupName)
+	_, err := s.client.ResourceGroupsClient.CreateOrUpdate(ctx, id, hashiGroupsSDK.ResourceGroup{
+		Location: location,
+		Tags:     &tags,
 	})
 
 	if err != nil {
@@ -46,13 +49,17 @@ func (s *StepCreateResourceGroup) createResourceGroup(ctx context.Context, resou
 	return err
 }
 
-func (s *StepCreateResourceGroup) doesResourceGroupExist(ctx context.Context, resourceGroupName string) (bool, error) {
-	exists, err := s.client.GroupsClient.CheckExistence(ctx, resourceGroupName)
+func (s *StepCreateResourceGroup) doesResourceGroupExist(ctx context.Context, subscriptionId string, resourceGroupName string) (bool, error) {
+	id := commonids.NewResourceGroupID(subscriptionId, resourceGroupName)
+	exists, err := s.client.ResourceGroupsClient.Get(ctx, id)
 	if err != nil {
+		if exists.HttpResponse.StatusCode == 404 {
+			return false, nil
+		}
 		s.say(s.client.LastError.Error())
 	}
 
-	return exists.Response.StatusCode != 404, err
+	return exists.HttpResponse.StatusCode != 404, nil
 }
 
 func (s *StepCreateResourceGroup) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -64,7 +71,7 @@ func (s *StepCreateResourceGroup) Run(ctx context.Context, state multistep.State
 
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
 	var location = state.Get(constants.ArmLocation).(string)
-	tags, ok := state.Get(constants.ArmTags).(map[string]*string)
+	tags, ok := state.Get(constants.ArmNewSDKTags).(map[string]string)
 	if !ok {
 		err := fmt.Errorf("failed to extract tags from state bag")
 		state.Put(constants.Error, err)
@@ -72,7 +79,8 @@ func (s *StepCreateResourceGroup) Run(ctx context.Context, state multistep.State
 		return multistep.ActionHalt
 	}
 
-	exists, err := s.exists(ctx, resourceGroupName)
+	subscriptionId := state.Get(constants.ArmSubscription).(string)
+	exists, err := s.exists(ctx, subscriptionId, resourceGroupName)
 	if err != nil {
 		return processStepResult(err, s.error, state)
 	}
@@ -94,9 +102,9 @@ func (s *StepCreateResourceGroup) Run(ctx context.Context, state multistep.State
 		s.say(fmt.Sprintf(" -> Location          : '%s'", location))
 		s.say(" -> Tags              :")
 		for k, v := range tags {
-			s.say(fmt.Sprintf(" ->> %s : %s", k, *v))
+			s.say(fmt.Sprintf(" ->> %s : %s", k, v))
 		}
-		err = s.create(ctx, resourceGroupName, location, tags)
+		err = s.create(ctx, subscriptionId, resourceGroupName, location, tags)
 		if err == nil {
 			state.Put(constants.ArmIsResourceGroupCreated, true)
 		}
@@ -122,28 +130,34 @@ func (s *StepCreateResourceGroup) Cleanup(state multistep.StateBag) {
 		return
 	}
 
-	ctx := context.TODO()
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Minute*10)
+	defer cancelFunc()
+
 	resourceGroupName := state.Get(constants.ArmResourceGroupName).(string)
-	if exists, err := s.exists(ctx, resourceGroupName); !exists || err != nil {
+	subscriptionId := state.Get(constants.ArmSubscription).(string)
+	if exists, err := s.exists(ctx, subscriptionId, resourceGroupName); !exists || err != nil {
 		return
 	}
 
 	ui.Say("\nCleanup requested, deleting resource group ...")
-	f, err := s.client.GroupsClient.Delete(ctx, resourceGroupName)
-	if err == nil {
-		if state.Get(constants.ArmAsyncResourceGroupDelete).(bool) {
-			s.say(fmt.Sprintf("\n Not waiting for Resource Group delete as requested by user. Resource Group Name is %s", resourceGroupName))
-		} else {
-			err = f.WaitForCompletionRef(ctx, s.client.GroupsClient.Client)
+	id := commonids.NewResourceGroupID(subscriptionId, resourceGroupName)
+	if state.Get(constants.ArmAsyncResourceGroupDelete).(bool) {
+		_, deleteErr := s.client.ResourceGroupsClient.Delete(ctx, id, hashiGroupsSDK.DefaultDeleteOperationOptions())
+		if deleteErr != nil {
+			ui.Error(fmt.Sprintf("Error deleting resource group.  Please delete it manually.\n\n"+
+				"Name: %s\n"+
+				"Error: %s", resourceGroupName, deleteErr))
+			return
 		}
-	}
-	if err != nil {
-		ui.Error(fmt.Sprintf("Error deleting resource group.  Please delete it manually.\n\n"+
-			"Name: %s\n"+
-			"Error: %s", resourceGroupName, err))
-		return
-	}
-	if !state.Get(constants.ArmAsyncResourceGroupDelete).(bool) {
+		s.say(fmt.Sprintf("\n Not waiting for Resource Group delete as requested by user. Resource Group Name is %s", resourceGroupName))
+	} else {
+		err := s.client.ResourceGroupsClient.DeleteThenPoll(ctx, id, hashiGroupsSDK.DefaultDeleteOperationOptions())
+		if err != nil {
+			ui.Error(fmt.Sprintf("Error deleting resource group.  Please delete it manually.\n\n"+
+				"Name: %s\n"+
+				"Error: %s", resourceGroupName, err))
+			return
+		}
 		ui.Say("Resource group has been deleted.")
 	}
 }

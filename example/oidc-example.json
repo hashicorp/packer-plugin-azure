@@ -1,0 +1,28 @@
+{
+  "variables": {
+    "arm_oidc_token": "{{env `ARM_OIDC_TOKEN`}}",
+    "subscription_id": "{{env `ARM_SUBSCRIPTION_ID`}}",
+    "arm_client_id": "{{env `ARM_CLIENT_ID`}}"
+  },
+  "builders": [{
+    "type": "azure-arm",
+    "managed_image_resource_group_name": "packer-acceptance-test",
+    "managed_image_name": "oidc-example",
+    "os_type": "Windows",
+    "image_publisher": "MicrosoftWindowsServer",
+    "image_offer": "WindowsServer",
+    "image_sku": "2012-R2-Datacenter",
+    "client_jwt": "{{user `arm_oidc_token`}}",
+    "client_id": "{{user `arm_client_id`}}",
+    "subscription_id": "{{ user `subscription_id`}}",
+    "communicator": "winrm",
+    "winrm_use_ssl": "true",
+    "winrm_insecure": "true",
+    "winrm_timeout": "3m",
+    "winrm_username": "packer",
+    "location": "South Central US",
+    "vm_size": "Standard_DS2_v2"
+  }]
+}
+
+

@@ -14,7 +14,7 @@ import (
 
 func TestStepValidateTemplateShouldFailIfValidateFails(t *testing.T) {
 	var testSubject = &StepValidateTemplate{
-		validate: func(context.Context, string, string) error { return fmt.Errorf("!! Unit Test FAIL !!") },
+		validate: func(context.Context, string, string, string) error { return fmt.Errorf("!! Unit Test FAIL !!") },
 		say:      func(message string) {},
 		error:    func(e error) {},
 	}
@@ -33,7 +33,7 @@ func TestStepValidateTemplateShouldFailIfValidateFails(t *testing.T) {
 
 func TestStepValidateTemplateShouldPassIfValidatePasses(t *testing.T) {
 	var testSubject = &StepValidateTemplate{
-		validate: func(context.Context, string, string) error { return nil },
+		validate: func(context.Context, string, string, string) error { return nil },
 		say:      func(message string) {},
 		error:    func(e error) {},
 	}
@@ -52,11 +52,12 @@ func TestStepValidateTemplateShouldPassIfValidatePasses(t *testing.T) {
 
 func TestStepValidateTemplateShouldTakeResourceGroupNameArgumentFromStateBag(t *testing.T) {
 	var actualResourceGroupName string
+	var actualSubscriptionId string
 
 	var testSubject = &StepValidateTemplate{
-		validate: func(ctx context.Context, resourceGroupName string, deploymentName string) error {
+		validate: func(ctx context.Context, subscriptionId string, resourceGroupName string, deploymentName string) error {
 			actualResourceGroupName = resourceGroupName
-
+			actualSubscriptionId = subscriptionId
 			return nil
 		},
 		say:   func(message string) {},
@@ -71,9 +72,14 @@ func TestStepValidateTemplateShouldTakeResourceGroupNameArgumentFromStateBag(t *
 	}
 
 	var expectedResourceGroupName = stateBag.Get(constants.ArmResourceGroupName).(string)
+	var expectedSubscriptionId = stateBag.Get(constants.ArmSubscription).(string)
 
 	if actualResourceGroupName != expectedResourceGroupName {
 		t.Fatal("Expected the step to source 'constants.ArmResourceGroupName' from the state bag, but it did not.")
+	}
+
+	if actualSubscriptionId != expectedSubscriptionId {
+		t.Fatal("Expected the step to source 'constants.ArmSubscription' from the state bag, but it did not.")
 	}
 }
 
@@ -83,7 +89,7 @@ func TestStepValidateTemplateShouldTakeDeploymentNameArgumentFromParam(t *testin
 
 	stateBag := createTestStateBagStepValidateTemplate()
 	var testSubject = &StepValidateTemplate{
-		validate: func(ctx context.Context, resourceGroupName string, deploymentName string) error {
+		validate: func(ctx context.Context, subscriptionId string, resourceGroupName string, deploymentName string) error {
 			actualDeploymentName = deploymentName
 
 			return nil
@@ -109,6 +115,7 @@ func createTestStateBagStepValidateTemplate() multistep.StateBag {
 
 	stateBag.Put(constants.ArmDeploymentName, "Unit Test: DeploymentName")
 	stateBag.Put(constants.ArmResourceGroupName, "Unit Test: ResourceGroupName")
+	stateBag.Put(constants.ArmSubscription, "Unit Test: Subscription")
 
 	return stateBag
 }

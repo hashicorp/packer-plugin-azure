@@ -17,6 +17,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	jwt "github.com/golang-jwt/jwt"
+	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
@@ -190,8 +191,9 @@ func Test_ClientConfig_AzureCli(t *testing.T) {
 	getEnvOrSkip(t, "AZURE_CLI_AUTH")
 
 	cfg := Config{
-		UseAzureCLIAuth:  true,
-		cloudEnvironment: getCloud(),
+		UseAzureCLIAuth:     true,
+		cloudEnvironment:    getCloud(),
+		newCloudEnvironment: environments.AzurePublic(),
 	}
 	assertValid(t, cfg)
 
@@ -200,8 +202,8 @@ func Test_ClientConfig_AzureCli(t *testing.T) {
 		t.Fatalf("Expected nil err, but got: %v", err)
 	}
 
-	if cfg.authType != authTypeAzureCLI {
-		t.Fatalf("Expected authType to be %q, but got: %q", authTypeAzureCLI, cfg.authType)
+	if cfg.AuthType() != AuthTypeAzureCLI {
+		t.Fatalf("Expected authType to be %q, but got: %q", AuthTypeAzureCLI, cfg.AuthType())
 	}
 }
 
@@ -397,16 +399,6 @@ func Test_ClientConfig_CannotUseBothClientJWTAndSecret(t *testing.T) {
 		ClientID:       "12345",
 		ClientSecret:   "12345",
 		ClientJWT:      getJWT(10*time.Minute, true),
-	}
-
-	assertInvalid(t, cfg)
-}
-
-func Test_ClientConfig_ClientJWTShouldBeValidForAtLeast5Minutes(t *testing.T) {
-	cfg := Config{
-		SubscriptionID: "12345",
-		ClientID:       "12345",
-		ClientJWT:      getJWT(time.Minute, true),
 	}
 
 	assertInvalid(t, cfg)
