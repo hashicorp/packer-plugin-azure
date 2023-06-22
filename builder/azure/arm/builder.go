@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	armstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2017-10-01/storage"
 	"github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest/adal"
@@ -187,6 +188,16 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if b.config.DiskEncryptionSetId != "" {
 		b.stateBag.Put(constants.ArmBuildDiskEncryptionSetId, b.config.DiskEncryptionSetId)
 	}
+	sourceImageSpecialized := false
+	if b.config.SharedGallery.GalleryName != "" {
+		galleryImage, err := azureClient.GalleryImagesClient.Get(ctx, b.config.SharedGallery.ResourceGroup, b.config.SharedGallery.GalleryName, b.config.SharedGallery.ImageName)
+		if err != nil {
+			return nil, fmt.Errorf("the parent Shared Gallery Image '%s' from which to source the managed image version to does not exist in the resource group '%s' or does not contain managed image '%s'", b.config.SharedGallery.GalleryName, b.config.SharedGallery.ResourceGroup, b.config.SharedGallery.ImageName)
+		}
+		if galleryImage.OsState == compute.OperatingSystemStateTypesSpecialized {
+			sourceImageSpecialized = true
+		}
+	}
 	// Validate that Shared Gallery Image exists before publishing to SIG
 	if b.config.isPublishToSIG() {
 		_, err = azureClient.GalleryImagesClient.Get(ctx, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
@@ -212,13 +223,17 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		b.stateBag.Put(constants.ArmManagedImageSharedGalleryReplicationRegions, b.config.SharedGalleryDestination.SigDestinationReplicationRegions)
 	}
 	generatedData := &packerbuilderdata.GeneratedData{State: b.stateBag}
+	getVirtualMachineDeploymentFunction := GetVirtualMachineDeployment
+	if sourceImageSpecialized {
+		getVirtualMachineDeploymentFunction = GetSpecializedVirtualMachineDeployment
+	}
 	var steps []multistep.Step
 	if b.config.OSType == constants.Target_Linux {
 		steps = []multistep.Step{
 			NewStepGetSourceImageName(azureClient, ui, &b.config, generatedData),
 			NewStepCreateResourceGroup(azureClient, ui),
-			NewStepValidateTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
-			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment, VirtualMachineTemplate),
+			NewStepValidateTemplate(azureClient, ui, &b.config, deploymentName, getVirtualMachineDeploymentFunction),
+			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, getVirtualMachineDeploymentFunction, VirtualMachineTemplate),
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),
 			&communicator.StepConnectSSH{
 				Config:    &b.config.Comm,
@@ -267,8 +282,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		steps = append(steps,
 			NewStepGetCertificate(azureClient, ui),
 			NewStepSetCertificate(&b.config, ui),
-			NewStepValidateTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
-			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment, VirtualMachineTemplate),
+			NewStepValidateTemplate(azureClient, ui, &b.config, deploymentName, getVirtualMachineDeploymentFunction),
+			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, getVirtualMachineDeploymentFunction, VirtualMachineTemplate),
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),
 		)
 

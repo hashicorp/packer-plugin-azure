@@ -56,7 +56,11 @@ func GetKeyVaultDeployment(config *Config, secretValue string) (*resources.Deplo
 	return createDeploymentParameters(*doc, params)
 }
 
-func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) {
+func GetSpecializedVirtualMachineDeployment(config *Config) (*resources.Deployment, error) {
+	builder, err := GetVirtualMachineTemplateBuilder(config)
+	if err != nil {
+		return nil, err
+	}
 	params := &template.TemplateParameters{
 		AdminUsername:              &template.TemplateParameter{Value: config.UserName},
 		AdminPassword:              &template.TemplateParameter{Value: config.Password},
@@ -74,6 +78,41 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 		CommandToExecute:           &template.TemplateParameter{Value: config.CustomScript},
 	}
 
+	err = builder.SetSpecializedVM()
+	if err != nil {
+		return nil, err
+	}
+	doc, _ := builder.ToJSON()
+	return createDeploymentParameters(*doc, params)
+}
+
+func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) {
+	builder, err := GetVirtualMachineTemplateBuilder(config)
+	if err != nil {
+		return nil, err
+	}
+	params := &template.TemplateParameters{
+		AdminUsername:              &template.TemplateParameter{Value: config.UserName},
+		AdminPassword:              &template.TemplateParameter{Value: config.Password},
+		DnsNameForPublicIP:         &template.TemplateParameter{Value: config.tmpComputeName},
+		NicName:                    &template.TemplateParameter{Value: config.tmpNicName},
+		OSDiskName:                 &template.TemplateParameter{Value: config.tmpOSDiskName},
+		DataDiskName:               &template.TemplateParameter{Value: config.tmpDataDiskName},
+		PublicIPAddressName:        &template.TemplateParameter{Value: config.tmpPublicIPAddressName},
+		SubnetName:                 &template.TemplateParameter{Value: config.tmpSubnetName},
+		StorageAccountBlobEndpoint: &template.TemplateParameter{Value: config.storageAccountBlobEndpoint},
+		VirtualNetworkName:         &template.TemplateParameter{Value: config.tmpVirtualNetworkName},
+		NsgName:                    &template.TemplateParameter{Value: config.tmpNsgName},
+		VMSize:                     &template.TemplateParameter{Value: config.VMSize},
+		VMName:                     &template.TemplateParameter{Value: config.tmpComputeName},
+		CommandToExecute:           &template.TemplateParameter{Value: config.CustomScript},
+	}
+
+	doc, _ := builder.ToJSON()
+	return createDeploymentParameters(*doc, params)
+}
+
+func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder, error) {
 	builder, err := template.NewTemplateBuilder(template.BasicTemplate)
 	if err != nil {
 		return nil, err
@@ -244,9 +283,7 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 	if err != nil {
 		return nil, err
 	}
-
-	doc, _ := builder.ToJSON()
-	return createDeploymentParameters(*doc, params)
+	return builder, nil
 }
 
 func createDeploymentParameters(doc string, parameters *template.TemplateParameters) (*resources.Deployment, error) {
