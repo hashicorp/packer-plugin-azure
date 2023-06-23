@@ -504,6 +504,22 @@ func TestVirtualMachineDeployment15(t *testing.T) {
 	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
+// Ensure Specialized VMs don't set OsProfile}
+func TestVirtualMachineDeployment16(t *testing.T) {
+	m := getArmBuilderConfiguration()
+
+	var c Config
+	_, err := c.Prepare(m, getPackerConfiguration(), getPackerSSHPasswordCommunicatorConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := GetSpecializedVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
 // Ensure the link values are not set, and the concrete values are set.
 func TestKeyVaultDeployment00(t *testing.T) {
 	var c Config
