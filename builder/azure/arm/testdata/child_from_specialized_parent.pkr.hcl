@@ -4,23 +4,33 @@ locals { timestamp = regex_replace(timestamp(), "[- TZ:]", "") }
 
 variable "ssh_password" {
   type = string
-  sensitive = true
   default = "${env("ARM_SSH_PASS")}"
+  sensitive = true
+}
+
+variable "subscription" {
+  default = "${env("ARM_SUBSCRIPTION_ID")}"
+  type = string
+  sensitive = true
 }
 
 source "azure-arm" "linux-sig" {
-  image_offer        = "0001-com-ubuntu-server-jammy"
-  image_publisher    = "canonical"
-  image_sku          = "22_04-lts-arm64"
   use_azure_cli_auth = true
   location           = "South Central US"
   vm_size            = "Standard_D4ps_v5"
   ssh_username       = "packer"
   ssh_password       = var.ssh_password
-  shared_image_gallery_destination {
+  shared_image_gallery{
+    subscription   = var.subscription
     image_name     = "arm-linux-specialized-sig"
     gallery_name   = "acctestgallery"
     image_version  = "1.0.0"
+    resource_group = "packer-acceptance-test"
+  }
+  shared_image_gallery_destination {
+    image_name     = "arm-linux-specialized-sig"
+    gallery_name   = "acctestgallery"
+    image_version  = "1.0.1"
     resource_group = "packer-acceptance-test"
     specialized    = true
   }

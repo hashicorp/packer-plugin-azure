@@ -44,29 +44,44 @@ import (
 
 const DeviceLoginAcceptanceTest = "DEVICELOGIN_TEST"
 
-func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG(t *testing.T) {
+// This test builds two images,
+// First a parent Specialized ARM 64 Linux VM to a Shared Image Gallery/Compute Gallery
+// Then a second Specialized ARM64 Linux VM that uses the first as its source/parent image
+func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG_WithChildImage(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("AZURE_CLI_AUTH") == "" {
 		t.Skip("Azure CLI Acceptance tests skipped unless env 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
 		return
 	}
+
+	if os.Getenv("ARM_SSH_PASS") == "" {
+		// If no password is set generate a SSH password to be shared between the two builds
+		// Specialized images retain their user setup, so the password needs to be the same across both builds.
+
+		var tempName = NewTempName("packer-acc-test")
+		err := os.Setenv("ARM_SSH_PASS", tempName.AdminPassword)
+		if err != nil {
+			t.Fatalf("Failed to set ARM_SSH_PASS env variables with error %s", err.Error())
+		}
+	}
+
+	createSharedImageGalleryDefinition(t, CreateSharedImageGalleryDefinitionParameters{
+		galleryImageName: "arm-linux-specialized-sig",
+		imageSku:         "22_04-lts-arm64",
+		imageOffer:       "0001-com-ubuntu-server-jammy",
+		imagePublisher:   "canonical",
+		isX64:            false,
+		isWindows:        false,
+		useGenTwoVM:      true,
+		specialized:      true,
+	})
+
+	defer deleteSharedImageGalleryDefinition(t, "arm-linux-specialized-sig", []string{"1.0.0", "1.0.1"})
+	// Create parent specialized shared gallery image
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-specialized-linux-sig",
 		Type:     "azure-arm",
 		Template: string(armLinuxSpecialziedSIGTemplate),
-		Setup: func() error {
-			createSharedImageGalleryDefinition(t, CreateSharedImageGalleryDefinitionParameters{
-				galleryImageName: "arm-linux-specialized-sig",
-				imageSku:         "22_04-lts-arm64",
-				imageOffer:       "0001-com-ubuntu-server-jammy",
-				imagePublisher:   "canonical",
-				isX64:            false,
-				isWindows:        false,
-				useGenTwoVM:      true,
-				specialized:      true,
-			})
-			return nil
-		},
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
 			if buildCommand.ProcessState != nil {
 				if buildCommand.ProcessState.ExitCode() != 0 {
@@ -76,33 +91,54 @@ func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG(t *testing.T) {
 			return nil
 		},
 		Teardown: func() error {
-			deleteSharedImageGalleryDefinition(t, "arm-linux-specialized-sig")
 			return nil
 		},
 	})
+
+	// Create child image from a specialized parent
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-specialized-linux-sig-child",
+		Type:     "azure-arm",
+		Template: string(armLinuxChildFromSpecializedParent),
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
+	})
+
 }
 
+func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG_ChildOfSpecializedParent(t *testing.T) {
+	if os.Getenv("AZURE_CLI_AUTH") == "" {
+		t.Skip("Azure CLI Acceptance tests skipped unless env 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
+		return
+	}
+}
 func TestBuilderAcc_SharedImageGallery_WindowsSIG(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("AZURE_CLI_AUTH") == "" {
 		t.Skip("Azure CLI Acceptance tests skipped unless env 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
 		return
 	}
+
+	createSharedImageGalleryDefinition(t, CreateSharedImageGalleryDefinitionParameters{
+		galleryImageName: "windows-sig",
+		imageSku:         "2012-R2-Datacenter",
+		imageOffer:       "WindowsServer",
+		imagePublisher:   "MicrosoftWindowsServer",
+		isX64:            true,
+		isWindows:        true,
+	})
+	defer deleteSharedImageGalleryDefinition(t, "windows-sig", []string{"1.0.0"})
+
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-windows-sig",
 		Type:     "azure-arm",
 		Template: string(windowsSIGTemplate),
-		Setup: func() error {
-			createSharedImageGalleryDefinition(t, CreateSharedImageGalleryDefinitionParameters{
-				galleryImageName: "windows-sig",
-				imageSku:         "2012-R2-Datacenter",
-				imageOffer:       "WindowsServer",
-				imagePublisher:   "MicrosoftWindowsServer",
-				isX64:            true,
-				isWindows:        true,
-			})
-			return nil
-		},
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
 			if buildCommand.ProcessState != nil {
 				if buildCommand.ProcessState.ExitCode() != 0 {
@@ -112,7 +148,6 @@ func TestBuilderAcc_SharedImageGallery_WindowsSIG(t *testing.T) {
 			return nil
 		},
 		Teardown: func() error {
-			deleteSharedImageGalleryDefinition(t, "windows-sig")
 			return nil
 		},
 	})
@@ -324,6 +359,9 @@ var windowsSIGTemplate []byte
 //go:embed testdata/arm_linux_specialized.pkr.hcl
 var armLinuxSpecialziedSIGTemplate []byte
 
+//go:embed testdata/child_from_specialized_parent.pkr.hcl
+var armLinuxChildFromSpecializedParent []byte
+
 func TestBuilderAcc_rsaSHA2OnlyServer(t *testing.T) {
 	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
@@ -422,21 +460,26 @@ func createSharedImageGalleryDefinition(t *testing.T, params CreateSharedImageGa
 	}
 }
 
-func deleteSharedImageGalleryDefinition(t *testing.T, galleryImageName string) {
+func deleteSharedImageGalleryDefinition(t *testing.T, galleryImageName string, imageVersions []string) {
 	azureClient := createTestAzureClient(t)
-	versionFuture, err := azureClient.GalleryImageVersionsClient.Delete(context.TODO(), "packer-acceptance-test", "acctestgallery", galleryImageName, "1.0.0")
-	if err != nil {
-		t.Fatalf("failed to delete Gallery %s: %s", galleryImageName, err)
-	}
-	err = versionFuture.WaitForCompletionRef(context.TODO(), azureClient.GalleryImageVersionsClient.Client)
-	if err != nil {
-		t.Fatalf("failed to delete Gallery %s: %s", galleryImageName, err)
+	for _, imageVersion := range imageVersions {
+		// If we fail to delete a gallery version we should still try to delete other versions and the gallery
+		// Its possible a build was canceled or failed mid test that would leave any of the builds incomplete
+		// We still want to try and delete the Gallery to not leave behind orphaned resources to manually clean up
+		versionFuture, err := azureClient.GalleryImageVersionsClient.Delete(context.TODO(), "packer-acceptance-test", "acctestgallery", galleryImageName, imageVersion)
+		if err != nil {
+			t.Logf("failed to delete Gallery Image Version %s:%s %s", galleryImageName, imageVersion, err)
+		}
+		err = versionFuture.WaitForCompletionRef(context.TODO(), azureClient.GalleryImageVersionsClient.Client)
+		if err != nil {
+			t.Logf("failed to delete Gallery Image Version %s:%s %s", galleryImageName, imageVersion, err)
+		}
 	}
 	retryConfig := retry.Config{
 		Tries:      5,
-		RetryDelay: (&retry.Backoff{InitialBackoff: 10 * time.Second, MaxBackoff: 60 * time.Second, Multiplier: 2}).Linear,
+		RetryDelay: (&retry.Backoff{InitialBackoff: 2 * time.Second, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}
-	err = retryConfig.Run(context.TODO(), func(ctx context.Context) error {
+	err := retryConfig.Run(context.TODO(), func(ctx context.Context) error {
 		galleryFuture, err := azureClient.GalleryImagesClient.Delete(context.TODO(), "packer-acceptance-test", "acctestgallery", galleryImageName)
 		if err != nil {
 			return err
@@ -447,7 +490,6 @@ func deleteSharedImageGalleryDefinition(t *testing.T, galleryImageName string) {
 	if err != nil {
 		t.Fatalf("failed to delete Gallery %s: %s", galleryImageName, err)
 	}
-
 }
 
 func testUi() *packersdk.BasicUi {
