@@ -520,6 +520,7 @@ func TestVirtualMachineDeployment16(t *testing.T) {
 
 	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
+
 // Ensure the link values are not set, and the concrete values are set.
 func TestKeyVaultDeployment00(t *testing.T) {
 	var c Config
