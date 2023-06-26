@@ -32,7 +32,7 @@ import (
 // Packer is running on an Azure VM with either a System Assigned Managed
 // Identity or User Assigned Managed Identity.
 type Config struct {
-	// One of Public, China, Germany, or
+	// One of Public, China, or
 	// USGovernment. Defaults to Public. Long forms such as
 	// USGovernmentCloud and AzureUSGovernmentCloud are also supported.
 	CloudEnvironmentName string `mapstructure:"cloud_environment_name" required:"false"`
@@ -138,16 +138,6 @@ func (c *Config) setNewCloudEnvironment() error {
 			"CHINACLOUD":      "china",
 			"AZURECHINACLOUD": "china",
 
-			// TODO Implement AzureGermanCloud
-			// I reached out to the provider team and will try to get it implemented in the SDK first`
-			"GERMAN":           "AzureGermanCloud",
-			"GERMANCLOUD":      "AzureGermanCloud",
-			"AZUREGERMANCLOUD": "AzureGermanCloud",
-
-			"GERMANY":           "AzureGermanCloud",
-			"GERMANYCLOUD":      "AzureGermanCloud",
-			"AZUREGERMANYCLOUD": "AzureGermanCloud",
-
 			"PUBLIC":           "public",
 			"PUBLICCLOUD":      "public",
 			"AZUREPUBLICCLOUD": "public",
@@ -172,6 +162,7 @@ func (c *Config) setNewCloudEnvironment() error {
 	return nil
 }
 
+// This is still used by the Chroot and DTL builder
 func (c *Config) setCloudEnvironment() error {
 	// First, try using the metadata host to look up the cloud.
 	if c.MetadataHost == "" {
@@ -191,14 +182,6 @@ func (c *Config) setCloudEnvironment() error {
 			"CHINA":           "AzureChinaCloud",
 			"CHINACLOUD":      "AzureChinaCloud",
 			"AZURECHINACLOUD": "AzureChinaCloud",
-
-			"GERMAN":           "AzureGermanCloud",
-			"GERMANCLOUD":      "AzureGermanCloud",
-			"AZUREGERMANCLOUD": "AzureGermanCloud",
-
-			"GERMANY":           "AzureGermanCloud",
-			"GERMANYCLOUD":      "AzureGermanCloud",
-			"AZUREGERMANYCLOUD": "AzureGermanCloud",
 
 			"PUBLIC":           "AzurePublicCloud",
 			"PUBLICCLOUD":      "AzurePublicCloud",
