@@ -117,6 +117,12 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 			s.say(fmt.Sprintf(" -> Image Name                : '%s'", targetManagedImageName))
 			s.say(fmt.Sprintf(" -> Image Location            : '%s'", targetManagedImageLocation))
 			err = s.captureManagedImage(ctx, subscriptionId, targetManagedImageResourceGroupName, targetManagedImageName, imageParameters)
+			if err != nil {
+				state.Put(constants.Error, err)
+				s.error(err)
+
+				return multistep.ActionHalt
+			}
 		} else if isSIGImage {
 			// It's possible to create SIG image without a managed image
 			return multistep.ActionContinue
@@ -150,13 +156,6 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 		}
 	}
 	return multistep.ActionContinue
-}
-
-func (s *StepCaptureImage) haltAndError(state multistep.StateBag, err error) multistep.StepAction {
-	state.Put(constants.Error, err)
-	s.error(err)
-
-	return multistep.ActionHalt
 }
 
 func (*StepCaptureImage) Cleanup(multistep.StateBag) {

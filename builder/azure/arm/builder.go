@@ -16,6 +16,7 @@ import (
 
 	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	hashiGalleryImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
+	hashiGalleryImageVersionsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 	hashiStorageAccountsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/storage/2022-09-01/storageaccounts"
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
@@ -202,6 +203,14 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		if err != nil {
 			return nil, fmt.Errorf("the Shared Gallery Image '%s' to which to publish the managed image version to does not exist in the resource group '%s' or does not contain managed image '%s'", b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationImageName)
 		}
+
+		// Check if a Image Version already exists for our target destination
+		galleryImageVersionId := hashiGalleryImageVersionsSDK.NewImageVersionID(sigSubscriptionID, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion)
+		_, err := azureClient.GalleryImageVersionsClient.Get(ctx, galleryImageVersionId, hashiGalleryImageVersionsSDK.DefaultGetOperationOptions())
+		if err == nil {
+			return nil, fmt.Errorf("a gallery image version for image name:version %s:%s already exists in gallery %s", b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationGalleryName)
+		}
+
 		// SIG requires that replication regions include the region in which the Managed Image resides
 		managedImageLocation := normalizeAzureRegion(b.stateBag.Get(constants.ArmLocation).(string))
 		foundMandatoryReplicationRegion := false
