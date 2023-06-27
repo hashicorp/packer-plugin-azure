@@ -5,7 +5,6 @@ package arm
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
@@ -117,6 +116,12 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 			s.say(fmt.Sprintf(" -> Image Name                : '%s'", targetManagedImageName))
 			s.say(fmt.Sprintf(" -> Image Location            : '%s'", targetManagedImageLocation))
 			err = s.captureManagedImage(ctx, subscriptionId, targetManagedImageResourceGroupName, targetManagedImageName, imageParameters)
+			if err != nil {
+				state.Put(constants.Error, err)
+				s.error(err)
+
+				return multistep.ActionHalt
+			}
 		} else if isSIGImage {
 			// It's possible to create SIG image without a managed image
 			return multistep.ActionContinue
@@ -129,34 +134,20 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 				state.Put(constants.Error, err)
 				s.error(err)
 				return multistep.ActionHalt
-			} else {
-				if vmInternalID == "" {
-					err = errors.New("Failed to get build VM before capturing image, Azure did not return the field VirtualMachine.Properties.VMId")
-					state.Put(constants.Error, err)
-					s.error(err)
-					return multistep.ActionHalt
-				} else {
-					s.say(fmt.Sprintf(" -> VM Internal ID            : '%s'", vmInternalID))
-					state.Put(constants.ArmBuildVMInternalId, vmInternalID)
-					s.say("Capturing VHD ...")
-					err = s.captureVhd(ctx, vmId, vmCaptureParameters)
-					if err != nil {
-						state.Put(constants.Error, err)
-						s.error(err)
-						return multistep.ActionHalt
-					}
-				}
+			}
+
+			s.say(fmt.Sprintf(" -> VM Internal ID            : '%s'", vmInternalID))
+			state.Put(constants.ArmBuildVMInternalId, vmInternalID)
+			s.say("Capturing VHD ...")
+			err = s.captureVhd(ctx, vmId, vmCaptureParameters)
+			if err != nil {
+				state.Put(constants.Error, err)
+				s.error(err)
+				return multistep.ActionHalt
 			}
 		}
 	}
 	return multistep.ActionContinue
-}
-
-func (s *StepCaptureImage) haltAndError(state multistep.StateBag, err error) multistep.StepAction {
-	state.Put(constants.Error, err)
-	s.error(err)
-
-	return multistep.ActionHalt
 }
 
 func (*StepCaptureImage) Cleanup(multistep.StateBag) {
