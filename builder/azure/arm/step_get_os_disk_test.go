@@ -95,13 +95,13 @@ func TestStepGetOSDiskShouldTakeValidateArgumentsFromStateBag(t *testing.T) {
 		t.Fatal("Expected the step to source 'constants.ArmResourceGroupName' from the state bag, but it did not.")
 	}
 
-	expectedOSDiskVhd, ok := stateBag.GetOk(constants.ArmOSDiskVhd)
+	expectedOSDiskVhd, ok := stateBag.GetOk(constants.ArmOSDiskUri)
 	if !ok {
-		t.Fatalf("Expected the state bag to have a value for '%s', but it did not.", constants.ArmOSDiskVhd)
+		t.Fatalf("Expected the state bag to have a value for '%s', but it did not.", constants.ArmOSDiskUri)
 	}
 
 	if expectedOSDiskVhd != "test.vhd" {
-		t.Fatalf("Expected the value of stateBag[%s] to be 'test.vhd', but got '%s'.", constants.ArmOSDiskVhd, expectedOSDiskVhd)
+		t.Fatalf("Expected the value of stateBag[%s] to be 'test.vhd', but got '%s'.", constants.ArmOSDiskUri, expectedOSDiskVhd)
 	}
 }
 

@@ -133,6 +133,7 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 					"Error: %s", imageName, err))
 			}
 		}
+		ui.Say(fmt.Sprintf("Skipping deletion -> %s : '%s' since 'keep_os_disk' is set to true", imageType, imageName))
 
 		var dataDisks []string
 		if disks := state.Get(constants.ArmAdditionalDiskVhds); disks != nil {
@@ -180,6 +181,7 @@ func (s *StepDeployTemplate) deleteDeploymentObject(ctx context.Context, state m
 }
 
 func (s *StepDeployTemplate) getImageDetails(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (string, string, error) {
+	//TODO is this still true?
 	//We can't depend on constants.ArmOSDiskVhd being set
 	var imageName, imageType string
 	vmID := hashiVMSDK.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)

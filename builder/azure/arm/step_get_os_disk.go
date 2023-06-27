@@ -64,16 +64,16 @@ func (s *StepGetOSDisk) Run(ctx context.Context, state multistep.StateBag) multi
 		return multistep.ActionHalt
 	}
 
-	var vhdUri string
+	var diskUri string
 	if vm.Properties.StorageProfile.OsDisk.Vhd != nil {
-		vhdUri = *vm.Properties.StorageProfile.OsDisk.Vhd.Uri
-		s.say(fmt.Sprintf(" -> OS Disk           : '%s'", vhdUri))
+		diskUri = *vm.Properties.StorageProfile.OsDisk.Vhd.Uri
+		s.say(fmt.Sprintf(" -> OS Disk           : '%s'", diskUri))
 	} else {
-		vhdUri = *vm.Properties.StorageProfile.OsDisk.ManagedDisk.Id
-		s.say(fmt.Sprintf(" -> Managed OS Disk   : '%s'", vhdUri))
+		diskUri = *vm.Properties.StorageProfile.OsDisk.ManagedDisk.Id
+		s.say(fmt.Sprintf(" -> Managed OS Disk   : '%s'", diskUri))
 	}
 
-	state.Put(constants.ArmOSDiskVhd, vhdUri)
+	state.Put(constants.ArmOSDiskUri, diskUri)
 	return multistep.ActionContinue
 }
 

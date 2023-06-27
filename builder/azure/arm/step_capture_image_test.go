@@ -19,10 +19,10 @@ func TestStepCaptureImageShouldFailIfCaptureFails(t *testing.T) {
 		captureVhd: func(context.Context, hashiVMSDK.VirtualMachineId, *hashiVMSDK.VirtualMachineCaptureParameters) error {
 			return fmt.Errorf("!! Unit Test FAIL !!")
 		},
-		generalizeVM: func(context.Context, hashiVMSDK.VirtualMachineId) error {
-			return nil
+		getVMInternalID: func(context.Context, hashiVMSDK.VirtualMachineId) (string, error) {
+			return "id", nil
 		},
-		get: func(client *AzureClient) *CaptureTemplate {
+		generalizeVM: func(context.Context, hashiVMSDK.VirtualMachineId) error {
 			return nil
 		},
 		say:   func(message string) {},
@@ -41,15 +41,15 @@ func TestStepCaptureImageShouldFailIfCaptureFails(t *testing.T) {
 	}
 }
 
-func TestStepCaptureImageShouldPassIfCapturePasses(t *testing.T) {
+func TestStepCaptureImageShouldFailIfGetVMIDFails(t *testing.T) {
 	var testSubject = &StepCaptureImage{
-		captureVhd: func(ctx context.Context, vmId hashiVMSDK.VirtualMachineId, parameters *hashiVMSDK.VirtualMachineCaptureParameters) error {
+		captureVhd: func(context.Context, hashiVMSDK.VirtualMachineId, *hashiVMSDK.VirtualMachineCaptureParameters) error {
 			return nil
+		},
+		getVMInternalID: func(context.Context, hashiVMSDK.VirtualMachineId) (string, error) {
+			return "", fmt.Errorf("!! Unit Test FAIL !!")
 		},
 		generalizeVM: func(context.Context, hashiVMSDK.VirtualMachineId) error {
-			return nil
-		},
-		get: func(client *AzureClient) *CaptureTemplate {
 			return nil
 		},
 		say:   func(message string) {},
@@ -58,6 +58,32 @@ func TestStepCaptureImageShouldPassIfCapturePasses(t *testing.T) {
 
 	stateBag := createTestStateBagStepCaptureImage()
 
+	var result = testSubject.Run(context.Background(), stateBag)
+	if result != multistep.ActionHalt {
+		t.Fatalf("Expected the step to return 'ActionHalt', but got '%d'.", result)
+	}
+
+	if _, ok := stateBag.GetOk(constants.Error); ok == false {
+		t.Fatalf("Expected the step to set stateBag['%s'], but it was not.", constants.Error)
+	}
+}
+func TestStepCaptureImageShouldPassIfCapturePasses(t *testing.T) {
+	var testSubject = &StepCaptureImage{
+		captureVhd: func(ctx context.Context, vmId hashiVMSDK.VirtualMachineId, parameters *hashiVMSDK.VirtualMachineCaptureParameters) error {
+			return nil
+		},
+		generalizeVM: func(context.Context, hashiVMSDK.VirtualMachineId) error {
+			return nil
+		},
+		getVMInternalID: func(ctx context.Context, vmId hashiVMSDK.VirtualMachineId) (string, error) {
+			return "id", nil
+		},
+		say:   func(message string) {},
+		error: func(e error) {},
+	}
+
+	stateBag := createTestStateBagStepCaptureImage()
+	stateBag.Put(constants.ArmIsSIGImage, true)
 	var result = testSubject.Run(context.Background(), stateBag)
 	if result != multistep.ActionContinue {
 		t.Fatalf("Expected the step to return 'ActionContinue', but got '%d'.", result)
@@ -78,14 +104,12 @@ func TestStepCaptureImageShouldCallGeneralizeIfSpecializedIsFalse(t *testing.T) 
 			generalizeCount++
 			return nil
 		},
-		get: func(client *AzureClient) *CaptureTemplate {
-			return nil
-		},
 		say:   func(message string) {},
 		error: func(e error) {},
 	}
 
 	stateBag := createTestStateBagStepCaptureImage()
+	stateBag.Put(constants.ArmIsSIGImage, true)
 	stateBag.Put(constants.ArmSharedImageGalleryDestinationSpecialized, false)
 	var result = testSubject.Run(context.Background(), stateBag)
 	if result != multistep.ActionContinue {
@@ -108,9 +132,6 @@ func TestStepCaptureImageShouldNotCallGeneralizeIfSpecializedIsTrue(t *testing.T
 		},
 		generalizeVM: func(context.Context, hashiVMSDK.VirtualMachineId) error {
 			generalizeCount++
-			return nil
-		},
-		get: func(client *AzureClient) *CaptureTemplate {
 			return nil
 		},
 		say:   func(message string) {},
@@ -139,10 +160,7 @@ func TestStepCaptureImageShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 	var actualResourceGroupName string
 	var actualComputeName string
 	var actualVirtualMachineCaptureParameters *hashiVMSDK.VirtualMachineCaptureParameters
-	actualCaptureTemplate := &CaptureTemplate{
-		Schema: "!! Unit Test !!",
-	}
-
+	expectedVirtualMachineID := "id"
 	var testSubject = &StepCaptureImage{
 		captureVhd: func(ctx context.Context, id hashiVMSDK.VirtualMachineId, parameters *hashiVMSDK.VirtualMachineCaptureParameters) error {
 			actualResourceGroupName = id.ResourceGroupName
@@ -151,11 +169,11 @@ func TestStepCaptureImageShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 
 			return nil
 		},
+		getVMInternalID: func(ctx context.Context, vmId hashiVMSDK.VirtualMachineId) (string, error) {
+			return expectedVirtualMachineID, nil
+		},
 		generalizeVM: func(context.Context, hashiVMSDK.VirtualMachineId) error {
 			return nil
-		},
-		get: func(client *AzureClient) *CaptureTemplate {
-			return actualCaptureTemplate
 		},
 		say:   func(message string) {},
 		error: func(e error) {},
@@ -171,8 +189,11 @@ func TestStepCaptureImageShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 	var expectedComputeName = stateBag.Get(constants.ArmComputeName).(string)
 	var expectedResourceGroupName = stateBag.Get(constants.ArmResourceGroupName).(string)
 	var expectedVirtualMachineCaptureParameters = stateBag.Get(constants.ArmNewVirtualMachineCaptureParameters).(*hashiVMSDK.VirtualMachineCaptureParameters)
-	var expectedCaptureTemplate = stateBag.Get(constants.ArmCaptureTemplate).(*CaptureTemplate)
 
+	actualVirtualMachineID := stateBag.Get(constants.ArmBuildVMInternalId).(string)
+	if actualVirtualMachineID != expectedVirtualMachineID {
+		t.Fatalf("Expected StepCaptureImage to set 'constants.ArmBuildVMInternalId' to the state bag to %s, but it was set to %s.", expectedVirtualMachineID, actualVirtualMachineID)
+	}
 	if actualComputeName != expectedComputeName {
 		t.Fatal("Expected StepCaptureImage to source 'constants.ArmComputeName' from the state bag, but it did not.")
 	}
@@ -185,9 +206,6 @@ func TestStepCaptureImageShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 		t.Fatal("Expected StepCaptureImage to source 'constants.ArmVirtualMachineCaptureParameters' from the state bag, but it did not.")
 	}
 
-	if actualCaptureTemplate != expectedCaptureTemplate {
-		t.Fatal("Expected StepCaptureImage to source 'constants.ArmCaptureTemplate' from the state bag, but it did not.")
-	}
 }
 
 func createTestStateBagStepCaptureImage() multistep.StateBag {

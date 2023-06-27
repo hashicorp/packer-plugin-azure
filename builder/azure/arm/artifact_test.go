@@ -17,24 +17,7 @@ func generatedData() map[string]interface{} {
 }
 
 func TestArtifactIdVHD(t *testing.T) {
-	template := CaptureTemplate{
-		Resources: []CaptureResources{
-			{
-				Properties: CaptureProperties{
-					StorageProfile: CaptureStorageProfile{
-						OSDisk: CaptureDisk{
-							Image: CaptureUri{
-								Uri: "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
-							},
-						},
-					},
-				},
-				Location: "southcentralus",
-			},
-		},
-	}
-
-	artifact, err := NewArtifact(&template, "Linux", generatedData())
+	artifact, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 0, generatedData())
 	if err != nil {
 		t.Fatalf("err=%s", err)
 	}
@@ -48,24 +31,7 @@ func TestArtifactIdVHD(t *testing.T) {
 }
 
 func TestArtifactIDManagedImage(t *testing.T) {
-	template := CaptureTemplate{
-		Resources: []CaptureResources{
-			{
-				Properties: CaptureProperties{
-					StorageProfile: CaptureStorageProfile{
-						OSDisk: CaptureDisk{
-							Image: CaptureUri{
-								Uri: "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
-							},
-						},
-					},
-				},
-				Location: "southcentralus",
-			},
-		},
-	}
-
-	artifact, err := NewManagedImageArtifact("Linux", "fakeResourceGroup", "fakeName", "fakeLocation", "fakeID", "fakeOsDiskSnapshotName", "fakeDataDiskSnapshotPrefix", generatedData(), false, &template)
+	artifact, err := NewManagedImageArtifact("Linux", "fakeResourceGroup", "fakeName", "fakeLocation", "fakeID", "fakeOsDiskSnapshotName", "fakeDataDiskSnapshotPrefix", generatedData(), "")
 	if err != nil {
 		t.Fatalf("err=%s", err)
 	}
@@ -88,24 +54,7 @@ ManagedImageDataDiskSnapshotPrefix: fakeDataDiskSnapshotPrefix
 }
 
 func TestArtifactIDManagedImageWithoutOSDiskSnapshotName(t *testing.T) {
-	template := CaptureTemplate{
-		Resources: []CaptureResources{
-			{
-				Properties: CaptureProperties{
-					StorageProfile: CaptureStorageProfile{
-						OSDisk: CaptureDisk{
-							Image: CaptureUri{
-								Uri: "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
-							},
-						},
-					},
-				},
-				Location: "southcentralus",
-			},
-		},
-	}
-
-	artifact, err := NewManagedImageArtifact("Linux", "fakeResourceGroup", "fakeName", "fakeLocation", "fakeID", "", "fakeDataDiskSnapshotPrefix", generatedData(), false, &template)
+	artifact, err := NewManagedImageArtifact("Linux", "fakeResourceGroup", "fakeName", "fakeLocation", "fakeID", "", "fakeDataDiskSnapshotPrefix", generatedData(), "")
 	if err != nil {
 		t.Fatalf("err=%s", err)
 	}
@@ -127,24 +76,7 @@ ManagedImageDataDiskSnapshotPrefix: fakeDataDiskSnapshotPrefix
 }
 
 func TestArtifactIDManagedImageWithoutDataDiskSnapshotPrefix(t *testing.T) {
-	template := CaptureTemplate{
-		Resources: []CaptureResources{
-			{
-				Properties: CaptureProperties{
-					StorageProfile: CaptureStorageProfile{
-						OSDisk: CaptureDisk{
-							Image: CaptureUri{
-								Uri: "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
-							},
-						},
-					},
-				},
-				Location: "southcentralus",
-			},
-		},
-	}
-
-	artifact, err := NewManagedImageArtifact("Linux", "fakeResourceGroup", "fakeName", "fakeLocation", "fakeID", "fakeOsDiskSnapshotName", "", generatedData(), false, &template)
+	artifact, err := NewManagedImageArtifact("Linux", "fakeResourceGroup", "fakeName", "fakeLocation", "fakeID", "fakeOsDiskSnapshotName", "", generatedData(), "")
 	if err != nil {
 		t.Fatalf("err=%s", err)
 	}
@@ -166,24 +98,7 @@ ManagedImageOSDiskSnapshotName: fakeOsDiskSnapshotName
 }
 
 func TestArtifactIDManagedImageWithKeepingTheOSDisk(t *testing.T) {
-	template := CaptureTemplate{
-		Resources: []CaptureResources{
-			{
-				Properties: CaptureProperties{
-					StorageProfile: CaptureStorageProfile{
-						OSDisk: CaptureDisk{
-							Image: CaptureUri{
-								Uri: "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
-							},
-						},
-					},
-				},
-				Location: "southcentralus",
-			},
-		},
-	}
-
-	artifact, err := NewManagedImageArtifact("Linux", "fakeResourceGroup", "fakeName", "fakeLocation", "fakeID", "fakeOsDiskSnapshotName", "", generatedData(), true, &template)
+	artifact, err := NewManagedImageArtifact("Linux", "fakeResourceGroup", "fakeName", "fakeLocation", "fakeID", "fakeOsDiskSnapshotName", "", generatedData(), "/subscriptions/subscription/resourceGroups/test/providers/Microsoft.Compute/images/myimage")
 	if err != nil {
 		t.Fatalf("err=%s", err)
 	}
@@ -196,7 +111,7 @@ ManagedImageName: fakeName
 ManagedImageId: fakeID
 ManagedImageLocation: fakeLocation
 ManagedImageOSDiskSnapshotName: fakeOsDiskSnapshotName
-OSDiskUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd
+OSDiskUri: /subscriptions/subscription/resourceGroups/test/providers/Microsoft.Compute/images/myimage
 `
 
 	result := artifact.String()
@@ -391,24 +306,7 @@ SharedImageGalleryReplicatedRegions: fake-region-1, fake-region-2
 }
 
 func TestArtifactString(t *testing.T) {
-	template := CaptureTemplate{
-		Resources: []CaptureResources{
-			{
-				Properties: CaptureProperties{
-					StorageProfile: CaptureStorageProfile{
-						OSDisk: CaptureDisk{
-							Image: CaptureUri{
-								Uri: "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
-							},
-						},
-					},
-				},
-				Location: "southcentralus",
-			},
-		},
-	}
-
-	artifact, err := NewArtifact(&template, "Linux", generatedData())
+	artifact, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 0, generatedData())
 	if err != nil {
 		t.Fatalf("err=%s", err)
 	}
@@ -429,31 +327,7 @@ func TestArtifactString(t *testing.T) {
 }
 
 func TestAdditionalDiskArtifactString(t *testing.T) {
-	template := CaptureTemplate{
-		Resources: []CaptureResources{
-			{
-				Properties: CaptureProperties{
-					StorageProfile: CaptureStorageProfile{
-						OSDisk: CaptureDisk{
-							Image: CaptureUri{
-								Uri: "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
-							},
-						},
-						DataDisks: []CaptureDisk{
-							{
-								Image: CaptureUri{
-									Uri: "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-datadisk-1.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
-								},
-							},
-						},
-					},
-				},
-				Location: "southcentralus",
-			},
-		},
-	}
-
-	artifact, err := NewArtifact(&template, "Linux", generatedData())
+	artifact, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 1, generatedData())
 	if err != nil {
 		t.Fatalf("err=%s", err)
 	}
@@ -477,24 +351,7 @@ func TestAdditionalDiskArtifactString(t *testing.T) {
 }
 
 func TestArtifactProperties(t *testing.T) {
-	template := CaptureTemplate{
-		Resources: []CaptureResources{
-			{
-				Properties: CaptureProperties{
-					StorageProfile: CaptureStorageProfile{
-						OSDisk: CaptureDisk{
-							Image: CaptureUri{
-								Uri: "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
-							},
-						},
-					},
-				},
-				Location: "southcentralus",
-			},
-		},
-	}
-
-	testSubject, err := NewArtifact(&template, "Linux", generatedData())
+	testSubject, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 0, generatedData())
 	if err != nil {
 		t.Fatalf("err=%s", err)
 	}
@@ -514,31 +371,7 @@ func TestArtifactProperties(t *testing.T) {
 }
 
 func TestAdditionalDiskArtifactProperties(t *testing.T) {
-	template := CaptureTemplate{
-		Resources: []CaptureResources{
-			{
-				Properties: CaptureProperties{
-					StorageProfile: CaptureStorageProfile{
-						OSDisk: CaptureDisk{
-							Image: CaptureUri{
-								Uri: "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
-							},
-						},
-						DataDisks: []CaptureDisk{
-							{
-								Image: CaptureUri{
-									Uri: "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-datadisk-1.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
-								},
-							},
-						},
-					},
-				},
-				Location: "southcentralus",
-			},
-		},
-	}
-
-	testSubject, err := NewArtifact(&template, "Linux", generatedData())
+	testSubject, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 1, generatedData())
 	if err != nil {
 		t.Fatalf("err=%s", err)
 	}
@@ -563,66 +396,6 @@ func TestAdditionalDiskArtifactProperties(t *testing.T) {
 	}
 	if (*testSubject.AdditionalDisks)[0].AdditionalDiskUri != "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-datadisk-1.4085bb15-3644-4641-b9cd-f575918640b4.vhd" {
 		t.Errorf("Expected additional disk uri to be 'https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-datadisk-1.4085bb15-3644-4641-b9cd-f575918640b4.vhd', but got %s", (*testSubject.AdditionalDisks)[0].AdditionalDiskUri)
-	}
-}
-
-func TestArtifactOverHyphenatedCaptureUri(t *testing.T) {
-	template := CaptureTemplate{
-		Resources: []CaptureResources{
-			{
-				Properties: CaptureProperties{
-					StorageProfile: CaptureStorageProfile{
-						OSDisk: CaptureDisk{
-							Image: CaptureUri{
-								Uri: "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/pac-ker-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
-							},
-						},
-					},
-				},
-				Location: "southcentralus",
-			},
-		},
-	}
-
-	testSubject, err := NewArtifact(&template, "Linux", generatedData())
-	if err != nil {
-		t.Fatalf("err=%s", err)
-	}
-
-	if testSubject.TemplateUri != "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/pac-ker-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json" {
-		t.Errorf("Expected template to be 'https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/pac-ker-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json', but got %s", testSubject.TemplateUri)
-	}
-}
-
-func TestArtifactRejectMalformedTemplates(t *testing.T) {
-	template := CaptureTemplate{}
-
-	_, err := NewArtifact(&template, "Linux", generatedData())
-	if err == nil {
-		t.Fatalf("Expected artifact creation to fail, but it succeeded.")
-	}
-}
-
-func TestArtifactRejectMalformedStorageUri(t *testing.T) {
-	template := CaptureTemplate{
-		Resources: []CaptureResources{
-			{
-				Properties: CaptureProperties{
-					StorageProfile: CaptureStorageProfile{
-						OSDisk: CaptureDisk{
-							Image: CaptureUri{
-								Uri: "bark",
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	_, err := NewArtifact(&template, "Linux", generatedData())
-	if err == nil {
-		t.Fatalf("Expected artifact creation to fail, but it succeeded.")
 	}
 }
 

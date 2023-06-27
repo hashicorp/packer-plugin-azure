@@ -5,7 +5,6 @@ package arm
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math"
 	"os"
@@ -58,57 +57,7 @@ type AzureClient struct {
 	hashiGalleryImagesSDK.GalleryImagesClient
 	GiovanniBlobClient giovanniBlobStorageSDK.Client
 	InspectorMaxLength int
-	Template           *CaptureTemplate
 	LastError          azureErrorResponse
-}
-
-func getCaptureResponse(body string) *CaptureTemplate {
-	var operation CaptureOperation
-	err := json.Unmarshal([]byte(body), &operation)
-	if err != nil {
-		return nil
-	}
-
-	if operation.Properties != nil && operation.Properties.Output != nil {
-		return operation.Properties.Output
-	}
-
-	return nil
-}
-
-// HACK(chrboum): This method is a hack.  It was written to work around this issue
-// (https://github.com/Azure/azure-sdk-for-go/issues/307) and to an extent this
-// issue (https://github.com/Azure/azure-rest-api-specs/issues/188).
-//
-// Capturing a VM is a long running operation that requires polling.  There are
-// couple different forms of polling, and the end result of a poll operation is
-// discarded by the SDK.  It is expected that any discarded data can be re-fetched,
-// so discarding it has minimal impact.  Unfortunately, there is no way to re-fetch
-// the template returned by a capture call that I am aware of.
-//
-// If the second issue were fixed the VM ID would be included when GET'ing a VM.  The
-// VM ID could be used to locate the captured VHD, and captured template.
-// Unfortunately, the VM ID is not included so this method cannot be used either.
-//
-// This code captures the template and saves it to the client (the AzureClient type).
-// It expects that the capture API is called only once, or rather you only care that the
-// last call's value is important because subsequent requests are not persisted.  There
-// is no care given to multiple threads writing this value because for our use case
-// it does not matter.
-func templateCapture(client *AzureClient) autorest.RespondDecorator {
-	return func(r autorest.Responder) autorest.Responder {
-		return autorest.ResponderFunc(func(resp *http.Response) error {
-			body, bodyString := handleBody(resp.Body, math.MaxInt64)
-			resp.Body = body
-
-			captureTemplate := getCaptureResponse(bodyString)
-			if captureTemplate != nil {
-				client.Template = captureTemplate
-			}
-
-			return r.Respond(resp)
-		})
-	}
 }
 
 func errorCapture(client *AzureClient) autorest.RespondDecorator {
@@ -174,7 +123,7 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	azureClient.VirtualMachinesClient = hashiVMSDK.NewVirtualMachinesClientWithBaseURI(*resourceManagerEndpoint)
 	azureClient.VirtualMachinesClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
 	azureClient.VirtualMachinesClient.Client.RequestInspector = withInspection(maxlen)
-	azureClient.VirtualMachinesClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), templateCapture(azureClient), errorCapture(azureClient))
+	azureClient.VirtualMachinesClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
 	azureClient.VirtualMachinesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.VirtualMachinesClient.Client.UserAgent)
 	azureClient.VirtualMachinesClient.Client.PollingDuration = pollingDuration
 
@@ -277,6 +226,7 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	if err != nil {
 		return nil, nil, err
 	}
+	// TODO Handle potential panic here if Access Token or child objects are null
 	objectId, err := getObjectIdFromToken(token.AccessToken)
 	if err != nil {
 		return nil, nil, err

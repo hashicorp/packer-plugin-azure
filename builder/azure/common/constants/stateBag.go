@@ -29,7 +29,7 @@ const (
 	ArmNicName                    string = "arm.NicName"
 	ArmKeyVaultName               string = "arm.KeyVaultName"
 	ArmLocation                   string = "arm.Location"
-	ArmOSDiskVhd                  string = "arm.OSDiskVhd"
+	ArmOSDiskUri                  string = "arm.OSDiskUri"
 	ArmAdditionalDiskVhds         string = "arm.AdditionalDiskVhds"
 	ArmPublicIPAddressName        string = "arm.PublicIPAddressName"
 	ArmResourceGroupName          string = "arm.ResourceGroupName"
@@ -69,4 +69,5 @@ const (
 	ArmKeepOSDisk                                              string = "arm.KeepOSDisk"
 	ArmBuildDiskEncryptionSetId                                string = "arm.ArmBuildDiskEncryptionSetId"
 	ArmSubscription                                            string = "arm.Subscription"
+	ArmBuildVMInternalId                                       string = "arm.BuildVMInternalId"
 )

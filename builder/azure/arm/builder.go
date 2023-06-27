@@ -149,9 +149,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				return nil, fmt.Errorf("the managed image named %s already exists in the resource group %s, use the -force option to automatically delete it.", b.config.ManagedImageName, b.config.ManagedImageResourceGroupName)
 			}
 		}
-	} else if !b.config.isPublishToSIG() {
-		// User is not using Managed Images to build, warning message here that this path is being deprecated
-		ui.Error("Warning: You are using Azure Packer Builder to create VHDs which is being deprecated, consider using Managed Images. Learn more https://www.packer.io/docs/builders/azure/arm#azure-arm-builder-specific-options")
 	}
 
 	if b.config.BuildResourceGroupName != "" {
@@ -172,7 +169,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			return nil, err
 		}
 		b.config.storageAccountBlobEndpoint = *account.Properties.PrimaryEndpoints.Blob
-
 		if !equalLocation(account.Location, b.config.Location) {
 			return nil, fmt.Errorf("The storage account is located in %s, but the build will take place in %s. The locations must be identical", account.Location, b.config.Location)
 		}
@@ -372,19 +368,10 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			return b.managedImageArtifactWithSIGAsDestination(managedImageID, stateData)
 		}
 
-		if template, ok := b.stateBag.GetOk(constants.ArmCaptureTemplate); ok {
-			return NewManagedImageArtifact(b.config.OSType,
-				b.config.ManagedImageResourceGroupName,
-				b.config.ManagedImageName,
-				b.config.Location,
-				managedImageID,
-				b.config.ManagedImageOSDiskSnapshotName,
-				b.config.ManagedImageDataDiskSnapshotPrefix,
-				stateData,
-				b.stateBag.Get(constants.ArmKeepOSDisk).(bool),
-				template.(*CaptureTemplate))
+		var osDiskUri string
+		if b.stateBag.Get(constants.ArmKeepOSDisk).(bool) {
+			osDiskUri = b.stateBag.Get(constants.ArmOSDiskUri).(string)
 		}
-
 		return NewManagedImageArtifact(b.config.OSType,
 			b.config.ManagedImageResourceGroupName,
 			b.config.ManagedImageName,
@@ -393,22 +380,22 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			b.config.ManagedImageOSDiskSnapshotName,
 			b.config.ManagedImageDataDiskSnapshotPrefix,
 			stateData,
-			b.stateBag.Get(constants.ArmKeepOSDisk).(bool),
-			nil)
+			osDiskUri,
+		)
 	}
 
 	if b.config.isPublishToSIG() {
 		return b.sharedImageArtifact(stateData)
 	}
-
-	if template, ok := b.stateBag.GetOk(constants.ArmCaptureTemplate); ok {
-		return NewArtifact(
-			template.(*CaptureTemplate),
-			b.config.OSType,
-			stateData)
-	}
-
-	return &Artifact{StateData: stateData}, nil
+	ui.Say(b.config.storageAccountBlobEndpoint)
+	ui.Say(fmt.Sprintf("%d", len(b.config.AdditionalDiskSize)))
+	return NewArtifact(
+		b.stateBag.Get(constants.ArmBuildVMInternalId).(string),
+		b.config.storageAccountBlobEndpoint,
+		b.config.StorageAccount,
+		b.config.OSType,
+		len(b.config.AdditionalDiskSize),
+		stateData)
 }
 
 func (b *Builder) writeSSHPrivateKey(ui packersdk.Ui, debugKeyPath string) {
