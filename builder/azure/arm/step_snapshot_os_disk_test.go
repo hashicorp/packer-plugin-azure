@@ -89,7 +89,7 @@ func createTestStateBagStepSnapshotOSDisk() multistep.StateBag {
 	stateBag.Put(constants.ArmTags, tags)
 	stateBag.Put(constants.ArmNewSDKTags, newSDKTags)
 
-	stateBag.Put(constants.ArmOSDiskVhd, "subscriptions/123-456-789/resourceGroups/existingresourcegroup/providers/Microsoft.Compute/disks/osdisk")
+	stateBag.Put(constants.ArmOSDiskUri, "subscriptions/123-456-789/resourceGroups/existingresourcegroup/providers/Microsoft.Compute/disks/osdisk")
 	stateBag.Put(constants.ArmManagedImageOSDiskSnapshotName, "Unit Test: ManagedImageOSDiskSnapshotName")
 	stateBag.Put(constants.ArmSubscription, "Unit Test: Subscription")
 

@@ -621,6 +621,10 @@ func (c *Config) getSourceSharedImageGalleryID() string {
 	return id
 }
 
+func (c *Config) getStorageAccountEndpoint() string {
+	return c.storageAccountBlobEndpoint
+}
+
 func (c *Config) toVMID() string {
 	var resourceGroupName string
 	if c.tmpResourceGroupName != "" {

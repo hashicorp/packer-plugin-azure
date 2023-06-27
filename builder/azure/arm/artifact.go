@@ -6,9 +6,6 @@ package arm
 import (
 	"bytes"
 	"fmt"
-	"log"
-	"net/url"
-	"path"
 	"strings"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
@@ -53,7 +50,7 @@ type Artifact struct {
 	StateData map[string]interface{}
 }
 
-func NewManagedImageArtifact(osType, resourceGroup, name, location, id, osDiskSnapshotName, dataDiskSnapshotPrefix string, generatedData map[string]interface{}, keepOSDisk bool, template *CaptureTemplate) (*Artifact, error) {
+func NewManagedImageArtifact(osType, resourceGroup, name, location, id, osDiskSnapshotName, dataDiskSnapshotPrefix string, generatedData map[string]interface{}, osDiskUri string) (*Artifact, error) {
 	res := Artifact{
 		ManagedImageResourceGroupName:      resourceGroup,
 		ManagedImageName:                   name,
@@ -65,24 +62,8 @@ func NewManagedImageArtifact(osType, resourceGroup, name, location, id, osDiskSn
 		StateData:                          generatedData,
 	}
 
-	if keepOSDisk {
-		if template == nil {
-			log.Printf("artifact error: nil capture template")
-			return &res, nil
-		}
-
-		if len(template.Resources) != 1 {
-			log.Printf("artifact error: malformed capture template, expected one resource")
-			return &res, nil
-		}
-
-		vhdUri, err := url.Parse(template.Resources[0].Properties.StorageProfile.OSDisk.Image.Uri)
-		if err != nil {
-			log.Printf("artifact error: Error parsing osdisk url: %s", err)
-			return &res, nil
-		}
-
-		res.OSDiskUri = vhdUri.String()
+	if osDiskUri != "" {
+		res.OSDiskUri = osDiskUri
 	}
 
 	return &res, nil
@@ -111,70 +92,31 @@ func NewSharedImageArtifact(osType, destinationSharedImageGalleryId string, loca
 	}, nil
 }
 
-func NewArtifact(template *CaptureTemplate, osType string, generatedData map[string]interface{}) (*Artifact, error) {
-	if template == nil {
-		return nil, fmt.Errorf("nil capture template")
-	}
+func NewArtifact(vmInternalID string, storageAccountUrl string, storageAccountLocation string, osType string, additionalDiskCount int, generatedData map[string]interface{}) (*Artifact, error) {
+	vhdUri := fmt.Sprintf("%ssystem/Microsoft.Compute/Images/images/packer-osDisk.%s.vhd", storageAccountUrl, vmInternalID)
 
-	if len(template.Resources) != 1 {
-		return nil, fmt.Errorf("malformed capture template, expected one resource")
-	}
-
-	vhdUri, err := url.Parse(template.Resources[0].Properties.StorageProfile.OSDisk.Image.Uri)
-	if err != nil {
-		return nil, err
-	}
-
-	templateUri, err := storageUriToTemplateUri(vhdUri)
-	if err != nil {
-		return nil, err
-	}
+	templateUri := fmt.Sprintf("%ssystem/Microsoft.Compute/Images/images/packer-vmTemplate.%s.json", storageAccountUrl, vmInternalID)
 
 	var additional_disks *[]AdditionalDiskArtifact
-	if template.Resources[0].Properties.StorageProfile.DataDisks != nil {
-		data_disks := make([]AdditionalDiskArtifact, len(template.Resources[0].Properties.StorageProfile.DataDisks))
-		for i, additionaldisk := range template.Resources[0].Properties.StorageProfile.DataDisks {
-			additionalVhdUri, err := url.Parse(additionaldisk.Image.Uri)
-			if err != nil {
-				return nil, err
-			}
-			data_disks[i].AdditionalDiskUri = additionalVhdUri.String()
+	if additionalDiskCount > 0 {
+		data_disks := make([]AdditionalDiskArtifact, additionalDiskCount)
+		for i := 0; i < additionalDiskCount; i++ {
+			data_disks[i].AdditionalDiskUri = fmt.Sprintf("%ssystem/Microsoft.Compute/Images/images/packer-datadisk-%d.%s.vhd", storageAccountUrl, i+1, vmInternalID)
 		}
 		additional_disks = &data_disks
 	}
 
 	return &Artifact{
 		OSType:      osType,
-		OSDiskUri:   vhdUri.String(),
-		TemplateUri: templateUri.String(),
+		OSDiskUri:   vhdUri,
+		TemplateUri: templateUri,
 
 		AdditionalDisks: additional_disks,
 
-		StorageAccountLocation: template.Resources[0].Location,
+		StorageAccountLocation: storageAccountLocation,
 
 		StateData: generatedData,
 	}, nil
-}
-
-func storageUriToTemplateUri(su *url.URL) (*url.URL, error) {
-	// packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd -> 4085bb15-3644-4641-b9cd-f575918640b4
-	filename := path.Base(su.Path)
-	parts := strings.Split(filename, ".")
-
-	if len(parts) < 3 {
-		return nil, fmt.Errorf("malformed URL")
-	}
-
-	// packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd -> packer
-	prefixParts := strings.Split(parts[0], "-")
-	prefix := strings.Join(prefixParts[:len(prefixParts)-1], "-")
-
-	templateFilename := fmt.Sprintf("%s-vmTemplate.%s.json", prefix, parts[1])
-
-	// https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd"
-	//   ->
-	// https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json"
-	return url.Parse(strings.Replace(su.String(), filename, templateFilename, 1))
 }
 
 func (a *Artifact) isManagedImage() bool {
@@ -333,7 +275,7 @@ func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
 		return img
 	}
 
-	// If image is a legacy VHD
+	// If image is a VHD
 	labels["storage_account_location"] = a.StorageAccountLocation
 	labels["template_uri"] = a.TemplateUri
 
