@@ -14,12 +14,19 @@ variable "subscription" {
   sensitive = true
 }
 
+variable "ssh_private_key_location" {
+  default = "${env("ARM_SSH_PRIVATE_KEY_LOCATION")}"
+  type = string
+}
+
 source "azure-arm" "linux-sig" {
   use_azure_cli_auth = true
   location           = "South Central US"
   vm_size            = "Standard_D4ps_v5"
   ssh_username       = "packer"
   ssh_password       = var.ssh_password
+  ssh_private_key_file = var.ssh_private_key_location
+  communicator       = "ssh"
   shared_image_gallery{
     subscription   = var.subscription
     image_name     = "arm-linux-specialized-sig"

@@ -10,6 +10,8 @@ package arm
 // * ARM_CLIENT_SECRET
 // * ARM_SUBSCRIPTION_ID
 // * ARM_STORAGE_ACCOUNT
+// * AZURE_SSH_PASS - In our Linux SIG test we build two specialized images, this requires setting a shared password for both builds
+// * ARM_SSH_PRIVATE_KEY_LOCATION - the file location of a PEM encoded SSH private key,
 //
 // The subscription in question should have a resource group
 // called "packer-acceptance-test" in "South Central US" region. The
@@ -54,15 +56,15 @@ func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG_WithChildImage(t
 		return
 	}
 
+	// A password is required to be shared between builds as Specialized Images do not have their main user profile removed
 	if os.Getenv("ARM_SSH_PASS") == "" {
-		// If no password is set generate a SSH password to be shared between the two builds
-		// Specialized images retain their user setup, so the password needs to be the same across both builds.
+		t.Fatalf("To run this test set a valid ssh password in the env variable ARM_SSH_PASS")
+		return
+	}
 
-		var tempName = NewTempName("packer-acc-test")
-		err := os.Setenv("ARM_SSH_PASS", tempName.AdminPassword)
-		if err != nil {
-			t.Fatalf("Failed to set ARM_SSH_PASS env variables with error %s", err.Error())
-		}
+	if os.Getenv("ARM_SSH_PRIVATE_KEY_LOCATION") == "" {
+		t.Fatalf("To run this test set a valid ssh private key location in ARM_SSH_PRIVATE_KEY_LOCATION")
+		return
 	}
 
 	createSharedImageGalleryDefinition(t, CreateSharedImageGalleryDefinitionParameters{
@@ -112,12 +114,6 @@ func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG_WithChildImage(t
 
 }
 
-func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG_ChildOfSpecializedParent(t *testing.T) {
-	if os.Getenv("AZURE_CLI_AUTH") == "" {
-		t.Skip("Azure CLI Acceptance tests skipped unless env 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
-		return
-	}
-}
 func TestBuilderAcc_SharedImageGallery_WindowsSIG(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("AZURE_CLI_AUTH") == "" {

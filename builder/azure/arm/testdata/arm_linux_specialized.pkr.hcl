@@ -8,6 +8,11 @@ variable "ssh_password" {
   default = "${env("ARM_SSH_PASS")}"
 }
 
+variable "ssh_private_key_location" {
+  default = "${env("ARM_SSH_PRIVATE_KEY_LOCATION")}"
+  type = string
+}
+
 source "azure-arm" "linux-sig" {
   image_offer        = "0001-com-ubuntu-server-jammy"
   image_publisher    = "canonical"
@@ -17,6 +22,8 @@ source "azure-arm" "linux-sig" {
   vm_size            = "Standard_D4ps_v5"
   ssh_username       = "packer"
   ssh_password       = var.ssh_password
+  ssh_private_key_file = var.ssh_private_key_location
+  communicator       = "ssh"
   shared_image_gallery_destination {
     image_name     = "arm-linux-specialized-sig"
     gallery_name   = "acctestgallery"
