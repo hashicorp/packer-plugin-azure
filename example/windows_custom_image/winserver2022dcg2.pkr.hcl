@@ -35,7 +35,7 @@ source "azure-arm" "imageBuild" {
 
   os_type                             = "Windows"
 
-  # UNCOMMENT THE BELOW TO ENABLE Trusted Launch
+  # UNCOMMENT THE LINES BELOW TO ENABLE Trusted Launch
   # secure_boot_enabled                 = true
   # vtpm_enabled                        = true
 
