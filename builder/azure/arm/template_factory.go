@@ -233,8 +233,8 @@ func GetVirtualMachineDeployment(config *Config) (*resources.Deployment, error) 
 		}
 	}
 
-	if config.SecureBootEnabled || config.VTpmEnabled {
-		err = builder.SetSecurityProfile(config.SecureBootEnabled, config.VTpmEnabled)
+	if config.SecureBootEnabled || config.VTpmEnabled || config.EncryptionAtHost {
+		err = builder.SetSecurityProfile(config.SecureBootEnabled, config.VTpmEnabled, config.EncryptionAtHost)
 		if err != nil {
 			return nil, err
 		}

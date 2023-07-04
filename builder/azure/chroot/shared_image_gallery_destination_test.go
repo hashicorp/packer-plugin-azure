@@ -46,12 +46,12 @@ func TestSharedImageGalleryDestination_Validate(t *testing.T) {
 				ImageName:     "ImageName",
 				ImageVersion:  "0.1.2",
 				TargetRegions: []TargetRegion{
-					TargetRegion{
+					{
 						Name:               "region1",
 						ReplicaCount:       5,
 						StorageAccountType: "Standard_ZRS",
 					},
-					TargetRegion{
+					{
 						Name:               "region2",
 						ReplicaCount:       3,
 						StorageAccountType: "Standard_LRS",
@@ -78,12 +78,12 @@ func TestSharedImageGalleryDestination_Validate(t *testing.T) {
 				ImageName:     "ImageName",
 				ImageVersion:  "0.1.2",
 				TargetRegions: []TargetRegion{
-					TargetRegion{
+					{
 						Name:               "region1",
 						ReplicaCount:       5,
 						StorageAccountType: "Standard_ZRS",
 					},
-					TargetRegion{
+					{
 						Name:               "region2",
 						ReplicaCount:       3,
 						StorageAccountType: "Standard_LRS",
@@ -104,12 +104,12 @@ func TestSharedImageGalleryDestination_Validate(t *testing.T) {
 				ImageName:     "ImageName",
 				ImageVersion:  "0.1.2alpha",
 				TargetRegions: []TargetRegion{
-					TargetRegion{
+					{
 						Name:               "region1",
 						ReplicaCount:       5,
 						StorageAccountType: "Standard_ZRS",
 					},
-					TargetRegion{
+					{
 						Name:               "region2",
 						ReplicaCount:       3,
 						StorageAccountType: "Standard_LRS",
