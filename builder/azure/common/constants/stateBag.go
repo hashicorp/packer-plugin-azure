@@ -70,4 +70,5 @@ const (
 	ArmBuildDiskEncryptionSetId                                string = "arm.ArmBuildDiskEncryptionSetId"
 	ArmSubscription                                            string = "arm.Subscription"
 	ArmBuildVMInternalId                                       string = "arm.BuildVMInternalId"
+	DtlLabName                                                 string = "dtl.LabName"
 )

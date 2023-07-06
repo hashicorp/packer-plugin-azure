@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	hashiDTLVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -15,7 +16,7 @@ import (
 type StepDeleteVirtualMachine struct {
 	client *AzureClient
 	config *Config
-	delete func(ctx context.Context, resourceGroupName string, computeName string, state multistep.StateBag) error
+	delete func(ctx context.Context, resourceGroupName string, subscriptionId string, labName string, computeName string) error
 	say    func(message string)
 	error  func(e error)
 }
@@ -32,11 +33,9 @@ func NewStepDeleteVirtualMachine(client *AzureClient, ui packersdk.Ui, config *C
 	return step
 }
 
-func (s *StepDeleteVirtualMachine) deleteVirtualMachine(ctx context.Context, resourceGroupName string, vmName string, state multistep.StateBag) error {
-	f, err := s.client.DtlVirtualMachineClient.Delete(ctx, resourceGroupName, s.config.LabName, vmName)
-	if err == nil {
-		err = f.WaitForCompletionRef(ctx, s.client.DtlVirtualMachineClient.Client)
-	}
+func (s *StepDeleteVirtualMachine) deleteVirtualMachine(ctx context.Context, subscriptionId string, labName string, resourceGroupName string, vmName string) error {
+	vmId := hashiDTLVMSDK.NewVirtualMachineID(subscriptionId, resourceGroupName, labName, vmName)
+	err := s.client.DtlMetaClient.VirtualMachines.DeleteThenPoll(ctx, vmId)
 	if err != nil {
 		s.say("Error from delete VM")
 		s.say(s.client.LastError.Error())
@@ -50,11 +49,14 @@ func (s *StepDeleteVirtualMachine) Run(ctx context.Context, state multistep.Stat
 
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
 	var computeName = state.Get(constants.ArmComputeName).(string)
+	var dtlLabName = state.Get(constants.DtlLabName).(string)
+	var subscriptionId = state.Get(constants.ArmSubscription).(string)
 
 	s.say(fmt.Sprintf(" -> ResourceGroupName : '%s'", resourceGroupName))
+
 	s.say(fmt.Sprintf(" -> ComputeName       : '%s'", computeName))
 
-	err := s.deleteVirtualMachine(ctx, resourceGroupName, computeName, state)
+	err := s.deleteVirtualMachine(ctx, subscriptionId, dtlLabName, resourceGroupName, computeName)
 
 	s.say("Deleting virtual machine ...Complete")
 	return processStepResult(err, s.error, state)

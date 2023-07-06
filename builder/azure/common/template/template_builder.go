@@ -735,6 +735,9 @@ const BasicTemplate = `{
     "publicIPAddressName": {
       "type": "string"
     },
+    "publicIPAddressSku": {
+      "type": "string"
+    },
     "subnetName": {
       "type": "string"
     },
@@ -785,6 +788,9 @@ const BasicTemplate = `{
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[parameters('publicIPAddressName')]",
       "location": "[variables('location')]",
+      "sku": {
+	"name": "[parameters('publicIPAddressSku')]",
+      }
       "properties": {
         "publicIPAllocationMethod": "[variables('publicIPAddressType')]",
         "dnsSettings": {
