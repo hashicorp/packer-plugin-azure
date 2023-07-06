@@ -519,7 +519,7 @@ func (s *TemplateBuilder) SetSecurityProfile(secureBootEnabled bool, vtpmEnabled
 	return nil
 }
 
-func (s *TemplateBuilder) SetSpecializedVM() error {
+func (s *TemplateBuilder) ClearOsProfile() error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
