@@ -216,7 +216,6 @@ func deleteResource(ctx context.Context, client *AzureClient, subscriptionId str
 	switch resourceType {
 	case "Microsoft.Compute/virtualMachines":
 		vmID := hashiVMSDK.NewVirtualMachineID(subscriptionId, resourceGroupName, resourceName)
-		// TODO don't rely on default operations, set hard delete to false
 		if err := client.VirtualMachinesClient.DeleteThenPoll(ctx, vmID, hashiVMSDK.DefaultDeleteOperationOptions()); err != nil {
 			return err
 		}

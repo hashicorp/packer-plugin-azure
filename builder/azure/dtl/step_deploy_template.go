@@ -5,29 +5,29 @@ package dtl
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/devtestlabs/mgmt/2018-09-15/dtl"
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
+
+	hashiLabsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/labs"
+	hashiDTLVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/virtualmachines"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/networkinterfaces"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
+	"github.com/hashicorp/packer-plugin-sdk/retry"
 )
 
 type StepDeployTemplate struct {
-	client     *AzureClient
-	deploy     func(ctx context.Context, resourceGroupName string, deploymentName string, state multistep.StateBag) error
-	delete     func(ctx context.Context, client *AzureClient, resourceType string, resourceName string, resourceGroupName string) error
-	disk       func(ctx context.Context, resourceGroupName string, computeName string) (string, string, error)
-	deleteDisk func(ctx context.Context, imageType string, imageName string, resourceGroupName string) error
-	say        func(message string)
-	error      func(e error)
-	config     *Config
-	factory    templateFactoryFuncDtl
-	name       string
+	client  *AzureClient
+	deploy  func(ctx context.Context, resourceGroupName string, deploymentName string, state multistep.StateBag) error
+	say     func(message string)
+	error   func(e error)
+	config  *Config
+	factory templateFactoryFuncDtl
+	name    string
 }
 
 func NewStepDeployTemplate(client *AzureClient, ui packersdk.Ui, config *Config, deploymentName string, factory templateFactoryFuncDtl) *StepDeployTemplate {
@@ -41,24 +41,26 @@ func NewStepDeployTemplate(client *AzureClient, ui packersdk.Ui, config *Config,
 	}
 
 	step.deploy = step.deployTemplate
-	step.delete = deleteResource
-	step.disk = step.getImageDetails
-	step.deleteDisk = step.deleteImage
 	return step
 }
 
 func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupName string, deploymentName string, state multistep.StateBag) error {
 
-	vmlistPage, err := s.client.DtlVirtualMachineClient.List(ctx, s.config.tmpResourceGroupName, s.config.LabName, "", "", nil, "")
+	subscriptionId := s.config.ClientConfig.SubscriptionID
+	labName := s.config.LabName
 
+	// TODO Talk to Tom(s) about this, we have to have two different Labs IDs in different calls, so we can probably move this into the commonids package
+	labResourceId := hashiDTLVMSDK.NewLabID(subscriptionId, resourceGroupName, labName)
+	labId := hashiLabsSDK.NewLabID(subscriptionId, s.config.tmpResourceGroupName, labName)
+	vmlistPage, err := s.client.DtlMetaClient.VirtualMachines.List(ctx, labResourceId, hashiDTLVMSDK.DefaultListOperationOptions())
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return err
 	}
 
-	vmList := vmlistPage.Values()
-	for i := range vmList {
-		if *vmList[i].Name == s.config.tmpComputeName {
+	vmList := vmlistPage.Model
+	for _, vm := range *vmList {
+		if *vm.Name == s.config.tmpComputeName {
 			return fmt.Errorf("Error: Virtual Machine %s already exists. Please use another name", s.config.tmpComputeName)
 		}
 	}
@@ -69,17 +71,15 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupNa
 		return err
 	}
 
-	f, err := s.client.DtlLabsClient.CreateEnvironment(ctx, s.config.tmpResourceGroupName, s.config.LabName, *labMachine)
-	if err == nil {
-		err = f.WaitForCompletionRef(ctx, s.client.DtlLabsClient.Client)
-	}
+	err = s.client.DtlMetaClient.Labs.CreateEnvironmentThenPoll(ctx, labId, *labMachine)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return err
 	}
 
 	expand := "Properties($expand=ComputeVm,Artifacts,NetworkInterface)"
-	vm, err := s.client.DtlVirtualMachineClient.Get(ctx, s.config.tmpResourceGroupName, s.config.LabName, s.config.tmpComputeName, expand)
+	vmResourceId := hashiDTLVMSDK.NewVirtualMachineID(subscriptionId, s.config.tmpResourceGroupName, labName, s.config.tmpComputeName)
+	vm, err := s.client.DtlMetaClient.VirtualMachines.Get(ctx, vmResourceId, hashiDTLVMSDK.GetOperationOptions{Expand: &expand})
 	if err != nil {
 		s.say(s.client.LastError.Error())
 	}
@@ -87,14 +87,16 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupNa
 	// set tmpFQDN to the PrivateIP or to the real FQDN depending on
 	// publicIP being allowed or not
 	if s.config.DisallowPublicIP {
-		resp, err := s.client.InterfacesClient.Get(ctx, s.config.tmpResourceGroupName, s.config.tmpNicName, "")
+		interfaceID := commonids.NewNetworkInterfaceID(subscriptionId, resourceGroupName, s.config.tmpNicName)
+		resp, err := s.client.NetworkMetaClient.NetworkInterfaces.Get(ctx, interfaceID, networkinterfaces.DefaultGetOperationOptions())
 		if err != nil {
 			s.say(s.client.LastError.Error())
 			return err
 		}
-		s.config.tmpFQDN = *(*resp.IPConfigurations)[0].PrivateIPAddress
+		// TODO This operation seems kinda off, but I don't wanna spend time digging into it right now
+		s.config.tmpFQDN = *(*resp.Model.Properties.IPConfigurations)[0].Properties.PrivateIPAddress
 	} else {
-		s.config.tmpFQDN = *vm.Fqdn
+		s.config.tmpFQDN = *vm.Model.Properties.Fqdn
 	}
 	s.say(fmt.Sprintf(" -> VM FQDN/IP : '%s'", s.config.tmpFQDN))
 	state.Put(constants.SSHHost, s.config.tmpFQDN)
@@ -111,39 +113,42 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupNa
 			winrma)
 
 		var hostname = "hostName"
-		dp := &dtl.ArtifactParameterProperties{}
+		dp := &hashiDTLVMSDK.ArtifactParameterProperties{}
 		dp.Name = &hostname
 		dp.Value = &s.config.tmpFQDN
-		dparams := []dtl.ArtifactParameterProperties{*dp}
+		dparams := []hashiDTLVMSDK.ArtifactParameterProperties{*dp}
 
-		winrmArtifact := &dtl.ArtifactInstallProperties{
+		winrmArtifact := &hashiDTLVMSDK.ArtifactInstallProperties{
 			ArtifactTitle: &winrma,
-			ArtifactID:    &artifactid,
+			ArtifactId:    &artifactid,
 			Parameters:    &dparams,
 		}
 
-		dtlArtifacts := []dtl.ArtifactInstallProperties{*winrmArtifact}
-		dtlArtifactsRequest := dtl.ApplyArtifactsRequest{Artifacts: &dtlArtifacts}
+		dtlArtifacts := []hashiDTLVMSDK.ArtifactInstallProperties{*winrmArtifact}
+		dtlArtifactsRequest := hashiDTLVMSDK.ApplyArtifactsRequest{Artifacts: &dtlArtifacts}
 
-		// infinite loop until the artifacts have been applied
-		for {
-			f, err := s.client.DtlVirtualMachineClient.ApplyArtifacts(ctx, s.config.tmpResourceGroupName, s.config.LabName, s.config.tmpComputeName, dtlArtifactsRequest)
-			if err == nil {
-				s.say("WinRM artifact deployment started, waiting for completion")
-				err = f.WaitForCompletionRef(ctx, s.client.DtlVirtualMachineClient.Client)
-				if err != nil {
-					s.say(s.client.LastError.Error())
-					return err
-				}
-				break
-			} else {
-				s.say("WinRM artifact deployment failed, sleeping a minute and retrying")
-				time.Sleep(60 * time.Second)
+		// TODO this was an infinite loop, I have seen apply artifacts fail
+		// But this needs a bit further validation into why it fails and
+		// How we can avoid the need for a retry backoff
+		// But a retry backoff is much more preferable to an infinite loop
+
+		retryConfig := retry.Config{
+			Tries:      5,
+			RetryDelay: (&retry.Backoff{InitialBackoff: 5 * time.Second, MaxBackoff: 60 * time.Second, Multiplier: 1.5}).Linear,
+		}
+		err = retryConfig.Run(ctx, func(ctx context.Context) error {
+			err := s.client.DtlMetaClient.VirtualMachines.ApplyArtifactsThenPoll(ctx, vmResourceId, dtlArtifactsRequest)
+			if err != nil {
+				s.say("WinRM artifact deployment failed, retrying")
 			}
+			return nil
+		})
+		if err != nil {
+			return err
 		}
 	}
 
-	xs := strings.Split(*vm.LabVirtualMachineProperties.ComputeID, "/")
+	xs := strings.Split(*vm.Model.Properties.ComputeId, "/")
 	s.config.VMCreationResourceGroup = xs[4]
 
 	// Resuing the Resource group name from common constants as all steps depend on it.
@@ -166,85 +171,7 @@ func (s *StepDeployTemplate) Run(ctx context.Context, state multistep.StateBag) 
 		s.error, state)
 }
 
-func (s *StepDeployTemplate) getImageDetails(ctx context.Context, resourceGroupName string, computeName string) (string, string, error) {
-	//We can't depend on constants.ArmOSDiskVhd being set
-	var imageName string
-	var imageType string
-	vm, err := s.client.VirtualMachinesClient.Get(ctx, resourceGroupName, computeName, "")
-	if err != nil {
-		return imageName, imageType, err
-	} else {
-		if vm.StorageProfile.OsDisk.Vhd != nil {
-			imageType = "image"
-			imageName = *vm.StorageProfile.OsDisk.Vhd.URI
-		} else {
-			imageType = "Microsoft.Compute/disks"
-			imageName = *vm.StorageProfile.OsDisk.ManagedDisk.ID
-		}
-	}
-	return imageType, imageName, nil
-}
-
-func deleteResource(ctx context.Context, client *AzureClient, resourceType string, resourceName string, resourceGroupName string) error {
-	switch resourceType {
-	case "Microsoft.Compute/virtualMachines":
-		f, err := client.VirtualMachinesClient.Delete(ctx, resourceGroupName, resourceName)
-		if err == nil {
-			err = f.WaitForCompletionRef(ctx, client.VirtualMachinesClient.Client)
-		}
-		return err
-	case "Microsoft.Network/networkInterfaces":
-		f, err := client.InterfacesClient.Delete(ctx, resourceGroupName, resourceName)
-		if err == nil {
-			err = f.WaitForCompletionRef(ctx, client.InterfacesClient.Client)
-		}
-		return err
-	case "Microsoft.Network/virtualNetworks":
-		f, err := client.VirtualNetworksClient.Delete(ctx, resourceGroupName, resourceName)
-		if err == nil {
-			err = f.WaitForCompletionRef(ctx, client.VirtualNetworksClient.Client)
-		}
-		return err
-	case "Microsoft.Network/publicIPAddresses":
-		f, err := client.PublicIPAddressesClient.Delete(ctx, resourceGroupName, resourceName)
-		if err == nil {
-			err = f.WaitForCompletionRef(ctx, client.PublicIPAddressesClient.Client)
-		}
-		return err
-	}
-	return nil
-}
-
-func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageType string, imageName string, resourceGroupName string) error {
-	// Managed disk
-	if imageType == "Microsoft.Compute/disks" {
-		xs := strings.Split(imageName, "/")
-		diskName := xs[len(xs)-1]
-		f, err := s.client.DisksClient.Delete(ctx, resourceGroupName, diskName)
-		if err == nil {
-			err = f.WaitForCompletionRef(ctx, s.client.DisksClient.Client)
-		}
-		return err
-	}
-	// VHD image
-	u, err := url.Parse(imageName)
-	if err != nil {
-		return err
-	}
-	xs := strings.Split(u.Path, "/")
-	if len(xs) < 3 {
-		return errors.New("Unable to parse path of image " + imageName)
-	}
-	var storageAccountName = xs[1]
-	var blobName = strings.Join(xs[2:], "/")
-
-	blob := s.client.BlobStorageClient.GetContainerReference(storageAccountName).GetBlobReference(blobName)
-	err = blob.Delete(nil)
-	return err
-}
-
 func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
-	//Only clean up if this was an existing resource group and the resource group
-	//is marked as created
-	// Just return now
+	// TODO are there any resources created in DTL builds we should tear down?
+	// There was teardown code from the ARM builder copy pasted in but it was never called
 }

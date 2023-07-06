@@ -218,7 +218,7 @@ type Config struct {
 	// tags. Tag names cannot exceed 512 characters, and tag values cannot exceed
 	// 256 characters. Tags are applied to every resource deployed by a Packer
 	// build, i.e. Resource Group, VM, NIC, VNET, Public IP, KeyVault, etc.
-	AzureTags map[string]*string `mapstructure:"azure_tags" required:"false"`
+	AzureTags map[string]string `mapstructure:"azure_tags" required:"false"`
 
 	// Used for creating images from Marketplace images. Please refer to
 	// [Deploy an image with Marketplace
@@ -323,6 +323,10 @@ type keyVaultCertificate struct {
 
 func (c *Config) isManagedImage() bool {
 	return c.ManagedImageName != ""
+}
+
+func (c *Config) isPublishToSIG() bool {
+	return c.SharedGalleryDestination.SigDestinationGalleryName != ""
 }
 
 func (c *Config) toVirtualMachineCaptureParameters() *compute.VirtualMachineCaptureParameters {
@@ -575,8 +579,8 @@ func assertTagProperties(c *Config, errs *packersdk.MultiError) {
 		if len(k) > 512 {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("the tag name %q exceeds (%d) the 512 character limit", k, len(k)))
 		}
-		if len(*v) > 256 {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("the tag name %q exceeds (%d) the 256 character limit", *v, len(*v)))
+		if len(v) > 256 {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("the tag name %q exceeds (%d) the 256 character limit", v, len(v)))
 		}
 	}
 }

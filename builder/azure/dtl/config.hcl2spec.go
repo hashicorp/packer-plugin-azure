@@ -76,7 +76,7 @@ type FlatConfig struct {
 	ManagedImageResourceGroupName       *string                            `mapstructure:"managed_image_resource_group_name" required:"true" cty:"managed_image_resource_group_name" hcl:"managed_image_resource_group_name"`
 	ManagedImageName                    *string                            `mapstructure:"managed_image_name" required:"true" cty:"managed_image_name" hcl:"managed_image_name"`
 	ManagedImageStorageAccountType      *string                            `mapstructure:"managed_image_storage_account_type" required:"false" cty:"managed_image_storage_account_type" hcl:"managed_image_storage_account_type"`
-	AzureTags                           map[string]*string                 `mapstructure:"azure_tags" required:"false" cty:"azure_tags" hcl:"azure_tags"`
+	AzureTags                           map[string]string                  `mapstructure:"azure_tags" required:"false" cty:"azure_tags" hcl:"azure_tags"`
 	PlanID                              *string                            `mapstructure:"plan_id" required:"false" cty:"plan_id" hcl:"plan_id"`
 	PollingDurationTimeout              *string                            `mapstructure:"polling_duration_timeout" required:"false" cty:"polling_duration_timeout" hcl:"polling_duration_timeout"`
 	OSType                              *string                            `mapstructure:"os_type" required:"false" cty:"os_type" hcl:"os_type"`

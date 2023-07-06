@@ -4,7 +4,7 @@
 package dtl
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"math"
 	"net/http"
@@ -12,17 +12,20 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-04-01/compute"
-	newCompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
-	dtl "github.com/Azure/azure-sdk-for-go/services/devtestlabs/mgmt/2018-09-15/dtl"
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-01-01/network"
-	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
-	armStorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2017-10-01/storage"
-	"github.com/Azure/azure-sdk-for-go/storage"
+	"github.com/golang-jwt/jwt"
+
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
+	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	hashiGalleryImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
+	hashiGalleryImageVersionsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
+	hashiDTLSDK "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15"
+	hashiVaultsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/vaults"
+	hashiNetworkSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01"
+	"github.com/hashicorp/go-azure-sdk/sdk/auth"
+	authWrapper "github.com/hashicorp/go-azure-sdk/sdk/auth/autorest"
+	"github.com/hashicorp/go-azure-sdk/sdk/client/resourcemanager"
+	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 	"github.com/hashicorp/packer-plugin-azure/version"
 	"github.com/hashicorp/packer-plugin-sdk/useragent"
 )
@@ -32,81 +35,16 @@ const (
 )
 
 type AzureClient struct {
-	storage.BlobStorageClient
-	resources.DeploymentsClient
-	resources.DeploymentOperationsClient
-	resources.GroupsClient
-	network.PublicIPAddressesClient
-	network.InterfacesClient
-	network.SubnetsClient
-	network.VirtualNetworksClient
-	compute.ImagesClient
-	compute.VirtualMachinesClient
-	common.VaultClient
-	armStorage.AccountsClient
-	compute.DisksClient
-	compute.SnapshotsClient
-	newCompute.GalleryImageVersionsClient
-	newCompute.GalleryImagesClient
+	InspectorMaxLength int
+	LastError          azureErrorResponse
 
-	InspectorMaxLength       int
-	Template                 *CaptureTemplate
-	LastError                azureErrorResponse
-	VaultClientDelete        common.VaultClient
-	DtlLabsClient            dtl.LabsClient
-	DtlVirtualMachineClient  dtl.VirtualMachinesClient
-	DtlEnvironmentsClient    dtl.EnvironmentsClient
-	DtlCustomImageClient     dtl.CustomImagesClient
-	DtlVirtualNetworksClient dtl.VirtualNetworksClient
-}
-
-func getCaptureResponse(body string) *CaptureTemplate {
-	var operation CaptureOperation
-	err := json.Unmarshal([]byte(body), &operation)
-	if err != nil {
-		return nil
-	}
-
-	if operation.Properties != nil && operation.Properties.Output != nil {
-		return operation.Properties.Output
-	}
-
-	return nil
-}
-
-// HACK(chrboum): This method is a hack.  It was written to work around this issue
-// (https://github.com/Azure/azure-sdk-for-go/issues/307) and to an extent this
-// issue (https://github.com/Azure/azure-rest-api-specs/issues/188).
-//
-// Capturing a VM is a long running operation that requires polling.  There are
-// couple different forms of polling, and the end result of a poll operation is
-// discarded by the SDK.  It is expected that any discarded data can be re-fetched,
-// so discarding it has minimal impact.  Unfortunately, there is no way to re-fetch
-// the template returned by a capture call that I am aware of.
-//
-// If the second issue were fixed the VM ID would be included when GET'ing a VM.  The
-// VM ID could be used to locate the captured VHD, and captured template.
-// Unfortunately, the VM ID is not included so this method cannot be used either.
-//
-// This code captures the template and saves it to the client (the AzureClient type).
-// It expects that the capture API is called only once, or rather you only care that the
-// last call's value is important because subsequent requests are not persisted.  There
-// is no care given to multiple threads writing this value because for our use case
-// it does not matter.
-func templateCapture(client *AzureClient) autorest.RespondDecorator {
-	return func(r autorest.Responder) autorest.Responder {
-		return autorest.ResponderFunc(func(resp *http.Response) error {
-			body, bodyString := handleBody(resp.Body, math.MaxInt64)
-			resp.Body = body
-
-			captureTemplate := getCaptureResponse(bodyString)
-			if captureTemplate != nil {
-				client.Template = captureTemplate
-			}
-
-			return r.Respond(resp)
-		})
-	}
+	hashiVMSDK.VirtualMachinesClient
+	hashiImagesSDK.ImagesClient
+	hashiVaultsSDK.VaultsClient
+	NetworkMetaClient hashiNetworkSDK.Client
+	hashiGalleryImageVersionsSDK.GalleryImageVersionsClient
+	hashiGalleryImagesSDK.GalleryImagesClient
+	DtlMetaClient hashiDTLSDK.Client
 }
 
 func errorCapture(client *AzureClient) autorest.RespondDecorator {
@@ -134,74 +72,162 @@ func byConcatDecorators(decorators ...autorest.RespondDecorator) autorest.Respon
 	}
 }
 
-func NewAzureClient(subscriptionID, resourceGroupName string,
-	cloud *azure.Environment, SharedGalleryTimeout time.Duration, CustomImageCaptureTimeout time.Duration, PollingDuration time.Duration,
-	servicePrincipalToken *adal.ServicePrincipalToken) (*AzureClient, error) {
+type NewSDKAuthOptions struct {
+	AuthType       string
+	ClientID       string
+	ClientSecret   string
+	ClientJWT      string
+	ClientCertPath string
+	TenantID       string
+	SubscriptionID string
+}
+
+// Returns an Azure Client used for the Azure Resource Manager
+// Also returns the Azure object ID for the authentication method used in the build
+func NewAzureClient(ctx context.Context, subscriptionID string,
+	cloud *environments.Environment, SharedGalleryTimeout time.Duration, CustomImageCaptureTimeout time.Duration, PollingDuration time.Duration, newSdkAuthOptions NewSDKAuthOptions) (*AzureClient, *string, error) {
 
 	var azureClient = &AzureClient{}
 
 	maxlen := getInspectorMaxLength()
 
-	azureClient.DtlVirtualMachineClient = dtl.NewVirtualMachinesClientWithBaseURI(cloud.ResourceManagerEndpoint, subscriptionID)
-	azureClient.DtlVirtualMachineClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
-	azureClient.DtlVirtualMachineClient.RequestInspector = withInspection(maxlen)
-	azureClient.DtlVirtualMachineClient.ResponseInspector = byConcatDecorators(byInspecting(maxlen), templateCapture(azureClient), errorCapture(azureClient))
-	azureClient.DtlVirtualMachineClient.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.DtlVirtualMachineClient.UserAgent)
-	azureClient.DtlVirtualMachineClient.Client.PollingDuration = PollingDuration
+	if cloud == nil || cloud.ResourceManager == nil {
+		// TODO Throw error message that helps users solve this problem
+		return nil, nil, fmt.Errorf("Azure Environment not configured correctly")
+	}
+	resourceManagerEndpoint, _ := cloud.ResourceManager.Endpoint()
+	resourceManagerAuthorizer, err := buildResourceManagerAuthorizer(ctx, newSdkAuthOptions, *cloud)
+	if err != nil {
+		return nil, nil, err
+	}
+	dtlMetaClient := hashiDTLSDK.NewClientWithBaseURI(*resourceManagerEndpoint, func(c *autorest.Client) {
+		c.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
+		c.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), "go-azure-sdk Meta Client")
+		c.RequestInspector = withInspection(maxlen)
+		c.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
+	})
+	azureClient.DtlMetaClient = dtlMetaClient
 
-	azureClient.DtlEnvironmentsClient = dtl.NewEnvironmentsClientWithBaseURI(cloud.ResourceManagerEndpoint, subscriptionID)
-	azureClient.DtlEnvironmentsClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
-	azureClient.DtlEnvironmentsClient.RequestInspector = withInspection(maxlen)
-	azureClient.DtlEnvironmentsClient.ResponseInspector = byConcatDecorators(byInspecting(maxlen), templateCapture(azureClient), errorCapture(azureClient))
-	azureClient.DtlEnvironmentsClient.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.DtlEnvironmentsClient.UserAgent)
-	azureClient.DtlEnvironmentsClient.Client.PollingDuration = PollingDuration
+	azureClient.GalleryImageVersionsClient = hashiGalleryImageVersionsSDK.NewGalleryImageVersionsClientWithBaseURI(*resourceManagerEndpoint)
+	azureClient.GalleryImageVersionsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
+	azureClient.GalleryImageVersionsClient.Client.RequestInspector = withInspection(maxlen)
+	azureClient.GalleryImageVersionsClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
+	azureClient.GalleryImageVersionsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.GalleryImageVersionsClient.Client.UserAgent)
+	azureClient.GalleryImageVersionsClient.Client.PollingDuration = PollingDuration
 
-	azureClient.DtlLabsClient = dtl.NewLabsClientWithBaseURI(cloud.ResourceManagerEndpoint, subscriptionID)
-	azureClient.DtlLabsClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
-	azureClient.DtlLabsClient.RequestInspector = withInspection(maxlen)
-	azureClient.DtlLabsClient.ResponseInspector = byConcatDecorators(byInspecting(maxlen), templateCapture(azureClient), errorCapture(azureClient))
-	azureClient.DtlLabsClient.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.DtlLabsClient.UserAgent)
-	azureClient.DtlLabsClient.Client.PollingDuration = PollingDuration
-
-	azureClient.DtlCustomImageClient = dtl.NewCustomImagesClientWithBaseURI(cloud.ResourceManagerEndpoint, subscriptionID)
-	azureClient.DtlCustomImageClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
-	azureClient.DtlCustomImageClient.RequestInspector = withInspection(maxlen)
-	azureClient.DtlCustomImageClient.ResponseInspector = byConcatDecorators(byInspecting(maxlen), templateCapture(azureClient), errorCapture(azureClient))
-	azureClient.DtlCustomImageClient.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.DtlCustomImageClient.UserAgent)
-	azureClient.DtlCustomImageClient.PollingDuration = autorest.DefaultPollingDuration
-	azureClient.DtlCustomImageClient.Client.PollingDuration = CustomImageCaptureTimeout
-
-	azureClient.DtlVirtualNetworksClient = dtl.NewVirtualNetworksClientWithBaseURI(cloud.ResourceManagerEndpoint, subscriptionID)
-	azureClient.DtlVirtualNetworksClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
-	azureClient.DtlVirtualNetworksClient.RequestInspector = withInspection(maxlen)
-	azureClient.DtlVirtualNetworksClient.ResponseInspector = byConcatDecorators(byInspecting(maxlen), templateCapture(azureClient), errorCapture(azureClient))
-	azureClient.DtlVirtualNetworksClient.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.DtlVirtualNetworksClient.UserAgent)
-	azureClient.DtlVirtualNetworksClient.Client.PollingDuration = PollingDuration
-
-	azureClient.GalleryImageVersionsClient = newCompute.NewGalleryImageVersionsClientWithBaseURI(cloud.ResourceManagerEndpoint, subscriptionID)
-	azureClient.GalleryImageVersionsClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
-	azureClient.GalleryImageVersionsClient.RequestInspector = withInspection(maxlen)
-	azureClient.GalleryImageVersionsClient.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.GalleryImageVersionsClient.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.GalleryImageVersionsClient.UserAgent)
-	azureClient.GalleryImageVersionsClient.Client.PollingDuration = SharedGalleryTimeout
-
-	azureClient.GalleryImagesClient = newCompute.NewGalleryImagesClientWithBaseURI(cloud.ResourceManagerEndpoint, subscriptionID)
-	azureClient.GalleryImagesClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
-	azureClient.GalleryImagesClient.RequestInspector = withInspection(maxlen)
-	azureClient.GalleryImagesClient.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.GalleryImagesClient.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.GalleryImagesClient.UserAgent)
+	azureClient.GalleryImagesClient = hashiGalleryImagesSDK.NewGalleryImagesClientWithBaseURI(*resourceManagerEndpoint)
+	azureClient.GalleryImagesClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
+	azureClient.GalleryImagesClient.Client.RequestInspector = withInspection(maxlen)
+	azureClient.GalleryImagesClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
+	azureClient.GalleryImagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.GalleryImagesClient.Client.UserAgent)
 	azureClient.GalleryImagesClient.Client.PollingDuration = PollingDuration
 
-	azureClient.InterfacesClient = network.NewInterfacesClientWithBaseURI(cloud.ResourceManagerEndpoint, subscriptionID)
-	azureClient.InterfacesClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
-	azureClient.InterfacesClient.RequestInspector = withInspection(maxlen)
-	azureClient.InterfacesClient.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.InterfacesClient.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.InterfacesClient.UserAgent)
-	azureClient.InterfacesClient.Client.PollingDuration = PollingDuration
+	azureClient.ImagesClient = hashiImagesSDK.NewImagesClientWithBaseURI(*resourceManagerEndpoint)
+	azureClient.ImagesClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
+	azureClient.ImagesClient.Client.RequestInspector = withInspection(maxlen)
+	azureClient.ImagesClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
+	azureClient.ImagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.ImagesClient.Client.UserAgent)
+	azureClient.ImagesClient.Client.PollingDuration = PollingDuration
 
-	return azureClient, nil
+	// TODO Request/Response inpectors for Track 2
+	networkMetaClient, err := hashiNetworkSDK.NewClientWithBaseURI(cloud.ResourceManager, func(c *resourcemanager.Client) {
+		c.Client.Authorizer = resourceManagerAuthorizer
+		c.Client.UserAgent = "some-user-agent"
+	})
+
+	if err != nil {
+		return nil, nil, err
+	}
+	azureClient.NetworkMetaClient = *networkMetaClient
+	token, err := resourceManagerAuthorizer.Token(ctx, &http.Request{})
+	if err != nil {
+		return nil, nil, err
+	}
+	objectId, err := getObjectIdFromToken(token.AccessToken)
+	if err != nil {
+		return nil, nil, err
+	}
+	return azureClient, &objectId, nil
 }
 
+const (
+	AuthTypeDeviceLogin     = "DeviceLogin"
+	AuthTypeMSI             = "ManagedIdentity"
+	AuthTypeClientSecret    = "ClientSecret"
+	AuthTypeClientCert      = "ClientCertificate"
+	AuthTypeClientBearerJWT = "ClientBearerJWT"
+	AuthTypeAzureCLI        = "AzureCLI"
+)
+
+func buildResourceManagerAuthorizer(ctx context.Context, authOpts NewSDKAuthOptions, env environments.Environment) (auth.Authorizer, error) {
+	authorizer, err := buildAuthorizer(ctx, authOpts, env, env.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building Resource Manager authorizer from credentials: %+v", err)
+	}
+	return authorizer, nil
+}
+
+func buildAuthorizer(ctx context.Context, authOpts NewSDKAuthOptions, env environments.Environment, api environments.Api) (auth.Authorizer, error) {
+	var authConfig auth.Credentials
+	switch authOpts.AuthType {
+	case AuthTypeDeviceLogin:
+		return nil, fmt.Errorf("DeviceLogin is not supported in v2 of the Azure Packer Plugin, however you can use the Azure CLI `az login --use-device-code` to use a device code, and then use CLI authentication")
+	case AuthTypeAzureCLI:
+		authConfig = auth.Credentials{
+			Environment:                       env,
+			EnableAuthenticatingUsingAzureCLI: true,
+		}
+	case AuthTypeMSI:
+		authConfig = auth.Credentials{
+			Environment:                              env,
+			EnableAuthenticatingUsingManagedIdentity: true,
+		}
+	case AuthTypeClientSecret:
+		authConfig = auth.Credentials{
+			Environment:                           env,
+			EnableAuthenticatingUsingClientSecret: true,
+			ClientID:                              authOpts.ClientID,
+			ClientSecret:                          authOpts.ClientSecret,
+			TenantID:                              authOpts.TenantID,
+		}
+	case AuthTypeClientCert:
+		authConfig = auth.Credentials{
+			Environment: env,
+			EnableAuthenticatingUsingClientCertificate: true,
+			ClientID:                  authOpts.ClientID,
+			ClientCertificatePath:     authOpts.ClientCertPath,
+			ClientCertificatePassword: "",
+		}
+	case AuthTypeClientBearerJWT:
+		authConfig = auth.Credentials{
+			Environment:                   env,
+			EnableAuthenticationUsingOIDC: true,
+			ClientID:                      authOpts.ClientID,
+			TenantID:                      authOpts.TenantID,
+			OIDCAssertionToken:            authOpts.ClientJWT,
+		}
+	default:
+		panic("AuthType not set")
+	}
+	authorizer, err := auth.NewAuthorizerFromCredentials(ctx, authConfig, api)
+	if err != nil {
+		return nil, err
+	}
+	return authorizer, nil
+}
+func getObjectIdFromToken(token string) (string, error) {
+	claims := jwt.MapClaims{}
+	var p jwt.Parser
+
+	var err error
+
+	_, _, err = p.ParseUnverified(token, claims)
+
+	if err != nil {
+		return "", err
+	}
+	return claims["oid"].(string), nil
+}
 func getInspectorMaxLength() int64 {
 	value, ok := os.LookupEnv(EnvPackerLogAzureMaxLen)
 	if !ok {

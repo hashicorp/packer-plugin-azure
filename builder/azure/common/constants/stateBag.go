@@ -20,7 +20,6 @@ const (
 )
 
 const (
-	ArmCaptureTemplate            string = "arm.CaptureTemplate"
 	ArmComputeName                string = "arm.ComputeName"
 	ArmImageParameters            string = "arm.ImageParameters"
 	ArmCertificateUrl             string = "arm.CertificateUrl"
@@ -70,4 +69,5 @@ const (
 	ArmBuildDiskEncryptionSetId                                string = "arm.ArmBuildDiskEncryptionSetId"
 	ArmSubscription                                            string = "arm.Subscription"
 	ArmBuildVMInternalId                                       string = "arm.BuildVMInternalId"
+	DtlLabName                                                 string = "dtl.LabName"
 )

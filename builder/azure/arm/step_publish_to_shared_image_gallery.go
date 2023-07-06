@@ -45,7 +45,7 @@ func getSigDestinationStorageAccountType(s string) (hashiGalleryImageVersionsSDK
 		return hashiGalleryImageVersionsSDK.StorageAccountTypeStandardLRS, nil
 	}
 	for _, t := range hashiGalleryImageVersionsSDK.PossibleValuesForStorageAccountType() {
-		if string(t) == s {
+		if s == t {
 			return hashiGalleryImageVersionsSDK.StorageAccountType(t), nil
 		}
 	}

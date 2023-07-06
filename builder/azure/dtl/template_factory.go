@@ -6,10 +6,10 @@ package dtl
 import (
 	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/services/devtestlabs/mgmt/2018-09-15/dtl"
+	hashiDTLLabsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/labs"
 )
 
-type templateFactoryFuncDtl func(*Config) (*dtl.LabVirtualMachineCreationParameter, error)
+type templateFactoryFuncDtl func(*Config) (*hashiDTLLabsSDK.LabVirtualMachineCreationParameter, error)
 
 func newBool(val bool) *bool {
 	b := true
@@ -32,9 +32,9 @@ func getCustomImageId(config *Config) *string {
 	return nil
 }
 
-func GetVirtualMachineDeployment(config *Config) (*dtl.LabVirtualMachineCreationParameter, error) {
+func GetVirtualMachineDeployment(config *Config) (*hashiDTLLabsSDK.LabVirtualMachineCreationParameter, error) {
 
-	galleryImageRef := dtl.GalleryImageReference{
+	galleryImageRef := hashiDTLLabsSDK.GalleryImageReference{
 		Offer:     &config.ImageOffer,
 		Publisher: &config.ImagePublisher,
 		Sku:       &config.ImageSku,
@@ -48,7 +48,7 @@ func GetVirtualMachineDeployment(config *Config) (*dtl.LabVirtualMachineCreation
 		config.LabName,
 		config.LabVirtualNetworkName)
 
-	dtlArtifacts := []dtl.ArtifactInstallProperties{}
+	dtlArtifacts := []hashiDTLLabsSDK.ArtifactInstallProperties{}
 
 	if config.DtlArtifacts != nil {
 		for i := range config.DtlArtifacts {
@@ -62,51 +62,50 @@ func GetVirtualMachineDeployment(config *Config) (*dtl.LabVirtualMachineCreation
 				config.DtlArtifacts[i].RepositoryName,
 				config.DtlArtifacts[i].ArtifactName)
 
-			dparams := []dtl.ArtifactParameterProperties{}
+			dparams := []hashiDTLLabsSDK.ArtifactParameterProperties{}
 			for j := range config.DtlArtifacts[i].Parameters {
 
-				dp := &dtl.ArtifactParameterProperties{}
+				dp := &hashiDTLLabsSDK.ArtifactParameterProperties{}
 				dp.Name = &config.DtlArtifacts[i].Parameters[j].Name
 				dp.Value = &config.DtlArtifacts[i].Parameters[j].Value
 
 				dparams = append(dparams, *dp)
 			}
-			dtlArtifact := &dtl.ArtifactInstallProperties{
+			dtlArtifact := &hashiDTLLabsSDK.ArtifactInstallProperties{
 				ArtifactTitle: &config.DtlArtifacts[i].ArtifactName,
-				ArtifactID:    &config.DtlArtifacts[i].ArtifactId,
+				ArtifactId:    &config.DtlArtifacts[i].ArtifactId,
 				Parameters:    &dparams,
 			}
 			dtlArtifacts = append(dtlArtifacts, *dtlArtifact)
 		}
 	}
 
-	labMachineProps := &dtl.LabVirtualMachineCreationParameterProperties{
-		CreatedByUserID:            &config.ClientConfig.ClientID,
-		OwnerObjectID:              &config.ClientConfig.ObjectID,
-		OsType:                     &config.OSType,
+	labMachineProps := &hashiDTLLabsSDK.LabVirtualMachineCreationParameterProperties{
+		OwnerUserPrincipalName:     &config.ClientConfig.ClientID,
+		OwnerObjectId:              &config.ClientConfig.ObjectID,
 		Size:                       &config.VMSize,
 		UserName:                   &config.UserName,
 		Password:                   &config.Password,
-		SSHKey:                     &config.sshAuthorizedKey,
-		IsAuthenticationWithSSHKey: newBool(true),
+		SshKey:                     &config.sshAuthorizedKey,
+		IsAuthenticationWithSshKey: newBool(true),
 		LabSubnetName:              &config.LabSubnetName,
-		LabVirtualNetworkID:        &labVirtualNetworkID,
+		LabVirtualNetworkId:        &labVirtualNetworkID,
 		DisallowPublicIPAddress:    &config.DisallowPublicIP,
 		GalleryImageReference:      &galleryImageRef,
-		CustomImageID:              getCustomImageId(config),
-		PlanID:                     &config.PlanID,
+		CustomImageId:              getCustomImageId(config),
+		PlanId:                     &config.PlanID,
 
-		AllowClaim:                   newBool(false),
-		StorageType:                  &config.StorageType,
-		VirtualMachineCreationSource: dtl.FromGalleryImage,
-		Artifacts:                    &dtlArtifacts,
+		AllowClaim:  newBool(false),
+		StorageType: &config.StorageType,
+		Artifacts:   &dtlArtifacts,
 	}
 
-	labMachine := &dtl.LabVirtualMachineCreationParameter{
+	labMachine := &hashiDTLLabsSDK.LabVirtualMachineCreationParameter{
 		Name:     &config.tmpComputeName,
 		Location: &config.Location,
-		Tags:     config.AzureTags,
-		LabVirtualMachineCreationParameterProperties: labMachineProps,
+		// TODO
+		//Tags:     config.AzureTags,
+		Properties: labMachineProps,
 	}
 
 	return labMachine, nil

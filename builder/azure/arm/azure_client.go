@@ -176,7 +176,6 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	azureClient.ImagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.ImagesClient.Client.UserAgent)
 	azureClient.ImagesClient.Client.PollingDuration = pollingDuration
 
-	// Clients that are using the existing SDK/auth logic
 	azureClient.StorageAccountsClient = hashiStorageAccountsSDK.NewStorageAccountsClientWithBaseURI(*resourceManagerEndpoint)
 	azureClient.StorageAccountsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
 	azureClient.StorageAccountsClient.Client.RequestInspector = withInspection(maxlen)
@@ -184,11 +183,12 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	azureClient.StorageAccountsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.StorageAccountsClient.Client.UserAgent)
 	azureClient.StorageAccountsClient.Client.PollingDuration = pollingDuration
 
-	api := environments.AzurePublic().ResourceManager
-	networkMetaClient, err := hashiNetworkMetaSDK.NewClientWithBaseURI(api, func(c *resourcemanager.Client) {
+	// TODO Request/Response inpectors for Track 2
+	networkMetaClient, err := hashiNetworkMetaSDK.NewClientWithBaseURI(cloud.ResourceManager, func(c *resourcemanager.Client) {
 		c.Client.Authorizer = resourceManagerAuthorizer
 		c.Client.UserAgent = "some-user-agent"
 	})
+
 	if err != nil {
 		return nil, nil, err
 	}
@@ -281,7 +281,7 @@ func buildAuthorizer(ctx context.Context, authOpts NewSDKAuthOptions, env enviro
 	var authConfig auth.Credentials
 	switch authOpts.AuthType {
 	case AuthTypeDeviceLogin:
-		return nil, fmt.Errorf("DeviceLogin is not supported, however you can use the Azure CLI `az login --use-device-code` to use a device code, and then use CLI authentication")
+		return nil, fmt.Errorf("DeviceLogin is not supported in v2 of the Azure Packer Plugin, however you can use the Azure CLI `az login --use-device-code` to use a device code, and then use CLI authentication")
 	case AuthTypeAzureCLI:
 		authConfig = auth.Credentials{
 			Environment:                       env,
@@ -322,7 +322,6 @@ func buildAuthorizer(ctx context.Context, authOpts NewSDKAuthOptions, env enviro
 	authorizer, err := auth.NewAuthorizerFromCredentials(ctx, authConfig, api)
 	if err != nil {
 		return nil, err
-		//fmt.Errorf("building Resource Manager authorizer from credentials: %+v", err)
 	}
 	return authorizer, nil
 }
@@ -339,5 +338,4 @@ func getObjectIdFromToken(token string) (string, error) {
 		return "", err
 	}
 	return claims["oid"].(string), nil
-
 }
