@@ -37,6 +37,7 @@ import (
 )
 
 func TestBuilderAcc_ManagedDisk_Windows(t *testing.T) {
+	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-managedisk-windows",
 		Type:     "azure-dtl",
@@ -52,6 +53,7 @@ func TestBuilderAcc_ManagedDisk_Windows(t *testing.T) {
 	})
 }
 func TestBuilderAcc_ManagedDisk_Linux_Artifacts(t *testing.T) {
+	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-managedisk-linux",
 		Type:     "azure-dtl",
