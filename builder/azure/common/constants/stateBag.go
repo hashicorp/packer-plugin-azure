@@ -69,4 +69,6 @@ const (
 	ArmKeepOSDisk                                              string = "arm.KeepOSDisk"
 	ArmBuildDiskEncryptionSetId                                string = "arm.ArmBuildDiskEncryptionSetId"
 	ArmSubscription                                            string = "arm.Subscription"
+
+	DtlLabName                         string = "dtl.LabName"
 )

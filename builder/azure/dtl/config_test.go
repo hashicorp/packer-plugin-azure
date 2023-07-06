@@ -266,13 +266,13 @@ func TestConfigShouldAcceptTags(t *testing.T) {
 	}
 
 	value := config.AzureTags["tag01"]
-	if *value != "value01" {
-		t.Errorf("expected AzureTags[\"tag01\"] to have value \"value01\", but got %q", *value)
+	if value != "value01" {
+		t.Errorf("expected AzureTags[\"tag01\"] to have value \"value01\", but got %q", value)
 	}
 
 	value = config.AzureTags["tag02"]
-	if *value != "value02" {
-		t.Errorf("expected AzureTags[\"tag02\"] to have value \"value02\", but got %q", *value)
+	if value != "value02" {
+		t.Errorf("expected AzureTags[\"tag02\"] to have value \"value02\", but got %q", value)
 	}
 }
 
