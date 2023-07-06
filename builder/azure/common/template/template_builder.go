@@ -501,7 +501,7 @@ func (s *TemplateBuilder) SetLicenseType(licenseType string) error {
 	return nil
 }
 
-func (s *TemplateBuilder) SetSecurityProfile(secureBootEnabled bool, vtpmEnabled bool) error {
+func (s *TemplateBuilder) SetSecurityProfile(secureBootEnabled bool, vtpmEnabled bool, encryptionAtHost bool) error {
 	s.setVariable("apiVersion", "2020-12-01") // Required for Trusted Launch
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
@@ -509,10 +509,13 @@ func (s *TemplateBuilder) SetSecurityProfile(secureBootEnabled bool, vtpmEnabled
 	}
 
 	resource.Properties.SecurityProfile = &compute.SecurityProfile{}
-	resource.Properties.SecurityProfile.UefiSettings = &compute.UefiSettings{}
-	resource.Properties.SecurityProfile.SecurityType = compute.SecurityTypesTrustedLaunch
-	resource.Properties.SecurityProfile.UefiSettings.SecureBootEnabled = to.BoolPtr(secureBootEnabled)
-	resource.Properties.SecurityProfile.UefiSettings.VTpmEnabled = to.BoolPtr(vtpmEnabled)
+	if secureBootEnabled || vtpmEnabled {
+		resource.Properties.SecurityProfile.UefiSettings = &compute.UefiSettings{}
+		resource.Properties.SecurityProfile.SecurityType = compute.SecurityTypesTrustedLaunch
+		resource.Properties.SecurityProfile.UefiSettings.SecureBootEnabled = to.BoolPtr(secureBootEnabled)
+		resource.Properties.SecurityProfile.UefiSettings.VTpmEnabled = to.BoolPtr(vtpmEnabled)
+	}
+	resource.Properties.SecurityProfile.EncryptionAtHost = to.BoolPtr(encryptionAtHost)
 
 	return nil
 }
