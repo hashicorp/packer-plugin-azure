@@ -45,6 +45,7 @@ import (
 const DeviceLoginAcceptanceTest = "DEVICELOGIN_TEST"
 
 func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG(t *testing.T) {
+	t.Parallel()
 	if os.Getenv("AZURE_CLI_AUTH") == "" {
 		t.Skip("Azure CLI Acceptance tests skipped unless env 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
 		return
@@ -82,6 +83,7 @@ func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG(t *testing.T) {
 }
 
 func TestBuilderAcc_SharedImageGallery_WindowsSIG(t *testing.T) {
+	t.Parallel()
 	if os.Getenv("AZURE_CLI_AUTH") == "" {
 		t.Skip("Azure CLI Acceptance tests skipped unless env 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
 		return
@@ -117,6 +119,7 @@ func TestBuilderAcc_SharedImageGallery_WindowsSIG(t *testing.T) {
 }
 
 func TestBuilderAcc_ManagedDisk_Windows(t *testing.T) {
+	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-managedisk-windows",
 		Type:     "azure-arm",
@@ -133,6 +136,7 @@ func TestBuilderAcc_ManagedDisk_Windows(t *testing.T) {
 }
 
 func TestBuilderAcc_ManagedDisk_Windows_Build_Resource_Group(t *testing.T) {
+	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-managedisk-windows-build-resource-group",
 		Type:     "azure-arm",
@@ -149,6 +153,7 @@ func TestBuilderAcc_ManagedDisk_Windows_Build_Resource_Group(t *testing.T) {
 }
 
 func TestBuilderAcc_ManagedDisk_Windows_Build_Resource_Group_Additional_Disk(t *testing.T) {
+	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-managedisk-windows-build-resource-group-additional-disk",
 		Type:     "azure-arm",
@@ -165,6 +170,7 @@ func TestBuilderAcc_ManagedDisk_Windows_Build_Resource_Group_Additional_Disk(t *
 }
 
 func TestBuilderAcc_ManagedDisk_Windows_DeviceLogin(t *testing.T) {
+	t.Parallel()
 	if os.Getenv(DeviceLoginAcceptanceTest) == "" {
 		t.Skipf("Device Login Acceptance tests skipped unless env '%s' set, as its requires manual step during execution", DeviceLoginAcceptanceTest)
 		return
@@ -185,6 +191,7 @@ func TestBuilderAcc_ManagedDisk_Windows_DeviceLogin(t *testing.T) {
 }
 
 func TestBuilderAcc_ManagedDisk_Linux(t *testing.T) {
+	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-managedisk-linux",
 		Type:     "azure-arm",
@@ -201,6 +208,7 @@ func TestBuilderAcc_ManagedDisk_Linux(t *testing.T) {
 }
 
 func TestBuilderAcc_ManagedDisk_Linux_DeviceLogin(t *testing.T) {
+	t.Parallel()
 	if os.Getenv(DeviceLoginAcceptanceTest) == "" {
 		t.Skipf("Device Login Acceptance tests skipped unless env '%s' set, as its requires manual step during execution", DeviceLoginAcceptanceTest)
 		return
@@ -221,6 +229,7 @@ func TestBuilderAcc_ManagedDisk_Linux_DeviceLogin(t *testing.T) {
 }
 
 func TestBuilderAcc_ManagedDisk_Linux_AzureCLI(t *testing.T) {
+	t.Parallel()
 	if os.Getenv("AZURE_CLI_AUTH") == "" {
 		t.Skip("Azure CLI Acceptance tests skipped unless env 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
 		return
@@ -242,6 +251,7 @@ func TestBuilderAcc_ManagedDisk_Linux_AzureCLI(t *testing.T) {
 }
 
 func TestBuilderAcc_Blob_Windows(t *testing.T) {
+	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-blob-windows",
 		Type:     "azure-arm",
@@ -258,6 +268,7 @@ func TestBuilderAcc_Blob_Windows(t *testing.T) {
 }
 
 func TestBuilderAcc_Blob_Linux(t *testing.T) {
+	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-blob-linux",
 		Type:     "azure-arm",
@@ -274,6 +285,7 @@ func TestBuilderAcc_Blob_Linux(t *testing.T) {
 }
 
 func TestBuilderUserData_Linux(t *testing.T) {
+	t.Parallel()
 	tmpfile, err := ioutil.TempFile("", "userdata")
 	if err != nil {
 		t.Fatalf("failed creating tempfile: %s", err)
@@ -313,6 +325,7 @@ var windowsSIGTemplate []byte
 var armLinuxSpecialziedSIGTemplate []byte
 
 func TestBuilderAcc_rsaSHA2OnlyServer(t *testing.T) {
+	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-ubuntu-jammy-linux",
 		Type:     "azure-arm",
