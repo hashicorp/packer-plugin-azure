@@ -9,7 +9,7 @@ variable "ssh_password" {
 }
 
 variable "ssh_private_key_location" {
-  default = "${env("ARM_SSH_PRIVATE_KEY_LOCATION")}"
+  default = "${env("ARM_SSH_PRIVATE_KEY_FILE")}"
   type = string
 }
 

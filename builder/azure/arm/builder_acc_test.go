@@ -11,7 +11,7 @@ package arm
 // * ARM_SUBSCRIPTION_ID
 // * ARM_STORAGE_ACCOUNT
 // * AZURE_SSH_PASS - In our Linux SIG test we build two specialized images, this requires setting a shared password for both builds
-// * ARM_SSH_PRIVATE_KEY_LOCATION - the file location of a PEM encoded SSH private key,
+// * ARM_SSH_PRIVATE_KEY_FILE - the file location of a PEM encoded SSH private key,
 //
 // The subscription in question should have a resource group
 // called "packer-acceptance-test" in "South Central US" region. The
@@ -62,8 +62,8 @@ func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG_WithChildImage(t
 		return
 	}
 
-	if os.Getenv("ARM_SSH_PRIVATE_KEY_LOCATION") == "" {
-		t.Fatalf("To run this test set a valid ssh private key location in ARM_SSH_PRIVATE_KEY_LOCATION")
+	if os.Getenv("ARM_SSH_PRIVATE_KEY_FILE") == "" {
+		t.Fatalf("To run this test set a valid ssh private key location in ARM_SSH_PRIVATE_KEY_FILE")
 		return
 	}
 

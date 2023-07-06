@@ -78,7 +78,7 @@ func GetSpecializedVirtualMachineDeployment(config *Config) (*resources.Deployme
 		CommandToExecute:           &template.TemplateParameter{Value: config.CustomScript},
 	}
 
-	err = builder.SetSpecializedVM()
+	err = builder.ClearOsProfile()
 	if err != nil {
 		return nil, err
 	}
