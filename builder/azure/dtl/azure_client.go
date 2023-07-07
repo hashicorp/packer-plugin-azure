@@ -17,9 +17,11 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	hashiDisksSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
 	hashiGalleryImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
 	hashiGalleryImageVersionsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 	hashiDTLSDK "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15"
+	hashiVaultsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/vaults"
 	hashiNetworkSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01"
 	"github.com/hashicorp/go-azure-sdk/sdk/auth"
 	authWrapper "github.com/hashicorp/go-azure-sdk/sdk/auth/autorest"
@@ -27,6 +29,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 	"github.com/hashicorp/packer-plugin-azure/version"
 	"github.com/hashicorp/packer-plugin-sdk/useragent"
+	giovanniBlobStorageSDK "github.com/tombuildsstuff/giovanni/storage/2020-08-04/blob/blobs"
 )
 
 const (
@@ -37,8 +40,11 @@ type AzureClient struct {
 	InspectorMaxLength int
 	LastError          azureErrorResponse
 
+	GiovanniBlobClient giovanniBlobStorageSDK.Client
+	hashiDisksSDK.DisksClient
 	hashiVMSDK.VirtualMachinesClient
 	hashiImagesSDK.ImagesClient
+	hashiVaultsSDK.VaultsClient
 	NetworkMetaClient hashiNetworkSDK.Client
 	hashiGalleryImageVersionsSDK.GalleryImageVersionsClient
 	hashiGalleryImagesSDK.GalleryImagesClient
@@ -112,6 +118,10 @@ func NewAzureClient(ctx context.Context, subscriptionID, resourceGroupName strin
 	if err != nil {
 		return nil, nil, err
 	}
+	storageAccountAuthorizer, err := buildStorageAuthorizer(ctx, newSdkAuthOptions, *cloud)
+	if err != nil {
+		return nil, nil, err
+	}
 	dtlMetaClient := hashiDTLSDK.NewClientWithBaseURI(*resourceManagerEndpoint, func(c *autorest.Client) {
 		c.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
 		c.UserAgent = "some-user-agent"
@@ -148,6 +158,11 @@ func NewAzureClient(ctx context.Context, subscriptionID, resourceGroupName strin
 		return nil, nil, err
 	}
 	azureClient.NetworkMetaClient = *networkMetaClient
+	blobClient := giovanniBlobStorageSDK.New()
+	azureClient.GiovanniBlobClient = blobClient
+	azureClient.GiovanniBlobClient.Authorizer = authWrapper.AutorestAuthorizer(storageAccountAuthorizer)
+	azureClient.GiovanniBlobClient.Client.RequestInspector = withInspection(maxlen)
+	azureClient.GiovanniBlobClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
 	token, err := resourceManagerAuthorizer.Token(ctx, &http.Request{})
 	if err != nil {
 		return nil, nil, err

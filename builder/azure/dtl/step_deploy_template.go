@@ -12,10 +12,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
+	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	hashiDisksSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
 	hashiNetworkSecurityGroupsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/networksecuritygroups"
 	hashiVirtualNetworksSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/virtualnetworks"
-	hashiDeploymentOperationsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deploymentoperations"
-	hashiDeploymentsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
+	giovanniBlobStorageSDK "github.com/tombuildsstuff/giovanni/storage/2020-08-04/blob/blobs"
 
 	hashiLabsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/labs"
 	hashiDTLVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/virtualmachines"
@@ -28,9 +29,9 @@ import (
 type StepDeployTemplate struct {
 	client     *AzureClient
 	deploy     func(ctx context.Context, resourceGroupName string, deploymentName string, state multistep.StateBag) error
-	delete     func(ctx context.Context, client *AzureClient, resourceType string, resourceName string, resourceGroupName string) error
-	disk       func(ctx context.Context, resourceGroupName string, computeName string) (string, string, error)
-	deleteDisk func(ctx context.Context, imageType string, imageName string, resourceGroupName string) error
+	delete     func(ctx context.Context, client *AzureClient, subscriptionID, resourceType string, resourceName string, resourceGroupName string) error
+	disk       func(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (string, string, error)
+	deleteDisk func(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool, subscriptionId string, storageAccountName string) error
 	say        func(message string)
 	error      func(e error)
 	config     *Config
@@ -170,33 +171,44 @@ func (s *StepDeployTemplate) Run(ctx context.Context, state multistep.StateBag) 
 		s.error, state)
 }
 
-func (s *StepDeployTemplate) getImageDetails(ctx context.Context, resourceGroupName string, computeName string) (string, string, error) {
+func (s *StepDeployTemplate) getImageDetails(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (string, string, error) {
 	//We can't depend on constants.ArmOSDiskVhd being set
-	var imageName string
-	var imageType string
-	vm, err := s.client.VirtualMachinesClient.Get(ctx, resourceGroupName, computeName, "")
+	var imageName, imageType string
+	vmID := hashiVMSDK.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)
+	vm, err := s.client.VirtualMachinesClient.Get(ctx, vmID, hashiVMSDK.DefaultGetOperationOptions())
 	if err != nil {
 		return imageName, imageType, err
-	} else {
-		if vm.StorageProfile.OsDisk.Vhd != nil {
-			imageType = "image"
-			imageName = *vm.StorageProfile.OsDisk.Vhd.URI
-		} else {
-			imageType = "Microsoft.Compute/disks"
-			imageName = *vm.StorageProfile.OsDisk.ManagedDisk.ID
-		}
 	}
+	if err != nil {
+		s.say(s.client.LastError.Error())
+		return "", "", err
+	}
+	if model := vm.Model; model == nil {
+		return "", "", errors.New("TODO")
+	}
+	if vm.Model.Properties.StorageProfile.OsDisk.Vhd != nil {
+		imageType = "image"
+		imageName = *vm.Model.Properties.StorageProfile.OsDisk.Vhd.Uri
+		return imageType, imageName, nil
+	}
+
+	if vm.Model.Properties.StorageProfile.OsDisk.ManagedDisk.Id == nil {
+		return "", "", fmt.Errorf("unable to obtain a OS disk for %q, please check that the instance has been created", computeName)
+	}
+
+	imageType = "Microsoft.Compute/disks"
+	imageName = *vm.Model.Properties.StorageProfile.OsDisk.ManagedDisk.Id
+
 	return imageType, imageName, nil
 }
 
 func deleteResource(ctx context.Context, client *AzureClient, subscriptionId string, resourceType string, resourceName string, resourceGroupName string) error {
 	switch resourceType {
 	case "Microsoft.Compute/virtualMachines":
-		f, err := client.VirtualMachinesClient.Delete(ctx, resourceGroupName, resourceName)
-		if err == nil {
-			err = f.WaitForCompletionRef(ctx, client.VirtualMachinesClient.Client)
+		vmID := hashiVMSDK.NewVirtualMachineID(subscriptionId, resourceGroupName, resourceName)
+		if err := client.VirtualMachinesClient.DeleteThenPoll(ctx, vmID, hashiVMSDK.DefaultDeleteOperationOptions()); err != nil {
+			return err
 		}
-		return err
 	case "Microsoft.KeyVault/vaults":
 		id := commonids.NewKeyVaultID(subscriptionId, resourceGroupName, resourceName)
 		_, err := client.VaultsClient.Delete(ctx, id)
