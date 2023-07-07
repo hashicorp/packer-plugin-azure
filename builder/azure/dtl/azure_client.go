@@ -102,7 +102,7 @@ type NewSDKAuthOptions struct {
 
 // Returns an Azure Client used for the Azure Resource Manager
 // Also returns the Azure object ID for the authentication method used in the build
-func NewAzureClient(ctx context.Context, subscriptionID, resourceGroupName string,
+func NewAzureClient(ctx context.Context, subscriptionID string,
 	cloud *environments.Environment, SharedGalleryTimeout time.Duration, CustomImageCaptureTimeout time.Duration, PollingDuration time.Duration, newSdkAuthOptions NewSDKAuthOptions) (*AzureClient, *string, error) {
 
 	var azureClient = &AzureClient{}

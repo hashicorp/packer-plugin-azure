@@ -61,7 +61,9 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupNa
 	subscriptionId := s.config.ClientConfig.SubscriptionID
 	labName := s.config.LabName
 
+	// TODO Talk to Tom(s) about this, we have to have two different Labs IDs in different calls, so we can probably move this into the commonids package
 	labResourceId := hashiDTLVMSDK.NewLabID(subscriptionId, resourceGroupName, labName)
+	labId := hashiLabsSDK.NewLabID(subscriptionId, s.config.tmpResourceGroupName, labName)
 	vmlistPage, err := s.client.DtlMetaClient.VirtualMachines.List(ctx, labResourceId, hashiDTLVMSDK.DefaultListOperationOptions())
 	if err != nil {
 		s.say(s.client.LastError.Error())
@@ -81,7 +83,6 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupNa
 		return err
 	}
 
-	labId := hashiLabsSDK.NewLabID(subscriptionId, s.config.tmpResourceGroupName, labName)
 	err = s.client.DtlMetaClient.Labs.CreateEnvironmentThenPoll(ctx, labId, *labMachine)
 	if err != nil {
 		s.say(s.client.LastError.Error())
