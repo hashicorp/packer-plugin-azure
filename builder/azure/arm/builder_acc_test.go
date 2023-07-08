@@ -10,7 +10,6 @@ package arm
 // * ARM_CLIENT_SECRET
 // * ARM_SUBSCRIPTION_ID
 // * ARM_STORAGE_ACCOUNT
-// * AZURE_SSH_PASS - In our Linux SIG test we build two specialized images, this requires setting a shared password for both builds
 // * ARM_SSH_PRIVATE_KEY_FILE - the file location of a PEM encoded SSH private key,
 //
 // The subscription in question should have a resource group
@@ -52,13 +51,7 @@ const DeviceLoginAcceptanceTest = "DEVICELOGIN_TEST"
 func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG_WithChildImage(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("AZURE_CLI_AUTH") == "" {
-		t.Skip("Azure CLI Acceptance tests skipped unless env 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
-		return
-	}
-
-	// A password is required to be shared between builds as Specialized Images do not have their main user profile removed
-	if os.Getenv("ARM_SSH_PASS") == "" {
-		t.Fatalf("To run this test set a valid ssh password in the env variable ARM_SSH_PASS")
+		t.Fatalf("Azure CLI Acceptance tests require 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
 		return
 	}
 
@@ -117,7 +110,7 @@ func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG_WithChildImage(t
 func TestBuilderAcc_SharedImageGallery_WindowsSIG(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("AZURE_CLI_AUTH") == "" {
-		t.Skip("Azure CLI Acceptance tests skipped unless env 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
+		t.Fatalf("Azure CLI Acceptance tests require 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
 		return
 	}
 
@@ -262,7 +255,7 @@ func TestBuilderAcc_ManagedDisk_Linux_DeviceLogin(t *testing.T) {
 func TestBuilderAcc_ManagedDisk_Linux_AzureCLI(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("AZURE_CLI_AUTH") == "" {
-		t.Skip("Azure CLI Acceptance tests skipped unless env 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
+		t.Fatalf("Azure CLI Acceptance tests require 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
 		return
 	}
 

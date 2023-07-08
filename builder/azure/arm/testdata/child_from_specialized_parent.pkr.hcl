@@ -2,12 +2,6 @@
 # SPDX-License-Identifier: MPL-2.0
 locals { timestamp = regex_replace(timestamp(), "[- TZ:]", "") }
 
-variable "ssh_password" {
-  type = string
-  default = "${env("ARM_SSH_PASS")}"
-  sensitive = true
-}
-
 variable "subscription" {
   default = "${env("ARM_SUBSCRIPTION_ID")}"
   type = string
@@ -24,7 +18,6 @@ source "azure-arm" "linux-sig" {
   location           = "South Central US"
   vm_size            = "Standard_D4ps_v5"
   ssh_username       = "packer"
-  ssh_password       = var.ssh_password
   ssh_private_key_file = var.ssh_private_key_location
   communicator       = "ssh"
   shared_image_gallery{
