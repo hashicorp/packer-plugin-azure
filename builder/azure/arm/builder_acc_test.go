@@ -50,6 +50,12 @@ const DeviceLoginAcceptanceTest = "DEVICELOGIN_TEST"
 // Then a second Specialized ARM64 Linux VM that uses the first as its source/parent image
 func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG_WithChildImage(t *testing.T) {
 	t.Parallel()
+
+	if os.Getenv("PACKER_ACC") == "" {
+		t.Skip("Skipping acceptance test as environment variable `PACKER_ACC` is not set")
+		return
+	}
+
 	if os.Getenv("AZURE_CLI_AUTH") == "" {
 		t.Fatalf("Azure CLI Acceptance tests require 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
 		return
@@ -109,6 +115,10 @@ func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG_WithChildImage(t
 
 func TestBuilderAcc_SharedImageGallery_WindowsSIG(t *testing.T) {
 	t.Parallel()
+	if os.Getenv("PACKER_ACC") == "" {
+		t.Skip("Skipping acceptance test as environment variable `PACKER_ACC` is not set")
+		return
+	}
 	if os.Getenv("AZURE_CLI_AUTH") == "" {
 		t.Fatalf("Azure CLI Acceptance tests require 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
 		return
@@ -254,6 +264,10 @@ func TestBuilderAcc_ManagedDisk_Linux_DeviceLogin(t *testing.T) {
 
 func TestBuilderAcc_ManagedDisk_Linux_AzureCLI(t *testing.T) {
 	t.Parallel()
+	if os.Getenv("PACKER_ACC") == "" {
+		t.Skip("Skipping acceptance test as environment variable `PACKER_ACC` is not set")
+		return
+	}
 	if os.Getenv("AZURE_CLI_AUTH") == "" {
 		t.Fatalf("Azure CLI Acceptance tests require 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
 		return
