@@ -355,7 +355,6 @@ func (s *TemplateBuilder) SetSpot(policy compute.VirtualMachineEvictionPolicyTyp
 
 	resource.Properties.Priority = to.StringPtr("Spot")
 	resource.Properties.EvictionPolicy = &policy
-
 	if price == 0 {
 		price = -1
 	}
@@ -517,6 +516,15 @@ func (s *TemplateBuilder) SetSecurityProfile(secureBootEnabled bool, vtpmEnabled
 	}
 	resource.Properties.SecurityProfile.EncryptionAtHost = to.BoolPtr(encryptionAtHost)
 
+	return nil
+}
+
+func (s *TemplateBuilder) ClearOsProfile() error {
+	resource, err := s.getResourceByType(resourceVirtualMachine)
+	if err != nil {
+		return err
+	}
+	resource.Properties.OsProfile = nil
 	return nil
 }
 

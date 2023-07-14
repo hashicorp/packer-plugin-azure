@@ -69,6 +69,7 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 
 			// First check if the parent Gallery Image Version source ID is a managed image, if so we use that as our source image name
 			parentSourceID := *image.GalleryImageVersionProperties.StorageProfile.Source.ID
+
 			isSIGSourcedFromManagedImage, _ := regexp.MatchString("/subscriptions/[^/]*/resourceGroups/[^/]*/providers/Microsoft.Compute/images/[^/]*$", parentSourceID)
 
 			if isSIGSourcedFromManagedImage {
