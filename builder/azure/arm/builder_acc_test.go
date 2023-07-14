@@ -10,7 +10,7 @@ package arm
 // * ARM_CLIENT_SECRET
 // * ARM_SUBSCRIPTION_ID
 // * ARM_STORAGE_ACCOUNT
-// * ARM_SSH_PRIVATE_KEY_FILE - the file location of a PEM encoded SSH private key,
+// * ARM_SSH_PRIVATE_KEY_FILE - the file location of a PEM encoded RSA SSH Private Key (ed25519 is not supported by Azure),
 //
 // The subscription in question should have a resource group
 // called "packer-acceptance-test" in "South Central US" region. The
