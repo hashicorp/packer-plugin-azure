@@ -214,7 +214,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	}
 	sourceImageSpecialized := false
 	if b.config.SharedGallery.GalleryName != "" {
-		galleryImage, err := azureClient.GalleryImagesClient.Get(ctx, b.config.SharedGallery.ResourceGroup, b.config.SharedGallery.GalleryName, b.config.SharedGallery.ImageName)
+		client := azureClient.GalleryImagesClient
+		client.SubscriptionID = b.config.SharedGallery.Subscription
+		galleryImage, err := client.Get(ctx, b.config.SharedGallery.ResourceGroup, b.config.SharedGallery.GalleryName, b.config.SharedGallery.ImageName)
 		if err != nil {
 			return nil, fmt.Errorf("the parent Shared Gallery Image '%s' from which to source the managed image version to does not exist in the resource group '%s' or does not contain managed image '%s'", b.config.SharedGallery.GalleryName, b.config.SharedGallery.ResourceGroup, b.config.SharedGallery.ImageName)
 		}
