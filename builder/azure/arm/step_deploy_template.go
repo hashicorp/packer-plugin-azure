@@ -13,12 +13,12 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
-	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
-	hashiDisksSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
-	hashiNetworkSecurityGroupsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/networksecuritygroups"
-	hashiVirtualNetworksSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/virtualnetworks"
-	hashiDeploymentOperationsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deploymentoperations"
-	hashiDeploymentsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/networksecuritygroups"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/virtualnetworks"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deploymentoperations"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -156,7 +156,7 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, subscriptionId 
 	if err != nil {
 		return err
 	}
-	id := hashiDeploymentsSDK.NewResourceGroupProviderDeploymentID(subscriptionId, resourceGroupName, deploymentName)
+	id := deployments.NewResourceGroupProviderDeploymentID(subscriptionId, resourceGroupName, deploymentName)
 	err = s.client.DeploymentsClient.CreateOrUpdateThenPoll(ctx, id, *deployment)
 	if err != nil {
 		s.say(s.client.LastError.Error())
@@ -172,7 +172,7 @@ func (s *StepDeployTemplate) deleteDeploymentObject(ctx context.Context, state m
 	ui := state.Get("ui").(packersdk.Ui)
 
 	ui.Say(fmt.Sprintf("Removing the created Deployment object: '%s'", deploymentName))
-	id := hashiDeploymentsSDK.NewResourceGroupProviderDeploymentID(subscriptionId, resourceGroupName, deploymentName)
+	id := deployments.NewResourceGroupProviderDeploymentID(subscriptionId, resourceGroupName, deploymentName)
 	err := s.client.DeploymentsClient.DeleteThenPoll(ctx, id)
 	if err != nil {
 		return err
@@ -184,8 +184,8 @@ func (s *StepDeployTemplate) getImageDetails(ctx context.Context, subscriptionId
 	//TODO is this still true?
 	//We can't depend on constants.ArmOSDiskVhd being set
 	var imageName, imageType string
-	vmID := hashiVMSDK.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)
-	vm, err := s.client.VirtualMachinesClient.Get(ctx, vmID, hashiVMSDK.DefaultGetOperationOptions())
+	vmID := virtualmachines.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)
+	vm, err := s.client.VirtualMachinesClient.Get(ctx, vmID, virtualmachines.DefaultGetOperationOptions())
 	if err != nil {
 		return imageName, imageType, err
 	}
@@ -215,8 +215,8 @@ func (s *StepDeployTemplate) getImageDetails(ctx context.Context, subscriptionId
 func deleteResource(ctx context.Context, client *AzureClient, subscriptionId string, resourceType string, resourceName string, resourceGroupName string) error {
 	switch resourceType {
 	case "Microsoft.Compute/virtualMachines":
-		vmID := hashiVMSDK.NewVirtualMachineID(subscriptionId, resourceGroupName, resourceName)
-		if err := client.VirtualMachinesClient.DeleteThenPoll(ctx, vmID, hashiVMSDK.DefaultDeleteOperationOptions()); err != nil {
+		vmID := virtualmachines.NewVirtualMachineID(subscriptionId, resourceGroupName, resourceName)
+		if err := client.VirtualMachinesClient.DeleteThenPoll(ctx, vmID, virtualmachines.DefaultDeleteOperationOptions()); err != nil {
 			return err
 		}
 	case "Microsoft.KeyVault/vaults":
@@ -228,11 +228,11 @@ func deleteResource(ctx context.Context, client *AzureClient, subscriptionId str
 		err := client.NetworkMetaClient.NetworkInterfaces.DeleteThenPoll(ctx, interfaceID)
 		return err
 	case "Microsoft.Network/virtualNetworks":
-		vnetID := hashiVirtualNetworksSDK.NewVirtualNetworkID(subscriptionId, resourceGroupName, resourceName)
+		vnetID := virtualnetworks.NewVirtualNetworkID(subscriptionId, resourceGroupName, resourceName)
 		err := client.NetworkMetaClient.VirtualNetworks.DeleteThenPoll(ctx, vnetID)
 		return err
 	case "Microsoft.Network/networkSecurityGroups":
-		secGroupId := hashiNetworkSecurityGroupsSDK.NewNetworkSecurityGroupID(subscriptionId, resourceGroupName, resourceName)
+		secGroupId := networksecuritygroups.NewNetworkSecurityGroupID(subscriptionId, resourceGroupName, resourceName)
 		err := client.NetworkMetaClient.NetworkSecurityGroups.DeleteThenPoll(ctx, secGroupId)
 		return err
 	case "Microsoft.Network/publicIPAddresses":
@@ -250,7 +250,7 @@ func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, 
 	if isManagedDisk {
 		xs := strings.Split(imageName, "/")
 		diskName := xs[len(xs)-1]
-		diskId := hashiDisksSDK.NewDiskID(subscriptionId, resourceGroupName, diskName)
+		diskId := disks.NewDiskID(subscriptionId, resourceGroupName, diskName)
 
 		if err := s.client.DisksClient.DeleteThenPoll(ctx, diskId); err != nil {
 			return err
@@ -274,9 +274,9 @@ func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, 
 
 func (s *StepDeployTemplate) deleteDeploymentResources(ctx context.Context, subscriptionId, deploymentName, resourceGroupName string) error {
 	var maxResources int64 = 50
-	options := hashiDeploymentOperationsSDK.DefaultListOperationOptions()
+	options := deploymentoperations.DefaultListOperationOptions()
 	options.Top = &maxResources
-	id := hashiDeploymentOperationsSDK.NewResourceGroupDeploymentID(subscriptionId, resourceGroupName, deploymentName)
+	id := deploymentoperations.NewResourceGroupDeploymentID(subscriptionId, resourceGroupName, deploymentName)
 	deploymentOperations, err := s.client.DeploymentOperationsClient.ListComplete(ctx, id, options)
 	if err != nil {
 		s.reportIfError(err, resourceGroupName)

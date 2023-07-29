@@ -10,10 +10,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
-	"github.com/hashicorp/packer-plugin-sdk/packer/registry/image"
 	registryimage "github.com/hashicorp/packer-plugin-sdk/packer/registry/image"
 )
 
@@ -63,7 +62,7 @@ func (a *Artifact) String() string {
 }
 
 func (a *Artifact) State(name string) interface{} {
-	if name == image.ArtifactStateURI {
+	if name == registryimage.ArtifactStateURI {
 		return a.hcpPackerRegistryMetadata()
 	}
 	return a.StateData[name]
@@ -75,7 +74,7 @@ func (a *Artifact) Destroy() error {
 	for _, resource := range a.Resources {
 		log.Printf("Deleting resource %s", resource)
 
-		id, err := azure.ParseResourceID(resource)
+		id, err := client.ParseResourceID(resource)
 		if err != nil {
 			return fmt.Errorf("Unable to parse resource id (%s): %v", resource, err)
 		}
@@ -85,14 +84,10 @@ func (a *Artifact) Destroy() error {
 
 		switch restype {
 		case "microsoft.compute/images":
-			res, err := a.AzureClientSet.ImagesClient().Delete(ctx, id.ResourceGroup, id.ResourceName)
+			imageID := images.NewImageID(a.AzureClientSet.SubscriptionID(), id.ResourceGroup, id.ResourceName.String())
+			err := a.AzureClientSet.ImagesClient().DeleteThenPoll(ctx, imageID)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("Unable to initiate deletion of resource (%s): %v", resource, err))
-			} else {
-				err := res.WaitForCompletionRef(ctx, a.AzureClientSet.PollClient())
-				if err != nil {
-					errs = append(errs, fmt.Errorf("Unable to complete deletion of resource (%s): %v", resource, err))
-				}
 			}
 		default:
 			errs = append(errs, fmt.Errorf("Don't know how to delete resources of type %s (%s)", resource, restype))

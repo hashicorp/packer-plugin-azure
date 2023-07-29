@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	hashiSecretsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/secrets"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/secrets"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -16,7 +16,7 @@ import (
 type StepCertificateInKeyVault struct {
 	config      *Config
 	client      *AzureClient
-	set         func(ctx context.Context, id hashiSecretsSDK.SecretId) error
+	set         func(ctx context.Context, id secrets.SecretId) error
 	say         func(message string)
 	error       func(e error)
 	certificate string
@@ -35,9 +35,9 @@ func NewStepCertificateInKeyVault(client *AzureClient, ui packersdk.Ui, config *
 	return step
 }
 
-func (s *StepCertificateInKeyVault) setCertificate(ctx context.Context, id hashiSecretsSDK.SecretId) error {
-	_, err := s.client.SecretsClient.CreateOrUpdate(ctx, id, hashiSecretsSDK.SecretCreateOrUpdateParameters{
-		Properties: hashiSecretsSDK.SecretProperties{
+func (s *StepCertificateInKeyVault) setCertificate(ctx context.Context, id secrets.SecretId) error {
+	_, err := s.client.SecretsClient.CreateOrUpdate(ctx, id, secrets.SecretCreateOrUpdateParameters{
+		Properties: secrets.SecretProperties{
 			Value: &s.certificate,
 		},
 	})
@@ -49,7 +49,7 @@ func (s *StepCertificateInKeyVault) Run(ctx context.Context, state multistep.Sta
 	var keyVaultName = state.Get(constants.ArmKeyVaultName).(string)
 	var subscriptionId = state.Get(constants.ArmSubscription).(string)
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
-	id := hashiSecretsSDK.NewSecretID(subscriptionId, resourceGroupName, keyVaultName, DefaultSecretName)
+	id := secrets.NewSecretID(subscriptionId, resourceGroupName, keyVaultName, DefaultSecretName)
 	err := s.set(ctx, id)
 	if err != nil {
 		s.error(fmt.Errorf("Error setting winrm cert in custom keyvault: %s", err))

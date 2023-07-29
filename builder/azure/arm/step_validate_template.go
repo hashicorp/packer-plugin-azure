@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	hashiDeploymentsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -42,7 +42,7 @@ func (s *StepValidateTemplate) validateTemplate(ctx context.Context, subscriptio
 	if err != nil {
 		return err
 	}
-	id := hashiDeploymentsSDK.NewResourceGroupProviderDeploymentID(subscriptionId, resourceGroupName, deploymentName)
+	id := deployments.NewResourceGroupProviderDeploymentID(subscriptionId, resourceGroupName, deploymentName)
 	_, err = s.client.DeploymentsClient.Validate(ctx, id, *deployment)
 	if err != nil {
 		s.say(s.client.LastError.Error())

@@ -7,8 +7,8 @@ import (
 	"context"
 	"fmt"
 
-	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
-	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -16,10 +16,10 @@ import (
 
 type StepCaptureImage struct {
 	client              *AzureClient
-	generalizeVM        func(ctx context.Context, vmId hashiVMSDK.VirtualMachineId) error
-	getVMInternalID     func(ctx context.Context, vmId hashiVMSDK.VirtualMachineId) (string, error)
-	captureVhd          func(ctx context.Context, vmId hashiVMSDK.VirtualMachineId, parameters *hashiVMSDK.VirtualMachineCaptureParameters) error
-	captureManagedImage func(ctx context.Context, subscriptionId string, resourceGroupName string, imageName string, parameters *hashiImagesSDK.Image) error
+	generalizeVM        func(ctx context.Context, vmId virtualmachines.VirtualMachineId) error
+	getVMInternalID     func(ctx context.Context, vmId virtualmachines.VirtualMachineId) (string, error)
+	captureVhd          func(ctx context.Context, vmId virtualmachines.VirtualMachineId, parameters *virtualmachines.VirtualMachineCaptureParameters) error
+	captureManagedImage func(ctx context.Context, subscriptionId string, resourceGroupName string, imageName string, parameters *images.Image) error
 	say                 func(message string)
 	error               func(e error)
 }
@@ -42,7 +42,7 @@ func NewStepCaptureImage(client *AzureClient, ui packersdk.Ui) *StepCaptureImage
 	return step
 }
 
-func (s *StepCaptureImage) generalize(ctx context.Context, vmId hashiVMSDK.VirtualMachineId) error {
+func (s *StepCaptureImage) generalize(ctx context.Context, vmId virtualmachines.VirtualMachineId) error {
 	_, err := s.client.Generalize(ctx, vmId)
 	if err != nil {
 		s.say(s.client.LastError.Error())
@@ -50,8 +50,8 @@ func (s *StepCaptureImage) generalize(ctx context.Context, vmId hashiVMSDK.Virtu
 	return err
 }
 
-func (s *StepCaptureImage) captureImageFromVM(ctx context.Context, subscriptionId string, resourceGroupName string, imageName string, image *hashiImagesSDK.Image) error {
-	id := hashiImagesSDK.NewImageID(subscriptionId, resourceGroupName, imageName)
+func (s *StepCaptureImage) captureImageFromVM(ctx context.Context, subscriptionId string, resourceGroupName string, imageName string, image *images.Image) error {
+	id := images.NewImageID(subscriptionId, resourceGroupName, imageName)
 	err := s.client.ImagesClient.CreateOrUpdateThenPoll(ctx, id, *image)
 	if err != nil {
 		s.say(s.client.LastError.Error())
@@ -59,7 +59,7 @@ func (s *StepCaptureImage) captureImageFromVM(ctx context.Context, subscriptionI
 	return err
 }
 
-func (s *StepCaptureImage) captureImage(ctx context.Context, vmId hashiVMSDK.VirtualMachineId, parameters *hashiVMSDK.VirtualMachineCaptureParameters) error {
+func (s *StepCaptureImage) captureImage(ctx context.Context, vmId virtualmachines.VirtualMachineId, parameters *virtualmachines.VirtualMachineCaptureParameters) error {
 	if err := s.client.VirtualMachinesClient.CaptureThenPoll(ctx, vmId, *parameters); err != nil {
 		s.say(s.client.LastError.Error())
 		return err
@@ -67,8 +67,8 @@ func (s *StepCaptureImage) captureImage(ctx context.Context, vmId hashiVMSDK.Vir
 	return nil
 }
 
-func (s *StepCaptureImage) getVMID(ctx context.Context, vmId hashiVMSDK.VirtualMachineId) (string, error) {
-	vmResponse, err := s.client.VirtualMachinesClient.Get(ctx, vmId, hashiVMSDK.DefaultGetOperationOptions())
+func (s *StepCaptureImage) getVMID(ctx context.Context, vmId virtualmachines.VirtualMachineId) (string, error) {
+	vmResponse, err := s.client.VirtualMachinesClient.Get(ctx, vmId, virtualmachines.DefaultGetOperationOptions())
 	if err != nil {
 		return "", err
 	}
@@ -84,14 +84,14 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 	var computeName = state.Get(constants.ArmComputeName).(string)
 	var location = state.Get(constants.ArmLocation).(string)
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
-	var vmCaptureParameters = state.Get(constants.ArmNewVirtualMachineCaptureParameters).(*hashiVMSDK.VirtualMachineCaptureParameters)
-	var imageParameters = state.Get(constants.ArmImageParameters).(*hashiImagesSDK.Image)
+	var vmCaptureParameters = state.Get(constants.ArmNewVirtualMachineCaptureParameters).(*virtualmachines.VirtualMachineCaptureParameters)
+	var imageParameters = state.Get(constants.ArmImageParameters).(*images.Image)
 	var subscriptionId = state.Get(constants.ArmSubscription).(string)
 	var isManagedImage = state.Get(constants.ArmIsManagedImage).(bool)
 	var isSIGImage = state.Get(constants.ArmIsSIGImage).(bool)
 	var skipGeneralization = state.Get(constants.ArmSharedImageGalleryDestinationSpecialized).(bool)
 
-	vmId := hashiVMSDK.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)
+	vmId := virtualmachines.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)
 	s.say(fmt.Sprintf(" -> Compute ResourceGroupName : '%s'", resourceGroupName))
 	s.say(fmt.Sprintf(" -> Compute Name              : '%s'", computeName))
 	s.say(fmt.Sprintf(" -> Compute Location          : '%s'", location))

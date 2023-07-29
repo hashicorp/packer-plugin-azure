@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	sdkconfig "github.com/hashicorp/packer-plugin-sdk/template/config"
 )
@@ -128,11 +128,11 @@ func TestConfigShouldBeAbleToOverrideDefaultedValues(t *testing.T) {
 		t.Errorf("Expected 'vm_size' to be set to 'override_vm_size', but found %q!", c.VMSize)
 	}
 
-	if c.managedImageStorageAccountType != hashiVMSDK.StorageAccountTypesPremiumLRS {
+	if c.managedImageStorageAccountType != virtualmachines.StorageAccountTypesPremiumLRS {
 		t.Errorf("Expected 'managed_image_storage_account_type' to be set to 'Premium_LRS', but found %q!", c.managedImageStorageAccountType)
 	}
 
-	if c.diskCachingType != hashiVMSDK.CachingTypesNone {
+	if c.diskCachingType != virtualmachines.CachingTypesNone {
 		t.Errorf("Expected 'disk_caching_type' to be set to 'None', but found %q!", c.diskCachingType)
 	}
 
@@ -505,8 +505,8 @@ func TestConfigShouldDefaultToPublicCloud(t *testing.T) {
 		t.Errorf("Expected 'CloudEnvironmentName' to default to 'Public', but got '%s'.", c.ClientConfig.CloudEnvironmentName)
 	}
 
-	if c.ClientConfig.CloudEnvironment() == nil || c.ClientConfig.CloudEnvironment().Name != "AzurePublicCloud" {
-		t.Errorf("Expected 'cloudEnvironment' to be set to 'AzurePublicCloud', but got '%s'.", c.ClientConfig.CloudEnvironment())
+	if c.ClientConfig.CloudEnvironment() == nil || c.ClientConfig.CloudEnvironment().Name != "Public" {
+		t.Errorf("Expected 'cloudEnvironment' to be set to 'Public', but got '%s'.", c.ClientConfig.CloudEnvironment().Name)
 	}
 }
 
@@ -525,25 +525,25 @@ func TestConfigInstantiatesCorrectAzureEnvironment(t *testing.T) {
 		"communicator":           "none",
 	}
 
-	// user input is fun :)
+	// user input is fun :D
 	var table = []struct {
 		name            string
 		environmentName string
 	}{
-		{"China", "AzureChinaCloud"},
-		{"ChinaCloud", "AzureChinaCloud"},
-		{"AzureChinaCloud", "AzureChinaCloud"},
-		{"aZuReChInAcLoUd", "AzureChinaCloud"},
+		{"China", "China"},
+		{"ChinaCloud", "China"},
+		{"AzureChinaCloud", "China"},
+		{"aZuReChInAcLoUd", "China"},
 
-		{"USGovernment", "AzureUSGovernmentCloud"},
-		{"USGovernmentCloud", "AzureUSGovernmentCloud"},
-		{"AzureUSGovernmentCloud", "AzureUSGovernmentCloud"},
-		{"aZuReUsGoVeRnMeNtClOuD", "AzureUSGovernmentCloud"},
+		{"USGovernment", "USGovernment"},
+		{"USGovernmentCloud", "USGovernment"},
+		{"AzureUSGovernmentCloud", "USGovernment"},
+		{"aZuReUsGoVeRnMeNtClOuD", "USGovernment"},
 
-		{"Public", "AzurePublicCloud"},
-		{"PublicCloud", "AzurePublicCloud"},
-		{"AzurePublicCloud", "AzurePublicCloud"},
-		{"aZuRePuBlIcClOuD", "AzurePublicCloud"},
+		{"Public", "Public"},
+		{"PublicCloud", "Public"},
+		{"AzurePublicCloud", "Public"},
+		{"aZuRePuBlIcClOuD", "Public"},
 	}
 
 	packerConfiguration := getPackerConfiguration()
@@ -557,7 +557,7 @@ func TestConfigInstantiatesCorrectAzureEnvironment(t *testing.T) {
 		}
 
 		if c.ClientConfig.CloudEnvironment() == nil || c.ClientConfig.CloudEnvironment().Name != x.environmentName {
-			t.Errorf("Expected 'cloudEnvironment' to be set to '%s', but got '%s'.", x.environmentName, c.ClientConfig.CloudEnvironment())
+			t.Errorf("Expected 'cloudEnvironment' to be set to '%s', but got '%s'.", x.environmentName, c.ClientConfig.CloudEnvironment().Name)
 		}
 	}
 }
@@ -2367,7 +2367,7 @@ func getArmBuilderConfigurationWithWindows() map[string]string {
 	m["object_id"] = "ignored00"
 	m["tenant_id"] = "ignored00"
 	m["subscription_id"] = "ignored00"
-	m["use_interactive_auth"] = "true"
+	m["use_azure_cli_auth"] = "true"
 	m["winrm_username"] = "ignored00"
 	m["communicator"] = "winrm"
 	m["os_type"] = constants.Target_Windows

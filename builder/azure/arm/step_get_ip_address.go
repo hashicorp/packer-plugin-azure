@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
-	hashiNetworkInterfacesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/networkinterfaces"
-	hashiPublicIPSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/publicipaddresses"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/networkinterfaces"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/publicipaddresses"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -61,7 +61,7 @@ func NewStepGetIPAddress(client *AzureClient, ui packersdk.Ui, endpoint Endpoint
 
 func (s *StepGetIPAddress) getPrivateIP(ctx context.Context, subscriptionId string, resourceGroupName string, ipAddressName string, interfaceName string) (string, error) {
 	intID := commonids.NewNetworkInterfaceID(subscriptionId, resourceGroupName, interfaceName)
-	resp, err := s.client.NetworkMetaClient.NetworkInterfaces.Get(ctx, intID, hashiNetworkInterfacesSDK.DefaultGetOperationOptions())
+	resp, err := s.client.NetworkMetaClient.NetworkInterfaces.Get(ctx, intID, networkinterfaces.DefaultGetOperationOptions())
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return "", err
@@ -72,7 +72,7 @@ func (s *StepGetIPAddress) getPrivateIP(ctx context.Context, subscriptionId stri
 
 func (s *StepGetIPAddress) getPublicIP(ctx context.Context, subscriptionId string, resourceGroupName string, ipAddressName string, interfaceName string) (string, error) {
 	ipID := commonids.NewPublicIPAddressID(subscriptionId, resourceGroupName, ipAddressName)
-	resp, err := s.client.NetworkMetaClient.PublicIPAddresses.Get(ctx, ipID, hashiPublicIPSDK.DefaultGetOperationOptions())
+	resp, err := s.client.NetworkMetaClient.PublicIPAddresses.Get(ctx, ipID, publicipaddresses.DefaultGetOperationOptions())
 	if err != nil {
 		return "", err
 	}

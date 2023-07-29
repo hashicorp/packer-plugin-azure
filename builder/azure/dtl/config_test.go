@@ -160,15 +160,15 @@ func TestConfigShouldTransformToVirtualMachineCaptureParameters(t *testing.T) {
 
 	parameters := config.toVirtualMachineCaptureParameters()
 
-	if *parameters.DestinationContainerName != config.CaptureContainerName {
-		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", *parameters.DestinationContainerName, config.CaptureContainerName)
+	if parameters.DestinationContainerName != config.CaptureContainerName {
+		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", parameters.DestinationContainerName, config.CaptureContainerName)
 	}
 
-	if *parameters.VhdPrefix != config.CaptureNamePrefix {
-		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", *parameters.VhdPrefix, config.CaptureNamePrefix)
+	if parameters.VhdPrefix != config.CaptureNamePrefix {
+		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", parameters.VhdPrefix, config.CaptureNamePrefix)
 	}
 
-	if *parameters.OverwriteVhds != false {
+	if parameters.OverwriteVhds != false {
 		t.Error("Expected OverwriteVhds to be false, but it was not.")
 	}
 }

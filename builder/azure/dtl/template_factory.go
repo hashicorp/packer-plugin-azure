@@ -6,10 +6,10 @@ package dtl
 import (
 	"fmt"
 
-	hashiDTLLabsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/labs"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/labs"
 )
 
-type templateFactoryFuncDtl func(*Config) (*hashiDTLLabsSDK.LabVirtualMachineCreationParameter, error)
+type templateFactoryFuncDtl func(*Config) (*labs.LabVirtualMachineCreationParameter, error)
 
 func newBool(val bool) *bool {
 	b := true
@@ -32,9 +32,9 @@ func getCustomImageId(config *Config) *string {
 	return nil
 }
 
-func GetVirtualMachineDeployment(config *Config) (*hashiDTLLabsSDK.LabVirtualMachineCreationParameter, error) {
+func GetVirtualMachineDeployment(config *Config) (*labs.LabVirtualMachineCreationParameter, error) {
 
-	galleryImageRef := hashiDTLLabsSDK.GalleryImageReference{
+	galleryImageRef := labs.GalleryImageReference{
 		Offer:     &config.ImageOffer,
 		Publisher: &config.ImagePublisher,
 		Sku:       &config.ImageSku,
@@ -48,7 +48,7 @@ func GetVirtualMachineDeployment(config *Config) (*hashiDTLLabsSDK.LabVirtualMac
 		config.LabName,
 		config.LabVirtualNetworkName)
 
-	dtlArtifacts := []hashiDTLLabsSDK.ArtifactInstallProperties{}
+	dtlArtifacts := []labs.ArtifactInstallProperties{}
 
 	if config.DtlArtifacts != nil {
 		for i := range config.DtlArtifacts {
@@ -62,16 +62,16 @@ func GetVirtualMachineDeployment(config *Config) (*hashiDTLLabsSDK.LabVirtualMac
 				config.DtlArtifacts[i].RepositoryName,
 				config.DtlArtifacts[i].ArtifactName)
 
-			dparams := []hashiDTLLabsSDK.ArtifactParameterProperties{}
+			dparams := []labs.ArtifactParameterProperties{}
 			for j := range config.DtlArtifacts[i].Parameters {
 
-				dp := &hashiDTLLabsSDK.ArtifactParameterProperties{}
+				dp := &labs.ArtifactParameterProperties{}
 				dp.Name = &config.DtlArtifacts[i].Parameters[j].Name
 				dp.Value = &config.DtlArtifacts[i].Parameters[j].Value
 
 				dparams = append(dparams, *dp)
 			}
-			dtlArtifact := &hashiDTLLabsSDK.ArtifactInstallProperties{
+			dtlArtifact := &labs.ArtifactInstallProperties{
 				ArtifactTitle: &config.DtlArtifacts[i].ArtifactName,
 				ArtifactId:    &config.DtlArtifacts[i].ArtifactId,
 				Parameters:    &dparams,
@@ -80,7 +80,7 @@ func GetVirtualMachineDeployment(config *Config) (*hashiDTLLabsSDK.LabVirtualMac
 		}
 	}
 
-	labMachineProps := &hashiDTLLabsSDK.LabVirtualMachineCreationParameterProperties{
+	labMachineProps := &labs.LabVirtualMachineCreationParameterProperties{
 		OwnerUserPrincipalName:     &config.ClientConfig.ClientID,
 		OwnerObjectId:              &config.ClientConfig.ObjectID,
 		Size:                       &config.VMSize,
@@ -100,7 +100,7 @@ func GetVirtualMachineDeployment(config *Config) (*hashiDTLLabsSDK.LabVirtualMac
 		Artifacts:   &dtlArtifacts,
 	}
 
-	labMachine := &hashiDTLLabsSDK.LabVirtualMachineCreationParameter{
+	labMachine := &labs.LabVirtualMachineCreationParameter{
 		Name:     &config.tmpComputeName,
 		Location: &config.Location,
 		// TODO

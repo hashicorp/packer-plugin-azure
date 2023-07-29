@@ -14,14 +14,15 @@ import (
 	"strings"
 	"time"
 
-	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
-	hashiGalleryImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
-	hashiGalleryImageVersionsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
-	hashiStorageAccountsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/storage/2022-09-01/storageaccounts"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/storage/2022-09-01/storageaccounts"
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	packerAzureCommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
+	commonclient "github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/lin"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
@@ -90,7 +91,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	b.stateBag.Put(constants.Ui, ui)
 
 	// Pass in relevant auth information for hashicorp/go-azure-sdk
-	authOptions := NewSDKAuthOptions{
+	authOptions := commonclient.NewSDKAuthOptions{
 		AuthType:       b.config.ClientConfig.AuthType(),
 		ClientID:       b.config.ClientConfig.ClientID,
 		ClientSecret:   b.config.ClientConfig.ClientSecret,
@@ -104,7 +105,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	azureClient, objectID, err := NewAzureClient(
 		ctx,
 		(b.config.ResourceGroupName != "" || b.config.StorageAccount != ""),
-		b.config.ClientConfig.NewCloudEnvironment(),
+		b.config.ClientConfig.CloudEnvironment(),
 		b.config.SharedGalleryTimeout,
 		b.config.PollingDurationTimeout,
 		authOptions,
@@ -137,8 +138,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		}
 
 		// If a managed image already exists it cannot be overwritten.
-		imageId := hashiImagesSDK.NewImageID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName, b.config.ManagedImageName)
-		_, err = azureClient.ImagesClient.Get(ctx, imageId, hashiImagesSDK.DefaultGetOperationOptions())
+		imageId := images.NewImageID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName, b.config.ManagedImageName)
+		_, err = azureClient.ImagesClient.Get(ctx, imageId, images.DefaultGetOperationOptions())
 		if err == nil {
 			if b.config.PackerForce {
 				ui.Say(fmt.Sprintf("the managed image named %s already exists, but deleting it due to -force flag", b.config.ManagedImageName))
@@ -198,15 +199,15 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			sigSubscriptionID = b.stateBag.Get(constants.ArmSubscription).(string)
 		}
 		b.stateBag.Put(constants.ArmSharedImageGalleryDestinationSubscription, sigSubscriptionID)
-		galleryId := hashiGalleryImagesSDK.NewGalleryImageID(sigSubscriptionID, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
+		galleryId := galleryimages.NewGalleryImageID(sigSubscriptionID, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
 		_, err = azureClient.GalleryImagesClient.Get(ctx, galleryId)
 		if err != nil {
 			return nil, fmt.Errorf("the Shared Gallery Image '%s' to which to publish the managed image version to does not exist in the resource group '%s' or does not contain managed image '%s'", b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationImageName)
 		}
 
 		// Check if a Image Version already exists for our target destination
-		galleryImageVersionId := hashiGalleryImageVersionsSDK.NewImageVersionID(sigSubscriptionID, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion)
-		_, err := azureClient.GalleryImageVersionsClient.Get(ctx, galleryImageVersionId, hashiGalleryImageVersionsSDK.DefaultGetOperationOptions())
+		galleryImageVersionId := galleryimageversions.NewImageVersionID(sigSubscriptionID, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion)
+		_, err := azureClient.GalleryImageVersionsClient.Get(ctx, galleryImageVersionId, galleryimageversions.DefaultGetOperationOptions())
 		if err == nil {
 			return nil, fmt.Errorf("a gallery image version for image name:version %s:%s already exists in gallery %s", b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationGalleryName)
 		}
@@ -232,7 +233,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	sourceImageSpecialized := false
 	if b.config.SharedGallery.GalleryName != "" {
 		client := azureClient.GalleryImagesClient
-		id := hashiGalleryImagesSDK.NewGalleryImageID(b.config.SharedGallery.Subscription, b.config.SharedGallery.ResourceGroup, b.config.SharedGallery.GalleryName, b.config.SharedGallery.ImageName)
+		id := galleryimages.NewGalleryImageID(b.config.SharedGallery.Subscription, b.config.SharedGallery.ResourceGroup, b.config.SharedGallery.GalleryName, b.config.SharedGallery.ImageName)
 		galleryImage, err := client.Get(ctx, id)
 		if err != nil {
 			return nil, fmt.Errorf("the parent Shared Gallery Image '%s' from which to source the managed image version to does not exist in the resource group '%s' or does not contain managed image '%s'", b.config.SharedGallery.GalleryName, b.config.SharedGallery.ResourceGroup, b.config.SharedGallery.ImageName)
@@ -240,7 +241,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		if galleryImage.Model == nil {
 			return nil, fmt.Errorf("SDK returned empty model for gallery image")
 		}
-		if galleryImage.Model.Properties.OsState == hashiGalleryImagesSDK.OperatingSystemStateTypesSpecialized {
+		if galleryImage.Model.Properties.OsState == galleryimages.OperatingSystemStateTypesSpecialized {
 			sourceImageSpecialized = true
 		}
 	}
@@ -449,7 +450,7 @@ func (b *Builder) writeSSHPrivateKey(ui packersdk.Ui, debugKeyPath string) {
 }
 
 func (b *Builder) isPublicPrivateNetworkCommunication() bool {
-	return DefaultPrivateVirtualNetworkWithPublicIp != b.config.PrivateVirtualNetworkWithPublicIp
+	return b.config.PrivateVirtualNetworkWithPublicIp
 }
 
 func (b *Builder) isPrivateNetworkCommunication() bool {
@@ -464,9 +465,9 @@ func canonicalizeLocation(location string) string {
 	return strings.Replace(location, " ", "", -1)
 }
 
-func (b *Builder) getBlobAccount(ctx context.Context, client *AzureClient, subscriptionId string, resourceGroupName string, storageAccountName string) (*hashiStorageAccountsSDK.StorageAccount, error) {
-	id := hashiStorageAccountsSDK.NewStorageAccountID(subscriptionId, resourceGroupName, storageAccountName)
-	account, err := client.StorageAccountsClient.GetProperties(ctx, id, hashiStorageAccountsSDK.DefaultGetPropertiesOperationOptions())
+func (b *Builder) getBlobAccount(ctx context.Context, client *AzureClient, subscriptionId string, resourceGroupName string, storageAccountName string) (*storageaccounts.StorageAccount, error) {
+	id := storageaccounts.NewStorageAccountID(subscriptionId, resourceGroupName, storageAccountName)
+	account, err := client.StorageAccountsClient.GetProperties(ctx, id, storageaccounts.DefaultGetPropertiesOperationOptions())
 	if err != nil {
 		return nil, err
 	}

@@ -11,8 +11,8 @@ import (
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 
-	hashiLabsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/labs"
-	hashiDTLVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/virtualmachines"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/labs"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/virtualmachines"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/networkinterfaces"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -50,9 +50,9 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupNa
 	labName := s.config.LabName
 
 	// TODO Talk to Tom(s) about this, we have to have two different Labs IDs in different calls, so we can probably move this into the commonids package
-	labResourceId := hashiDTLVMSDK.NewLabID(subscriptionId, resourceGroupName, labName)
-	labId := hashiLabsSDK.NewLabID(subscriptionId, s.config.tmpResourceGroupName, labName)
-	vmlistPage, err := s.client.DtlMetaClient.VirtualMachines.List(ctx, labResourceId, hashiDTLVMSDK.DefaultListOperationOptions())
+	labResourceId := virtualmachines.NewLabID(subscriptionId, resourceGroupName, labName)
+	labId := labs.NewLabID(subscriptionId, s.config.tmpResourceGroupName, labName)
+	vmlistPage, err := s.client.DtlMetaClient.VirtualMachines.List(ctx, labResourceId, virtualmachines.DefaultListOperationOptions())
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return err
@@ -78,8 +78,8 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupNa
 	}
 
 	expand := "Properties($expand=ComputeVm,Artifacts,NetworkInterface)"
-	vmResourceId := hashiDTLVMSDK.NewVirtualMachineID(subscriptionId, s.config.tmpResourceGroupName, labName, s.config.tmpComputeName)
-	vm, err := s.client.DtlMetaClient.VirtualMachines.Get(ctx, vmResourceId, hashiDTLVMSDK.GetOperationOptions{Expand: &expand})
+	vmResourceId := virtualmachines.NewVirtualMachineID(subscriptionId, s.config.tmpResourceGroupName, labName, s.config.tmpComputeName)
+	vm, err := s.client.DtlMetaClient.VirtualMachines.Get(ctx, vmResourceId, virtualmachines.GetOperationOptions{Expand: &expand})
 	if err != nil {
 		s.say(s.client.LastError.Error())
 	}
@@ -113,19 +113,19 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupNa
 			winrma)
 
 		var hostname = "hostName"
-		dp := &hashiDTLVMSDK.ArtifactParameterProperties{}
+		dp := &virtualmachines.ArtifactParameterProperties{}
 		dp.Name = &hostname
 		dp.Value = &s.config.tmpFQDN
-		dparams := []hashiDTLVMSDK.ArtifactParameterProperties{*dp}
+		dparams := []virtualmachines.ArtifactParameterProperties{*dp}
 
-		winrmArtifact := &hashiDTLVMSDK.ArtifactInstallProperties{
+		winrmArtifact := &virtualmachines.ArtifactInstallProperties{
 			ArtifactTitle: &winrma,
 			ArtifactId:    &artifactid,
 			Parameters:    &dparams,
 		}
 
-		dtlArtifacts := []hashiDTLVMSDK.ArtifactInstallProperties{*winrmArtifact}
-		dtlArtifactsRequest := hashiDTLVMSDK.ApplyArtifactsRequest{Artifacts: &dtlArtifacts}
+		dtlArtifacts := []virtualmachines.ArtifactInstallProperties{*winrmArtifact}
+		dtlArtifactsRequest := virtualmachines.ApplyArtifactsRequest{Artifacts: &dtlArtifacts}
 
 		// TODO this was an infinite loop, I have seen apply artifacts fail
 		// But this needs a bit further validation into why it fails and

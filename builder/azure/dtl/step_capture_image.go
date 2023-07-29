@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	hashiDTLCustomImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/customimages"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/customimages"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -46,29 +46,29 @@ func (s *StepCaptureImage) captureImageFromVM(ctx context.Context) error {
 		s.config.LabName,
 		s.config.tmpComputeName)
 
-	customImageProperties := hashiDTLCustomImagesSDK.CustomImageProperties{}
+	customImageProperties := customimages.CustomImageProperties{}
 
 	if s.config.OSType == constants.Target_Linux {
-		deprovision := hashiDTLCustomImagesSDK.LinuxOsStateDeprovisionRequested
+		deprovision := customimages.LinuxOsStateDeprovisionRequested
 		if s.config.SkipSysprep {
-			deprovision = hashiDTLCustomImagesSDK.LinuxOsStateDeprovisionApplied
+			deprovision = customimages.LinuxOsStateDeprovisionApplied
 		}
-		customImageProperties = hashiDTLCustomImagesSDK.CustomImageProperties{
-			VM: &hashiDTLCustomImagesSDK.CustomImagePropertiesFromVM{
-				LinuxOsInfo: &hashiDTLCustomImagesSDK.LinuxOsInfo{
+		customImageProperties = customimages.CustomImageProperties{
+			VM: &customimages.CustomImagePropertiesFromVM{
+				LinuxOsInfo: &customimages.LinuxOsInfo{
 					LinuxOsState: &deprovision,
 				},
 				SourceVMId: &imageID,
 			},
 		}
 	} else if s.config.OSType == constants.Target_Windows {
-		deprovision := hashiDTLCustomImagesSDK.WindowsOsStateSysprepRequested
+		deprovision := customimages.WindowsOsStateSysprepRequested
 		if s.config.SkipSysprep {
-			deprovision = hashiDTLCustomImagesSDK.WindowsOsStateSysprepApplied
+			deprovision = customimages.WindowsOsStateSysprepApplied
 		}
-		customImageProperties = hashiDTLCustomImagesSDK.CustomImageProperties{
-			VM: &hashiDTLCustomImagesSDK.CustomImagePropertiesFromVM{
-				WindowsOsInfo: &hashiDTLCustomImagesSDK.WindowsOsInfo{
+		customImageProperties = customimages.CustomImageProperties{
+			VM: &customimages.CustomImagePropertiesFromVM{
+				WindowsOsInfo: &customimages.WindowsOsInfo{
 					WindowsOsState: &deprovision,
 				},
 				SourceVMId: &imageID,
@@ -76,12 +76,12 @@ func (s *StepCaptureImage) captureImageFromVM(ctx context.Context) error {
 		}
 	}
 
-	customImage := &hashiDTLCustomImagesSDK.CustomImage{
+	customImage := &customimages.CustomImage{
 		Name:       &s.config.ManagedImageName,
 		Properties: customImageProperties,
 	}
 
-	customImageId := hashiDTLCustomImagesSDK.NewCustomImageID(s.config.ClientConfig.SubscriptionID, s.config.LabResourceGroupName, s.config.LabName, s.config.ManagedImageName)
+	customImageId := customimages.NewCustomImageID(s.config.ClientConfig.SubscriptionID, s.config.LabResourceGroupName, s.config.LabName, s.config.ManagedImageName)
 	err := s.client.DtlMetaClient.CustomImages.CreateOrUpdateThenPoll(ctx, customImageId, *customImage)
 	if err != nil {
 		s.say("Error from Capture Image")

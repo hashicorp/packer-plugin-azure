@@ -57,7 +57,6 @@ type FlatConfig struct {
 	TenantID                            *string                            `mapstructure:"tenant_id" required:"false" cty:"tenant_id" hcl:"tenant_id"`
 	SubscriptionID                      *string                            `mapstructure:"subscription_id" cty:"subscription_id" hcl:"subscription_id"`
 	UseAzureCLIAuth                     *bool                              `mapstructure:"use_azure_cli_auth" required:"false" cty:"use_azure_cli_auth" hcl:"use_azure_cli_auth"`
-	UseInteractiveAuth                  *bool                              `mapstructure:"use_interactive_auth" required:"false" cty:"use_interactive_auth" hcl:"use_interactive_auth"`
 	CaptureNamePrefix                   *string                            `mapstructure:"capture_name_prefix" cty:"capture_name_prefix" hcl:"capture_name_prefix"`
 	CaptureContainerName                *string                            `mapstructure:"capture_container_name" cty:"capture_container_name" hcl:"capture_container_name"`
 	SharedGallery                       *FlatSharedImageGallery            `mapstructure:"shared_image_gallery" cty:"shared_image_gallery" hcl:"shared_image_gallery"`
@@ -176,7 +175,6 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"tenant_id":                                &hcldec.AttrSpec{Name: "tenant_id", Type: cty.String, Required: false},
 		"subscription_id":                          &hcldec.AttrSpec{Name: "subscription_id", Type: cty.String, Required: false},
 		"use_azure_cli_auth":                       &hcldec.AttrSpec{Name: "use_azure_cli_auth", Type: cty.Bool, Required: false},
-		"use_interactive_auth":                     &hcldec.AttrSpec{Name: "use_interactive_auth", Type: cty.Bool, Required: false},
 		"capture_name_prefix":                      &hcldec.AttrSpec{Name: "capture_name_prefix", Type: cty.String, Required: false},
 		"capture_container_name":                   &hcldec.AttrSpec{Name: "capture_container_name", Type: cty.String, Required: false},
 		"shared_image_gallery":                     &hcldec.BlockSpec{TypeName: "shared_image_gallery", Nested: hcldec.ObjectSpec((*FlatSharedImageGallery)(nil).HCL2Spec())},

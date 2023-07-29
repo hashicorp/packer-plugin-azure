@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	dtlBuilder "github.com/hashicorp/packer-plugin-azure/builder/azure/dtl"
 
-	hashiDTLVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/virtualmachines"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/virtualmachines"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 
 	"github.com/hashicorp/packer-plugin-sdk/common"
@@ -50,7 +50,7 @@ type Config struct {
 	VMName string `mapstructure:"vm_name" required:"true"`
 
 	// The default PollingDuration for azure is 15mins, this property will override
-	// that value. See [Azure DefaultPollingDuration](https://godoc.org/github.com/Azure/go-autorest/autorest#pkg-constants)
+	// that value.
 	// If your Packer build is failing on the
 	// ARM deployment step with the error `Original Error:
 	// context deadline exceeded`, then you probably need to increase this timeout from
@@ -126,7 +126,7 @@ func (p *Provisioner) Provision(ctx context.Context, ui packersdk.Ui, comm packe
 	}
 
 	// Pass in relevant auth information for hashicorp/go-azure-sdk
-	authOptions := dtlBuilder.NewSDKAuthOptions{
+	authOptions := client.NewSDKAuthOptions{
 		AuthType:       p.config.ClientConfig.AuthType(),
 		ClientID:       p.config.ClientConfig.ClientID,
 		ClientSecret:   p.config.ClientConfig.ClientSecret,
@@ -139,7 +139,7 @@ func (p *Provisioner) Provision(ctx context.Context, ui packersdk.Ui, comm packe
 	azureClient, _, err := dtlBuilder.NewAzureClient(
 		ctx,
 		p.config.ClientConfig.SubscriptionID,
-		p.config.ClientConfig.NewCloudEnvironment(),
+		p.config.ClientConfig.CloudEnvironment(),
 		p.config.PollingDurationTimeout,
 		p.config.PollingDurationTimeout,
 		p.config.PollingDurationTimeout,
@@ -151,7 +151,7 @@ func (p *Provisioner) Provision(ctx context.Context, ui packersdk.Ui, comm packe
 	}
 
 	ui.Say("Installing Artifact DTL")
-	dtlArtifacts := []hashiDTLVMSDK.ArtifactInstallProperties{}
+	dtlArtifacts := []virtualmachines.ArtifactInstallProperties{}
 
 	if p.config.DtlArtifacts != nil {
 		for i := range p.config.DtlArtifacts {
@@ -161,15 +161,15 @@ func (p *Provisioner) Provision(ctx context.Context, ui packersdk.Ui, comm packe
 				p.config.LabName,
 				p.config.DtlArtifacts[i].ArtifactName)
 
-			dparams := []hashiDTLVMSDK.ArtifactParameterProperties{}
+			dparams := []virtualmachines.ArtifactParameterProperties{}
 			for j := range p.config.DtlArtifacts[i].Parameters {
-				dp := &hashiDTLVMSDK.ArtifactParameterProperties{}
+				dp := &virtualmachines.ArtifactParameterProperties{}
 				dp.Name = &p.config.DtlArtifacts[i].Parameters[j].Name
 				dp.Value = &p.config.DtlArtifacts[i].Parameters[j].Value
 
 				dparams = append(dparams, *dp)
 			}
-			Aip := hashiDTLVMSDK.ArtifactInstallProperties{
+			Aip := virtualmachines.ArtifactInstallProperties{
 				ArtifactId:    &p.config.DtlArtifacts[i].ArtifactId,
 				Parameters:    &dparams,
 				ArtifactTitle: &p.config.DtlArtifacts[i].ArtifactName,
@@ -178,13 +178,13 @@ func (p *Provisioner) Provision(ctx context.Context, ui packersdk.Ui, comm packe
 		}
 	}
 
-	dtlApplyArifactRequest := hashiDTLVMSDK.ApplyArtifactsRequest{
+	dtlApplyArifactRequest := virtualmachines.ApplyArtifactsRequest{
 		Artifacts: &dtlArtifacts,
 	}
 
 	ui.Say("Applying artifact ")
 
-	vmResourceId := hashiDTLVMSDK.NewVirtualMachineID(p.config.ClientConfig.SubscriptionID, p.config.ResourceGroupName, p.config.LabName, p.config.VMName)
+	vmResourceId := virtualmachines.NewVirtualMachineID(p.config.ClientConfig.SubscriptionID, p.config.ResourceGroupName, p.config.LabName, p.config.VMName)
 	err = azureClient.DtlMetaClient.VirtualMachines.ApplyArtifactsThenPoll(ctx, vmResourceId, dtlApplyArifactRequest)
 
 	if err != nil {

@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	hashiSecretsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/secrets"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/secrets"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -36,7 +36,7 @@ func NewStepGetCertificate(client *AzureClient, ui packersdk.Ui) *StepGetCertifi
 }
 
 func (s *StepGetCertificate) getCertificateUrl(ctx context.Context, subscriptionId string, resourceGroupName string, keyVaultName string, secretName string) (string, error) {
-	id := hashiSecretsSDK.NewSecretID(subscriptionId, resourceGroupName, keyVaultName, secretName)
+	id := secrets.NewSecretID(subscriptionId, resourceGroupName, keyVaultName, secretName)
 	secret, err := s.client.SecretsClient.Get(ctx, id)
 	if err != nil {
 		s.say(s.client.LastError.Error())

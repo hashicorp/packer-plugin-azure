@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 
-	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -17,7 +17,7 @@ import (
 
 type StepGetDataDisk struct {
 	client *AzureClient
-	query  func(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (*hashiVMSDK.VirtualMachine, error)
+	query  func(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (*virtualmachines.VirtualMachine, error)
 	say    func(message string)
 	error  func(e error)
 }
@@ -33,9 +33,9 @@ func NewStepGetAdditionalDisks(client *AzureClient, ui packersdk.Ui) *StepGetDat
 	return step
 }
 
-func (s *StepGetDataDisk) queryCompute(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (*hashiVMSDK.VirtualMachine, error) {
-	vmID := hashiVMSDK.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)
-	vm, err := s.client.VirtualMachinesClient.Get(ctx, vmID, hashiVMSDK.DefaultGetOperationOptions())
+func (s *StepGetDataDisk) queryCompute(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (*virtualmachines.VirtualMachine, error) {
+	vmID := virtualmachines.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)
+	vm, err := s.client.VirtualMachinesClient.Get(ctx, vmID, virtualmachines.DefaultGetOperationOptions())
 	if err != nil {
 		s.say(s.client.LastError.Error())
 	}

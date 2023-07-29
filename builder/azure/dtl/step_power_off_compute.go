@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	hashiDTLVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/virtualmachines"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -35,8 +35,7 @@ func NewStepPowerOffCompute(client *AzureClient, ui packersdk.Ui, config *Config
 }
 
 func (s *StepPowerOffCompute) powerOffCompute(ctx context.Context, resourceGroupName string, labName, computeName string) error {
-	//f, err := s.client.VirtualMachinesClient.Deallocate(ctx, resourceGroupName, computeName)
-	vmResourceId := hashiDTLVMSDK.NewVirtualMachineID(s.config.ClientConfig.SubscriptionID, s.config.tmpResourceGroupName, labName, computeName)
+	vmResourceId := virtualmachines.NewVirtualMachineID(s.config.ClientConfig.SubscriptionID, s.config.tmpResourceGroupName, labName, computeName)
 	err := s.client.DtlMetaClient.VirtualMachines.StopThenPoll(ctx, vmResourceId)
 	if err != nil {
 		s.say(s.client.LastError.Error())

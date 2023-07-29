@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -33,8 +33,8 @@ func NewStepPowerOffCompute(client *AzureClient, ui packersdk.Ui) *StepPowerOffC
 
 func (s *StepPowerOffCompute) powerOffCompute(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) error {
 	hibernate := false
-	vmId := hashiVMSDK.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)
-	err := s.client.VirtualMachinesClient.DeallocateThenPoll(ctx, vmId, hashiVMSDK.DeallocateOperationOptions{Hibernate: &hibernate})
+	vmId := virtualmachines.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)
+	err := s.client.VirtualMachinesClient.DeallocateThenPoll(ctx, vmId, virtualmachines.DeallocateOperationOptions{Hibernate: &hibernate})
 	if err != nil {
 		s.say(s.client.LastError.Error())
 	}

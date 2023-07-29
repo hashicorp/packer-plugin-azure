@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -25,6 +26,13 @@ type StepGetSourceImageName struct {
 
 	Location      string
 	GeneratedData *packerbuilderdata.GeneratedData
+
+	get func(context.Context, client.AzureClientSet, galleryimageversions.ImageVersionId) (*galleryimageversions.GalleryImageVersion, error)
+}
+
+func NewStepGetSourceImageName(step *StepGetSourceImageName) *StepGetSourceImageName {
+	step.get = step.getSharedImageGalleryVersion
+	return step
 }
 
 func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -46,17 +54,16 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 			return multistep.ActionContinue
 		}
 
-		client := azcli.GalleryImageVersionsClient()
-		image, err := client.Get(ctx, imageID.ResourceGroup, imageID.ResourceName[0], imageID.ResourceName[1], imageID.ResourceName[2], "")
+		imageVersionID := galleryimageversions.NewImageVersionID(azcli.SubscriptionID(), imageID.ResourceGroup, imageID.ResourceName[0], imageID.ResourceName[1], imageID.ResourceName[2])
+		image, err := s.get(ctx, azcli, imageVersionID)
 		if err != nil {
 			log.Printf("[TRACE] error retrieving managed image name for shared source image %q: %v", s.SourceImageResourceID, err)
 			s.GeneratedData.Put("SourceImageName", "ERR_SOURCE_IMAGE_NAME_NOT_FOUND")
 			return multistep.ActionContinue
 		}
-
-		if image.GalleryImageVersionProperties != nil && image.GalleryImageVersionProperties.StorageProfile != nil &&
-			image.GalleryImageVersionProperties.StorageProfile.Source != nil && image.GalleryImageVersionProperties.StorageProfile.Source.ID != nil {
-			id := *image.GalleryImageVersionProperties.StorageProfile.Source.ID
+		if image.Properties != nil &&
+			image.Properties.StorageProfile.Source != nil && image.Properties.StorageProfile.Source.Id != nil {
+			id := *image.Properties.StorageProfile.Source.Id
 			ui.Say(fmt.Sprintf(" -> SourceImageName: '%s'", id))
 			s.GeneratedData.Put("SourceImageName", id)
 			return multistep.ActionContinue
@@ -74,6 +81,18 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 	ui.Say(fmt.Sprintf(" -> SourceImageName: '%s'", imageID))
 	s.GeneratedData.Put("SourceImageName", imageID)
 	return multistep.ActionContinue
+}
+
+func (s *StepGetSourceImageName) getSharedImageGalleryVersion(ctx context.Context, azclient client.AzureClientSet, id galleryimageversions.ImageVersionId) (*galleryimageversions.GalleryImageVersion, error) {
+
+	imageVersionResult, err := azclient.GalleryImageVersionsClient().Get(ctx, id, galleryimageversions.DefaultGetOperationOptions())
+	if err != nil {
+		return nil, err
+	}
+	if imageVersionResult.Model == nil {
+		return nil, fmt.Errorf("SDK returned empty model")
+	}
+	return imageVersionResult.Model, nil
 }
 
 func (*StepGetSourceImageName) Cleanup(multistep.StateBag) {

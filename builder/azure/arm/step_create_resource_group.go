@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
-	hashiGroupsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -38,7 +38,7 @@ func NewStepCreateResourceGroup(client *AzureClient, ui packersdk.Ui) *StepCreat
 
 func (s *StepCreateResourceGroup) createResourceGroup(ctx context.Context, subscriptionId string, resourceGroupName string, location string, tags map[string]string) error {
 	id := commonids.NewResourceGroupID(subscriptionId, resourceGroupName)
-	_, err := s.client.ResourceGroupsClient.CreateOrUpdate(ctx, id, hashiGroupsSDK.ResourceGroup{
+	_, err := s.client.ResourceGroupsClient.CreateOrUpdate(ctx, id, resourcegroups.ResourceGroup{
 		Location: location,
 		Tags:     &tags,
 	})
@@ -142,7 +142,7 @@ func (s *StepCreateResourceGroup) Cleanup(state multistep.StateBag) {
 	ui.Say("\nCleanup requested, deleting resource group ...")
 	id := commonids.NewResourceGroupID(subscriptionId, resourceGroupName)
 	if state.Get(constants.ArmAsyncResourceGroupDelete).(bool) {
-		_, deleteErr := s.client.ResourceGroupsClient.Delete(ctx, id, hashiGroupsSDK.DefaultDeleteOperationOptions())
+		_, deleteErr := s.client.ResourceGroupsClient.Delete(ctx, id, resourcegroups.DefaultDeleteOperationOptions())
 		if deleteErr != nil {
 			ui.Error(fmt.Sprintf("Error deleting resource group.  Please delete it manually.\n\n"+
 				"Name: %s\n"+
@@ -151,7 +151,7 @@ func (s *StepCreateResourceGroup) Cleanup(state multistep.StateBag) {
 		}
 		s.say(fmt.Sprintf("\n Not waiting for Resource Group delete as requested by user. Resource Group Name is %s", resourceGroupName))
 	} else {
-		err := s.client.ResourceGroupsClient.DeleteThenPoll(ctx, id, hashiGroupsSDK.DefaultDeleteOperationOptions())
+		err := s.client.ResourceGroupsClient.DeleteThenPoll(ctx, id, resourcegroups.DefaultDeleteOperationOptions())
 		if err != nil {
 			ui.Error(fmt.Sprintf("Error deleting resource group.  Please delete it manually.\n\n"+
 				"Name: %s\n"+

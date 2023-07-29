@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strconv"
 
-	hashiSnapshotsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/snapshots"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/snapshots"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -36,17 +36,17 @@ func NewStepSnapshotDataDisks(client *AzureClient, ui packersdk.Ui, config *Conf
 }
 
 func (s *StepSnapshotDataDisks) createDataDiskSnapshot(ctx context.Context, subscriptionId string, resourceGroupName string, srcUriVhd string, location string, tags map[string]string, dstSnapshotName string) error {
-	srcVhdToSnapshot := hashiSnapshotsSDK.Snapshot{
-		Properties: &hashiSnapshotsSDK.SnapshotProperties{
-			CreationData: hashiSnapshotsSDK.CreationData{
-				CreateOption:     hashiSnapshotsSDK.DiskCreateOptionCopy,
+	srcVhdToSnapshot := snapshots.Snapshot{
+		Properties: &snapshots.SnapshotProperties{
+			CreationData: snapshots.CreationData{
+				CreateOption:     snapshots.DiskCreateOptionCopy,
 				SourceResourceId: common.StringPtr(srcUriVhd),
 			},
 		},
 		Location: *common.StringPtr(location),
 		Tags:     &tags,
 	}
-	id := hashiSnapshotsSDK.NewSnapshotID(subscriptionId, resourceGroupName, dstSnapshotName)
+	id := snapshots.NewSnapshotID(subscriptionId, resourceGroupName, dstSnapshotName)
 	err := s.client.SnapshotsClient.CreateOrUpdateThenPoll(ctx, id, srcVhdToSnapshot)
 
 	if err != nil {

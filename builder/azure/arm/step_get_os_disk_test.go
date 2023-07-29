@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -16,7 +16,7 @@ import (
 
 func TestStepGetOSDiskShouldFailIfGetFails(t *testing.T) {
 	var testSubject = &StepGetOSDisk{
-		query: func(context.Context, string, string, string) (*hashiVMSDK.VirtualMachine, error) {
+		query: func(context.Context, string, string, string) (*virtualmachines.VirtualMachine, error) {
 			return createVirtualMachineFromUri("test.vhd"), fmt.Errorf("!! Unit Test FAIL !!")
 		},
 		say:   func(message string) {},
@@ -37,7 +37,7 @@ func TestStepGetOSDiskShouldFailIfGetFails(t *testing.T) {
 
 func TestStepGetOSDiskShouldPassIfGetPasses(t *testing.T) {
 	var testSubject = &StepGetOSDisk{
-		query: func(context.Context, string, string, string) (*hashiVMSDK.VirtualMachine, error) {
+		query: func(context.Context, string, string, string) (*virtualmachines.VirtualMachine, error) {
 			return createVirtualMachineFromUri("test.vhd"), nil
 		},
 		say:   func(message string) {},
@@ -62,7 +62,7 @@ func TestStepGetOSDiskShouldTakeValidateArgumentsFromStateBag(t *testing.T) {
 	var actualSubscriptionId string
 
 	var testSubject = &StepGetOSDisk{
-		query: func(ctx context.Context, resourceGroupName string, computeName string, subscriptionId string) (*hashiVMSDK.VirtualMachine, error) {
+		query: func(ctx context.Context, resourceGroupName string, computeName string, subscriptionId string) (*virtualmachines.VirtualMachine, error) {
 			actualResourceGroupName = resourceGroupName
 			actualComputeName = computeName
 			actualSubscriptionId = subscriptionId
@@ -115,12 +115,12 @@ func createTestStateBagStepGetOSDisk() multistep.StateBag {
 	return stateBag
 }
 
-func createVirtualMachineFromUri(vhdUri string) *hashiVMSDK.VirtualMachine {
-	vm := hashiVMSDK.VirtualMachine{
-		Properties: &hashiVMSDK.VirtualMachineProperties{
-			StorageProfile: &hashiVMSDK.StorageProfile{
-				OsDisk: &hashiVMSDK.OSDisk{
-					Vhd: &hashiVMSDK.VirtualHardDisk{
+func createVirtualMachineFromUri(vhdUri string) *virtualmachines.VirtualMachine {
+	vm := virtualmachines.VirtualMachine{
+		Properties: &virtualmachines.VirtualMachineProperties{
+			StorageProfile: &virtualmachines.StorageProfile{
+				OsDisk: &virtualmachines.OSDisk{
+					Vhd: &virtualmachines.VirtualHardDisk{
 						Uri: &vhdUri,
 					},
 				},

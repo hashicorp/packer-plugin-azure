@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	hashiGalleryImageVersionsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -41,35 +41,35 @@ func NewStepPublishToSharedImageGallery(client *AzureClient, ui packersdk.Ui, co
 
 func (s *StepPublishToSharedImageGallery) publishToSig(ctx context.Context, subscriptionID, managedImageID, sigDestinationResourceGroup, sigDestinationGalleryName, sigDestinationImageName, sigDestinationImageVersion string, sigReplicationRegions []string, location string, tags map[string]string) (string, error) {
 
-	replicationRegions := make([]hashiGalleryImageVersionsSDK.TargetRegion, len(sigReplicationRegions))
+	replicationRegions := make([]galleryimageversions.TargetRegion, len(sigReplicationRegions))
 	for i, v := range sigReplicationRegions {
 		regionName := v
-		replicationRegions[i] = hashiGalleryImageVersionsSDK.TargetRegion{Name: regionName}
+		replicationRegions[i] = galleryimageversions.TargetRegion{Name: regionName}
 	}
 
-	galleryImageVersion := hashiGalleryImageVersionsSDK.GalleryImageVersion{
+	galleryImageVersion := galleryimageversions.GalleryImageVersion{
 		Location: location,
 		Tags:     &tags,
-		Properties: &hashiGalleryImageVersionsSDK.GalleryImageVersionProperties{
-			StorageProfile: hashiGalleryImageVersionsSDK.GalleryImageVersionStorageProfile{
-				Source: &hashiGalleryImageVersionsSDK.GalleryArtifactVersionFullSource{
+		Properties: &galleryimageversions.GalleryImageVersionProperties{
+			StorageProfile: galleryimageversions.GalleryImageVersionStorageProfile{
+				Source: &galleryimageversions.GalleryArtifactVersionFullSource{
 					Id: &managedImageID,
 				},
 			},
-			PublishingProfile: &hashiGalleryImageVersionsSDK.GalleryArtifactPublishingProfileBase{
+			PublishingProfile: &galleryimageversions.GalleryArtifactPublishingProfileBase{
 				TargetRegions: &replicationRegions,
 			},
 		},
 	}
 
-	galleryImageVersionId := hashiGalleryImageVersionsSDK.NewImageVersionID(subscriptionID, sigDestinationResourceGroup, sigDestinationGalleryName, sigDestinationImageName, sigDestinationImageVersion)
+	galleryImageVersionId := galleryimageversions.NewImageVersionID(subscriptionID, sigDestinationResourceGroup, sigDestinationGalleryName, sigDestinationImageName, sigDestinationImageVersion)
 	err := s.client.GalleryImageVersionsClient.CreateOrUpdateThenPoll(ctx, galleryImageVersionId, galleryImageVersion)
 
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return "", err
 	}
-	createdSIGImageVersion, err := s.client.GalleryImageVersionsClient.Get(ctx, galleryImageVersionId, hashiGalleryImageVersionsSDK.DefaultGetOperationOptions())
+	createdSIGImageVersion, err := s.client.GalleryImageVersionsClient.Get(ctx, galleryImageVersionId, galleryimageversions.DefaultGetOperationOptions())
 
 	if err != nil {
 		s.say(s.client.LastError.Error())

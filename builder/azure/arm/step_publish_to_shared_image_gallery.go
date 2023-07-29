@@ -7,8 +7,8 @@ import (
 	"context"
 	"fmt"
 
-	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
-	hashiGalleryImageVersionsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -40,13 +40,13 @@ func NewStepPublishToSharedImageGallery(client *AzureClient, ui packersdk.Ui, co
 	return step
 }
 
-func getSigDestinationStorageAccountType(s string) (hashiGalleryImageVersionsSDK.StorageAccountType, error) {
+func getSigDestinationStorageAccountType(s string) (galleryimageversions.StorageAccountType, error) {
 	if s == "" {
-		return hashiGalleryImageVersionsSDK.StorageAccountTypeStandardLRS, nil
+		return galleryimageversions.StorageAccountTypeStandardLRS, nil
 	}
-	for _, t := range hashiGalleryImageVersionsSDK.PossibleValuesForStorageAccountType() {
+	for _, t := range galleryimageversions.PossibleValuesForStorageAccountType() {
 		if s == t {
-			return hashiGalleryImageVersionsSDK.StorageAccountType(t), nil
+			return galleryimageversions.StorageAccountType(t), nil
 		}
 	}
 	return "", fmt.Errorf("not an accepted value for shared_image_gallery_destination.storage_account_type")
@@ -73,10 +73,10 @@ func getSigDestination(state multistep.StateBag) SharedImageGalleryDestination {
 }
 
 func (s *StepPublishToSharedImageGallery) publishToSig(ctx context.Context, subscriptionID string, sourceID string, sharedImageGallery SharedImageGalleryDestination, miSGImageVersionEndOfLifeDate string, miSGImageVersionExcludeFromLatest bool, miSigReplicaCount int64, location string, diskEncryptionSetId string, tags map[string]string) (string, error) {
-	replicationRegions := make([]hashiGalleryImageVersionsSDK.TargetRegion, len(sharedImageGallery.SigDestinationReplicationRegions))
+	replicationRegions := make([]galleryimageversions.TargetRegion, len(sharedImageGallery.SigDestinationReplicationRegions))
 	for i, v := range sharedImageGallery.SigDestinationReplicationRegions {
 		regionName := v
-		replicationRegions[i] = hashiGalleryImageVersionsSDK.TargetRegion{Name: regionName}
+		replicationRegions[i] = galleryimageversions.TargetRegion{Name: regionName}
 	}
 
 	storageAccountType, err := getSigDestinationStorageAccountType(sharedImageGallery.SigDestinationStorageAccountType)
@@ -87,24 +87,24 @@ func (s *StepPublishToSharedImageGallery) publishToSig(ctx context.Context, subs
 
 	if diskEncryptionSetId != "" {
 		for index, targetRegion := range replicationRegions {
-			targetRegion.Encryption = &hashiGalleryImageVersionsSDK.EncryptionImages{
-				OsDiskImage: &hashiGalleryImageVersionsSDK.OSDiskImageEncryption{
+			targetRegion.Encryption = &galleryimageversions.EncryptionImages{
+				OsDiskImage: &galleryimageversions.OSDiskImageEncryption{
 					DiskEncryptionSetId: &diskEncryptionSetId,
 				},
 			}
 			replicationRegions[index] = targetRegion
 		}
 	}
-	galleryImageVersion := hashiGalleryImageVersionsSDK.GalleryImageVersion{
+	galleryImageVersion := galleryimageversions.GalleryImageVersion{
 		Location: location,
 		Tags:     &tags,
-		Properties: &hashiGalleryImageVersionsSDK.GalleryImageVersionProperties{
-			StorageProfile: hashiGalleryImageVersionsSDK.GalleryImageVersionStorageProfile{
-				Source: &hashiGalleryImageVersionsSDK.GalleryArtifactVersionFullSource{
+		Properties: &galleryimageversions.GalleryImageVersionProperties{
+			StorageProfile: galleryimageversions.GalleryImageVersionStorageProfile{
+				Source: &galleryimageversions.GalleryArtifactVersionFullSource{
 					Id: &sourceID,
 				},
 			},
-			PublishingProfile: &hashiGalleryImageVersionsSDK.GalleryArtifactPublishingProfileBase{
+			PublishingProfile: &galleryimageversions.GalleryArtifactPublishingProfileBase{
 				TargetRegions:      &replicationRegions,
 				EndOfLifeDate:      &miSGImageVersionEndOfLifeDate,
 				ExcludeFromLatest:  &miSGImageVersionExcludeFromLatest,
@@ -114,14 +114,14 @@ func (s *StepPublishToSharedImageGallery) publishToSig(ctx context.Context, subs
 		},
 	}
 
-	galleryImageVersionId := hashiGalleryImageVersionsSDK.NewImageVersionID(subscriptionID, sharedImageGallery.SigDestinationResourceGroup, sharedImageGallery.SigDestinationGalleryName, sharedImageGallery.SigDestinationImageName, sharedImageGallery.SigDestinationImageVersion)
+	galleryImageVersionId := galleryimageversions.NewImageVersionID(subscriptionID, sharedImageGallery.SigDestinationResourceGroup, sharedImageGallery.SigDestinationGalleryName, sharedImageGallery.SigDestinationImageName, sharedImageGallery.SigDestinationImageVersion)
 	err = s.client.GalleryImageVersionsClient.CreateOrUpdateThenPoll(ctx, galleryImageVersionId, galleryImageVersion)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return "", err
 	}
 
-	createdSGImageVersion, err := s.client.GalleryImageVersionsClient.Get(ctx, galleryImageVersionId, hashiGalleryImageVersionsSDK.DefaultGetOperationOptions())
+	createdSGImageVersion, err := s.client.GalleryImageVersionsClient.Get(ctx, galleryImageVersionId, galleryimageversions.DefaultGetOperationOptions())
 
 	if err != nil {
 		s.say(s.client.LastError.Error())
@@ -153,7 +153,7 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 		managedImageSubscription := stateBag.Get(constants.ArmManagedImageSubscription).(string)
 		sourceID = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/images/%s", managedImageSubscription, targetManagedImageResourceGroupName, targetManagedImageName)
 	} else {
-		var imageParameters = stateBag.Get(constants.ArmImageParameters).(*hashiImagesSDK.Image)
+		var imageParameters = stateBag.Get(constants.ArmImageParameters).(*images.Image)
 		sourceID = *imageParameters.Properties.SourceVirtualMachine.Id
 	}
 

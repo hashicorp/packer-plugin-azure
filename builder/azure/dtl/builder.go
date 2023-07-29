@@ -12,12 +12,13 @@ import (
 	"runtime"
 	"strings"
 
-	hashiGalleryImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
-	hashiDTLCustomImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/customimages"
-	hashiDTLLabsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/labs"
-	hashiDTLVNETSDK "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/virtualnetworks"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/customimages"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/labs"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/virtualnetworks"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	packerAzureCommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
+	commonclient "github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/lin"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
@@ -74,7 +75,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	b.stateBag.Put(constants.Ui, ui)
 
 	// Pass in relevant auth information for hashicorp/go-azure-sdk
-	authOptions := NewSDKAuthOptions{
+	authOptions := commonclient.NewSDKAuthOptions{
 		AuthType:       b.config.ClientConfig.AuthType(),
 		ClientID:       b.config.ClientConfig.ClientID,
 		ClientSecret:   b.config.ClientConfig.ClientSecret,
@@ -87,7 +88,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	azureClient, objectId, err := NewAzureClient(
 		ctx,
 		b.config.ClientConfig.SubscriptionID,
-		b.config.ClientConfig.NewCloudEnvironment(),
+		b.config.ClientConfig.CloudEnvironment(),
 		b.config.SharedGalleryTimeout,
 		b.config.CustomImageCaptureTimeout,
 		b.config.PollingDurationTimeout,
@@ -113,8 +114,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	if b.config.isManagedImage() {
 		// If a managed image already exists it cannot be overwritten. We need to delete it if the user has provided  -force flag
-		customImageResourceId := hashiDTLCustomImagesSDK.NewCustomImageID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName, b.config.LabName, b.config.ManagedImageName)
-		_, err = azureClient.DtlMetaClient.CustomImages.Get(ctx, customImageResourceId, hashiDTLCustomImagesSDK.DefaultGetOperationOptions())
+		customImageResourceId := customimages.NewCustomImageID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName, b.config.LabName, b.config.ManagedImageName)
+		_, err = azureClient.DtlMetaClient.CustomImages.Get(ctx, customImageResourceId, customimages.DefaultGetOperationOptions())
 
 		if err == nil {
 			if b.config.PackerForce {
@@ -145,7 +146,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	// For Managed Images, validate that Shared Gallery Image exists before publishing to SIG
 	if b.config.isManagedImage() && b.config.SharedGalleryDestination.SigDestinationGalleryName != "" {
 		sigSubscriptionID := b.stateBag.Get(constants.ArmSubscription).(string)
-		galleryId := hashiGalleryImagesSDK.NewGalleryImageID(sigSubscriptionID, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
+		galleryId := galleryimages.NewGalleryImageID(sigSubscriptionID, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
 		_, err = azureClient.GalleryImagesClient.Get(ctx, galleryId)
 		if err != nil {
 			return nil, fmt.Errorf("the Shared Gallery Image '%s' to which to publish the managed image version to does not exist in the resource group '%s' or does not contain managed image '%s'", b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationImageName)
@@ -171,8 +172,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	}
 
 	// Find the lab location
-	labResourceId := hashiDTLLabsSDK.NewLabID(b.config.ClientConfig.SubscriptionID, b.config.LabResourceGroupName, b.config.LabName)
-	lab, err := azureClient.DtlMetaClient.Labs.Get(ctx, labResourceId, hashiDTLLabsSDK.DefaultGetOperationOptions())
+	labResourceId := labs.NewLabID(b.config.ClientConfig.SubscriptionID, b.config.LabResourceGroupName, b.config.LabName)
+	lab, err := azureClient.DtlMetaClient.Labs.Get(ctx, labResourceId, labs.DefaultGetOperationOptions())
 	if err != nil {
 		return nil, fmt.Errorf("Unable to fetch the Lab %s information in %s resource group", b.config.LabName, b.config.LabResourceGroupName)
 	}
@@ -338,8 +339,8 @@ func (b *Builder) setTemplateParameters(stateBag multistep.StateBag) {
 
 func (b *Builder) getSubnetInformation(ctx context.Context, ui packersdk.Ui, azClient AzureClient) (*string, *string, error) {
 	num := int64(10)
-	labResourceId := hashiDTLVNETSDK.NewLabID(b.config.ClientConfig.SubscriptionID, b.config.LabResourceGroupName, b.config.LabName)
-	virtualNetworkPage, err := azClient.DtlMetaClient.VirtualNetworks.List(ctx, labResourceId, hashiDTLVNETSDK.ListOperationOptions{Top: &num})
+	labResourceId := virtualnetworks.NewLabID(b.config.ClientConfig.SubscriptionID, b.config.LabResourceGroupName, b.config.LabName)
+	virtualNetworkPage, err := azClient.DtlMetaClient.VirtualNetworks.List(ctx, labResourceId, virtualnetworks.ListOperationOptions{Top: &num})
 
 	if err != nil {
 		return nil, nil, fmt.Errorf("Error retrieving Virtual networks in Resourcegroup %s", b.config.LabResourceGroupName)
@@ -350,7 +351,7 @@ func (b *Builder) getSubnetInformation(ctx context.Context, ui packersdk.Ui, azC
 		for _, subnetOverride := range *virtualNetwork.Properties.SubnetOverrides {
 
 			// Check if the Subnet is allowed to create VMs having Public IP
-			if *subnetOverride.UseInVMCreationPermission == hashiDTLVNETSDK.UsagePermissionTypeAllow && *subnetOverride.UsePublicIPAddressPermission == hashiDTLVNETSDK.UsagePermissionTypeAllow {
+			if *subnetOverride.UseInVMCreationPermission == virtualnetworks.UsagePermissionTypeAllow && *subnetOverride.UsePublicIPAddressPermission == virtualnetworks.UsagePermissionTypeAllow {
 				// Return Virtual Network Name and Subnet Name
 				// Since we cannot query the Usage information from DTL network we cannot know the current remaining capacity.
 				// TODO (vaangadi) : Fix this to query the subnets that actually have space to create VM.

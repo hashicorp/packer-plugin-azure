@@ -8,21 +8,21 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"time"
 
+	"github.com/hashicorp/go-azure-helpers/polling"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 )
 
 var _ multistep.Step = &StepCreateNewDiskset{}
 
 type StepCreateNewDiskset struct {
 	OSDiskID                   string // Disk ID
-	OSDiskSizeGB               int32  // optional, ignored if 0
+	OSDiskSizeGB               int64  // optional, ignored if 0
 	OSDiskStorageAccountType   string // from compute.DiskStorageAccountTypes
 	DataDiskStorageAccountType string // from compute.DiskStorageAccountTypes
 
@@ -43,8 +43,16 @@ type StepCreateNewDiskset struct {
 	Location string
 
 	SkipCleanup bool
+
+	getVersion func(context.Context, client.AzureClientSet, galleryimageversions.ImageVersionId) (*galleryimageversions.GalleryImageVersion, error)
+	create     func(context.Context, client.AzureClientSet, disks.DiskId, disks.Disk) (polling.LongRunningPoller, error)
 }
 
+func NewStepCreateNewDiskset(step *StepCreateNewDiskset) *StepCreateNewDiskset {
+	step.getVersion = step.getSharedImageGalleryVersion
+	step.create = step.createDiskset
+	return step
+}
 func (s *StepCreateNewDiskset) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	azcli := state.Get("azureclient").(client.AzureClientSet)
 	ui := state.Get("ui").(packersdk.Ui)
@@ -72,7 +80,8 @@ func (s *StepCreateNewDiskset) Run(ctx context.Context, state multistep.StateBag
 	disk := s.getOSDiskDefinition(azcli.SubscriptionID())
 
 	// Initiate disk creation
-	f, err := azcli.DisksClient().CreateOrUpdate(ctx, osDisk.ResourceGroup, osDisk.ResourceName.String(), disk)
+	diskId := disks.NewDiskID(azcli.SubscriptionID(), osDisk.ResourceGroup, osDisk.ResourceName.String())
+	response, err := s.create(ctx, azcli, diskId, disk)
 	if err != nil {
 		return errorMessage("Failed to initiate resource creation: %q", osDisk)
 	}
@@ -82,9 +91,9 @@ func (s *StepCreateNewDiskset) Run(ctx context.Context, state multistep.StateBag
 
 	type Future struct {
 		client.Resource
-		compute.DisksCreateOrUpdateFuture
+		polling.LongRunningPoller
 	}
-	futures := []Future{{osDisk, f}}
+	futures := []Future{{osDisk, response}}
 
 	if s.SourceImageResourceID != "" {
 		// retrieve image to see if there are any datadisks
@@ -97,32 +106,28 @@ func (s *StepCreateNewDiskset) Run(ctx context.Context, state multistep.StateBag
 			"Microsoft.Compute/galleries/images/versions") {
 			return errorMessage("source image id is not a shared image version %q, expected type 'Microsoft.Compute/galleries/images/versions'", imageID)
 		}
-		image, err := azcli.GalleryImageVersionsClient().Get(ctx,
-			imageID.ResourceGroup,
-			imageID.ResourceName[0], imageID.ResourceName[1], imageID.ResourceName[2], "")
+		galleryImageVersionId := galleryimageversions.NewImageVersionID(azcli.SubscriptionID(),
+			imageID.ResourceGroup, imageID.ResourceName[0], imageID.ResourceName[1], imageID.ResourceName[2])
+		image, err := s.getVersion(ctx, azcli, galleryImageVersionId)
 		if err != nil {
 			return errorMessage("error retrieving source image %q: %v", imageID, err)
 		}
-
-		if image.GalleryImageVersionProperties != nil &&
-			image.GalleryImageVersionProperties.StorageProfile != nil &&
-			image.GalleryImageVersionProperties.StorageProfile.DataDiskImages != nil {
-			for i, ddi := range *image.GalleryImageVersionProperties.StorageProfile.DataDiskImages {
-				if ddi.Lun == nil {
-					return errorMessage("unexpected: lun is null for data disk # %d", i)
-				}
-				datadiskID, err := client.ParseResourceID(fmt.Sprintf("%s%d", s.DataDiskIDPrefix, *ddi.Lun))
+		if image.Properties != nil &&
+			image.Properties.StorageProfile.DataDiskImages != nil {
+			for _, ddi := range *image.Properties.StorageProfile.DataDiskImages {
+				datadiskID, err := client.ParseResourceID(fmt.Sprintf("%s%d", s.DataDiskIDPrefix, ddi.Lun))
 				if err != nil {
 					return errorMessage("unable to construct resource id for datadisk: %v", err)
 				}
 
-				disk := s.getDatadiskDefinitionFromImage(*ddi.Lun)
+				disk := s.getDatadiskDefinitionFromImage(ddi.Lun)
 				// Initiate disk creation
-				f, err := azcli.DisksClient().CreateOrUpdate(ctx, datadiskID.ResourceGroup, datadiskID.ResourceName.String(), disk)
+				diskId := disks.NewDiskID(azcli.SubscriptionID(), datadiskID.ResourceGroup, datadiskID.ResourceName.String())
+				f, err := s.create(ctx, azcli, diskId, disk)
 				if err != nil {
 					return errorMessage("Failed to initiate resource creation: %q", datadiskID)
 				}
-				s.disks[*ddi.Lun] = datadiskID          // save the resoure we just create in our disk set
+				s.disks[ddi.Lun] = datadiskID           // save the resoure we just create in our disk set
 				state.Put(stateBagKey_Diskset, s.disks) // update the statebag
 				ui.Say(fmt.Sprintf("Creating disk %q", datadiskID))
 
@@ -135,12 +140,9 @@ func (s *StepCreateNewDiskset) Run(ctx context.Context, state multistep.StateBag
 
 	// Wait for completion
 	for _, f := range futures {
-		cli := azcli.PollClient() // quick polling for quick operations
-		cli.PollingDelay = time.Second
-		err = f.WaitForCompletionRef(ctx, cli)
-		if err != nil {
-			return errorMessage(
-				"error creating new disk '%s': %v", f.Resource, err)
+		error := f.LongRunningPoller.PollUntilDone()
+		if error != nil {
+			return errorMessage("Failed to create resource %q error %s", f.Resource, error)
 		}
 		ui.Say(fmt.Sprintf("Disk %q created", f.Resource))
 	}
@@ -148,27 +150,30 @@ func (s *StepCreateNewDiskset) Run(ctx context.Context, state multistep.StateBag
 	return multistep.ActionContinue
 }
 
-func (s StepCreateNewDiskset) getOSDiskDefinition(subscriptionID string) compute.Disk {
-	disk := compute.Disk{
-		Location: to.StringPtr(s.Location),
-		DiskProperties: &compute.DiskProperties{
-			OsType:       "Linux",
-			CreationData: &compute.CreationData{},
+func (s StepCreateNewDiskset) getOSDiskDefinition(subscriptionID string) disks.Disk {
+	osType := disks.OperatingSystemTypesLinux
+	disk := disks.Disk{
+		Location: s.Location,
+		Properties: &disks.DiskProperties{
+			OsType:       &osType,
+			CreationData: disks.CreationData{},
 		},
 	}
 
 	if s.OSDiskStorageAccountType != "" {
-		disk.Sku = &compute.DiskSku{
-			Name: compute.DiskStorageAccountTypes(s.OSDiskStorageAccountType),
+		hashiDiskSkuName := disks.DiskStorageAccountTypes(s.OSDiskStorageAccountType)
+		disk.Sku = &disks.DiskSku{
+			Name: &hashiDiskSkuName,
 		}
 	}
 
 	if s.HyperVGeneration != "" {
-		disk.DiskProperties.HyperVGeneration = compute.HyperVGeneration(s.HyperVGeneration)
+		hyperVGeneration := disks.HyperVGeneration(s.HyperVGeneration)
+		disk.Properties.HyperVGeneration = &hyperVGeneration
 	}
 
 	if s.OSDiskSizeGB > 0 {
-		disk.DiskProperties.DiskSizeGB = to.Int32Ptr(s.OSDiskSizeGB)
+		disk.Properties.DiskSizeGB = &s.OSDiskSizeGB
 	}
 
 	switch {
@@ -176,44 +181,65 @@ func (s StepCreateNewDiskset) getOSDiskDefinition(subscriptionID string) compute
 		imageID := fmt.Sprintf(
 			"/subscriptions/%s/providers/Microsoft.Compute/locations/%s/publishers/%s/artifacttypes/vmimage/offers/%s/skus/%s/versions/%s", subscriptionID, s.Location,
 			s.SourcePlatformImage.Publisher, s.SourcePlatformImage.Offer, s.SourcePlatformImage.Sku, s.SourcePlatformImage.Version)
-		disk.CreationData.CreateOption = compute.DiskCreateOptionFromImage
-		disk.CreationData.ImageReference = &compute.ImageDiskReference{
-			ID: to.StringPtr(imageID),
+		disk.Properties.CreationData.CreateOption = disks.DiskCreateOptionFromImage
+		disk.Properties.CreationData.ImageReference = &disks.ImageDiskReference{
+			Id: &imageID,
 		}
 	case s.SourceOSDiskResourceID != "":
-		disk.CreationData.CreateOption = compute.DiskCreateOptionCopy
-		disk.CreationData.SourceResourceID = to.StringPtr(s.SourceOSDiskResourceID)
+		disk.Properties.CreationData.CreateOption = disks.DiskCreateOptionCopy
+		disk.Properties.CreationData.SourceResourceId = &s.SourceOSDiskResourceID
 	case s.SourceImageResourceID != "":
-		disk.CreationData.CreateOption = compute.DiskCreateOptionFromImage
-		disk.CreationData.GalleryImageReference = &compute.ImageDiskReference{
-			ID: to.StringPtr(s.SourceImageResourceID),
+		disk.Properties.CreationData.CreateOption = disks.DiskCreateOptionFromImage
+		disk.Properties.CreationData.GalleryImageReference = &disks.ImageDiskReference{
+			Id: &s.SourceImageResourceID,
 		}
 	default:
-		disk.CreationData.CreateOption = compute.DiskCreateOptionEmpty
+		disk.Properties.CreationData.CreateOption = disks.DiskCreateOptionEmpty
 	}
 	return disk
 }
 
-func (s StepCreateNewDiskset) getDatadiskDefinitionFromImage(lun int32) compute.Disk {
-	disk := compute.Disk{
-		Location: to.StringPtr(s.Location),
-		DiskProperties: &compute.DiskProperties{
-			CreationData: &compute.CreationData{},
+func (s StepCreateNewDiskset) getDatadiskDefinitionFromImage(lun int64) disks.Disk {
+	disk := disks.Disk{
+		Location: s.Location,
+		Properties: &disks.DiskProperties{
+			CreationData: disks.CreationData{},
 		},
 	}
 
-	disk.CreationData.CreateOption = compute.DiskCreateOptionFromImage
-	disk.CreationData.GalleryImageReference = &compute.ImageDiskReference{
-		ID:  to.StringPtr(s.SourceImageResourceID),
-		Lun: to.Int32Ptr(lun),
+	disk.Properties.CreationData.CreateOption = disks.DiskCreateOptionFromImage
+	disk.Properties.CreationData.GalleryImageReference = &disks.ImageDiskReference{
+		Id:  &s.SourceImageResourceID,
+		Lun: &lun,
 	}
 
+	diskSkuName := disks.DiskStorageAccountTypes(s.DataDiskStorageAccountType)
 	if s.DataDiskStorageAccountType != "" {
-		disk.Sku = &compute.DiskSku{
-			Name: compute.DiskStorageAccountTypes(s.DataDiskStorageAccountType),
+		disk.Sku = &disks.DiskSku{
+			Name: &diskSkuName,
 		}
 	}
 	return disk
+}
+
+func (s *StepCreateNewDiskset) createDiskset(ctx context.Context, azcli client.AzureClientSet, id disks.DiskId, disk disks.Disk) (polling.LongRunningPoller, error) {
+	f, err := azcli.DisksClient().CreateOrUpdate(ctx, id, disk)
+	if err != nil {
+		return polling.LongRunningPoller{}, err
+	}
+	return f.Poller, nil
+}
+
+func (s *StepCreateNewDiskset) getSharedImageGalleryVersion(ctx context.Context, azclient client.AzureClientSet, id galleryimageversions.ImageVersionId) (*galleryimageversions.GalleryImageVersion, error) {
+
+	imageVersionResult, err := azclient.GalleryImageVersionsClient().Get(ctx, id, galleryimageversions.DefaultGetOperationOptions())
+	if err != nil {
+		return nil, err
+	}
+	if imageVersionResult.Model == nil {
+		return nil, fmt.Errorf("SDK returned empty model")
+	}
+	return imageVersionResult.Model, nil
 }
 
 func (s *StepCreateNewDiskset) Cleanup(state multistep.StateBag) {
@@ -231,10 +257,8 @@ func (s *StepCreateNewDiskset) Cleanup(state multistep.StateBag) {
 
 			ui.Say(fmt.Sprintf("Deleting disk %q", d))
 
-			f, err := azcli.DisksClient().Delete(context.TODO(), d.ResourceGroup, d.ResourceName.String())
-			if err == nil {
-				err = f.WaitForCompletionRef(context.TODO(), azcli.PollClient())
-			}
+			diskID := disks.NewDiskID(azcli.SubscriptionID(), d.ResourceGroup, d.ResourceName.String())
+			err = azcli.DisksClient().DeleteThenPoll(context.TODO(), diskID)
 			if err != nil {
 				log.Printf("StepCreateNewDiskset.Cleanup: error: %+v", err)
 				ui.Error(fmt.Sprintf("error deleting disk '%s': %v.", d, err))

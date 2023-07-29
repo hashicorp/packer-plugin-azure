@@ -6,7 +6,7 @@ import (
 	"log"
 	"regexp"
 
-	hashiGalleryImageVersionsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
@@ -16,7 +16,7 @@ type StepGetSourceImageName struct {
 	client            *AzureClient
 	config            *Config
 	GeneratedData     *packerbuilderdata.GeneratedData
-	getGalleryVersion func(context.Context) (*hashiGalleryImageVersionsSDK.GalleryImageVersion, error)
+	getGalleryVersion func(context.Context) (*galleryimageversions.GalleryImageVersion, error)
 	say               func(message string)
 	error             func(e error)
 }
@@ -99,11 +99,11 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 	return multistep.ActionContinue
 }
 
-func (s *StepGetSourceImageName) GetGalleryImageVersion(ctx context.Context) (*hashiGalleryImageVersionsSDK.GalleryImageVersion, error) {
+func (s *StepGetSourceImageName) GetGalleryImageVersion(ctx context.Context) (*galleryimageversions.GalleryImageVersion, error) {
 	client := s.client.GalleryImageVersionsClient
 
-	galleryVersionId := hashiGalleryImageVersionsSDK.NewImageVersionID(s.config.SharedGallery.Subscription, s.config.SharedGallery.ResourceGroup, s.config.SharedGallery.GalleryName, s.config.SharedGallery.ImageName, s.config.SharedGallery.ImageVersion)
-	result, err := client.Get(ctx, galleryVersionId, hashiGalleryImageVersionsSDK.DefaultGetOperationOptions())
+	galleryVersionId := galleryimageversions.NewImageVersionID(s.config.SharedGallery.Subscription, s.config.SharedGallery.ResourceGroup, s.config.SharedGallery.GalleryName, s.config.SharedGallery.ImageName, s.config.SharedGallery.ImageVersion)
+	result, err := client.Get(ctx, galleryVersionId, galleryimageversions.DefaultGetOperationOptions())
 	if err != nil {
 		return nil, err
 	}

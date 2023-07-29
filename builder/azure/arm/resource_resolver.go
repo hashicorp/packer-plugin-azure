@@ -16,8 +16,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
-	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
-	hashiSubnetsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/subnets"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/subnets"
 )
 
 type resourceResolver struct {
@@ -76,7 +76,7 @@ func getResourceGroupNameFromId(id string) string {
 	return xs[4]
 }
 
-func findManagedImageByName(client *AzureClient, name, subscriptionId, resourceGroupName string) (*hashiImagesSDK.Image, error) {
+func findManagedImageByName(client *AzureClient, name, subscriptionId, resourceGroupName string) (*images.Image, error) {
 	id := commonids.NewResourceGroupID(subscriptionId, resourceGroupName)
 	images, err := client.ImagesClient.ListByResourceGroupComplete(context.TODO(), id)
 	if err != nil {
@@ -119,7 +119,7 @@ func findVirtualNetworkResourceGroup(client *AzureClient, subscriptionId, name s
 
 func findVirtualNetworkSubnet(client *AzureClient, subscriptionId string, resourceGroupName string, name string) (string, error) {
 
-	subnets, err := client.NetworkMetaClient.Subnets.List(context.TODO(), hashiSubnetsSDK.NewVirtualNetworkID(subscriptionId, resourceGroupName, name))
+	subnets, err := client.NetworkMetaClient.Subnets.List(context.TODO(), subnets.NewVirtualNetworkID(subscriptionId, resourceGroupName, name))
 	if err != nil {
 		return "", err
 	}

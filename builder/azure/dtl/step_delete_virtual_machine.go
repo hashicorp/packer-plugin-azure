@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	hashiDTLVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/virtualmachines"
+	dtlvirtualmachines "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -34,7 +34,7 @@ func NewStepDeleteVirtualMachine(client *AzureClient, ui packersdk.Ui, config *C
 }
 
 func (s *StepDeleteVirtualMachine) deleteVirtualMachine(ctx context.Context, subscriptionId string, labName string, resourceGroupName string, vmName string) error {
-	vmId := hashiDTLVMSDK.NewVirtualMachineID(subscriptionId, resourceGroupName, labName, vmName)
+	vmId := dtlvirtualmachines.NewVirtualMachineID(subscriptionId, resourceGroupName, labName, vmName)
 	err := s.client.DtlMetaClient.VirtualMachines.DeleteThenPoll(ctx, vmId)
 	if err != nil {
 		s.say("Error from delete VM")

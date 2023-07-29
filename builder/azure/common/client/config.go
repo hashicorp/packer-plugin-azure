@@ -7,16 +7,19 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/azure/cli"
 	jwt "github.com/golang-jwt/jwt"
-	"github.com/hashicorp/go-azure-helpers/authentication"
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-12-01/subscriptions"
 	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
@@ -25,9 +28,8 @@ import (
 // `client_id` and `subscription_id` are specified in addition to one and only
 // one of the following: `client_secret`, `client_jwt`, `client_cert_path` --
 // Packer will use the specified Azure Active Directory (AAD) Service Principal
-// (SP).  If only `use_interactive_auth` is specified, Packer will try to
-// interactively log on the current user (tokens will be cached).  If none of
-// these options are specified, Packer will attempt to use the Managed Identity
+// (SP).
+// If none ofthese options are specified, Packer will attempt to use the Managed Identity
 // and subscription of the VM that Packer is running on.  This will only work if
 // Packer is running on an Azure VM with either a System Assigned Managed
 // Identity or User Assigned Managed Identity.
@@ -36,8 +38,7 @@ type Config struct {
 	// USGovernment. Defaults to Public. Long forms such as
 	// USGovernmentCloud and AzureUSGovernmentCloud are also supported.
 	CloudEnvironmentName string `mapstructure:"cloud_environment_name" required:"false"`
-	cloudEnvironment     *azure.Environment
-	newCloudEnvironment  *environments.Environment
+	cloudEnvironment     *environments.Environment
 	// The Hostname of the Azure Metadata Service
 	// (for example management.azure.com), used to obtain the Cloud Environment
 	// when using a Custom Azure Environment. This can also be sourced from the
@@ -81,13 +82,12 @@ type Config struct {
 	// Works with normal authentication (`az login`) and service principals (`az login --service-principal --username APP_ID --password PASSWORD --tenant TENANT_ID`).
 	// Ignores all other configurations if enabled.
 	UseAzureCLIAuth bool `mapstructure:"use_azure_cli_auth" required:"false"`
-	// Flag to use interactive login (use device code) authentication. Defaults to false.
-	// If enabled, it will use interactive authentication.
-	UseInteractiveAuth bool `mapstructure:"use_interactive_auth" required:"false"`
 }
 
+// allow override for unit tests
+var findTenantID = FindTenantID
+
 const (
-	AuthTypeDeviceLogin     = "DeviceLogin"
 	AuthTypeMSI             = "ManagedIdentity"
 	AuthTypeClientSecret    = "ClientSecret"
 	AuthTypeClientCert      = "ClientCertificate"
@@ -104,31 +104,24 @@ func (c *Config) SetDefaultValues() error {
 		c.CloudEnvironmentName = DefaultCloudEnvironmentName
 	}
 
-	err := c.setNewCloudEnvironment()
-	if err != nil {
-		return err
-	}
 	return c.setCloudEnvironment()
 }
 
-func (c *Config) CloudEnvironment() *azure.Environment {
+func (c *Config) CloudEnvironment() *environments.Environment {
 	return c.cloudEnvironment
-}
-func (c *Config) NewCloudEnvironment() *environments.Environment {
-	return c.newCloudEnvironment
 }
 func (c *Config) AuthType() string {
 	return c.authType
 }
 
-func (c *Config) setNewCloudEnvironment() error {
+func (c *Config) setCloudEnvironment() error {
 	if c.MetadataHost == "" {
 		if v := os.Getenv("ARM_METADATA_URL"); v != "" {
 			c.MetadataHost = v
 		}
 	}
 	env, err := environments.FromEndpoint(context.TODO(), c.MetadataHost, c.CloudEnvironmentName)
-	c.newCloudEnvironment = env
+	c.cloudEnvironment = env
 	if err != nil {
 		// fall back to old method of normalizing and looking up cloud names.
 		log.Printf(fmt.Sprintf("Error looking up environment using metadata host: %s. \n"+
@@ -157,54 +150,8 @@ func (c *Config) setNewCloudEnvironment() error {
 		if err != nil {
 			return err
 		}
-		c.newCloudEnvironment = env
+		c.cloudEnvironment = env
 	}
-	return nil
-}
-
-// This is still used by the Chroot and DTL builder
-func (c *Config) setCloudEnvironment() error {
-	// First, try using the metadata host to look up the cloud.
-	if c.MetadataHost == "" {
-		if v := os.Getenv("ARM_METADATA_URL"); v != "" {
-			c.MetadataHost = v
-		}
-	}
-
-	env, err := authentication.AzureEnvironmentByNameFromEndpoint(context.TODO(), c.MetadataHost, c.CloudEnvironmentName)
-	c.cloudEnvironment = env
-
-	if err != nil {
-		// fall back to old method of normalizing and looking up cloud names.
-		log.Printf(fmt.Sprintf("Error looking up environment using metadata host: %s. \n"+
-			"Falling back to hardcoded mechanism...", err.Error()))
-		lookup := map[string]string{
-			"CHINA":           "AzureChinaCloud",
-			"CHINACLOUD":      "AzureChinaCloud",
-			"AZURECHINACLOUD": "AzureChinaCloud",
-
-			"PUBLIC":           "AzurePublicCloud",
-			"PUBLICCLOUD":      "AzurePublicCloud",
-			"AZUREPUBLICCLOUD": "AzurePublicCloud",
-
-			"USGOVERNMENT":           "AzureUSGovernmentCloud",
-			"USGOVERNMENTCLOUD":      "AzureUSGovernmentCloud",
-			"AZUREUSGOVERNMENTCLOUD": "AzureUSGovernmentCloud",
-		}
-
-		name := strings.ToUpper(c.CloudEnvironmentName)
-		envName, ok := lookup[name]
-		if !ok {
-			return fmt.Errorf("There is no cloud environment matching the name '%s'!", c.CloudEnvironmentName)
-		}
-
-		env, err := azure.EnvironmentFromName(envName)
-		if err != nil {
-			return err
-		}
-		c.cloudEnvironment = &env
-	}
-
 	return nil
 }
 
@@ -227,10 +174,6 @@ func (c Config) Validate(errs *packersdk.MultiError) {
 	}
 
 	if c.UseMSI() {
-		return
-	}
-
-	if c.useDeviceLogin() {
 		return
 	}
 
@@ -286,19 +229,11 @@ func (c Config) Validate(errs *packersdk.MultiError) {
 		"  - client_secret\n"+
 		"  - client_jwt\n"+
 		"  - client_cert_path\n"+
-		"  - use_interactive_auth\n"+
 		"  - use_azure_cli_auth\n"+
-		"  to use interactive user authentication, specify only the following fields:\n"+
-		"  - subscription_id\n"+
-		"  - use_interactive_auth\n"+
 		"  to use an Azure Active Directory service principal, specify either:\n"+
 		"  - subscription_id, client_id and client_secret\n"+
 		"  - subscription_id, client_id and client_cert_path\n"+
 		"  - subscription_id, client_id and client_jwt."))
-}
-
-func (c Config) useDeviceLogin() bool {
-	return c.UseInteractiveAuth
 }
 
 func (c Config) UseCLI() bool {
@@ -306,84 +241,18 @@ func (c Config) UseCLI() bool {
 }
 
 func (c Config) UseMSI() bool {
-	return !c.UseInteractiveAuth &&
-		!c.UseAzureCLIAuth &&
+	return !c.UseAzureCLIAuth &&
 		c.ClientSecret == "" &&
 		c.ClientJWT == "" &&
 		c.ClientCertPath == "" &&
 		c.TenantID == ""
 }
 
-func (c Config) GetServicePrincipalTokens(say func(string)) (
-	servicePrincipalToken *adal.ServicePrincipalToken,
-	servicePrincipalTokenVault *adal.ServicePrincipalToken,
-	err error) {
-
-	servicePrincipalToken, err = c.GetServicePrincipalToken(say,
-		c.CloudEnvironment().ResourceManagerEndpoint)
-	if err != nil {
-		return nil, nil, err
-	}
-	servicePrincipalTokenVault, err = c.GetServicePrincipalToken(say,
-		strings.TrimRight(c.CloudEnvironment().KeyVaultEndpoint, "/"))
-	if err != nil {
-		return nil, nil, err
-	}
-	return servicePrincipalToken, servicePrincipalTokenVault, nil
-}
-
-func (c Config) GetServicePrincipalToken(
-	say func(string), forResource string) (
-	servicePrincipalToken *adal.ServicePrincipalToken,
-	err error) {
-
-	var auth oAuthTokenProvider
-	switch c.authType {
-	case AuthTypeDeviceLogin:
-		say("Getting tokens using device flow")
-		auth = NewDeviceFlowOAuthTokenProvider(*c.cloudEnvironment, say, c.TenantID)
-	case AuthTypeAzureCLI:
-		say("Getting tokens using Azure CLI")
-		auth = NewCliOAuthTokenProvider(*c.cloudEnvironment, say, c.TenantID)
-	case AuthTypeMSI:
-		say("Getting tokens using Managed Identity for Azure")
-		auth = NewMSIOAuthTokenProvider(*c.cloudEnvironment, c.ClientID)
-	case AuthTypeClientSecret:
-		say("Getting tokens using client secret")
-		auth = NewSecretOAuthTokenProvider(*c.cloudEnvironment, c.ClientID, c.ClientSecret, c.TenantID)
-	case AuthTypeClientCert:
-		say("Getting tokens using client certificate")
-		auth, err = NewCertOAuthTokenProvider(*c.cloudEnvironment, c.ClientID, c.ClientCertPath, c.TenantID, c.ClientCertExpireTimeout)
-		if err != nil {
-			return nil, err
-		}
-	case AuthTypeClientBearerJWT:
-		say("Getting tokens using client bearer JWT")
-		auth = NewJWTOAuthTokenProvider(*c.cloudEnvironment, c.ClientID, c.ClientJWT, c.TenantID)
-	default:
-		panic("AuthType not set, call FillParameters, or set explicitly")
-	}
-
-	servicePrincipalToken, err = auth.getServicePrincipalTokenWithResource(forResource)
-	if err != nil {
-		return nil, err
-	}
-
-	err = servicePrincipalToken.EnsureFresh()
-	if err != nil {
-		return nil, err
-	}
-
-	return servicePrincipalToken, nil
-}
-
 // FillParameters capture the user intent from the supplied parameter set in AuthType, retrieves the TenantID and CloudEnvironment if not specified.
 // The SubscriptionID is also retrieved in case MSI auth is requested.
 func (c *Config) FillParameters() error {
 	if c.authType == "" {
-		if c.useDeviceLogin() {
-			c.authType = AuthTypeDeviceLogin
-		} else if c.UseCLI() {
+		if c.UseCLI() {
 			c.authType = AuthTypeAzureCLI
 		} else if c.UseMSI() {
 			c.authType = AuthTypeMSI
@@ -397,28 +266,19 @@ func (c *Config) FillParameters() error {
 	}
 
 	if c.authType == AuthTypeMSI && c.SubscriptionID == "" {
-
 		subscriptionID, err := getSubscriptionFromIMDS()
 		if err != nil {
 			return fmt.Errorf("error fetching subscriptionID from VM metadata service for Managed Identity authentication: %v", err)
 		}
 		c.SubscriptionID = subscriptionID
 	}
-
 	if c.cloudEnvironment == nil {
-		err := c.setCloudEnvironment()
-		if err != nil {
-			return err
-		}
-
-	}
-
-	if c.newCloudEnvironment == nil {
-		newCloudErr := c.setNewCloudEnvironment()
+		newCloudErr := c.setCloudEnvironment()
 		if newCloudErr != nil {
 			return newCloudErr
 		}
 	}
+
 	if c.authType == AuthTypeAzureCLI {
 		tenantID, subscriptionID, err := getIDsFromAzureCLI()
 		if err != nil {
@@ -429,7 +289,8 @@ func (c *Config) FillParameters() error {
 		c.SubscriptionID = subscriptionID
 	}
 
-	if c.TenantID == "" {
+	// CLI Auth does not require tenant, SDK parses that for us
+	if c.TenantID == "" && !c.UseAzureCLIAuth {
 		tenantID, err := findTenantID(*c.cloudEnvironment, c.SubscriptionID)
 		if err != nil {
 			return err
@@ -444,5 +305,55 @@ func (c *Config) FillParameters() error {
 	return nil
 }
 
-// allow override for unit tests
-var findTenantID = FindTenantID
+// getIDsFromAzureCLI returns the TenantID and SubscriptionID from an active Azure CLI login session
+func getIDsFromAzureCLI() (string, string, error) {
+	profilePath, err := cli.ProfilePath()
+	if err != nil {
+		return "", "", err
+	}
+
+	profile, err := cli.LoadProfile(profilePath)
+	if err != nil {
+		return "", "", err
+	}
+
+	for _, p := range profile.Subscriptions {
+		if p.IsDefault {
+			return p.TenantID, p.ID, nil
+		}
+	}
+
+	return "", "", errors.New("Unable to find default subscription")
+}
+
+func FindTenantID(env environments.Environment, subscriptionID string) (string, error) {
+	const hdrKey = "WWW-Authenticate"
+	resourceManagerEndpoint, _ := env.ResourceManager.Endpoint()
+	c := subscriptions.NewSubscriptionsClientWithBaseURI(*resourceManagerEndpoint)
+
+	// we expect this request to fail (err != nil), but we are only interested
+	// in headers, so surface the error if the Response is not present (i.e.
+	// network error etc)
+	subs, err := c.Get(context.TODO(), commonids.NewSubscriptionID(subscriptionID))
+	if subs.HttpResponse == nil {
+		return "", fmt.Errorf("Request failed: %v", err)
+	}
+
+	// Expecting 401 StatusUnauthorized here, just read the header
+	if subs.HttpResponse.StatusCode != http.StatusUnauthorized {
+		return "", fmt.Errorf("Unexpected response from Get Subscription: %v", err)
+	}
+	hdr := subs.HttpResponse.Header.Get(hdrKey)
+	if hdr == "" {
+		return "", fmt.Errorf("Header %v not found in Get Subscription response", hdrKey)
+	}
+
+	// Example value for hdr:
+	//   Bearer authorization_uri="https://login.windows.net/996fe9d1-6171-40aa-945b-4c64b63bf655", error="invalid_token", error_description="The authentication failed because of missing 'Authorization' header."
+	r := regexp.MustCompile(`authorization_uri=".*/([0-9a-f\-]+)"`)
+	m := r.FindStringSubmatch(hdr)
+	if m == nil {
+		return "", fmt.Errorf("Could not find the tenant ID in header: %s %q", hdrKey, hdr)
+	}
+	return m[1], nil
+}

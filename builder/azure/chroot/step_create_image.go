@@ -9,9 +9,8 @@ import (
 	"log"
 	"sort"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -27,6 +26,13 @@ type StepCreateImage struct {
 	DataDiskStorageAccountType string
 	DataDiskCacheType          string
 	Location                   string
+
+	create func(ctx context.Context, client client.AzureClientSet, id images.ImageId, image images.Image) error
+}
+
+func NewStepCreateImage(step *StepCreateImage) *StepCreateImage {
+	step.create = step.createImage
+	return step
 }
 
 func (s *StepCreateImage) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -39,7 +45,7 @@ func (s *StepCreateImage) Run(ctx context.Context, state multistep.StateBag) mul
 		s.ImageResourceID,
 		diskResourceID))
 
-	imageResource, err := azure.ParseResourceID(s.ImageResourceID)
+	imageResource, err := client.ParseResourceID(s.ImageResourceID)
 
 	if err != nil {
 		log.Printf("StepCreateImage.Run: error: %+v", err)
@@ -50,55 +56,55 @@ func (s *StepCreateImage) Run(ctx context.Context, state multistep.StateBag) mul
 		return multistep.ActionHalt
 	}
 
-	image := compute.Image{
-		Location: to.StringPtr(s.Location),
-		ImageProperties: &compute.ImageProperties{
-			StorageProfile: &compute.ImageStorageProfile{
-				OsDisk: &compute.ImageOSDisk{
-					OsState: compute.OperatingSystemStateTypes(s.ImageOSState),
-					OsType:  compute.OperatingSystemTypesLinux,
-					ManagedDisk: &compute.SubResource{
-						ID: &diskResourceID,
+	storageAccountType := images.StorageAccountTypes(s.OSDiskStorageAccountType)
+	cacheingType := images.CachingTypes(s.OSDiskCacheType)
+	image := images.Image{
+		Location: s.Location,
+		Properties: &images.ImageProperties{
+			StorageProfile: &images.ImageStorageProfile{
+				OsDisk: &images.ImageOSDisk{
+					OsState: images.OperatingSystemStateTypes(s.ImageOSState),
+					OsType:  images.OperatingSystemTypesLinux,
+					ManagedDisk: &images.SubResource{
+						Id: &diskResourceID,
 					},
-					StorageAccountType: compute.StorageAccountTypes(s.OSDiskStorageAccountType),
-					Caching:            compute.CachingTypes(s.OSDiskCacheType),
+					StorageAccountType: &storageAccountType,
+					Caching:            &cacheingType,
 				},
-				//	DataDisks:     nil,
-				//	ZoneResilient: nil,
 			},
 		},
-		//		Tags:            nil,
 	}
 
-	var datadisks []compute.ImageDataDisk
+	var datadisks []images.ImageDataDisk
+	if len(diskset) > 0 {
+		storageAccountType = images.StorageAccountTypes(s.DataDiskStorageAccountType)
+		cacheingType = images.CachingTypes(s.DataDiskStorageAccountType)
+	}
 	for lun, resource := range diskset {
 		if lun != -1 {
 			ui.Say(fmt.Sprintf("   using %q for data disk (lun %d).", resource, lun))
 
-			datadisks = append(datadisks, compute.ImageDataDisk{
-				Lun:                to.Int32Ptr(lun),
-				ManagedDisk:        &compute.SubResource{ID: to.StringPtr(resource.String())},
-				StorageAccountType: compute.StorageAccountTypes(s.DataDiskStorageAccountType),
-				Caching:            compute.CachingTypes(s.DataDiskCacheType),
+			datadisks = append(datadisks, images.ImageDataDisk{
+				Lun:                lun,
+				ManagedDisk:        &images.SubResource{Id: common.StringPtr(resource.String())},
+				StorageAccountType: &storageAccountType,
+				Caching:            &cacheingType,
 			})
 		}
 	}
 	if datadisks != nil {
 		sort.Slice(datadisks, func(i, j int) bool {
-			return *datadisks[i].Lun < *datadisks[j].Lun
+			return datadisks[i].Lun < datadisks[j].Lun
 		})
-		image.ImageProperties.StorageProfile.DataDisks = &datadisks
+		image.Properties.StorageProfile.DataDisks = &datadisks
 	}
 
-	f, err := azcli.ImagesClient().CreateOrUpdate(
+	id := images.NewImageID(azcli.SubscriptionID(), imageResource.ResourceGroup, imageResource.ResourceName.String())
+	err = s.create(
 		ctx,
-		imageResource.ResourceGroup,
-		imageResource.ResourceName,
+		azcli,
+		id,
 		image)
-	if err == nil {
-		log.Println("Image creation in process...")
-		err = f.WaitForCompletionRef(ctx, azcli.PollClient())
-	}
 	if err != nil {
 		log.Printf("StepCreateImage.Run: error: %+v", err)
 		err := fmt.Errorf(
@@ -107,9 +113,13 @@ func (s *StepCreateImage) Run(ctx context.Context, state multistep.StateBag) mul
 		ui.Error(err.Error())
 		return multistep.ActionHalt
 	}
-	log.Printf("Image creation complete: %s", f.Status())
+	log.Printf("Image creation complete")
 
 	return multistep.ActionContinue
+}
+
+func (s *StepCreateImage) createImage(ctx context.Context, client client.AzureClientSet, id images.ImageId, image images.Image) error {
+	return client.ImagesClient().CreateOrUpdateThenPoll(ctx, id, image)
 }
 
 func (*StepCreateImage) Cleanup(bag multistep.StateBag) {} // this is the final artifact, don't delete

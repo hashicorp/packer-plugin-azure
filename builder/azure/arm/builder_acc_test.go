@@ -37,8 +37,9 @@ import (
 	"testing"
 	"time"
 
-	hashiGalleryImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
+	commonclient "github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
@@ -217,54 +218,12 @@ func TestBuilderAcc_ManagedDisk_Windows_Build_Resource_Group_Additional_Disk(t *
 	})
 }
 
-func TestBuilderAcc_ManagedDisk_Windows_DeviceLogin(t *testing.T) {
-	t.Parallel()
-	if os.Getenv(DeviceLoginAcceptanceTest) == "" {
-		t.Skipf("Device Login Acceptance tests skipped unless env '%s' set, as its requires manual step during execution", DeviceLoginAcceptanceTest)
-		return
-	}
-	acctest.TestPlugin(t, &acctest.PluginTestCase{
-		Name:     "test-azure-managedisk-windows-devicelogin",
-		Type:     "azure-arm",
-		Template: testBuilderAccManagedDiskWindowsDeviceLogin,
-		Check: func(buildCommand *exec.Cmd, logfile string) error {
-			if buildCommand.ProcessState != nil {
-				if buildCommand.ProcessState.ExitCode() != 0 {
-					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
-				}
-			}
-			return nil
-		},
-	})
-}
-
 func TestBuilderAcc_ManagedDisk_Linux(t *testing.T) {
 	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-managedisk-linux",
 		Type:     "azure-arm",
 		Template: testBuilderAccManagedDiskLinux,
-		Check: func(buildCommand *exec.Cmd, logfile string) error {
-			if buildCommand.ProcessState != nil {
-				if buildCommand.ProcessState.ExitCode() != 0 {
-					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
-				}
-			}
-			return nil
-		},
-	})
-}
-
-func TestBuilderAcc_ManagedDisk_Linux_DeviceLogin(t *testing.T) {
-	t.Parallel()
-	if os.Getenv(DeviceLoginAcceptanceTest) == "" {
-		t.Skipf("Device Login Acceptance tests skipped unless env '%s' set, as its requires manual step during execution", DeviceLoginAcceptanceTest)
-		return
-	}
-	acctest.TestPlugin(t, &acctest.PluginTestCase{
-		Name:     "test-azure-managedisk-linux-device-login",
-		Type:     "azure-arm",
-		Template: testBuilderAccManagedDiskLinuxDeviceLogin,
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
 			if buildCommand.ProcessState != nil {
 				if buildCommand.ProcessState.ExitCode() != 0 {
@@ -415,7 +374,7 @@ func createTestAzureClient(t *testing.T) AzureClient {
 	// Use CLI auth for our test client
 	b.config.ClientConfig.UseAzureCLIAuth = true
 	_ = b.config.ClientConfig.FillParameters()
-	authOptions := NewSDKAuthOptions{
+	authOptions := commonclient.NewSDKAuthOptions{
 		AuthType:       b.config.ClientConfig.AuthType(),
 		ClientID:       b.config.ClientConfig.ClientID,
 		ClientSecret:   b.config.ClientConfig.ClientSecret,
@@ -426,7 +385,7 @@ func createTestAzureClient(t *testing.T) AzureClient {
 	azureClient, _, err := NewAzureClient(
 		context.TODO(),
 		true,
-		b.config.ClientConfig.NewCloudEnvironment(),
+		b.config.ClientConfig.CloudEnvironment(),
 		b.config.SharedGalleryTimeout,
 		b.config.PollingDurationTimeout,
 		authOptions)
@@ -438,31 +397,31 @@ func createTestAzureClient(t *testing.T) AzureClient {
 
 func createSharedImageGalleryDefinition(t *testing.T, params CreateSharedImageGalleryDefinitionParameters) {
 	azureClient := createTestAzureClient(t)
-	osType := hashiGalleryImagesSDK.OperatingSystemTypesLinux
+	osType := galleryimages.OperatingSystemTypesLinux
 	if params.isWindows {
-		osType = hashiGalleryImagesSDK.OperatingSystemTypesWindows
+		osType = galleryimages.OperatingSystemTypesWindows
 	}
-	osState := hashiGalleryImagesSDK.OperatingSystemStateTypesGeneralized
+	osState := galleryimages.OperatingSystemStateTypesGeneralized
 	if params.specialized {
-		osState = hashiGalleryImagesSDK.OperatingSystemStateTypesSpecialized
+		osState = galleryimages.OperatingSystemStateTypesSpecialized
 	}
-	osArch := hashiGalleryImagesSDK.ArchitectureArmSixFour
+	osArch := galleryimages.ArchitectureArmSixFour
 	if params.isX64 {
-		osArch = hashiGalleryImagesSDK.ArchitectureXSixFour
+		osArch = galleryimages.ArchitectureXSixFour
 	}
-	hyperVGeneration := hashiGalleryImagesSDK.HyperVGenerationVOne
+	hyperVGeneration := galleryimages.HyperVGenerationVOne
 	if params.useGenTwoVM {
-		hyperVGeneration = hashiGalleryImagesSDK.HyperVGenerationVTwo
+		hyperVGeneration = galleryimages.HyperVGenerationVTwo
 	}
 	location := "southcentralus"
-	galleryId := hashiGalleryImagesSDK.NewGalleryImageID(params.subscriptionId, "packer-acceptance-test", "acctestgallery", params.galleryImageName)
-	_, err := azureClient.GalleryImagesClient.CreateOrUpdate(context.TODO(), galleryId, hashiGalleryImagesSDK.GalleryImage{
-		Properties: &hashiGalleryImagesSDK.GalleryImageProperties{
+	galleryId := galleryimages.NewGalleryImageID(params.subscriptionId, "packer-acceptance-test", "acctestgallery", params.galleryImageName)
+	_, err := azureClient.GalleryImagesClient.CreateOrUpdate(context.TODO(), galleryId, galleryimages.GalleryImage{
+		Properties: &galleryimages.GalleryImageProperties{
 			OsType:           osType,
 			OsState:          osState,
 			Architecture:     &osArch,
 			HyperVGeneration: &hyperVGeneration,
-			Identifier: hashiGalleryImagesSDK.GalleryImageIdentifier{
+			Identifier: galleryimages.GalleryImageIdentifier{
 				Publisher: params.imagePublisher,
 				Offer:     params.imageOffer,
 				Sku:       params.imageSku,
@@ -493,7 +452,7 @@ func deleteSharedImageGalleryDefinition(t *testing.T, subscriptionID string, gal
 		RetryDelay: (&retry.Backoff{InitialBackoff: 2 * time.Second, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}
 	err := retryConfig.Run(context.TODO(), func(ctx context.Context) error {
-		id := hashiGalleryImagesSDK.NewGalleryImageID(subscriptionID, "packer-acceptance-test", "acctestgallery", galleryImageName)
+		id := galleryimages.NewGalleryImageID(subscriptionID, "packer-acceptance-test", "acctestgallery", galleryImageName)
 		err := azureClient.GalleryImagesClient.DeleteThenPoll(context.TODO(), id)
 		if err != nil {
 			return err
@@ -658,36 +617,6 @@ const testBuilderAccManagedDiskWindowsBuildResourceGroupAdditionalDisk = `
 }
 `
 
-const testBuilderAccManagedDiskWindowsDeviceLogin = `
-{
-	"variables": {
-	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}"
-	},
-	"builders": [{
-	  "type": "azure-arm",
-
-	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
-
-	  "managed_image_resource_group_name": "packer-acceptance-test",
-	  "managed_image_name": "testBuilderAccManagedDiskWindowsDeviceLogin-{{timestamp}}",
-
-	  "os_type": "Windows",
-	  "image_publisher": "MicrosoftWindowsServer",
-	  "image_offer": "WindowsServer",
-	  "image_sku": "2012-R2-Datacenter",
-
-	  "communicator": "winrm",
-	  "winrm_use_ssl": "true",
-	  "winrm_insecure": "true",
-	  "winrm_timeout": "3m",
-	  "winrm_username": "packer",
-
-	  "location": "South Central US",
-	  "vm_size": "Standard_DS2_v2"
-	}]
-}
-`
-
 const testBuilderAccManagedDiskLinux = `
 {
 	"variables": {
@@ -716,31 +645,6 @@ const testBuilderAccManagedDiskLinux = `
 	    "env": "testing",
 	    "builder": "packer"
 	   }
-	}]
-}
-`
-
-const testBuilderAccManagedDiskLinuxDeviceLogin = `
-{
-	"variables": {
-	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}"
-	},
-	"builders": [{
-	  "type": "azure-arm",
-
-	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
-
-	  "managed_image_resource_group_name": "packer-acceptance-test",
-	  "managed_image_name": "testBuilderAccManagedDiskLinuxDeviceLogin-{{timestamp}}",
-
-	  "os_type": "Linux",
-	  "image_publisher": "Canonical",
-	  "image_offer": "UbuntuServer",
-	  "image_sku": "16.04-LTS",
-	  "async_resourcegroup_delete": "true",
-
-	  "location": "South Central US",
-	  "vm_size": "Standard_DS2_v2"
 	}]
 }
 `
