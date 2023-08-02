@@ -1,6 +1,6 @@
 module github.com/hashicorp/packer-plugin-azure
 
-go 1.18
+go 1.19
 
 require (
 	github.com/Azure/azure-sdk-for-go v64.0.0+incompatible
