@@ -116,3 +116,5 @@ require (
 
 // Incorrect plugin registration for Azure component; see hashicorp/packer-plugin-azure/pull/73
 retract v0.0.1
+
+replace github.com/zclconf/go-cty => github.com/nywilken/go-cty v1.12.1 // added by packer-sdc fix as noted in github.com/hashicorp/packer-plugin-sdk/issues/187
