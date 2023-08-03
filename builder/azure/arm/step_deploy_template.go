@@ -156,8 +156,10 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, subscriptionId 
 	if err != nil {
 		return err
 	}
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
 	id := deployments.NewResourceGroupProviderDeploymentID(subscriptionId, resourceGroupName, deploymentName)
-	err = s.client.DeploymentsClient.CreateOrUpdateThenPoll(ctx, id, *deployment)
+	err = s.client.DeploymentsClient.CreateOrUpdateThenPoll(pollingContext, id, *deployment)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return err
@@ -171,9 +173,11 @@ func (s *StepDeployTemplate) deleteDeploymentObject(ctx context.Context, state m
 	subscriptionId := state.Get(constants.ArmSubscription).(string)
 	ui := state.Get("ui").(packersdk.Ui)
 
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
 	ui.Say(fmt.Sprintf("Removing the created Deployment object: '%s'", deploymentName))
 	id := deployments.NewResourceGroupProviderDeploymentID(subscriptionId, resourceGroupName, deploymentName)
-	err := s.client.DeploymentsClient.DeleteThenPoll(ctx, id)
+	err := s.client.DeploymentsClient.DeleteThenPoll(pollingContext, id)
 	if err != nil {
 		return err
 	}
@@ -194,7 +198,7 @@ func (s *StepDeployTemplate) getImageDetails(ctx context.Context, subscriptionId
 		return "", "", err
 	}
 	if model := vm.Model; model == nil {
-		return "", "", errors.New("TODO")
+		return "", "", errors.New("SDK returned empty model")
 	}
 	if vm.Model.Properties.StorageProfile.OsDisk.Vhd != nil {
 		imageType = "image"
@@ -213,46 +217,52 @@ func (s *StepDeployTemplate) getImageDetails(ctx context.Context, subscriptionId
 }
 
 func deleteResource(ctx context.Context, client *AzureClient, subscriptionId string, resourceType string, resourceName string, resourceGroupName string) error {
+    
+	pollingContext, cancel := context.WithTimeout(ctx, client.PollingDuration)
+	defer cancel()
+	
 	switch resourceType {
 	case "Microsoft.Compute/virtualMachines":
 		vmID := virtualmachines.NewVirtualMachineID(subscriptionId, resourceGroupName, resourceName)
-		if err := client.VirtualMachinesClient.DeleteThenPoll(ctx, vmID, virtualmachines.DefaultDeleteOperationOptions()); err != nil {
+		if err := client.VirtualMachinesClient.DeleteThenPoll(pollingContext, vmID, virtualmachines.DefaultDeleteOperationOptions()); err != nil {
 			return err
 		}
 	case "Microsoft.KeyVault/vaults":
 		id := commonids.NewKeyVaultID(subscriptionId, resourceGroupName, resourceName)
-		_, err := client.VaultsClient.Delete(ctx, id)
+		_, err := client.VaultsClient.Delete(pollingContext, id)
 		return err
 	case "Microsoft.Network/networkInterfaces":
 		interfaceID := commonids.NewNetworkInterfaceID(subscriptionId, resourceGroupName, resourceName)
-		err := client.NetworkMetaClient.NetworkInterfaces.DeleteThenPoll(ctx, interfaceID)
+		err := client.NetworkMetaClient.NetworkInterfaces.DeleteThenPoll(pollingContext, interfaceID)
 		return err
 	case "Microsoft.Network/virtualNetworks":
 		vnetID := virtualnetworks.NewVirtualNetworkID(subscriptionId, resourceGroupName, resourceName)
-		err := client.NetworkMetaClient.VirtualNetworks.DeleteThenPoll(ctx, vnetID)
+		err := client.NetworkMetaClient.VirtualNetworks.DeleteThenPoll(pollingContext, vnetID)
 		return err
 	case "Microsoft.Network/networkSecurityGroups":
 		secGroupId := networksecuritygroups.NewNetworkSecurityGroupID(subscriptionId, resourceGroupName, resourceName)
-		err := client.NetworkMetaClient.NetworkSecurityGroups.DeleteThenPoll(ctx, secGroupId)
+		err := client.NetworkMetaClient.NetworkSecurityGroups.DeleteThenPoll(pollingContext, secGroupId)
 		return err
 	case "Microsoft.Network/publicIPAddresses":
 		ipID := commonids.NewPublicIPAddressID(subscriptionId, resourceGroupName, resourceName)
-		err := client.NetworkMetaClient.PublicIPAddresses.DeleteThenPoll(ctx, ipID)
+		err := client.NetworkMetaClient.PublicIPAddresses.DeleteThenPoll(pollingContext, ipID)
 		return err
 	}
 	return nil
 }
 
-// TODO Let's split this into two seperate methods, right now its confusing, especially with the changes I'm making
+// TODO Let's split this into two seperate methods 
 // deleteVHD and deleteManagedDisk, and then just check in Cleanup which function to call
 func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool, subscriptionId string, storageAccountName string) error {
 	// Managed disk
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
 	if isManagedDisk {
 		xs := strings.Split(imageName, "/")
 		diskName := xs[len(xs)-1]
 		diskId := disks.NewDiskID(subscriptionId, resourceGroupName, diskName)
 
-		if err := s.client.DisksClient.DeleteThenPoll(ctx, diskId); err != nil {
+		if err := s.client.DisksClient.DeleteThenPoll(pollingContext, diskId); err != nil {
 			return err
 		}
 		return nil
@@ -268,7 +278,7 @@ func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, 
 	if len(xs) < 3 {
 		return errors.New("Unable to parse path of image " + imageName)
 	}
-	_, err = s.client.GiovanniBlobClient.Delete(ctx, storageAccountName, "images", blobName, giovanniBlobStorageSDK.DeleteInput{})
+	_, err = s.client.GiovanniBlobClient.Delete(pollingContext, storageAccountName, "images", blobName, giovanniBlobStorageSDK.DeleteInput{})
 	return err
 }
 

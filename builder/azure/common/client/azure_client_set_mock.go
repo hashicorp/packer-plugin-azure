@@ -4,6 +4,8 @@
 package client
 
 import (
+	"time"
+
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachineimages"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
@@ -26,6 +28,7 @@ type AzureClientSetMock struct {
 	GalleryImageVersionsClientMock galleryimageversions.GalleryImageVersionsClient
 	MetadataClientMock             MetadataClientAPI
 	SubscriptionIDMock             string
+	PollingDelayMock time.Duration
 }
 
 // DisksClient returns a DisksClient
@@ -71,4 +74,8 @@ func (m *AzureClientSetMock) MetadataClient() MetadataClientAPI {
 // SubscriptionID returns SubscriptionIDMock
 func (m *AzureClientSetMock) SubscriptionID() string {
 	return m.SubscriptionIDMock
+}
+
+func (m *AzureClientSetMock) PollingDelay() time.Duration {
+	return m.PollingDelayMock
 }

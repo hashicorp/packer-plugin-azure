@@ -35,8 +35,10 @@ func NewStepPowerOffCompute(client *AzureClient, ui packersdk.Ui, config *Config
 }
 
 func (s *StepPowerOffCompute) powerOffCompute(ctx context.Context, resourceGroupName string, labName, computeName string) error {
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
 	vmResourceId := virtualmachines.NewVirtualMachineID(s.config.ClientConfig.SubscriptionID, s.config.tmpResourceGroupName, labName, computeName)
-	err := s.client.DtlMetaClient.VirtualMachines.StopThenPoll(ctx, vmResourceId)
+	err := s.client.DtlMetaClient.VirtualMachines.StopThenPoll(pollingContext, vmResourceId)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 	}

@@ -119,7 +119,9 @@ func (s *StepCreateImage) Run(ctx context.Context, state multistep.StateBag) mul
 }
 
 func (s *StepCreateImage) createImage(ctx context.Context, client client.AzureClientSet, id images.ImageId, image images.Image) error {
-	return client.ImagesClient().CreateOrUpdateThenPoll(ctx, id, image)
+	pollingContext, cancel := context.WithTimeout(ctx, client.PollingDelay())
+	defer cancel()
+	return client.ImagesClient().CreateOrUpdateThenPoll(pollingContext, id, image)
 }
 
 func (*StepCreateImage) Cleanup(bag multistep.StateBag) {} // this is the final artifact, don't delete

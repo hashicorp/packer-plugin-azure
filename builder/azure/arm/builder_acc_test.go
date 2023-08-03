@@ -374,7 +374,7 @@ func createTestAzureClient(t *testing.T) AzureClient {
 	// Use CLI auth for our test client
 	b.config.ClientConfig.UseAzureCLIAuth = true
 	_ = b.config.ClientConfig.FillParameters()
-	authOptions := commonclient.NewSDKAuthOptions{
+	authOptions := commonclient.AzureAuthOptions{
 		AuthType:       b.config.ClientConfig.AuthType(),
 		ClientID:       b.config.ClientConfig.ClientID,
 		ClientSecret:   b.config.ClientConfig.ClientSecret,

@@ -131,7 +131,7 @@ func TestStepCreateResourceGroupShouldTakeStepArgumentsFromStateBag(t *testing.T
 	var expectedResourceGroupName = stateBag.Get(constants.ArmResourceGroupName).(string)
 	var expectedLocation = stateBag.Get(constants.ArmLocation).(string)
 	var expectedSubscription = stateBag.Get(constants.ArmSubscription).(string)
-	var expectedTags = stateBag.Get(constants.ArmNewSDKTags).(map[string]string)
+	var expectedTags = stateBag.Get(constants.ArmTags).(map[string]string)
 
 	if actualResourceGroupName != expectedResourceGroupName {
 		t.Fatal("Expected the step to source 'constants.ArmResourceGroupName' from the state bag, but it did not.")
@@ -146,7 +146,7 @@ func TestStepCreateResourceGroupShouldTakeStepArgumentsFromStateBag(t *testing.T
 	}
 
 	if len(expectedTags) != len(actualTags) && expectedTags["tag01"] != actualTags["tag01"] {
-		t.Fatal("Expected the step to source 'constants.ArmNewSDKTags' from the state bag, but it did not.")
+		t.Fatal("Expected the step to source 'constants.ArmTags' from the state bag, but it did not.")
 	}
 
 	_, ok := stateBag.GetOk(constants.ArmIsResourceGroupCreated)
@@ -212,7 +212,7 @@ func createTestStateBagStepCreateResourceGroup() multistep.StateBag {
 		"tag01": value,
 	}
 
-	stateBag.Put(constants.ArmNewSDKTags, tags)
+	stateBag.Put(constants.ArmTags, tags)
 	return stateBag
 }
 
@@ -229,7 +229,7 @@ func createTestExistingStateBagStepCreateResourceGroup() multistep.StateBag {
 		"tag01": value,
 	}
 
-	stateBag.Put(constants.ArmNewSDKTags, tags)
+	stateBag.Put(constants.ArmTags, tags)
 	return stateBag
 }
 
@@ -245,7 +245,7 @@ func TestStepCreateResourceGroupShouldFailIfTagsFailCast(t *testing.T) {
 		"tag01": &value,
 	}
 
-	stateBag.Put(constants.ArmNewSDKTags, tags)
+	stateBag.Put(constants.ArmTags, tags)
 	var testSubject = &StepCreateResourceGroup{
 		create: func(context.Context, string, string, string, map[string]string) error { return nil },
 		say:    func(message string) {},

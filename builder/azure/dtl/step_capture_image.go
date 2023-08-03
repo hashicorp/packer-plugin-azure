@@ -82,7 +82,9 @@ func (s *StepCaptureImage) captureImageFromVM(ctx context.Context) error {
 	}
 
 	customImageId := customimages.NewCustomImageID(s.config.ClientConfig.SubscriptionID, s.config.LabResourceGroupName, s.config.LabName, s.config.ManagedImageName)
-	err := s.client.DtlMetaClient.CustomImages.CreateOrUpdateThenPoll(ctx, customImageId, *customImage)
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.CustomImageCaptureTimeout)
+	defer cancel()
+	err := s.client.DtlMetaClient.CustomImages.CreateOrUpdateThenPoll(pollingContext, customImageId, *customImage)
 	if err != nil {
 		s.say("Error from Capture Image")
 		s.say(s.client.LastError.Error())

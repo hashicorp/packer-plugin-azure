@@ -126,7 +126,7 @@ func (p *Provisioner) Provision(ctx context.Context, ui packersdk.Ui, comm packe
 	}
 
 	// Pass in relevant auth information for hashicorp/go-azure-sdk
-	authOptions := client.NewSDKAuthOptions{
+	authOptions := client.AzureAuthOptions{
 		AuthType:       p.config.ClientConfig.AuthType(),
 		ClientID:       p.config.ClientConfig.ClientID,
 		ClientSecret:   p.config.ClientConfig.ClientSecret,
@@ -184,8 +184,10 @@ func (p *Provisioner) Provision(ctx context.Context, ui packersdk.Ui, comm packe
 
 	ui.Say("Applying artifact ")
 
+	pollingContext, cancel := context.WithTimeout(ctx, azureClient.PollingDuration)
+	defer cancel()
 	vmResourceId := virtualmachines.NewVirtualMachineID(p.config.ClientConfig.SubscriptionID, p.config.ResourceGroupName, p.config.LabName, p.config.VMName)
-	err = azureClient.DtlMetaClient.VirtualMachines.ApplyArtifactsThenPoll(ctx, vmResourceId, dtlApplyArifactRequest)
+	err = azureClient.DtlMetaClient.VirtualMachines.ApplyArtifactsThenPoll(pollingContext, vmResourceId, dtlApplyArifactRequest)
 
 	if err != nil {
 		ui.Say(fmt.Sprintf("Error Applying artifact: %s", err))

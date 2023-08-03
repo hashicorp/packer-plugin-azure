@@ -1272,7 +1272,7 @@ func TestConfigShouldAcceptAbsentManagedImageButPresentSharedImageGalleryDestina
 			"resource_group":      "ignore",
 			"gallery_name":        "ignore",
 			"image_name":          "ignore",
-			"image_version":       "ignore",
+			"image_version":       "1.0.1",
 			"replication_regions": "ignore",
 		},
 	}
@@ -2090,7 +2090,34 @@ func TestConfigShouldAllowSharedImageGalleryOptions(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected config to accept Shared Image Gallery options - but failed with %q", err)
 	}
+}
 
+func TestConfigShouldRejectSharedImageGalleryDestinationInvalidVersion(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           "linux",
+		"image_sku": "ignore",
+		"image_offer": "ignore",
+		"image_publisher": "ignore",
+		"shared_image_gallery_destination": map[string]string{
+			"resource_group":      "ignore",
+			"gallery_name":        "ignore",
+			"image_name":          "ignore",
+			"image_version":       "not semver",
+			"replication_regions": "ignore",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("expected config to reject invalid shared image gallery destination version", err)
+	}
+	errorMessage := "An image_version must follow Major(int).Minor(int).Patch(int) format"
+	if !strings.Contains(err.Error(), errorMessage) {
+		t.Errorf("expected config to reject with error containing %s but got %s", errorMessage, err)
+	}
 }
 
 func TestSharedImageGalleryWithSkipImageCreateOptions(t *testing.T) {

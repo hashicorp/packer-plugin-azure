@@ -12,7 +12,6 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
@@ -67,9 +66,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	ui.Say("Running builder ...")
 
-	ctx, cancel := context.WithTimeout(ctx, time.Minute*60)
-	defer cancel()
-
 	// FillParameters function captures authType and sets defaults.
 	err := b.config.ClientConfig.FillParameters()
 	if err != nil {
@@ -91,7 +87,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	b.stateBag.Put(constants.Ui, ui)
 
 	// Pass in relevant auth information for hashicorp/go-azure-sdk
-	authOptions := commonclient.NewSDKAuthOptions{
+	authOptions := commonclient.AzureAuthOptions{
 		AuthType:       b.config.ClientConfig.AuthType(),
 		ClientID:       b.config.ClientConfig.ClientID,
 		ClientSecret:   b.config.ClientConfig.ClientSecret,
@@ -143,7 +139,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		if err == nil {
 			if b.config.PackerForce {
 				ui.Say(fmt.Sprintf("the managed image named %s already exists, but deleting it due to -force flag", b.config.ManagedImageName))
-				err := azureClient.ImagesClient.DeleteThenPoll(ctx, imageId)
+				deleteImageContext, cancel := context.WithTimeout(ctx, azureClient.PollingDuration)
+				defer cancel()
+				err := azureClient.ImagesClient.DeleteThenPoll(deleteImageContext, imageId)
 				if err != nil {
 					return nil, fmt.Errorf("failed to delete the managed image named %s : %s", b.config.ManagedImageName, azureClient.LastError.Error())
 				}
@@ -286,7 +284,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				NewStepDeployTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetCommunicatorSpecificKeyVaultDeployment, KeyVaultTemplate),
 			)
 		} else if b.config.Comm.Type == "winrm" {
-			steps = append(steps, NewStepCertificateInKeyVault(azureClient, ui, &b.config, b.config.winrmCertificate))
+			steps = append(steps, NewStepCertificateInKeyVault(azureClient, ui, &b.config, b.config.winrmCertificate, b.config.WinrmExpirationTime))
 		} else {
 			privateKey, err := ssh.ParseRawPrivateKey(b.config.Comm.SSHPrivateKey)
 			if err != nil {
@@ -294,14 +292,14 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			}
 			pk, ok := privateKey.(*rsa.PrivateKey)
 			if !ok {
-				//https://learn.microsoft.com/en-us/azure/virtual-machines/windows/connect-ssh?tabs=azurecli#supported-ssh-key-formats
+				// https://learn.microsoft.com/en-us/azure/virtual-machines/windows/connect-ssh?tabs=azurecli#supported-ssh-key-formats
 				return nil, errors.New("Provided private key must be in RSA format to use for SSH on Windows on Azure")
 			}
 			secret, err := b.config.formatCertificateForKeyVault(pk)
 			if err != nil {
 				return nil, err
 			}
-			steps = append(steps, NewStepCertificateInKeyVault(azureClient, ui, &b.config, secret))
+			steps = append(steps, NewStepCertificateInKeyVault(azureClient, ui, &b.config, secret, b.config.WinrmExpirationTime))
 		}
 		steps = append(steps,
 			NewStepGetCertificate(azureClient, ui),
@@ -478,8 +476,7 @@ func (b *Builder) getBlobAccount(ctx context.Context, client *AzureClient, subsc
 func (b *Builder) configureStateBag(stateBag multistep.StateBag) {
 	stateBag.Put(constants.AuthorizedKey, b.config.sshAuthorizedKey)
 
-	stateBag.Put(constants.ArmTags, packerAzureCommon.MapToAzureTags(b.config.AzureTags))
-	stateBag.Put(constants.ArmNewSDKTags, b.config.AzureTags)
+	stateBag.Put(constants.ArmTags, b.config.AzureTags)
 	stateBag.Put(constants.ArmComputeName, b.config.tmpComputeName)
 	stateBag.Put(constants.ArmDeploymentName, b.config.tmpDeploymentName)
 
@@ -541,7 +538,7 @@ func (b *Builder) setRuntimeParameters(stateBag multistep.StateBag) {
 }
 
 func (b *Builder) setTemplateParameters(stateBag multistep.StateBag) {
-	stateBag.Put(constants.ArmNewVirtualMachineCaptureParameters, b.config.toVirtualMachineCaptureParameters())
+	stateBag.Put(constants.ArmVirtualMachineCaptureParameters, b.config.toVirtualMachineCaptureParameters())
 }
 
 func (b *Builder) setImageParameters(stateBag multistep.StateBag) {

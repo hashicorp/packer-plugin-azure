@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -101,6 +102,7 @@ func TestStepDeployTemplateDeleteImageShouldFailWhenImageUrlCannotBeParsed(t *te
 		error:        func(e error) {},
 		name:         "--deployment-name--",
 		templateType: VirtualMachineTemplate,
+		client:       &AzureClient{PollingDuration: time.Minute * 5},
 	}
 	// Invalid URL per https://golang.org/src/net/url/url_test.go
 	err := testSubject.deleteImage(context.TODO(), "http://[fe80::1%en0]/", "Unit Test: ResourceGroupName", false, "subscriptionId", "")
@@ -113,6 +115,7 @@ func TestStepDeployTemplateDeleteImageShouldFailWithInvalidImage(t *testing.T) {
 	var testSubject = &StepDeployTemplate{
 		say:          func(message string) {},
 		error:        func(e error) {},
+		client:       &AzureClient{PollingDuration: time.Minute * 5},
 		name:         "--deployment-name--",
 		templateType: VirtualMachineTemplate,
 	}

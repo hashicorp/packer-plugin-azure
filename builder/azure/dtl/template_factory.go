@@ -103,8 +103,7 @@ func GetVirtualMachineDeployment(config *Config) (*labs.LabVirtualMachineCreatio
 	labMachine := &labs.LabVirtualMachineCreationParameter{
 		Name:     &config.tmpComputeName,
 		Location: &config.Location,
-		// TODO
-		//Tags:     config.AzureTags,
+		Tags:     &config.AzureTags,
 		Properties: labMachineProps,
 	}
 

@@ -46,8 +46,10 @@ func (s *StepSnapshotDataDisks) createDataDiskSnapshot(ctx context.Context, subs
 		Location: *common.StringPtr(location),
 		Tags:     &tags,
 	}
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
 	id := snapshots.NewSnapshotID(subscriptionId, resourceGroupName, dstSnapshotName)
-	err := s.client.SnapshotsClient.CreateOrUpdateThenPoll(ctx, id, srcVhdToSnapshot)
+	err := s.client.SnapshotsClient.CreateOrUpdateThenPoll(pollingContext, id, srcVhdToSnapshot)
 
 	if err != nil {
 		s.say(s.client.LastError.Error())
@@ -71,7 +73,7 @@ func (s *StepSnapshotDataDisks) Run(ctx context.Context, stateBag multistep.Stat
 
 	var resourceGroupName = stateBag.Get(constants.ArmManagedImageResourceGroupName).(string)
 	var location = stateBag.Get(constants.ArmLocation).(string)
-	var tags = stateBag.Get(constants.ArmNewSDKTags).(map[string]string)
+	var tags = stateBag.Get(constants.ArmTags).(map[string]string)
 	var additionalDisks = stateBag.Get(constants.ArmAdditionalDiskVhds).([]string)
 	var dstSnapshotPrefix = stateBag.Get(constants.ArmManagedImageDataDiskSnapshotPrefix).(string)
 	var subscriptionId = stateBag.Get(constants.ArmSubscription).(string)

@@ -188,7 +188,7 @@ func TestStepCaptureImageShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 
 	var expectedComputeName = stateBag.Get(constants.ArmComputeName).(string)
 	var expectedResourceGroupName = stateBag.Get(constants.ArmResourceGroupName).(string)
-	var expectedVirtualMachineCaptureParameters = stateBag.Get(constants.ArmNewVirtualMachineCaptureParameters).(*virtualmachines.VirtualMachineCaptureParameters)
+	var expectedVirtualMachineCaptureParameters = stateBag.Get(constants.ArmVirtualMachineCaptureParameters).(*virtualmachines.VirtualMachineCaptureParameters)
 
 	actualVirtualMachineID := stateBag.Get(constants.ArmBuildVMInternalId).(string)
 	if actualVirtualMachineID != expectedVirtualMachineID {
@@ -215,7 +215,7 @@ func createTestStateBagStepCaptureImage() multistep.StateBag {
 	stateBag.Put(constants.ArmComputeName, "Unit Test: ComputeName")
 	stateBag.Put(constants.ArmResourceGroupName, "Unit Test: ResourceGroupName")
 	stateBag.Put(constants.ArmSubscription, "Unit Test: SubscriptionId")
-	stateBag.Put(constants.ArmNewVirtualMachineCaptureParameters, &virtualmachines.VirtualMachineCaptureParameters{})
+	stateBag.Put(constants.ArmVirtualMachineCaptureParameters, &virtualmachines.VirtualMachineCaptureParameters{})
 
 	stateBag.Put(constants.ArmIsManagedImage, false)
 	stateBag.Put(constants.ArmManagedImageResourceGroupName, "")

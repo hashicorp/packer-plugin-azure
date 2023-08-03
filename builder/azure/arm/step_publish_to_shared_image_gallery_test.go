@@ -89,7 +89,7 @@ func createTestStateBagStepPublishToSharedImageGallery(managed bool) multistep.S
 	tags := map[string]string{
 		"tag01": value,
 	}
-	stateBag.Put(constants.ArmNewSDKTags, tags)
+	stateBag.Put(constants.ArmTags, tags)
 	stateBag.Put(constants.ArmManagedImageSharedGalleryReplicationRegions, []string{"ManagedImageSharedGalleryReplicationRegionA", "ManagedImageSharedGalleryReplicationRegionB"})
 	stateBag.Put(constants.ArmManagedImageSharedGalleryImageVersionStorageAccountType, "Standard_LRS")
 	if managed {

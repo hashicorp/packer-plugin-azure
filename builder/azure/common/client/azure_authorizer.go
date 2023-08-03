@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 )
 
-type NewSDKAuthOptions struct {
+type AzureAuthOptions struct {
 	AuthType       string
 	ClientID       string
 	ClientSecret   string
@@ -23,7 +23,7 @@ type NewSDKAuthOptions struct {
 	SubscriptionID string
 }
 
-func BuildResourceManagerAuthorizer(ctx context.Context, authOpts NewSDKAuthOptions, env environments.Environment) (auth.Authorizer, error) {
+func BuildResourceManagerAuthorizer(ctx context.Context, authOpts AzureAuthOptions, env environments.Environment) (auth.Authorizer, error) {
 	authorizer, err := buildAuthorizer(ctx, authOpts, env, env.ResourceManager)
 	if err != nil {
 		return nil, fmt.Errorf("building Resource Manager authorizer from credentials: %+v", err)
@@ -31,7 +31,7 @@ func BuildResourceManagerAuthorizer(ctx context.Context, authOpts NewSDKAuthOpti
 	return authorizer, nil
 }
 
-func BuildStorageAuthorizer(ctx context.Context, authOpts NewSDKAuthOptions, env environments.Environment) (auth.Authorizer, error) {
+func BuildStorageAuthorizer(ctx context.Context, authOpts AzureAuthOptions, env environments.Environment) (auth.Authorizer, error) {
 	authorizer, err := buildAuthorizer(ctx, authOpts, env, env.Storage)
 	if err != nil {
 		return nil, fmt.Errorf("building Storage authorizer from credentials: %+v", err)
@@ -39,7 +39,7 @@ func BuildStorageAuthorizer(ctx context.Context, authOpts NewSDKAuthOptions, env
 	return authorizer, nil
 }
 
-func buildAuthorizer(ctx context.Context, authOpts NewSDKAuthOptions, env environments.Environment, api environments.Api) (auth.Authorizer, error) {
+func buildAuthorizer(ctx context.Context, authOpts AzureAuthOptions, env environments.Environment, api environments.Api) (auth.Authorizer, error) {
 	var authConfig auth.Credentials
 	switch authOpts.AuthType {
 	case AuthTypeAzureCLI:
@@ -96,6 +96,9 @@ func GetObjectIdFromToken(token string) (string, error) {
 
 	if err != nil {
 		return "", err
+	}
+	if claims["oid"] == nil {
+		return "", fmt.Errorf("unable to parse ObjectID from Azure")
 	}
 	return claims["oid"].(string), nil
 }

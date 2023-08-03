@@ -90,7 +90,9 @@ func (s *StepCreateSnapshotset) Run(ctx context.Context, state multistep.StateBa
 }
 
 func (s *StepCreateSnapshotset) createSnapshot(ctx context.Context, azcli client.AzureClientSet, id snapshots.SnapshotId, snapshot snapshots.Snapshot) error {
-	return azcli.SnapshotsClient().CreateOrUpdateThenPoll(ctx, id, snapshot)
+	pollingContext, cancel := context.WithTimeout(ctx, azcli.PollingDelay())
+	defer cancel()
+	return azcli.SnapshotsClient().CreateOrUpdateThenPoll(pollingContext, id, snapshot)
 }
 
 func (s *StepCreateSnapshotset) Cleanup(state multistep.StateBag) {
@@ -103,7 +105,9 @@ func (s *StepCreateSnapshotset) Cleanup(state multistep.StateBag) {
 			snapshotID := snapshots.NewSnapshotID(azcli.SubscriptionID(), resource.ResourceGroup, resource.ResourceName.String())
 			ui.Say(fmt.Sprintf("Removing any active SAS for snapshot %q", resource))
 			{
-				err := azcli.SnapshotsClient().RevokeAccessThenPoll(context.TODO(), snapshotID)
+				pollingContext, cancel := context.WithTimeout(context.TODO(), azcli.PollingDelay())
+				defer cancel()
+				err := azcli.SnapshotsClient().RevokeAccessThenPoll(pollingContext, snapshotID)
 				if err != nil {
 					log.Printf("StepCreateSnapshotset.Cleanup: error: %+v", err)
 					ui.Error(fmt.Sprintf("error deleting snapshot %q: %v.", resource, err))
@@ -112,7 +116,9 @@ func (s *StepCreateSnapshotset) Cleanup(state multistep.StateBag) {
 
 			ui.Say(fmt.Sprintf("Deleting snapshot %q", resource))
 			{
-				err := azcli.SnapshotsClient().DeleteThenPoll(context.TODO(), snapshotID)
+				pollingContext, cancel := context.WithTimeout(context.TODO(), azcli.PollingDelay())
+				defer cancel()
+				err := azcli.SnapshotsClient().DeleteThenPoll(pollingContext, snapshotID)
 				if err != nil {
 					log.Printf("StepCreateSnapshotset.Cleanup: error: %+v", err)
 					ui.Error(fmt.Sprintf("error deleting snapshot %q: %v.", resource, err))

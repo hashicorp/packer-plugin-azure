@@ -494,7 +494,13 @@ type Config struct {
 	// automatically configure authentication credentials for the provisioned
 	// machine. For Linux this configures an SSH authorized key. For Windows
 	// this configures a WinRM certificate.
+
 	OSType string `mapstructure:"os_type" required:"false"`
+
+	// A time duration with which to set the WinRM certificate to expire
+	// This only works for Windows builds (valid time units include `s` for seconds, `m` for
+	// minutes, and `h` for hours.)
+	WinrmExpirationTime time.Duration `mapstructure:"winrm_expiration_time" required:"false"`
 	// temporary name assigned to the OSDisk. If this
 	// value is not set, a random value will be assigned. Being able to assign a custom
 	// osDiskName could ease deployment if naming conventions are used.
@@ -1239,6 +1245,11 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 		if c.SharedGalleryDestination.SigDestinationImageVersion == "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("An image_version must be specified for shared_image_gallery_destination"))
+		} else {
+			validImageVersion := regexp.MustCompile(`[0-9]*\.[0-9]*\.[0-9]*$`)
+			if !validImageVersion.Match([]byte(c.SharedGalleryDestination.SigDestinationImageVersion)) {
+				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("An image_version must follow Major(int).Minor(int).Patch(int) format"))
+			}
 		}
 		if c.SharedGalleryDestination.SigDestinationSubscription == "" {
 			c.SharedGalleryDestination.SigDestinationSubscription = c.ClientConfig.SubscriptionID

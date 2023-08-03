@@ -71,7 +71,9 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupNa
 		return err
 	}
 
-	err = s.client.DtlMetaClient.Labs.CreateEnvironmentThenPoll(ctx, labId, *labMachine)
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+	err = s.client.DtlMetaClient.Labs.CreateEnvironmentThenPoll(pollingContext, labId, *labMachine)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return err
@@ -93,7 +95,6 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupNa
 			s.say(s.client.LastError.Error())
 			return err
 		}
-		// TODO This operation seems kinda off, but I don't wanna spend time digging into it right now
 		s.config.tmpFQDN = *(*resp.Model.Properties.IPConfigurations)[0].Properties.PrivateIPAddress
 	} else {
 		s.config.tmpFQDN = *vm.Model.Properties.Fqdn
@@ -133,11 +134,13 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupNa
 		// But a retry backoff is much more preferable to an infinite loop
 
 		retryConfig := retry.Config{
-			Tries:      5,
+			Tries:      10,
 			RetryDelay: (&retry.Backoff{InitialBackoff: 5 * time.Second, MaxBackoff: 60 * time.Second, Multiplier: 1.5}).Linear,
 		}
 		err = retryConfig.Run(ctx, func(ctx context.Context) error {
-			err := s.client.DtlMetaClient.VirtualMachines.ApplyArtifactsThenPoll(ctx, vmResourceId, dtlArtifactsRequest)
+			pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+			defer cancel()
+			err := s.client.DtlMetaClient.VirtualMachines.ApplyArtifactsThenPoll(pollingContext, vmResourceId, dtlArtifactsRequest)
 			if err != nil {
 				s.say("WinRM artifact deployment failed, retrying")
 			}
@@ -171,7 +174,4 @@ func (s *StepDeployTemplate) Run(ctx context.Context, state multistep.StateBag) 
 		s.error, state)
 }
 
-func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
-	// TODO are there any resources created in DTL builds we should tear down?
-	// There was teardown code from the ARM builder copy pasted in but it was never called
-}
+func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {}

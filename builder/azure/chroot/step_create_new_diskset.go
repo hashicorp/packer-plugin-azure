@@ -258,7 +258,9 @@ func (s *StepCreateNewDiskset) Cleanup(state multistep.StateBag) {
 			ui.Say(fmt.Sprintf("Deleting disk %q", d))
 
 			diskID := disks.NewDiskID(azcli.SubscriptionID(), d.ResourceGroup, d.ResourceName.String())
-			err = azcli.DisksClient().DeleteThenPoll(context.TODO(), diskID)
+			pollingContext, cancel := context.WithTimeout(context.TODO(), azcli.PollingDelay())
+	        defer cancel()
+			err = azcli.DisksClient().DeleteThenPoll(pollingContext, diskID)
 			if err != nil {
 				log.Printf("StepCreateNewDiskset.Cleanup: error: %+v", err)
 				ui.Error(fmt.Sprintf("error deleting disk '%s': %v.", d, err))

@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/vaults"
 	networks "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01"
 	authWrapper "github.com/hashicorp/go-azure-sdk/sdk/auth/autorest"
+	"github.com/hashicorp/go-azure-sdk/sdk/client"
 	"github.com/hashicorp/go-azure-sdk/sdk/client/resourcemanager"
 	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 	azcommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
@@ -41,6 +42,10 @@ type AzureClient struct {
 	galleryimageversions.GalleryImageVersionsClient
 	galleryimages.GalleryImagesClient
 	DtlMetaClient dtl.Client
+	
+	PollingDuration time.Duration
+	CustomImageCaptureTimeout time.Duration
+	SharedGalleryTimeout time.Duration
 }
 
 func errorCapture(client *AzureClient) autorest.RespondDecorator {
@@ -59,7 +64,19 @@ func errorCapture(client *AzureClient) autorest.RespondDecorator {
 	}
 }
 
-// TODO Do we need a track 2 version of this method?
+func errorCaptureTrack2(client *AzureClient) client.ResponseMiddleware {
+	return func(req *http.Request, resp *http.Response) (*http.Response, error) {
+		body, bodyString := handleBody(resp.Body, math.MaxInt64)
+			resp.Body = body
+
+			errorResponse := newAzureErrorResponse(bodyString)
+			if errorResponse != nil {
+				client.LastError = *errorResponse
+			}
+			return resp, nil
+	}
+}
+
 func byConcatDecorators(decorators ...autorest.RespondDecorator) autorest.RespondDecorator {
 	return func(r autorest.Responder) autorest.Responder {
 		return autorest.DecorateResponder(r, decorators...)
@@ -69,18 +86,24 @@ func byConcatDecorators(decorators ...autorest.RespondDecorator) autorest.Respon
 // Returns an Azure Client used for the Azure Resource Manager
 // Also returns the Azure object ID for the authentication method used in the build
 func NewAzureClient(ctx context.Context, subscriptionID string,
-	cloud *environments.Environment, SharedGalleryTimeout time.Duration, CustomImageCaptureTimeout time.Duration, PollingDuration time.Duration, newSdkAuthOptions azcommon.NewSDKAuthOptions) (*AzureClient, *string, error) {
+	cloud *environments.Environment, SharedGalleryTimeout time.Duration, CustomImageCaptureTimeout time.Duration, PollingDuration time.Duration, authOptions azcommon.AzureAuthOptions) (*AzureClient, *string, error) {
 
 	var azureClient = &AzureClient{}
 
 	maxlen := getInspectorMaxLength()
+	trackTwoResponseMiddleware := []client.ResponseMiddleware{byInspectingTrack2(maxlen), errorCaptureTrack2(azureClient)}
+	trackTwoRequestMiddleware := []client.RequestMiddleware{withInspectionTrack2(maxlen)}
+
+	azureClient.CustomImageCaptureTimeout = CustomImageCaptureTimeout
+	azureClient.PollingDuration = PollingDuration
+	azureClient.SharedGalleryTimeout = SharedGalleryTimeout
+	
 
 	if cloud == nil || cloud.ResourceManager == nil {
-		// TODO Throw error message that helps users solve this problem
 		return nil, nil, fmt.Errorf("Azure Environment not configured correctly")
 	}
 	resourceManagerEndpoint, _ := cloud.ResourceManager.Endpoint()
-	resourceManagerAuthorizer, err := azcommon.BuildResourceManagerAuthorizer(ctx, newSdkAuthOptions, *cloud)
+	resourceManagerAuthorizer, err := azcommon.BuildResourceManagerAuthorizer(ctx, authOptions, *cloud)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -113,10 +136,11 @@ func NewAzureClient(ctx context.Context, subscriptionID string,
 	azureClient.ImagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.ImagesClient.Client.UserAgent)
 	azureClient.ImagesClient.Client.PollingDuration = PollingDuration
 
-	// TODO Request/Response inpectors for Track 2
 	networkMetaClient, err := networks.NewClientWithBaseURI(cloud.ResourceManager, func(c *resourcemanager.Client) {
 		c.Client.Authorizer = resourceManagerAuthorizer
 		c.Client.UserAgent = "some-user-agent"
+		c.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+		c.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
 	})
 
 	if err != nil {

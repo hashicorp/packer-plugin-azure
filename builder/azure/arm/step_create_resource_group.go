@@ -71,7 +71,7 @@ func (s *StepCreateResourceGroup) Run(ctx context.Context, state multistep.State
 
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
 	var location = state.Get(constants.ArmLocation).(string)
-	tags, ok := state.Get(constants.ArmNewSDKTags).(map[string]string)
+	tags, ok := state.Get(constants.ArmTags).(map[string]string)
 	if !ok {
 		err := fmt.Errorf("failed to extract tags from state bag")
 		state.Put(constants.Error, err)
@@ -151,7 +151,9 @@ func (s *StepCreateResourceGroup) Cleanup(state multistep.StateBag) {
 		}
 		s.say(fmt.Sprintf("\n Not waiting for Resource Group delete as requested by user. Resource Group Name is %s", resourceGroupName))
 	} else {
-		err := s.client.ResourceGroupsClient.DeleteThenPoll(ctx, id, resourcegroups.DefaultDeleteOperationOptions())
+		pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+		defer cancel()
+		err := s.client.ResourceGroupsClient.DeleteThenPoll(pollingContext, id, resourcegroups.DefaultDeleteOperationOptions())
 		if err != nil {
 			ui.Error(fmt.Sprintf("Error deleting resource group.  Please delete it manually.\n\n"+
 				"Name: %s\n"+

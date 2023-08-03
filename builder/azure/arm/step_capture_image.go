@@ -51,8 +51,10 @@ func (s *StepCaptureImage) generalize(ctx context.Context, vmId virtualmachines.
 }
 
 func (s *StepCaptureImage) captureImageFromVM(ctx context.Context, subscriptionId string, resourceGroupName string, imageName string, image *images.Image) error {
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
 	id := images.NewImageID(subscriptionId, resourceGroupName, imageName)
-	err := s.client.ImagesClient.CreateOrUpdateThenPoll(ctx, id, *image)
+	err := s.client.ImagesClient.CreateOrUpdateThenPoll(pollingContext, id, *image)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 	}
@@ -60,7 +62,9 @@ func (s *StepCaptureImage) captureImageFromVM(ctx context.Context, subscriptionI
 }
 
 func (s *StepCaptureImage) captureImage(ctx context.Context, vmId virtualmachines.VirtualMachineId, parameters *virtualmachines.VirtualMachineCaptureParameters) error {
-	if err := s.client.VirtualMachinesClient.CaptureThenPoll(ctx, vmId, *parameters); err != nil {
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+	if err := s.client.VirtualMachinesClient.CaptureThenPoll(pollingContext, vmId, *parameters); err != nil {
 		s.say(s.client.LastError.Error())
 		return err
 	}
@@ -84,7 +88,7 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 	var computeName = state.Get(constants.ArmComputeName).(string)
 	var location = state.Get(constants.ArmLocation).(string)
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
-	var vmCaptureParameters = state.Get(constants.ArmNewVirtualMachineCaptureParameters).(*virtualmachines.VirtualMachineCaptureParameters)
+	var vmCaptureParameters = state.Get(constants.ArmVirtualMachineCaptureParameters).(*virtualmachines.VirtualMachineCaptureParameters)
 	var imageParameters = state.Get(constants.ArmImageParameters).(*images.Image)
 	var subscriptionId = state.Get(constants.ArmSubscription).(string)
 	var isManagedImage = state.Get(constants.ArmIsManagedImage).(bool)

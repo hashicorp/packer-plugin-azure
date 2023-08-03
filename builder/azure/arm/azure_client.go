@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/storage/2022-09-01/storageaccounts"
 	authWrapper "github.com/hashicorp/go-azure-sdk/sdk/auth/autorest"
+	"github.com/hashicorp/go-azure-sdk/sdk/client"
 	"github.com/hashicorp/go-azure-sdk/sdk/client/resourcemanager"
 	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 	commonclient "github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
@@ -57,6 +58,9 @@ type AzureClient struct {
 	GiovanniBlobClient giovanniBlobStorageSDK.Client
 	InspectorMaxLength int
 	LastError          azureErrorResponse
+
+	PollingDuration time.Duration
+	SharedGalleryTimeout time.Duration
 }
 
 func errorCapture(client *AzureClient) autorest.RespondDecorator {
@@ -75,7 +79,19 @@ func errorCapture(client *AzureClient) autorest.RespondDecorator {
 	}
 }
 
-// TODO Do we need a track 2 version of this method?
+func errorCaptureTrack2(client *AzureClient) client.ResponseMiddleware {
+	return func(req *http.Request, resp *http.Response) (*http.Response, error) {
+		body, bodyString := handleBody(resp.Body, math.MaxInt64)
+			resp.Body = body
+
+			errorResponse := newAzureErrorResponse(bodyString)
+			if errorResponse != nil {
+				client.LastError = *errorResponse
+			}
+			return resp, nil
+	}
+}
+
 func byConcatDecorators(decorators ...autorest.RespondDecorator) autorest.RespondDecorator {
 	return func(r autorest.Responder) autorest.Responder {
 		return autorest.DecorateResponder(r, decorators...)
@@ -84,20 +100,23 @@ func byConcatDecorators(decorators ...autorest.RespondDecorator) autorest.Respon
 
 // Returns an Azure Client used for the Azure Resource Manager
 // Also returns the Azure object ID for the authentication method used in the build
-func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.Environment, sharedGalleryTimeout time.Duration, pollingDuration time.Duration, newSdkAuthOptions commonclient.NewSDKAuthOptions) (*AzureClient, *string, error) {
+func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.Environment, sharedGalleryTimeout time.Duration, pollingDuration time.Duration, authOptions commonclient.AzureAuthOptions) (*AzureClient, *string, error) {
 
 	var azureClient = &AzureClient{}
-
+	azureClient.PollingDuration = pollingDuration
+	azureClient.SharedGalleryTimeout = sharedGalleryTimeout
 	maxlen := getInspectorMaxLength()
 	if cloud == nil || cloud.ResourceManager == nil {
-		// TODO Throw error message that helps users solve this problem
 		return nil, nil, fmt.Errorf("azure environment not configured correctly")
 	}
 	resourceManagerEndpoint, _ := cloud.ResourceManager.Endpoint()
-	resourceManagerAuthorizer, err := commonclient.BuildResourceManagerAuthorizer(ctx, newSdkAuthOptions, *cloud)
+	resourceManagerAuthorizer, err := commonclient.BuildResourceManagerAuthorizer(ctx, authOptions, *cloud)
 	if err != nil {
 		return nil, nil, err
 	}
+	
+	trackTwoResponseMiddleware := []client.ResponseMiddleware{byInspectingTrack2(maxlen), errorCaptureTrack2(azureClient)}
+	trackTwoRequestMiddleware := []client.RequestMiddleware{withInspectionTrack2(maxlen)}
 
 	// Clients that have been ported to hashicorp/go-azure-sdk
 	azureClient.DisksClient = disks.NewDisksClientWithBaseURI(*resourceManagerEndpoint)
@@ -170,10 +189,11 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	azureClient.StorageAccountsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.StorageAccountsClient.Client.UserAgent)
 	azureClient.StorageAccountsClient.Client.PollingDuration = pollingDuration
 
-	// TODO Request/Response inpectors for Track 2
 	networkMetaClient, err := networks.NewClientWithBaseURI(cloud.ResourceManager, func(c *resourcemanager.Client) {
 		c.Client.Authorizer = resourceManagerAuthorizer
-		c.Client.UserAgent = "some-user-agent"
+		c.Client.UserAgent = useragent.String(version.AzurePluginVersion.FormattedVersion())
+		c.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
+		c.Client.RequestMiddlewares = &trackTwoRequestMiddleware
 	})
 
 	if err != nil {
@@ -197,7 +217,7 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 
 	// We only need the Blob Client to delete the OS VHD during VHD builds
 	if isVHDBuild {
-		storageAccountAuthorizer, err := commonclient.BuildStorageAuthorizer(ctx, newSdkAuthOptions, *cloud)
+		storageAccountAuthorizer, err := commonclient.BuildStorageAuthorizer(ctx, authOptions, *cloud)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -207,13 +227,16 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 		azureClient.GiovanniBlobClient.Authorizer = authWrapper.AutorestAuthorizer(storageAccountAuthorizer)
 		azureClient.GiovanniBlobClient.Client.RequestInspector = withInspection(maxlen)
 		azureClient.GiovanniBlobClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
+		azureClient.GiovanniBlobClient.Client.PollingDelay = pollingDuration
 	}
 
 	token, err := resourceManagerAuthorizer.Token(ctx, &http.Request{})
 	if err != nil {
 		return nil, nil, err
 	}
-	// TODO Handle potential panic here if Access Token or child objects are null
+	if token == nil {
+		return nil, nil, fmt.Errorf("unable to parse token from Azure Resource Manager")
+	}
 	objectId, err := commonclient.GetObjectIdFromToken(token.AccessToken)
 	if err != nil {
 		return nil, nil, err

@@ -79,14 +79,10 @@ func createTestStateBagStepSnapshotDataDisks() multistep.StateBag {
 	stateBag.Put(constants.ArmLocation, "Unit Test: Location")
 
 	value := "Unit Test: Tags"
-	tags := map[string]*string{
-		"tag01": &value,
-	}
-	newSDKTags := map[string]string{
+	tags := map[string]string{
 		"tag02:": value,
 	}
 	stateBag.Put(constants.ArmTags, tags)
-	stateBag.Put(constants.ArmNewSDKTags, newSDKTags)
 
 	stateBag.Put(constants.ArmAdditionalDiskVhds, []string{"subscriptions/123-456-789/resourceGroups/existingresourcegroup/providers/Microsoft.Compute/disks/osdisk"})
 	stateBag.Put(constants.ArmManagedImageDataDiskSnapshotPrefix, "Unit Test: ManagedImageDataDiskSnapshotPrefix")

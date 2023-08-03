@@ -33,8 +33,10 @@ func NewStepPowerOffCompute(client *AzureClient, ui packersdk.Ui) *StepPowerOffC
 
 func (s *StepPowerOffCompute) powerOffCompute(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) error {
 	hibernate := false
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
 	vmId := virtualmachines.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)
-	err := s.client.VirtualMachinesClient.DeallocateThenPoll(ctx, vmId, virtualmachines.DeallocateOperationOptions{Hibernate: &hibernate})
+	err := s.client.VirtualMachinesClient.DeallocateThenPoll(pollingContext, vmId, virtualmachines.DeallocateOperationOptions{Hibernate: &hibernate})
 	if err != nil {
 		s.say(s.client.LastError.Error())
 	}

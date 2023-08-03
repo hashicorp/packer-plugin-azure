@@ -116,8 +116,10 @@ func (s *StepCreateSharedImageVersion) Run(ctx context.Context, state multistep.
 }
 
 func (s *StepCreateSharedImageVersion) createImageVersion(ctx context.Context, azcli client.AzureClientSet, galleryImageVersionID galleryimageversions.ImageVersionId, imageVersion galleryimageversions.GalleryImageVersion) error {
+	pollingContext, cancel := context.WithTimeout(ctx, azcli.PollingDelay())
+	defer cancel()
 	return azcli.GalleryImageVersionsClient().CreateOrUpdateThenPoll(
-		ctx,
+		pollingContext,
 		galleryImageVersionID,
 		imageVersion)
 }

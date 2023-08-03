@@ -85,7 +85,9 @@ func (a *Artifact) Destroy() error {
 		switch restype {
 		case "microsoft.compute/images":
 			imageID := images.NewImageID(a.AzureClientSet.SubscriptionID(), id.ResourceGroup, id.ResourceName.String())
-			err := a.AzureClientSet.ImagesClient().DeleteThenPoll(ctx, imageID)
+			pollingContext, cancel := context.WithTimeout(ctx, a.AzureClientSet.PollingDelay())
+			defer cancel()
+			err := a.AzureClientSet.ImagesClient().DeleteThenPoll(pollingContext, imageID)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("Unable to initiate deletion of resource (%s): %v", resource, err))
 			}

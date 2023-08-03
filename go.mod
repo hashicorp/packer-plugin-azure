@@ -21,6 +21,7 @@ require (
 )
 
 require (
+	github.com/Azure/go-autorest/autorest/azure/cli v0.4.6
 	github.com/hashicorp/go-azure-sdk v0.20230523.1140858
 	github.com/tombuildsstuff/giovanni v0.20.0
 )
@@ -31,7 +32,6 @@ require (
 	cloud.google.com/go/iam v0.6.0 // indirect
 	cloud.google.com/go/storage v1.27.0 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
-	github.com/Azure/go-autorest/autorest/azure/cli v0.4.6 // indirect
 	github.com/Azure/go-autorest/autorest/validation v0.3.1 // indirect
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect

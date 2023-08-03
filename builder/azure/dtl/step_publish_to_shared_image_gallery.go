@@ -62,8 +62,10 @@ func (s *StepPublishToSharedImageGallery) publishToSig(ctx context.Context, subs
 		},
 	}
 
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.SharedGalleryTimeout)
+	defer cancel()
 	galleryImageVersionId := galleryimageversions.NewImageVersionID(subscriptionID, sigDestinationResourceGroup, sigDestinationGalleryName, sigDestinationImageName, sigDestinationImageVersion)
-	err := s.client.GalleryImageVersionsClient.CreateOrUpdateThenPoll(ctx, galleryImageVersionId, galleryImageVersion)
+	err := s.client.GalleryImageVersionsClient.CreateOrUpdateThenPoll(pollingContext, galleryImageVersionId, galleryImageVersion)
 
 	if err != nil {
 		s.say(s.client.LastError.Error())
@@ -92,7 +94,7 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 	var miSGImageName = stateBag.Get(constants.ArmManagedImageSharedGalleryImageName).(string)
 	var miSGImageVersion = stateBag.Get(constants.ArmManagedImageSharedGalleryImageVersion).(string)
 	var location = stateBag.Get(constants.ArmLocation).(string)
-	var tags = stateBag.Get(constants.ArmNewSDKTags).(map[string]string)
+	var tags = stateBag.Get(constants.ArmTags).(map[string]string)
 	var miSigReplicationRegions = stateBag.Get(constants.ArmManagedImageSharedGalleryReplicationRegions).([]string)
 	var targetManagedImageResourceGroupName = stateBag.Get(constants.ArmManagedImageResourceGroupName).(string)
 	var targetManagedImageName = stateBag.Get(constants.ArmManagedImageName).(string)

@@ -114,8 +114,10 @@ func (s *StepPublishToSharedImageGallery) publishToSig(ctx context.Context, subs
 		},
 	}
 
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.SharedGalleryTimeout)
+	defer cancel()
 	galleryImageVersionId := galleryimageversions.NewImageVersionID(subscriptionID, sharedImageGallery.SigDestinationResourceGroup, sharedImageGallery.SigDestinationGalleryName, sharedImageGallery.SigDestinationImageName, sharedImageGallery.SigDestinationImageVersion)
-	err = s.client.GalleryImageVersionsClient.CreateOrUpdateThenPoll(ctx, galleryImageVersionId, galleryImageVersion)
+	err = s.client.GalleryImageVersionsClient.CreateOrUpdateThenPoll(pollingContext, galleryImageVersionId, galleryImageVersion)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return "", err
@@ -140,7 +142,7 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 	s.say("Publishing to Shared Image Gallery ...")
 
 	location := stateBag.Get(constants.ArmLocation).(string)
-	tags := stateBag.Get(constants.ArmNewSDKTags).(map[string]string)
+	tags := stateBag.Get(constants.ArmTags).(map[string]string)
 
 	sharedImageGallery := getSigDestination(stateBag)
 	var sourceID string

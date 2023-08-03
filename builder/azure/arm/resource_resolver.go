@@ -93,7 +93,9 @@ func findManagedImageByName(client *AzureClient, name, subscriptionId, resourceG
 }
 
 func findVirtualNetworkResourceGroup(client *AzureClient, subscriptionId, name string) (string, error) {
-	virtualNetworks, err := client.NetworkMetaClient.VirtualNetworks.ListAllComplete(context.TODO(), commonids.NewSubscriptionID(subscriptionId))
+	vnetListContext, cancel := context.WithTimeout(context.TODO(), client.PollingDuration)
+	defer cancel()
+	virtualNetworks, err := client.NetworkMetaClient.VirtualNetworks.ListAllComplete(vnetListContext, commonids.NewSubscriptionID(subscriptionId))
 	if err != nil {
 		return "", err
 	}
@@ -119,7 +121,9 @@ func findVirtualNetworkResourceGroup(client *AzureClient, subscriptionId, name s
 
 func findVirtualNetworkSubnet(client *AzureClient, subscriptionId string, resourceGroupName string, name string) (string, error) {
 
-	subnets, err := client.NetworkMetaClient.Subnets.List(context.TODO(), subnets.NewVirtualNetworkID(subscriptionId, resourceGroupName, name))
+	subnetListContext, cancel := context.WithTimeout(context.TODO(), client.PollingDuration)
+	defer cancel()
+	subnets, err := client.NetworkMetaClient.Subnets.List(subnetListContext, subnets.NewVirtualNetworkID(subscriptionId, resourceGroupName, name))
 	if err != nil {
 		return "", err
 	}

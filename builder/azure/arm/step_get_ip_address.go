@@ -60,8 +60,10 @@ func NewStepGetIPAddress(client *AzureClient, ui packersdk.Ui, endpoint Endpoint
 }
 
 func (s *StepGetIPAddress) getPrivateIP(ctx context.Context, subscriptionId string, resourceGroupName string, ipAddressName string, interfaceName string) (string, error) {
+	getIPContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
 	intID := commonids.NewNetworkInterfaceID(subscriptionId, resourceGroupName, interfaceName)
-	resp, err := s.client.NetworkMetaClient.NetworkInterfaces.Get(ctx, intID, networkinterfaces.DefaultGetOperationOptions())
+	resp, err := s.client.NetworkMetaClient.NetworkInterfaces.Get(getIPContext, intID, networkinterfaces.DefaultGetOperationOptions())
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return "", err
@@ -71,8 +73,10 @@ func (s *StepGetIPAddress) getPrivateIP(ctx context.Context, subscriptionId stri
 }
 
 func (s *StepGetIPAddress) getPublicIP(ctx context.Context, subscriptionId string, resourceGroupName string, ipAddressName string, interfaceName string) (string, error) {
+	getIPContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
 	ipID := commonids.NewPublicIPAddressID(subscriptionId, resourceGroupName, ipAddressName)
-	resp, err := s.client.NetworkMetaClient.PublicIPAddresses.Get(ctx, ipID, publicipaddresses.DefaultGetOperationOptions())
+	resp, err := s.client.NetworkMetaClient.PublicIPAddresses.Get(getIPContext, ipID, publicipaddresses.DefaultGetOperationOptions())
 	if err != nil {
 		return "", err
 	}

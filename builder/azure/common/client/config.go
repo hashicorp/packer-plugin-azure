@@ -124,8 +124,8 @@ func (c *Config) setCloudEnvironment() error {
 	c.cloudEnvironment = env
 	if err != nil {
 		// fall back to old method of normalizing and looking up cloud names.
-		log.Printf(fmt.Sprintf("Error looking up environment using metadata host: %s. \n"+
-			"Falling back to hardcoded mechanism...", err.Error()))
+		log.Printf("Error looking up environment using metadata host: %s. \n"+
+			"Falling back to hardcoded mechanism...", err.Error())
 		lookup := map[string]string{
 			"CHINA":           "china",
 			"CHINACLOUD":      "china",
