@@ -217,10 +217,10 @@ func (s *StepDeployTemplate) getImageDetails(ctx context.Context, subscriptionId
 }
 
 func deleteResource(ctx context.Context, client *AzureClient, subscriptionId string, resourceType string, resourceName string, resourceGroupName string) error {
-    
+
 	pollingContext, cancel := context.WithTimeout(ctx, client.PollingDuration)
 	defer cancel()
-	
+
 	switch resourceType {
 	case "Microsoft.Compute/virtualMachines":
 		vmID := virtualmachines.NewVirtualMachineID(subscriptionId, resourceGroupName, resourceName)
@@ -251,7 +251,7 @@ func deleteResource(ctx context.Context, client *AzureClient, subscriptionId str
 	return nil
 }
 
-// TODO Let's split this into two seperate methods 
+// TODO Let's split this into two seperate methods
 // deleteVHD and deleteManagedDisk, and then just check in Cleanup which function to call
 func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool, subscriptionId string, storageAccountName string) error {
 	// Managed disk

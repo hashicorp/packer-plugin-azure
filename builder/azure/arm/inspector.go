@@ -57,16 +57,16 @@ func withInspection(maxlen int64) autorest.PrepareDecorator {
 }
 
 func withInspectionTrack2(maxlen int64) client.RequestMiddleware {
-	return func (r *http.Request) (*http.Request, error) {
-			body, bodyString := handleBody(r.Body, maxlen)
-			r.Body = body
+	return func(r *http.Request) (*http.Request, error) {
+		body, bodyString := handleBody(r.Body, maxlen)
+		r.Body = body
 
-			log.Print("Azure request", logutil.Fields{
-				"method":  r.Method,
-				"request": r.URL.String(),
-				"body":    bodyString,
-			})
-			return r, nil
+		log.Print("Azure request", logutil.Fields{
+			"method":  r.Method,
+			"request": r.URL.String(),
+			"body":    bodyString,
+		})
+		return r, nil
 	}
 }
 
@@ -90,17 +90,17 @@ func byInspecting(maxlen int64) autorest.RespondDecorator {
 
 func byInspectingTrack2(maxlen int64) client.ResponseMiddleware {
 	return func(req *http.Request, resp *http.Response) (*http.Response, error) {
-			body, bodyString := handleBody(resp.Body, maxlen)
-			resp.Body = body
+		body, bodyString := handleBody(resp.Body, maxlen)
+		resp.Body = body
 
-			log.Print("Azure response", logutil.Fields{
-				"status":          resp.Status,
-				"method":          resp.Request.Method,
-				"request":         resp.Request.URL.String(),
-				"x-ms-request-id": azure.ExtractRequestID(resp),
-				"body":            bodyString,
-			})
+		log.Print("Azure response", logutil.Fields{
+			"status":          resp.Status,
+			"method":          resp.Request.Method,
+			"request":         resp.Request.URL.String(),
+			"x-ms-request-id": azure.ExtractRequestID(resp),
+			"body":            bodyString,
+		})
 
-			return resp, nil
+		return resp, nil
 	}
 }

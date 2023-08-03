@@ -126,6 +126,18 @@ func (s *TemplateBuilder) BuildWindows(communicatorType string, keyVaultName str
 	return nil
 }
 
+func (s *TemplateBuilder) SetSecretExpiry(exp int64) error {
+	resource, err := s.getResourceByType(resourceKeyVaults)
+	if err != nil {
+		return err
+	}
+	resources := *resource.Resources
+	resources[0].Properties.Attributes = &Attributes{
+		Exp: exp,
+	}
+	return nil
+}
+
 func (s *TemplateBuilder) SetIdentity(userAssignedManagedIdentities []string) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {

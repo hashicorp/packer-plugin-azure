@@ -28,7 +28,7 @@ type AzureClientSetMock struct {
 	GalleryImageVersionsClientMock galleryimageversions.GalleryImageVersionsClient
 	MetadataClientMock             MetadataClientAPI
 	SubscriptionIDMock             string
-	PollingDelayMock time.Duration
+	PollingDurationMock            time.Duration
 }
 
 // DisksClient returns a DisksClient
@@ -76,6 +76,6 @@ func (m *AzureClientSetMock) SubscriptionID() string {
 	return m.SubscriptionIDMock
 }
 
-func (m *AzureClientSetMock) PollingDelay() time.Duration {
-	return m.PollingDelayMock
+func (m *AzureClientSetMock) PollingDuration() time.Duration {
+	return m.PollingDurationMock
 }

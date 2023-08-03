@@ -132,6 +132,7 @@ type Properties struct {
 	TypeHandlerVersion      *string               `json:"typeHandlerVersion,omitempty"`
 	AutoUpgradeMinorVersion *bool                 `json:"autoUpgradeMinorVersion,omitempty"`
 	Settings                *CustomScriptSettings `json:"settings,omitempty"`
+	Attributes              *Attributes           `json:"attributes,omitempty"`
 }
 
 type CustomScriptSettings struct {
@@ -149,6 +150,10 @@ type AccessPolicies struct {
 	ObjectId    *string      `json:"objectId,omitempty"`
 	TenantId    *string      `json:"tenantId,omitempty"`
 	Permissions *Permissions `json:"permissions,omitempty"`
+}
+
+type Attributes struct {
+	Exp int64 `json:"exp,omitempty"`
 }
 
 type Permissions struct {

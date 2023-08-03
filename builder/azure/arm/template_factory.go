@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
@@ -33,13 +34,18 @@ func GetCommunicatorSpecificKeyVaultDeployment(config *Config) (*deployments.Dep
 		if err != nil {
 			return nil, err
 		}
-		return GetKeyVaultDeployment(config, secret)
+		return GetKeyVaultDeployment(config, secret, nil)
 	} else {
-		return GetKeyVaultDeployment(config, config.winrmCertificate)
+		var exp *int64
+		if config.WinrmExpirationTime != 0 {
+			unixSeconds := time.Now().Add(config.WinrmExpirationTime).Unix()
+			exp = &unixSeconds
+		}
+		return GetKeyVaultDeployment(config, config.winrmCertificate, exp)
 	}
 }
 
-func GetKeyVaultDeployment(config *Config, secretValue string) (*deployments.Deployment, error) {
+func GetKeyVaultDeployment(config *Config, secretValue string, exp *int64) (*deployments.Deployment, error) {
 	params := &template.TemplateParameters{
 		KeyVaultName:        &template.TemplateParameter{Value: config.tmpKeyVaultName},
 		KeyVaultSKU:         &template.TemplateParameter{Value: config.BuildKeyVaultSKU},
@@ -51,6 +57,12 @@ func GetKeyVaultDeployment(config *Config, secretValue string) (*deployments.Dep
 	builder, _ := template.NewTemplateBuilder(template.KeyVault)
 	_ = builder.SetTags(&config.AzureTags)
 
+	if exp != nil {
+		err := builder.SetSecretExpiry(*exp)
+		if err != nil {
+			return nil, err
+		}
+	}
 	doc, _ := builder.ToJSON()
 	return createDeploymentParameters(*doc, params)
 }

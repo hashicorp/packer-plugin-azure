@@ -90,7 +90,7 @@ func (s *StepCreateSnapshotset) Run(ctx context.Context, state multistep.StateBa
 }
 
 func (s *StepCreateSnapshotset) createSnapshot(ctx context.Context, azcli client.AzureClientSet, id snapshots.SnapshotId, snapshot snapshots.Snapshot) error {
-	pollingContext, cancel := context.WithTimeout(ctx, azcli.PollingDelay())
+	pollingContext, cancel := context.WithTimeout(ctx, azcli.PollingDuration())
 	defer cancel()
 	return azcli.SnapshotsClient().CreateOrUpdateThenPoll(pollingContext, id, snapshot)
 }
@@ -105,7 +105,7 @@ func (s *StepCreateSnapshotset) Cleanup(state multistep.StateBag) {
 			snapshotID := snapshots.NewSnapshotID(azcli.SubscriptionID(), resource.ResourceGroup, resource.ResourceName.String())
 			ui.Say(fmt.Sprintf("Removing any active SAS for snapshot %q", resource))
 			{
-				pollingContext, cancel := context.WithTimeout(context.TODO(), azcli.PollingDelay())
+				pollingContext, cancel := context.WithTimeout(context.TODO(), azcli.PollingDuration())
 				defer cancel()
 				err := azcli.SnapshotsClient().RevokeAccessThenPoll(pollingContext, snapshotID)
 				if err != nil {
@@ -116,7 +116,7 @@ func (s *StepCreateSnapshotset) Cleanup(state multistep.StateBag) {
 
 			ui.Say(fmt.Sprintf("Deleting snapshot %q", resource))
 			{
-				pollingContext, cancel := context.WithTimeout(context.TODO(), azcli.PollingDelay())
+				pollingContext, cancel := context.WithTimeout(context.TODO(), azcli.PollingDuration())
 				defer cancel()
 				err := azcli.SnapshotsClient().DeleteThenPoll(pollingContext, snapshotID)
 				if err != nil {

@@ -490,11 +490,11 @@ type Config struct {
 	// its default of "15m" (valid time units include `s` for seconds, `m` for
 	// minutes, and `h` for hours.)
 	PollingDurationTimeout time.Duration `mapstructure:"polling_duration_timeout" required:"false"`
+
 	// If either Linux or Windows is specified Packer will
 	// automatically configure authentication credentials for the provisioned
 	// machine. For Linux this configures an SSH authorized key. For Windows
 	// this configures a WinRM certificate.
-
 	OSType string `mapstructure:"os_type" required:"false"`
 
 	// A time duration with which to set the WinRM certificate to expire

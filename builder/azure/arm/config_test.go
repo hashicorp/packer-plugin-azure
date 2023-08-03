@@ -2094,11 +2094,11 @@ func TestConfigShouldAllowSharedImageGalleryOptions(t *testing.T) {
 
 func TestConfigShouldRejectSharedImageGalleryDestinationInvalidVersion(t *testing.T) {
 	config := map[string]interface{}{
-		"location":                          "ignore",
-		"subscription_id":                   "ignore",
-		"os_type":                           "linux",
-		"image_sku": "ignore",
-		"image_offer": "ignore",
+		"location":        "ignore",
+		"subscription_id": "ignore",
+		"os_type":         "linux",
+		"image_sku":       "ignore",
+		"image_offer":     "ignore",
 		"image_publisher": "ignore",
 		"shared_image_gallery_destination": map[string]string{
 			"resource_group":      "ignore",

@@ -318,6 +318,10 @@
   machine. For Linux this configures an SSH authorized key. For Windows
   this configures a WinRM certificate.
 
+- `winrm_expiration_time` (duration string | ex: "1h5m2s") - A time duration with which to set the WinRM certificate to expire
+  This only works for Windows builds (valid time units include `s` for seconds, `m` for
+  minutes, and `h` for hours.)
+
 - `temp_os_disk_name` (string) - temporary name assigned to the OSDisk. If this
   value is not set, a random value will be assigned. Being able to assign a custom
   osDiskName could ease deployment if naming conventions are used.

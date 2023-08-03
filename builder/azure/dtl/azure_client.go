@@ -42,10 +42,10 @@ type AzureClient struct {
 	galleryimageversions.GalleryImageVersionsClient
 	galleryimages.GalleryImagesClient
 	DtlMetaClient dtl.Client
-	
-	PollingDuration time.Duration
+
+	PollingDuration           time.Duration
 	CustomImageCaptureTimeout time.Duration
-	SharedGalleryTimeout time.Duration
+	SharedGalleryTimeout      time.Duration
 }
 
 func errorCapture(client *AzureClient) autorest.RespondDecorator {
@@ -67,13 +67,13 @@ func errorCapture(client *AzureClient) autorest.RespondDecorator {
 func errorCaptureTrack2(client *AzureClient) client.ResponseMiddleware {
 	return func(req *http.Request, resp *http.Response) (*http.Response, error) {
 		body, bodyString := handleBody(resp.Body, math.MaxInt64)
-			resp.Body = body
+		resp.Body = body
 
-			errorResponse := newAzureErrorResponse(bodyString)
-			if errorResponse != nil {
-				client.LastError = *errorResponse
-			}
-			return resp, nil
+		errorResponse := newAzureErrorResponse(bodyString)
+		if errorResponse != nil {
+			client.LastError = *errorResponse
+		}
+		return resp, nil
 	}
 }
 
@@ -97,7 +97,6 @@ func NewAzureClient(ctx context.Context, subscriptionID string,
 	azureClient.CustomImageCaptureTimeout = CustomImageCaptureTimeout
 	azureClient.PollingDuration = PollingDuration
 	azureClient.SharedGalleryTimeout = SharedGalleryTimeout
-	
 
 	if cloud == nil || cloud.ResourceManager == nil {
 		return nil, nil, fmt.Errorf("Azure Environment not configured correctly")

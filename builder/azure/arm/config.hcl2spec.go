@@ -81,6 +81,7 @@ type FlatConfig struct {
 	PlanInfo                                   *FlatPlanInformation               `mapstructure:"plan_info" required:"false" cty:"plan_info" hcl:"plan_info"`
 	PollingDurationTimeout                     *string                            `mapstructure:"polling_duration_timeout" required:"false" cty:"polling_duration_timeout" hcl:"polling_duration_timeout"`
 	OSType                                     *string                            `mapstructure:"os_type" required:"false" cty:"os_type" hcl:"os_type"`
+	WinrmExpirationTime                        *string                            `mapstructure:"winrm_expiration_time" required:"false" cty:"winrm_expiration_time" hcl:"winrm_expiration_time"`
 	TempOSDiskName                             *string                            `mapstructure:"temp_os_disk_name" required:"false" cty:"temp_os_disk_name" hcl:"temp_os_disk_name"`
 	OSDiskSizeGB                               *int32                             `mapstructure:"os_disk_size_gb" required:"false" cty:"os_disk_size_gb" hcl:"os_disk_size_gb"`
 	AdditionalDiskSize                         []int32                            `mapstructure:"disk_additional_size" required:"false" cty:"disk_additional_size" hcl:"disk_additional_size"`
@@ -225,6 +226,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"plan_info":                                        &hcldec.BlockSpec{TypeName: "plan_info", Nested: hcldec.ObjectSpec((*FlatPlanInformation)(nil).HCL2Spec())},
 		"polling_duration_timeout":                         &hcldec.AttrSpec{Name: "polling_duration_timeout", Type: cty.String, Required: false},
 		"os_type":                                          &hcldec.AttrSpec{Name: "os_type", Type: cty.String, Required: false},
+		"winrm_expiration_time":                            &hcldec.AttrSpec{Name: "winrm_expiration_time", Type: cty.String, Required: false},
 		"temp_os_disk_name":                                &hcldec.AttrSpec{Name: "temp_os_disk_name", Type: cty.String, Required: false},
 		"os_disk_size_gb":                                  &hcldec.AttrSpec{Name: "os_disk_size_gb", Type: cty.Number, Required: false},
 		"disk_additional_size":                             &hcldec.AttrSpec{Name: "disk_additional_size", Type: cty.List(cty.Number), Required: false},

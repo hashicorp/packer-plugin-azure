@@ -119,7 +119,7 @@ func (s *StepCreateImage) Run(ctx context.Context, state multistep.StateBag) mul
 }
 
 func (s *StepCreateImage) createImage(ctx context.Context, client client.AzureClientSet, id images.ImageId, image images.Image) error {
-	pollingContext, cancel := context.WithTimeout(ctx, client.PollingDelay())
+	pollingContext, cancel := context.WithTimeout(ctx, client.PollingDuration())
 	defer cancel()
 	return client.ImagesClient().CreateOrUpdateThenPoll(pollingContext, id, image)
 }

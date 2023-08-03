@@ -43,7 +43,7 @@ type AzureClientSet interface {
 	// SubscriptionID returns the subscription ID that this client set was created for
 	SubscriptionID() string
 
-	PollingDelay() time.Duration
+	PollingDuration() time.Duration
 }
 
 var _ AzureClientSet = &azureClientSet{}
@@ -52,7 +52,8 @@ type azureClientSet struct {
 	sender                  autorest.Sender
 	authorizer              auth.Authorizer
 	subscriptionID          string
-	pollingDelay            time.Duration
+	PollingDelay            time.Duration
+	pollingDuration         time.Duration
 	ResourceManagerEndpoint string
 }
 
@@ -81,7 +82,8 @@ func new(c Config, say func(string)) (*azureClientSet, error) {
 		authorizer:              authorizer,
 		subscriptionID:          c.SubscriptionID,
 		sender:                  http.DefaultClient,
-		pollingDelay:            time.Second,
+		PollingDelay:            time.Second,
+		pollingDuration:         time.Minute * 15,
 		ResourceManagerEndpoint: *resourceManagerEndpoint,
 	}, nil
 }
@@ -90,8 +92,8 @@ func (s azureClientSet) SubscriptionID() string {
 	return s.subscriptionID
 }
 
-func (s azureClientSet) PollingDelay() time.Duration {
-	return s.pollingDelay
+func (s azureClientSet) PollingDuration() time.Duration {
+	return s.pollingDuration
 }
 
 func (s azureClientSet) configureTrack1Client(c *autorest.Client) {
@@ -113,49 +115,49 @@ func (s azureClientSet) MetadataClient() MetadataClientAPI {
 func (s azureClientSet) DisksClient() disks.DisksClient {
 	c := disks.NewDisksClientWithBaseURI(s.ResourceManagerEndpoint)
 	s.configureTrack1Client(&c.Client)
-	c.Client.PollingDelay = s.pollingDelay
+	c.Client.PollingDelay = s.PollingDelay
 	return c
 }
 
 func (s azureClientSet) SnapshotsClient() snapshots.SnapshotsClient {
 	c := snapshots.NewSnapshotsClientWithBaseURI(s.ResourceManagerEndpoint)
 	s.configureTrack1Client(&c.Client)
-	c.Client.PollingDelay = s.pollingDelay
+	c.Client.PollingDelay = s.PollingDelay
 	return c
 }
 
 func (s azureClientSet) ImagesClient() images.ImagesClient {
 	c := images.NewImagesClientWithBaseURI(s.ResourceManagerEndpoint)
 	s.configureTrack1Client(&c.Client)
-	c.Client.PollingDelay = s.pollingDelay
+	c.Client.PollingDelay = s.PollingDelay
 	return c
 }
 
 func (s azureClientSet) VirtualMachinesClient() virtualmachines.VirtualMachinesClient {
 	c := virtualmachines.NewVirtualMachinesClientWithBaseURI(s.ResourceManagerEndpoint)
 	s.configureTrack1Client(&c.Client)
-	c.Client.PollingDelay = s.pollingDelay
+	c.Client.PollingDelay = s.PollingDelay
 	return c
 }
 
 func (s azureClientSet) VirtualMachineImagesClient() virtualmachineimages.VirtualMachineImagesClient {
 	c := virtualmachineimages.NewVirtualMachineImagesClientWithBaseURI(s.ResourceManagerEndpoint)
 	s.configureTrack1Client(&c.Client)
-	c.Client.PollingDelay = s.pollingDelay
+	c.Client.PollingDelay = s.PollingDelay
 	return c
 }
 
 func (s azureClientSet) GalleryImagesClient() galleryimages.GalleryImagesClient {
 	c := galleryimages.NewGalleryImagesClientWithBaseURI(s.ResourceManagerEndpoint)
 	s.configureTrack1Client(&c.Client)
-	c.Client.PollingDelay = s.pollingDelay
+	c.Client.PollingDelay = s.PollingDelay
 	return c
 }
 
 func (s azureClientSet) GalleryImageVersionsClient() galleryimageversions.GalleryImageVersionsClient {
 	c := galleryimageversions.NewGalleryImageVersionsClientWithBaseURI(s.ResourceManagerEndpoint)
 	s.configureTrack1Client(&c.Client)
-	c.Client.PollingDelay = s.pollingDelay
+	c.Client.PollingDelay = s.PollingDelay
 	return c
 }
 

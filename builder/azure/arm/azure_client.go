@@ -59,7 +59,7 @@ type AzureClient struct {
 	InspectorMaxLength int
 	LastError          azureErrorResponse
 
-	PollingDuration time.Duration
+	PollingDuration      time.Duration
 	SharedGalleryTimeout time.Duration
 }
 
@@ -82,13 +82,13 @@ func errorCapture(client *AzureClient) autorest.RespondDecorator {
 func errorCaptureTrack2(client *AzureClient) client.ResponseMiddleware {
 	return func(req *http.Request, resp *http.Response) (*http.Response, error) {
 		body, bodyString := handleBody(resp.Body, math.MaxInt64)
-			resp.Body = body
+		resp.Body = body
 
-			errorResponse := newAzureErrorResponse(bodyString)
-			if errorResponse != nil {
-				client.LastError = *errorResponse
-			}
-			return resp, nil
+		errorResponse := newAzureErrorResponse(bodyString)
+		if errorResponse != nil {
+			client.LastError = *errorResponse
+		}
+		return resp, nil
 	}
 }
 
@@ -114,7 +114,7 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	if err != nil {
 		return nil, nil, err
 	}
-	
+
 	trackTwoResponseMiddleware := []client.ResponseMiddleware{byInspectingTrack2(maxlen), errorCaptureTrack2(azureClient)}
 	trackTwoRequestMiddleware := []client.RequestMiddleware{withInspectionTrack2(maxlen)}
 
