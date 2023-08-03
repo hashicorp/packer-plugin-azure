@@ -132,9 +132,9 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 					"Name: %s\n"+
 					"Error: %s", imageName, err))
 			}
+		} else {
+			ui.Say(fmt.Sprintf("Skipping deletion -> %s : '%s' since 'keep_os_disk' is set to true", imageType, imageName))
 		}
-		ui.Say(fmt.Sprintf("Skipping deletion -> %s : '%s' since 'keep_os_disk' is set to true", imageType, imageName))
-
 		var dataDisks []string
 		if disks := state.Get(constants.ArmAdditionalDiskVhds); disks != nil {
 			dataDisks = disks.([]string)
