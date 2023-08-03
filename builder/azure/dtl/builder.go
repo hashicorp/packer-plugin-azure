@@ -130,7 +130,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				return nil, fmt.Errorf("the managed image named %s already exists in the resource group %s, use the -force option to automatically delete it.", b.config.ManagedImageName, b.config.ManagedImageResourceGroupName)
 			}
 		}
-	} 
+	}
 
 	b.config.validateLocationZoneResiliency(ui.Say)
 
