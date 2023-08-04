@@ -11,7 +11,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/go-azure-helpers v0.56.0
 	github.com/hashicorp/hcl/v2 v2.16.2
-	github.com/hashicorp/packer-plugin-sdk v0.4.0
+	github.com/hashicorp/packer-plugin-sdk v0.5.1
 	github.com/masterzen/winrm v0.0.0-20210623064412-3b76017826b0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mitchellh/reflectwalk v1.0.2
