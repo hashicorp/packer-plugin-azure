@@ -25,7 +25,6 @@ type FlatConfig struct {
 	ClientSecret                      *string                            `mapstructure:"client_secret" cty:"client_secret" hcl:"client_secret"`
 	ClientCertPath                    *string                            `mapstructure:"client_cert_path" cty:"client_cert_path" hcl:"client_cert_path"`
 	ClientCertPassword                *string                            `mapstructure:"client_cert_password" cty:"client_cert_password" hcl:"client_cert_password"`
-	ClientCertExpireTimeout           *string                            `mapstructure:"client_cert_token_timeout" required:"false" cty:"client_cert_token_timeout" hcl:"client_cert_token_timeout"`
 	ClientJWT                         *string                            `mapstructure:"client_jwt" cty:"client_jwt" hcl:"client_jwt"`
 	ObjectID                          *string                            `mapstructure:"object_id" cty:"object_id" hcl:"object_id"`
 	TenantID                          *string                            `mapstructure:"tenant_id" required:"false" cty:"tenant_id" hcl:"tenant_id"`
@@ -83,7 +82,6 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"client_secret":                   &hcldec.AttrSpec{Name: "client_secret", Type: cty.String, Required: false},
 		"client_cert_path":                &hcldec.AttrSpec{Name: "client_cert_path", Type: cty.String, Required: false},
 		"client_cert_password":            &hcldec.AttrSpec{Name: "client_cert_password", Type: cty.String, Required: false},
-		"client_cert_token_timeout":       &hcldec.AttrSpec{Name: "client_cert_token_timeout", Type: cty.String, Required: false},
 		"client_jwt":                      &hcldec.AttrSpec{Name: "client_jwt", Type: cty.String, Required: false},
 		"object_id":                       &hcldec.AttrSpec{Name: "object_id", Type: cty.String, Required: false},
 		"tenant_id":                       &hcldec.AttrSpec{Name: "tenant_id", Type: cty.String, Required: false},
