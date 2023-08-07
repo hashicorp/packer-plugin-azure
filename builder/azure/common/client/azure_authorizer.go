@@ -14,13 +14,14 @@ import (
 )
 
 type AzureAuthOptions struct {
-	AuthType       string
-	ClientID       string
-	ClientSecret   string
-	ClientJWT      string
-	ClientCertPath string
-	TenantID       string
-	SubscriptionID string
+	AuthType           string
+	ClientID           string
+	ClientSecret       string
+	ClientJWT          string
+	ClientCertPath     string
+	ClientCertPassword string
+	TenantID           string
+	SubscriptionID     string
 }
 
 func BuildResourceManagerAuthorizer(ctx context.Context, authOpts AzureAuthOptions, env environments.Environment) (auth.Authorizer, error) {
@@ -65,8 +66,9 @@ func buildAuthorizer(ctx context.Context, authOpts AzureAuthOptions, env environ
 			Environment: env,
 			EnableAuthenticatingUsingClientCertificate: true,
 			ClientID:                  authOpts.ClientID,
+			TenantID:                  authOpts.TenantID,
 			ClientCertificatePath:     authOpts.ClientCertPath,
-			ClientCertificatePassword: "",
+			ClientCertificatePassword: authOpts.ClientCertPassword,
 		}
 	case AuthTypeClientBearerJWT:
 		authConfig = auth.Credentials{
