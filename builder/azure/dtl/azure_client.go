@@ -46,6 +46,7 @@ type AzureClient struct {
 	PollingDuration           time.Duration
 	CustomImageCaptureTimeout time.Duration
 	SharedGalleryTimeout      time.Duration
+	ObjectId                  string
 }
 
 func errorCapture(client *AzureClient) autorest.RespondDecorator {
@@ -84,9 +85,8 @@ func byConcatDecorators(decorators ...autorest.RespondDecorator) autorest.Respon
 }
 
 // Returns an Azure Client used for the Azure Resource Manager
-// Also returns the Azure object ID for the authentication method used in the build
 func NewAzureClient(ctx context.Context, subscriptionID string,
-	cloud *environments.Environment, SharedGalleryTimeout time.Duration, CustomImageCaptureTimeout time.Duration, PollingDuration time.Duration, authOptions azcommon.AzureAuthOptions) (*AzureClient, *string, error) {
+	cloud *environments.Environment, SharedGalleryTimeout time.Duration, CustomImageCaptureTimeout time.Duration, PollingDuration time.Duration, authOptions azcommon.AzureAuthOptions) (*AzureClient, error) {
 
 	var azureClient = &AzureClient{}
 
@@ -99,12 +99,12 @@ func NewAzureClient(ctx context.Context, subscriptionID string,
 	azureClient.SharedGalleryTimeout = SharedGalleryTimeout
 
 	if cloud == nil || cloud.ResourceManager == nil {
-		return nil, nil, fmt.Errorf("Azure Environment not configured correctly")
+		return nil, fmt.Errorf("Azure Environment not configured correctly")
 	}
 	resourceManagerEndpoint, _ := cloud.ResourceManager.Endpoint()
 	resourceManagerAuthorizer, err := azcommon.BuildResourceManagerAuthorizer(ctx, authOptions, *cloud)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	dtlMetaClient := dtl.NewClientWithBaseURI(*resourceManagerEndpoint, func(c *autorest.Client) {
 		c.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
@@ -143,18 +143,19 @@ func NewAzureClient(ctx context.Context, subscriptionID string,
 	})
 
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	azureClient.NetworkMetaClient = *networkMetaClient
 	token, err := resourceManagerAuthorizer.Token(ctx, &http.Request{})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	objectId, err := azcommon.GetObjectIdFromToken(token.AccessToken)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return azureClient, &objectId, nil
+	azureClient.ObjectId = objectId
+	return azureClient, nil
 }
 
 const (

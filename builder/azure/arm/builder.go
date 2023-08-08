@@ -98,9 +98,11 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	}
 
 	ui.Message("Creating Azure Resource Manager (ARM) client ...")
-	azureClient, objectID, err := NewAzureClient(
+	// For VHD Builds we need to enable the Blob Azure Storage client
+	configureBlobClient := (b.config.ResourceGroupName != "" || b.config.StorageAccount != "")
+	azureClient, err := NewAzureClient(
 		ctx,
-		(b.config.ResourceGroupName != "" || b.config.StorageAccount != ""),
+		configureBlobClient,
 		b.config.ClientConfig.CloudEnvironment(),
 		b.config.SharedGalleryTimeout,
 		b.config.PollingDurationTimeout,
@@ -115,9 +117,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if err := resolver.Resolve(&b.config); err != nil {
 		return nil, err
 	}
-
+	objectID := azureClient.ObjectID
 	if b.config.ClientConfig.ObjectID == "" {
-		b.config.ClientConfig.ObjectID = *objectID
+		b.config.ClientConfig.ObjectID = objectID
 	} else {
 		ui.Message("You have provided Object_ID which is no longer needed, Azure Packer ARM builder determines this automatically using the Azure Access Token")
 	}

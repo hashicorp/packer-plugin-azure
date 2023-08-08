@@ -59,6 +59,7 @@ type AzureClient struct {
 	InspectorMaxLength int
 	LastError          azureErrorResponse
 
+	ObjectID             string
 	PollingDuration      time.Duration
 	SharedGalleryTimeout time.Duration
 }
@@ -92,6 +93,7 @@ func errorCaptureTrack2(client *AzureClient) client.ResponseMiddleware {
 	}
 }
 
+// Track 1 Legacy method, can be removed when all clients are track 2
 func byConcatDecorators(decorators ...autorest.RespondDecorator) autorest.RespondDecorator {
 	return func(r autorest.Responder) autorest.Responder {
 		return autorest.DecorateResponder(r, decorators...)
@@ -99,20 +101,19 @@ func byConcatDecorators(decorators ...autorest.RespondDecorator) autorest.Respon
 }
 
 // Returns an Azure Client used for the Azure Resource Manager
-// Also returns the Azure object ID for the authentication method used in the build
-func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.Environment, sharedGalleryTimeout time.Duration, pollingDuration time.Duration, authOptions commonclient.AzureAuthOptions) (*AzureClient, *string, error) {
+func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.Environment, sharedGalleryTimeout time.Duration, pollingDuration time.Duration, authOptions commonclient.AzureAuthOptions) (*AzureClient, error) {
 
 	var azureClient = &AzureClient{}
 	azureClient.PollingDuration = pollingDuration
 	azureClient.SharedGalleryTimeout = sharedGalleryTimeout
 	maxlen := getInspectorMaxLength()
 	if cloud == nil || cloud.ResourceManager == nil {
-		return nil, nil, fmt.Errorf("azure environment not configured correctly")
+		return nil, fmt.Errorf("azure environment not configured correctly")
 	}
 	resourceManagerEndpoint, _ := cloud.ResourceManager.Endpoint()
 	resourceManagerAuthorizer, err := commonclient.BuildResourceManagerAuthorizer(ctx, authOptions, *cloud)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	trackTwoResponseMiddleware := []client.ResponseMiddleware{byInspectingTrack2(maxlen), errorCaptureTrack2(azureClient)}
@@ -195,9 +196,8 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 		c.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
 		c.Client.RequestMiddlewares = &trackTwoRequestMiddleware
 	})
-
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	azureClient.NetworkMetaClient = *networkMetaClient
 
@@ -219,7 +219,7 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	if isVHDBuild {
 		storageAccountAuthorizer, err := commonclient.BuildStorageAuthorizer(ctx, authOptions, *cloud)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		blobClient := giovanniBlobStorageSDK.New()
@@ -232,16 +232,17 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 
 	token, err := resourceManagerAuthorizer.Token(ctx, &http.Request{})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if token == nil {
-		return nil, nil, fmt.Errorf("unable to parse token from Azure Resource Manager")
+		return nil, fmt.Errorf("unable to parse token from Azure Resource Manager")
 	}
 	objectId, err := commonclient.GetObjectIdFromToken(token.AccessToken)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return azureClient, &objectId, nil
+	azureClient.ObjectID = objectId
+	return azureClient, nil
 }
 
 func getInspectorMaxLength() int64 {

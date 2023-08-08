@@ -85,7 +85,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		SubscriptionID: b.config.ClientConfig.SubscriptionID,
 	}
 	ui.Message("Creating Azure DevTestLab (DTL) client ...")
-	azureClient, objectId, err := NewAzureClient(
+	azureClient, err := NewAzureClient(
 		ctx,
 		b.config.ClientConfig.SubscriptionID,
 		b.config.ClientConfig.CloudEnvironment(),
@@ -102,8 +102,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if err := resolver.Resolve(&b.config); err != nil {
 		return nil, err
 	}
+	objectId := azureClient.ObjectId
 	if b.config.ClientConfig.ObjectID == "" {
-		b.config.ClientConfig.ObjectID = *objectId
+		b.config.ClientConfig.ObjectID = objectId
 	} else {
 		ui.Message("You have provided Object_ID which is no longer needed, azure packer builder determines this dynamically from the authentication token")
 	}
