@@ -5,6 +5,7 @@ package chroot
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -237,7 +238,7 @@ func (s *StepCreateNewDiskset) getSharedImageGalleryVersion(ctx context.Context,
 		return nil, err
 	}
 	if imageVersionResult.Model == nil {
-		return nil, fmt.Errorf("SDK returned empty model")
+		return nil, errors.New(client.SDK_NULL_MODEL_ERROR)
 	}
 	return imageVersionResult.Model, nil
 }

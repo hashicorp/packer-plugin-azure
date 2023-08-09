@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/virtualnetworks"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deploymentoperations"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -198,7 +199,7 @@ func (s *StepDeployTemplate) getImageDetails(ctx context.Context, subscriptionId
 		return "", "", err
 	}
 	if model := vm.Model; model == nil {
-		return "", "", errors.New("SDK returned empty model")
+		return "", "", errors.New(client.SDK_NULL_MODEL_ERROR)
 	}
 	if vm.Model.Properties.StorageProfile.OsDisk.Vhd != nil {
 		imageType = "image"

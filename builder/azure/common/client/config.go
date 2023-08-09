@@ -24,6 +24,10 @@ import (
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
+// This error is thrown whenever the Azure SDK returns a null model with no error
+// We do not expect this error to happen ever, but also don't want to throw a null pointer exception here.
+const SDK_NULL_MODEL_ERROR = "Unexpected SDK response, please open an issue on the Azure plugin issue tracker"
+
 // Config allows for various ways to authenticate Azure clients.  When
 // `client_id` and `subscription_id` are specified in addition to one and only
 // one of the following: `client_secret`, `client_jwt`, `client_cert_path` --

@@ -40,6 +40,10 @@ func handleBody(body io.ReadCloser, maxlen int64) (io.ReadCloser, string) {
 	return ioutil.NopCloser(bytes.NewReader(b)), chop(b, maxlen)
 }
 
+// WithInspection/ByInspection functions are used to Log requests and responses from Azure
+// Same as with error capture there are track 2 and track 1 versions of these functions
+// Once all endpoints we usea in go-azure-sdk are on track 2 clients
+// We can delete the track 1 functions and rename the track 2 clients
 func withInspection(maxlen int64) autorest.PrepareDecorator {
 	return func(p autorest.Preparer) autorest.Preparer {
 		return autorest.PreparerFunc(func(r *http.Request) (*http.Request, error) {

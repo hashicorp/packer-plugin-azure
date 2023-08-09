@@ -64,6 +64,7 @@ type AzureClient struct {
 	SharedGalleryTimeout time.Duration
 }
 
+// Error Capture Methods are used for parsing the returned error and setting is as the clients Last Error so we can log after failure
 func errorCapture(client *AzureClient) autorest.RespondDecorator {
 	return func(r autorest.Responder) autorest.Responder {
 		return autorest.ResponderFunc(func(resp *http.Response) error {
@@ -80,6 +81,8 @@ func errorCapture(client *AzureClient) autorest.RespondDecorator {
 	}
 }
 
+// Track 1 (autorest) and Track 2 clients use different method signatures for defining their response/request middleware, these functions do the same thing but just are wrapped in an autorest handler or not.
+// Go-Azure-SDK has endpoints supported on both Azure Track 1 and Azure Track 2, they will migrate them in time and we can consume those updates via upgrading our SDK
 func errorCaptureTrack2(client *AzureClient) client.ResponseMiddleware {
 	return func(req *http.Request, resp *http.Response) (*http.Response, error) {
 		body, bodyString := handleBody(resp.Body, math.MaxInt64)

@@ -239,7 +239,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			return nil, fmt.Errorf("the parent Shared Gallery Image '%s' from which to source the managed image version to does not exist in the resource group '%s' or does not contain managed image '%s'", b.config.SharedGallery.GalleryName, b.config.SharedGallery.ResourceGroup, b.config.SharedGallery.ImageName)
 		}
 		if galleryImage.Model == nil {
-			return nil, fmt.Errorf("SDK returned empty model for gallery image")
+			return nil, errors.New(commonclient.SDK_NULL_MODEL_ERROR)
 		}
 		if galleryImage.Model.Properties.OsState == galleryimages.OperatingSystemStateTypesSpecialized {
 			sourceImageSpecialized = true

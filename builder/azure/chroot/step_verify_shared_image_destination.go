@@ -5,6 +5,7 @@ package chroot
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -133,7 +134,7 @@ func (s *StepVerifySharedImageDestination) getGalleryImage(ctx context.Context, 
 		return nil, err
 	}
 	if res.Model == nil {
-		return nil, fmt.Errorf("SDK returned empty model")
+		return nil, errors.New(client.SDK_NULL_MODEL_ERROR)
 	}
 	return res.Model, nil
 }
@@ -144,7 +145,7 @@ func (s *StepVerifySharedImageDestination) listGalleryVersions(ctx context.Conte
 		return nil, err
 	}
 	if res.Items == nil {
-		return nil, fmt.Errorf("SDK returned empty model")
+		return nil, errors.New(client.SDK_NULL_MODEL_ERROR)
 	}
 	return res.Items, nil
 }

@@ -77,7 +77,7 @@ func buildAuthorizer(ctx context.Context, authOpts AzureAuthOptions, env environ
 			OIDCAssertionToken:            authOpts.ClientJWT,
 		}
 	default:
-		panic("AuthType not set")
+		return nil, fmt.Errorf("Unexpected AuthType %s set when trying to create Azure Client", authOpts.AuthType)
 	}
 	authorizer, err := auth.NewAuthorizerFromCredentials(ctx, authConfig, api)
 	if err != nil {

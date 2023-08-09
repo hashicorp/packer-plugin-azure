@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -81,7 +82,7 @@ func (s *StepCaptureImage) getVMID(ctx context.Context, vmId virtualmachines.Vir
 		vmId := vmResponse.Model.Properties.VMId
 		return *vmId, nil
 	}
-	return "", errors.New("SDK returned empty model")
+	return "", errors.New(client.SDK_NULL_MODEL_ERROR)
 }
 
 func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {

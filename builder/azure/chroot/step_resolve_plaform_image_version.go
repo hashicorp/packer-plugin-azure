@@ -5,6 +5,7 @@ package chroot
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -79,7 +80,7 @@ func (s *StepResolvePlatformImageVersion) listVMImages(ctx context.Context, azcl
 		return nil, err
 	}
 	if result.Model == nil {
-		return nil, fmt.Errorf("SDK returned empty model")
+		return nil, errors.New(client.SDK_NULL_MODEL_ERROR)
 	}
 	return result.Model, nil
 }
