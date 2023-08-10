@@ -5,7 +5,6 @@ package arm
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
@@ -82,7 +81,7 @@ func (s *StepCaptureImage) getVMID(ctx context.Context, vmId virtualmachines.Vir
 		vmId := vmResponse.Model.Properties.VMId
 		return *vmId, nil
 	}
-	return "", errors.New(client.SDK_NULL_MODEL_ERROR)
+	return "", client.NullModelSDKErr
 }
 
 func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {

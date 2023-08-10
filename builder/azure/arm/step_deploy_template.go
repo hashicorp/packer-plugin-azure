@@ -199,7 +199,7 @@ func (s *StepDeployTemplate) getImageDetails(ctx context.Context, subscriptionId
 		return "", "", err
 	}
 	if model := vm.Model; model == nil {
-		return "", "", errors.New(client.SDK_NULL_MODEL_ERROR)
+		return "", "", client.NullModelSDKErr
 	}
 	if vm.Model.Properties.StorageProfile.OsDisk.Vhd != nil {
 		imageType = "image"

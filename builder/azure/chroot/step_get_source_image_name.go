@@ -5,7 +5,6 @@ package chroot
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 
@@ -91,7 +90,7 @@ func (s *StepGetSourceImageName) getSharedImageGalleryVersion(ctx context.Contex
 		return nil, err
 	}
 	if imageVersionResult.Model == nil {
-		return nil, errors.New(client.SDK_NULL_MODEL_ERROR)
+		return nil, client.NullModelSDKErr
 	}
 	return imageVersionResult.Model, nil
 }

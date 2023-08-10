@@ -5,7 +5,6 @@ package chroot
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -145,7 +144,7 @@ func (s *StepVerifySharedImageSource) getGalleryVersion(ctx context.Context, azc
 		return nil, err
 	}
 	if res.Model == nil {
-		return nil, errors.New(client.SDK_NULL_MODEL_ERROR)
+		return nil, client.NullModelSDKErr
 	}
 	return res.Model, nil
 }
@@ -156,7 +155,7 @@ func (s *StepVerifySharedImageSource) getGalleryImage(ctx context.Context, azcli
 		return nil, err
 	}
 	if res.Model == nil {
-		return nil, errors.New(client.SDK_NULL_MODEL_ERROR)
+		return nil, client.NullModelSDKErr
 	}
 	return res.Model, nil
 }
