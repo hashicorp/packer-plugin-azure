@@ -184,6 +184,13 @@ func TestBuilderAcc_ManagedDisk_Windows(t *testing.T) {
 	})
 }
 
+// TODO Implement this test to validate client cert auth
+// This logic is largely straight forward and is just passing values into the SDK so we should be fine for the v2.0.0 release
+// But we should fill this test in when we migrate our acceptance tests to running in CI
+func TestBuilderAcc_ClientCertificateAuth(t *testing.T) {
+	t.Skip("Unimplemented Client Cert Auth Acceptance test")
+}
+
 func TestBuilderAcc_ManagedDisk_Windows_Build_Resource_Group(t *testing.T) {
 	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
