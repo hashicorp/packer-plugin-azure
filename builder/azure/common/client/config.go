@@ -14,7 +14,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure/cli"
 	jwt "github.com/golang-jwt/jwt"
@@ -58,11 +57,11 @@ type Config struct {
 	ClientID string `mapstructure:"client_id"`
 	// A password/secret registered for the AAD SP.
 	ClientSecret string `mapstructure:"client_secret"`
-	// The path to a pem-encoded certificate that will be used to authenticate
-	// as the specified AAD SP.
+	// The path to a PKCS#12 bundle (.pfx file) to be used as the client certificate
+	// that will be used to authenticate as the specified AAD SP.
 	ClientCertPath string `mapstructure:"client_cert_path"`
-	// The timeout for the JWT Token when using a [client certificate](#client_cert_path). Defaults to 1 hour.
-	ClientCertExpireTimeout time.Duration `mapstructure:"client_cert_token_timeout" required:"false"`
+	// The password for decrypting the client certificate bundle.
+	ClientCertPassword string `mapstructure:"client_cert_password"`
 	// A JWT bearer token for client auth (RFC 7523, Sec. 2.2) that will be used
 	// to authenticate the AAD SP. Provides more control over token the expiration
 	// when using certificate authentication than when using `client_cert_path`.
@@ -198,9 +197,6 @@ func (c Config) Validate(errs *packersdk.MultiError) {
 		if _, err := os.Stat(c.ClientCertPath); err != nil {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("client_cert_path is not an accessible file: %v", err))
 		}
-		if c.ClientCertExpireTimeout != 0 && c.ClientCertExpireTimeout < 5*time.Minute {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("client_cert_token_timeout will expire within 5 minutes, please set a value greater than 5 minutes"))
-		}
 		return
 	}
 
@@ -294,10 +290,6 @@ func (c *Config) FillParameters() error {
 			return err
 		}
 		c.TenantID = tenantID
-	}
-
-	if c.ClientCertExpireTimeout == 0 {
-		c.ClientCertExpireTimeout = time.Hour
 	}
 
 	return nil

@@ -64,13 +64,14 @@ func New(c Config, say func(string)) (AzureClientSet, error) {
 func new(c Config, say func(string)) (*azureClientSet, error) {
 	// Pass in relevant auth information for hashicorp/go-azure-sdk
 	authOptions := AzureAuthOptions{
-		AuthType:       c.AuthType(),
-		ClientID:       c.ClientID,
-		ClientSecret:   c.ClientSecret,
-		ClientJWT:      c.ClientJWT,
-		ClientCertPath: c.ClientCertPath,
-		TenantID:       c.TenantID,
-		SubscriptionID: c.SubscriptionID,
+		AuthType:           c.AuthType(),
+		ClientID:           c.ClientID,
+		ClientSecret:       c.ClientSecret,
+		ClientJWT:          c.ClientJWT,
+		ClientCertPath:     c.ClientCertPath,
+		ClientCertPassword: c.ClientCertPassword,
+		TenantID:           c.TenantID,
+		SubscriptionID:     c.SubscriptionID,
 	}
 	cloudEnv := c.cloudEnvironment
 	resourceManagerEndpoint, _ := cloudEnv.ResourceManager.Endpoint()

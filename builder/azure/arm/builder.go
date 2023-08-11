@@ -88,13 +88,14 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	// Pass in relevant auth information for hashicorp/go-azure-sdk
 	authOptions := commonclient.AzureAuthOptions{
-		AuthType:       b.config.ClientConfig.AuthType(),
-		ClientID:       b.config.ClientConfig.ClientID,
-		ClientSecret:   b.config.ClientConfig.ClientSecret,
-		ClientJWT:      b.config.ClientConfig.ClientJWT,
-		ClientCertPath: b.config.ClientConfig.ClientCertPath,
-		TenantID:       b.config.ClientConfig.TenantID,
-		SubscriptionID: b.config.ClientConfig.SubscriptionID,
+		AuthType:           b.config.ClientConfig.AuthType(),
+		ClientID:           b.config.ClientConfig.ClientID,
+		ClientSecret:       b.config.ClientConfig.ClientSecret,
+		ClientJWT:          b.config.ClientConfig.ClientJWT,
+		ClientCertPath:     b.config.ClientConfig.ClientCertPath,
+		ClientCertPassword: b.config.ClientConfig.ClientCertPassword,
+		TenantID:           b.config.ClientConfig.TenantID,
+		SubscriptionID:     b.config.ClientConfig.SubscriptionID,
 	}
 
 	ui.Message("Creating Azure Resource Manager (ARM) client ...")

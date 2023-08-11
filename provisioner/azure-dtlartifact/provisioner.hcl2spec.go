@@ -37,32 +37,32 @@ func (*FlatArtifactParameter) HCL2Spec() map[string]hcldec.Spec {
 // FlatConfig is an auto-generated flat version of Config.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatConfig struct {
-	PackerBuildName         *string                `mapstructure:"packer_build_name" cty:"packer_build_name" hcl:"packer_build_name"`
-	PackerBuilderType       *string                `mapstructure:"packer_builder_type" cty:"packer_builder_type" hcl:"packer_builder_type"`
-	PackerCoreVersion       *string                `mapstructure:"packer_core_version" cty:"packer_core_version" hcl:"packer_core_version"`
-	PackerDebug             *bool                  `mapstructure:"packer_debug" cty:"packer_debug" hcl:"packer_debug"`
-	PackerForce             *bool                  `mapstructure:"packer_force" cty:"packer_force" hcl:"packer_force"`
-	PackerOnError           *string                `mapstructure:"packer_on_error" cty:"packer_on_error" hcl:"packer_on_error"`
-	PackerUserVars          map[string]string      `mapstructure:"packer_user_variables" cty:"packer_user_variables" hcl:"packer_user_variables"`
-	PackerSensitiveVars     []string               `mapstructure:"packer_sensitive_variables" cty:"packer_sensitive_variables" hcl:"packer_sensitive_variables"`
-	CloudEnvironmentName    *string                `mapstructure:"cloud_environment_name" required:"false" cty:"cloud_environment_name" hcl:"cloud_environment_name"`
-	MetadataHost            *string                `mapstructure:"metadata_host" required:"false" cty:"metadata_host" hcl:"metadata_host"`
-	ClientID                *string                `mapstructure:"client_id" cty:"client_id" hcl:"client_id"`
-	ClientSecret            *string                `mapstructure:"client_secret" cty:"client_secret" hcl:"client_secret"`
-	ClientCertPath          *string                `mapstructure:"client_cert_path" cty:"client_cert_path" hcl:"client_cert_path"`
-	ClientCertExpireTimeout *string                `mapstructure:"client_cert_token_timeout" required:"false" cty:"client_cert_token_timeout" hcl:"client_cert_token_timeout"`
-	ClientJWT               *string                `mapstructure:"client_jwt" cty:"client_jwt" hcl:"client_jwt"`
-	ObjectID                *string                `mapstructure:"object_id" cty:"object_id" hcl:"object_id"`
-	TenantID                *string                `mapstructure:"tenant_id" required:"false" cty:"tenant_id" hcl:"tenant_id"`
-	SubscriptionID          *string                `mapstructure:"subscription_id" cty:"subscription_id" hcl:"subscription_id"`
-	UseAzureCLIAuth         *bool                  `mapstructure:"use_azure_cli_auth" required:"false" cty:"use_azure_cli_auth" hcl:"use_azure_cli_auth"`
-	DtlArtifacts            []FlatDtlArtifact      `mapstructure:"dtl_artifacts" required:"true" cty:"dtl_artifacts" hcl:"dtl_artifacts"`
-	LabName                 *string                `mapstructure:"lab_name" required:"true" cty:"lab_name" hcl:"lab_name"`
-	ResourceGroupName       *string                `mapstructure:"lab_resource_group_name" required:"true" cty:"lab_resource_group_name" hcl:"lab_resource_group_name"`
-	VMName                  *string                `mapstructure:"vm_name" required:"true" cty:"vm_name" hcl:"vm_name"`
-	PollingDurationTimeout  *string                `mapstructure:"polling_duration_timeout" required:"false" cty:"polling_duration_timeout" hcl:"polling_duration_timeout"`
-	AzureTags               map[string]*string     `mapstructure:"azure_tags" cty:"azure_tags" hcl:"azure_tags"`
-	Json                    map[string]interface{} `cty:"json" hcl:"json"`
+	PackerBuildName        *string                `mapstructure:"packer_build_name" cty:"packer_build_name" hcl:"packer_build_name"`
+	PackerBuilderType      *string                `mapstructure:"packer_builder_type" cty:"packer_builder_type" hcl:"packer_builder_type"`
+	PackerCoreVersion      *string                `mapstructure:"packer_core_version" cty:"packer_core_version" hcl:"packer_core_version"`
+	PackerDebug            *bool                  `mapstructure:"packer_debug" cty:"packer_debug" hcl:"packer_debug"`
+	PackerForce            *bool                  `mapstructure:"packer_force" cty:"packer_force" hcl:"packer_force"`
+	PackerOnError          *string                `mapstructure:"packer_on_error" cty:"packer_on_error" hcl:"packer_on_error"`
+	PackerUserVars         map[string]string      `mapstructure:"packer_user_variables" cty:"packer_user_variables" hcl:"packer_user_variables"`
+	PackerSensitiveVars    []string               `mapstructure:"packer_sensitive_variables" cty:"packer_sensitive_variables" hcl:"packer_sensitive_variables"`
+	CloudEnvironmentName   *string                `mapstructure:"cloud_environment_name" required:"false" cty:"cloud_environment_name" hcl:"cloud_environment_name"`
+	MetadataHost           *string                `mapstructure:"metadata_host" required:"false" cty:"metadata_host" hcl:"metadata_host"`
+	ClientID               *string                `mapstructure:"client_id" cty:"client_id" hcl:"client_id"`
+	ClientSecret           *string                `mapstructure:"client_secret" cty:"client_secret" hcl:"client_secret"`
+	ClientCertPath         *string                `mapstructure:"client_cert_path" cty:"client_cert_path" hcl:"client_cert_path"`
+	ClientCertPassword     *string                `mapstructure:"client_cert_password" cty:"client_cert_password" hcl:"client_cert_password"`
+	ClientJWT              *string                `mapstructure:"client_jwt" cty:"client_jwt" hcl:"client_jwt"`
+	ObjectID               *string                `mapstructure:"object_id" cty:"object_id" hcl:"object_id"`
+	TenantID               *string                `mapstructure:"tenant_id" required:"false" cty:"tenant_id" hcl:"tenant_id"`
+	SubscriptionID         *string                `mapstructure:"subscription_id" cty:"subscription_id" hcl:"subscription_id"`
+	UseAzureCLIAuth        *bool                  `mapstructure:"use_azure_cli_auth" required:"false" cty:"use_azure_cli_auth" hcl:"use_azure_cli_auth"`
+	DtlArtifacts           []FlatDtlArtifact      `mapstructure:"dtl_artifacts" required:"true" cty:"dtl_artifacts" hcl:"dtl_artifacts"`
+	LabName                *string                `mapstructure:"lab_name" required:"true" cty:"lab_name" hcl:"lab_name"`
+	ResourceGroupName      *string                `mapstructure:"lab_resource_group_name" required:"true" cty:"lab_resource_group_name" hcl:"lab_resource_group_name"`
+	VMName                 *string                `mapstructure:"vm_name" required:"true" cty:"vm_name" hcl:"vm_name"`
+	PollingDurationTimeout *string                `mapstructure:"polling_duration_timeout" required:"false" cty:"polling_duration_timeout" hcl:"polling_duration_timeout"`
+	AzureTags              map[string]*string     `mapstructure:"azure_tags" cty:"azure_tags" hcl:"azure_tags"`
+	Json                   map[string]interface{} `cty:"json" hcl:"json"`
 }
 
 // FlatMapstructure returns a new FlatConfig.
@@ -90,7 +90,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"client_id":                  &hcldec.AttrSpec{Name: "client_id", Type: cty.String, Required: false},
 		"client_secret":              &hcldec.AttrSpec{Name: "client_secret", Type: cty.String, Required: false},
 		"client_cert_path":           &hcldec.AttrSpec{Name: "client_cert_path", Type: cty.String, Required: false},
-		"client_cert_token_timeout":  &hcldec.AttrSpec{Name: "client_cert_token_timeout", Type: cty.String, Required: false},
+		"client_cert_password":       &hcldec.AttrSpec{Name: "client_cert_password", Type: cty.String, Required: false},
 		"client_jwt":                 &hcldec.AttrSpec{Name: "client_jwt", Type: cty.String, Required: false},
 		"object_id":                  &hcldec.AttrSpec{Name: "object_id", Type: cty.String, Required: false},
 		"tenant_id":                  &hcldec.AttrSpec{Name: "tenant_id", Type: cty.String, Required: false},
