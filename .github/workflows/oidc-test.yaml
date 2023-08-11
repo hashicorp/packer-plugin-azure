@@ -43,6 +43,8 @@ jobs:
       - name: Setup `packer`
         uses: hashicorp/setup-packer@main
         id: setup
+        with: 
+          version: '1.9.1'
 
       - name: Build the plugin
         run:  make
