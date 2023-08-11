@@ -59,7 +59,6 @@ type Config struct {
 	ClientSecret string `mapstructure:"client_secret"`
 	// The path to a PKCS#12 bundle (.pfx file) to be used as the client certificate
 	// that will be used to authenticate as the specified AAD SP.
-	// TODO should we just include Terraform docs here https://registry.terraform.io/providers/hashicorp/azuread/latest/docs/guides/service_principal_client_certificate.html#generating-a-client-certificate or should we re-write this
 	ClientCertPath string `mapstructure:"client_cert_path"`
 	// The password for decrypting the client certificate bundle.
 	ClientCertPassword string `mapstructure:"client_cert_password"`
