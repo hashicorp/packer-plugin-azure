@@ -208,18 +208,12 @@ func (c Config) Validate(errs *packersdk.MultiError) {
 		c.ClientSecret == "" &&
 		c.ClientCertPath == "" &&
 		c.ClientJWT != "" {
-		// Service principal using JWT
-		// Check that JWT is valid for at least 5 more minutes
-
 		p := jwt.Parser{}
 		claims := jwt.StandardClaims{}
 		token, _, err := p.ParseUnverified(c.ClientJWT, &claims)
 		if err != nil {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("client_jwt is not a JWT: %v", err))
 		} else {
-			//if claims.ExpiresAt < time.Now().Add(5*time.Minute).Unix() {
-			//	errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("%d %d, client_jwt will expire within 5 minutes, please use a JWT that is valid for at least 5 minutes", claims.ExpiresAt, time.Now().Add(5*time.Minute).Unix()))
-			//}
 			if t, ok := token.Header["x5t"]; !ok || t == "" {
 				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("client_jwt is missing the x5t header value, which is required for bearer JWT client authentication to Azure"))
 			}

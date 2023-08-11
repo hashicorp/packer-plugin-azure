@@ -2092,6 +2092,33 @@ func TestConfigShouldAllowSharedImageGalleryOptions(t *testing.T) {
 	}
 }
 
+func TestConfigShouldRejectSharedImageGalleryDestinationNoVersionSet(t *testing.T) {
+	config := map[string]interface{}{
+		"location":        "ignore",
+		"subscription_id": "ignore",
+		"os_type":         "linux",
+		"image_sku":       "ignore",
+		"image_offer":     "ignore",
+		"image_publisher": "ignore",
+		"shared_image_gallery_destination": map[string]string{
+			"resource_group":      "ignore",
+			"gallery_name":        "ignore",
+			"image_name":          "ignore",
+			"replication_regions": "ignore",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("expected config to reject invalid shared image gallery destination version", err)
+	}
+	errorMessage := "An image_version must be specified for shared_image_gallery_destination and must follow the Major(int).Minor(int).Patch(int) format"
+	if !strings.Contains(err.Error(), errorMessage) {
+		t.Errorf("expected config to reject with error containing %s but got %s", errorMessage, err)
+	}
+}
+
 func TestConfigShouldRejectSharedImageGalleryDestinationInvalidVersion(t *testing.T) {
 	config := map[string]interface{}{
 		"location":        "ignore",
@@ -2104,7 +2131,7 @@ func TestConfigShouldRejectSharedImageGalleryDestinationInvalidVersion(t *testin
 			"resource_group":      "ignore",
 			"gallery_name":        "ignore",
 			"image_name":          "ignore",
-			"image_version":       "not semver",
+			"image_version":       "a.0.1",
 			"replication_regions": "ignore",
 		},
 	}
@@ -2114,7 +2141,7 @@ func TestConfigShouldRejectSharedImageGalleryDestinationInvalidVersion(t *testin
 	if err == nil {
 		t.Fatal("expected config to reject invalid shared image gallery destination version", err)
 	}
-	errorMessage := "An image_version must follow Major(int).Minor(int).Patch(int) format"
+	errorMessage := "An image_version must be specified for shared_image_gallery_destination and must follow the Major(int).Minor(int).Patch(int) format"
 	if !strings.Contains(err.Error(), errorMessage) {
 		t.Errorf("expected config to reject with error containing %s but got %s", errorMessage, err)
 	}

@@ -1236,6 +1236,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 	}
 
+	validImageVersion := regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`)
 	if c.SharedGalleryDestination.SigDestinationGalleryName != "" {
 		if c.SharedGalleryDestination.SigDestinationResourceGroup == "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A resource_group must be specified for shared_image_gallery_destination"))
@@ -1243,13 +1244,8 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		if c.SharedGalleryDestination.SigDestinationImageName == "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("An image_name must be specified for shared_image_gallery_destination"))
 		}
-		if c.SharedGalleryDestination.SigDestinationImageVersion == "" {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("An image_version must be specified for shared_image_gallery_destination"))
-		} else {
-			validImageVersion := regexp.MustCompile(`[0-9]*\.[0-9]*\.[0-9]*$`)
-			if !validImageVersion.Match([]byte(c.SharedGalleryDestination.SigDestinationImageVersion)) {
-				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("An image_version must follow Major(int).Minor(int).Patch(int) format"))
-			}
+		if !validImageVersion.Match([]byte(c.SharedGalleryDestination.SigDestinationImageVersion)) {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("An image_version must be specified for shared_image_gallery_destination and must follow the Major(int).Minor(int).Patch(int) format"))
 		}
 		if c.SharedGalleryDestination.SigDestinationSubscription == "" {
 			c.SharedGalleryDestination.SigDestinationSubscription = c.ClientConfig.SubscriptionID
