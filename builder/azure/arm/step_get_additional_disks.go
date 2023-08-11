@@ -5,10 +5,10 @@ package arm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
-
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -17,7 +17,7 @@ import (
 
 type StepGetDataDisk struct {
 	client *AzureClient
-	query  func(ctx context.Context, resourceGroupName string, computeName string) (compute.VirtualMachine, error)
+	query  func(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (*virtualmachines.VirtualMachine, error)
 	say    func(message string)
 	error  func(e error)
 }
@@ -33,12 +33,16 @@ func NewStepGetAdditionalDisks(client *AzureClient, ui packersdk.Ui) *StepGetDat
 	return step
 }
 
-func (s *StepGetDataDisk) queryCompute(ctx context.Context, resourceGroupName string, computeName string) (compute.VirtualMachine, error) {
-	vm, err := s.client.VirtualMachinesClient.Get(ctx, resourceGroupName, computeName, "")
+func (s *StepGetDataDisk) queryCompute(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (*virtualmachines.VirtualMachine, error) {
+	vmID := virtualmachines.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)
+	vm, err := s.client.VirtualMachinesClient.Get(ctx, vmID, virtualmachines.DefaultGetOperationOptions())
 	if err != nil {
 		s.say(s.client.LastError.Error())
 	}
-	return vm, err
+	if model := vm.Model; model == nil {
+		return nil, errors.New("TODO")
+	}
+	return vm.Model, err
 }
 
 func (s *StepGetDataDisk) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -46,11 +50,11 @@ func (s *StepGetDataDisk) Run(ctx context.Context, state multistep.StateBag) mul
 
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
 	var computeName = state.Get(constants.ArmComputeName).(string)
-
+	var subscriptionId = state.Get(constants.ArmSubscription).(string)
 	s.say(fmt.Sprintf(" -> ResourceGroupName : '%s'", resourceGroupName))
 	s.say(fmt.Sprintf(" -> ComputeName       : '%s'", computeName))
 
-	vm, err := s.query(ctx, resourceGroupName, computeName)
+	vm, err := s.query(ctx, subscriptionId, resourceGroupName, computeName)
 	if err != nil {
 		state.Put(constants.Error, err)
 		s.error(err)
@@ -58,15 +62,15 @@ func (s *StepGetDataDisk) Run(ctx context.Context, state multistep.StateBag) mul
 		return multistep.ActionHalt
 	}
 
-	if vm.StorageProfile.DataDisks != nil {
+	if vm.Properties.StorageProfile.DataDisks != nil {
 		var vhdUri string
-		additional_disks := make([]string, len(*vm.StorageProfile.DataDisks))
-		for i, additionaldisk := range *vm.StorageProfile.DataDisks {
+		additional_disks := make([]string, len(*vm.Properties.StorageProfile.DataDisks))
+		for i, additionaldisk := range *vm.Properties.StorageProfile.DataDisks {
 			if additionaldisk.Vhd != nil {
-				vhdUri = *additionaldisk.Vhd.URI
+				vhdUri = *additionaldisk.Vhd.Uri
 				s.say(fmt.Sprintf(" -> Additional Disk %d          : '%s'", i+1, vhdUri))
 			} else {
-				vhdUri = *additionaldisk.ManagedDisk.ID
+				vhdUri = *additionaldisk.ManagedDisk.Id
 				s.say(fmt.Sprintf(" -> Managed Additional Disk %d  : '%s'", i+1, vhdUri))
 			}
 			additional_disks[i] = vhdUri

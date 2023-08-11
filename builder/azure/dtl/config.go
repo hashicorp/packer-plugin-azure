@@ -19,8 +19,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-04-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2021-07-01/compute"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+
 	"github.com/masterzen/winrm"
 
 	azcommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
@@ -212,13 +213,13 @@ type Config struct {
 	// type for a managed image. Valid values are Standard_LRS and Premium_LRS.
 	// The default is Standard_LRS.
 	ManagedImageStorageAccountType string `mapstructure:"managed_image_storage_account_type" required:"false"`
-	managedImageStorageAccountType compute.StorageAccountTypes
+	managedImageStorageAccountType virtualmachines.StorageAccountTypes
 
 	// the user can define up to 15
 	// tags. Tag names cannot exceed 512 characters, and tag values cannot exceed
 	// 256 characters. Tags are applied to every resource deployed by a Packer
 	// build, i.e. Resource Group, VM, NIC, VNET, Public IP, KeyVault, etc.
-	AzureTags map[string]*string `mapstructure:"azure_tags" required:"false"`
+	AzureTags map[string]string `mapstructure:"azure_tags" required:"false"`
 
 	// Used for creating images from Marketplace images. Please refer to
 	// [Deploy an image with Marketplace
@@ -230,7 +231,7 @@ type Config struct {
 	PlanID string `mapstructure:"plan_id" required:"false"`
 
 	// The default PollingDuration for azure is 15mins, this property will override
-	// that value. See [Azure DefaultPollingDuration](https://godoc.org/github.com/Azure/go-autorest/autorest#pkg-constants)
+	// that value.
 	// If your Packer build is failing on the
 	// ARM deployment step with the error `Original Error:
 	// context deadline exceeded`, then you probably need to increase this timeout from
@@ -264,7 +265,7 @@ type Config struct {
 	// Specify the disk caching type. Valid values
 	// are None, ReadOnly, and ReadWrite. The default value is ReadWrite.
 	DiskCachingType string `mapstructure:"disk_caching_type" required:"false"`
-	diskCachingType compute.CachingTypes
+	diskCachingType virtualmachines.CachingTypes
 
 	// DTL values
 	StorageType string `mapstructure:"storage_type"`
@@ -325,11 +326,15 @@ func (c *Config) isManagedImage() bool {
 	return c.ManagedImageName != ""
 }
 
-func (c *Config) toVirtualMachineCaptureParameters() *compute.VirtualMachineCaptureParameters {
-	return &compute.VirtualMachineCaptureParameters{
-		DestinationContainerName: &c.CaptureContainerName,
-		VhdPrefix:                &c.CaptureNamePrefix,
-		OverwriteVhds:            to.BoolPtr(false),
+func (c *Config) isPublishToSIG() bool {
+	return c.SharedGalleryDestination.SigDestinationGalleryName != ""
+}
+
+func (c *Config) toVirtualMachineCaptureParameters() *virtualmachines.VirtualMachineCaptureParameters {
+	return &virtualmachines.VirtualMachineCaptureParameters{
+		DestinationContainerName: c.CaptureContainerName,
+		VhdPrefix:                c.CaptureNamePrefix,
+		OverwriteVhds:            false,
 	}
 }
 
@@ -539,11 +544,11 @@ func provideDefaultValues(c *Config) error {
 	}
 
 	if c.ManagedImageStorageAccountType == "" {
-		c.managedImageStorageAccountType = compute.StorageAccountTypesStandardLRS
+		c.managedImageStorageAccountType = virtualmachines.StorageAccountTypesStandardLRS
 	}
 
 	if c.DiskCachingType == "" {
-		c.diskCachingType = compute.CachingTypesReadWrite
+		c.diskCachingType = virtualmachines.CachingTypesReadWrite
 	}
 
 	if c.ImagePublisher != "" && c.ImageVersion == "" {
@@ -575,8 +580,8 @@ func assertTagProperties(c *Config, errs *packersdk.MultiError) {
 		if len(k) > 512 {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("the tag name %q exceeds (%d) the 512 character limit", k, len(k)))
 		}
-		if len(*v) > 256 {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("the tag name %q exceeds (%d) the 256 character limit", *v, len(*v)))
+		if len(v) > 256 {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("the tag name %q exceeds (%d) the 256 character limit", v, len(v)))
 		}
 	}
 }
@@ -738,9 +743,9 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	switch c.ManagedImageStorageAccountType {
 	case "", string(compute.StorageAccountTypesStandardLRS):
-		c.managedImageStorageAccountType = compute.StorageAccountTypesStandardLRS
+		c.managedImageStorageAccountType = virtualmachines.StorageAccountTypesStandardLRS
 	case string(compute.StorageAccountTypesPremiumLRS):
-		c.managedImageStorageAccountType = compute.StorageAccountTypesPremiumLRS
+		c.managedImageStorageAccountType = virtualmachines.StorageAccountTypesPremiumLRS
 	default:
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The managed_image_storage_account_type %q is invalid", c.ManagedImageStorageAccountType))
 	}

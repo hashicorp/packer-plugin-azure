@@ -35,35 +35,19 @@ builder](/packer/plugins/builders/azure/arm). It is much easier to use.
 The Packer Azure builders provide a couple of ways to authenticate to Azure. The
 following methods are available and are explained below:
 
-- Azure Active Directory interactive login. Interactive login is available
-  for the Public and US Gov clouds only.
 - Azure Managed Identity
 - Azure Active Directory Service Principal
 - Azure CLI
 
--> **Don't know which authentication method to use?** Go with interactive
-login to try out the builders. If you need Packer to run automatically,
-switch to using a Service Principal or Managed Identity.
+-> **Don't know which authentication method to use?** 
+
+It is reccomended to use 'use_azure_cli_auth' to enable Azure CLI authentication
 
 No matter which method you choose, the identity you use will need the
 appropriate permissions on Azure resources for Packer to operate. The minimal
 set of permissions is highly dependent on the builder and its configuration.
 An easy way to get started is to assign the identity the `Contributor` role at
 the subscription level.
-
-## Azure Active Directory interactive login
-
-If your organization allows it, you can use a command line interactive login
-method based on oAuth 'device code flow'. Packer will select this method when
-you only specify `use_interactive_auth` in your builder configuration. When you
-run Packer, it will ask you to visit a web site and input a code. This web site
-will then authenticate you, satisfying any two-factor authentication policies
-that your organization might have. The tokens are cached under the
-`.azure/packer` directory in your home directory and will be reused if they are
-still valid on subsequent runs.
-
-Please note that the interactive login is only available on the Azure public
-cloud, not on sovereign/government clouds.
 
 ## Azure Managed Identity
 

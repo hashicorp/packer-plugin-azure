@@ -160,15 +160,15 @@ func TestConfigShouldTransformToVirtualMachineCaptureParameters(t *testing.T) {
 
 	parameters := config.toVirtualMachineCaptureParameters()
 
-	if *parameters.DestinationContainerName != config.CaptureContainerName {
-		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", *parameters.DestinationContainerName, config.CaptureContainerName)
+	if parameters.DestinationContainerName != config.CaptureContainerName {
+		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", parameters.DestinationContainerName, config.CaptureContainerName)
 	}
 
-	if *parameters.VhdPrefix != config.CaptureNamePrefix {
-		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", *parameters.VhdPrefix, config.CaptureNamePrefix)
+	if parameters.VhdPrefix != config.CaptureNamePrefix {
+		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", parameters.VhdPrefix, config.CaptureNamePrefix)
 	}
 
-	if *parameters.OverwriteVhds != false {
+	if parameters.OverwriteVhds != false {
 		t.Error("Expected OverwriteVhds to be false, but it was not.")
 	}
 }
@@ -266,13 +266,13 @@ func TestConfigShouldAcceptTags(t *testing.T) {
 	}
 
 	value := config.AzureTags["tag01"]
-	if *value != "value01" {
-		t.Errorf("expected AzureTags[\"tag01\"] to have value \"value01\", but got %q", *value)
+	if value != "value01" {
+		t.Errorf("expected AzureTags[\"tag01\"] to have value \"value01\", but got %q", value)
 	}
 
 	value = config.AzureTags["tag02"]
-	if *value != "value02" {
-		t.Errorf("expected AzureTags[\"tag02\"] to have value \"value02\", but got %q", *value)
+	if value != "value02" {
+		t.Errorf("expected AzureTags[\"tag02\"] to have value \"value02\", but got %q", value)
 	}
 }
 

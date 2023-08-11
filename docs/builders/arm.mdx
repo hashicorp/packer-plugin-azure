@@ -44,12 +44,6 @@ You can use a different subscription if you set `subscription_id`.  If your VM
 has multiple user assigned managed identities you will need to set `client_id`
 too.
 
-#### Interactive User Authentication
-
-To use interactive user authentication, you should specify
-`use_interactive_auth` only.  Packer will use cached credentials or redirect you
-to a website to log in.
-
 #### Service Principal
 
 To use a [service principal](https://packer.io/docs/builders/azure#azure-active-directory-service-principal)
@@ -531,27 +525,6 @@ prevent running afoul of Azure decency controls.
 
 The password alphabet used for random values is
 **0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ**.
-
-### Deprecation Warning
-
-You may see a scary-looking deprecation warning when you run the Azure builder:
-
-```
-==> azure-arm: Warning: You are using Azure Packer Builder to create VHDs which
-is being deprecated, consider using Managed Images. Learn more
-http://aka.ms/packermanagedimage
-```
-
-Don't panic. Your build won't stop working next week.
-
-Long-term, Azure wants everyone to move to using managed images and managed
-disks because they hide the complexity with respect to storage account
-performance. Managed disks can be exported to a VHD. If this is deprecated,
-it will be done in a transparent process by the Microsoft team who help
-maintain Packer.
-
-In the future, Packer may remove VHD support but add a post-processor that can
-automate the export to a storage account.
 
 ### Windows
 

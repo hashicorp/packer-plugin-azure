@@ -7,16 +7,16 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 )
 
 func TestStepPublishToSharedImageGalleryShouldNotPublishForVhd(t *testing.T) {
 	var testSubject = &StepPublishToSharedImageGallery{
-		publish: func(context.Context, string, SharedImageGalleryDestination, string, bool, int32, string, string, map[string]*string) (string, error) {
+		publish: func(context.Context, string, string, SharedImageGalleryDestination, string, bool, int64, string, string, map[string]string) (string, error) {
 			return "test", nil
 		},
 		say:   func(message string) {},
@@ -37,7 +37,7 @@ func TestStepPublishToSharedImageGalleryShouldNotPublishForVhd(t *testing.T) {
 
 func TestStepPublishToSharedImageGalleryShouldPublishForManagedImageWithSig(t *testing.T) {
 	var testSubject = &StepPublishToSharedImageGallery{
-		publish: func(context.Context, string, SharedImageGalleryDestination, string, bool, int32, string, string, map[string]*string) (string, error) {
+		publish: func(context.Context, string, string, SharedImageGalleryDestination, string, bool, int64, string, string, map[string]string) (string, error) {
 			return "", nil
 		},
 		say:   func(message string) {},
@@ -58,7 +58,7 @@ func TestStepPublishToSharedImageGalleryShouldPublishForManagedImageWithSig(t *t
 
 func TestStepPublishToSharedImageGalleryShouldPublishForNonManagedImageWithSig(t *testing.T) {
 	var testSubject = &StepPublishToSharedImageGallery{
-		publish: func(context.Context, string, SharedImageGalleryDestination, string, bool, int32, string, string, map[string]*string) (string, error) {
+		publish: func(context.Context, string, string, SharedImageGalleryDestination, string, bool, int64, string, string, map[string]string) (string, error) {
 			return "", nil
 		},
 		say:   func(message string) {},
@@ -86,8 +86,8 @@ func createTestStateBagStepPublishToSharedImageGallery(managed bool) multistep.S
 	stateBag.Put(constants.ArmManagedImageSharedGalleryImageVersion, "Unit Test: ManagedImageSharedGalleryImageVersion")
 	stateBag.Put(constants.ArmLocation, "Unit Test: Location")
 	value := "Unit Test: Tags"
-	tags := map[string]*string{
-		"tag01": &value,
+	tags := map[string]string{
+		"tag01": value,
 	}
 	stateBag.Put(constants.ArmTags, tags)
 	stateBag.Put(constants.ArmManagedImageSharedGalleryReplicationRegions, []string{"ManagedImageSharedGalleryReplicationRegionA", "ManagedImageSharedGalleryReplicationRegionB"})
@@ -96,11 +96,12 @@ func createTestStateBagStepPublishToSharedImageGallery(managed bool) multistep.S
 		stateBag.Put(constants.ArmManagedImageResourceGroupName, "Unit Test: ManagedImageResourceGroupName")
 		stateBag.Put(constants.ArmManagedImageName, "Unit Test: ManagedImageName")
 	} else {
-		stateBag.Put(constants.ArmImageParameters, &compute.Image{ImageProperties: &compute.ImageProperties{
-			SourceVirtualMachine: &compute.SubResource{ID: to.StringPtr("Unit Test: VM ID")},
+		stateBag.Put(constants.ArmImageParameters, &images.Image{Properties: &images.ImageProperties{
+			SourceVirtualMachine: &images.SubResource{Id: common.StringPtr("Unit Test: VM ID")},
 		}})
 	}
 	stateBag.Put(constants.ArmManagedImageSubscription, "Unit Test: ManagedImageSubscription")
+	stateBag.Put(constants.ArmSharedImageGalleryDestinationSubscription, "Unit Test: ManagedImageSubscription")
 	stateBag.Put(constants.ArmIsManagedImage, managed)
 	stateBag.Put(constants.ArmIsSIGImage, true)
 

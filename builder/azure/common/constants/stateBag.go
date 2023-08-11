@@ -15,12 +15,11 @@ const (
 
 // Default replica count for image versions in shared image gallery
 const (
-	SharedImageGalleryImageVersionDefaultMinReplicaCount int32 = 1
-	SharedImageGalleryImageVersionDefaultMaxReplicaCount int32 = 100
+	SharedImageGalleryImageVersionDefaultMinReplicaCount int64 = 1
+	SharedImageGalleryImageVersionDefaultMaxReplicaCount int64 = 100
 )
 
 const (
-	ArmCaptureTemplate                                         string = "arm.CaptureTemplate"
 	ArmComputeName                                             string = "arm.ComputeName"
 	ArmImageParameters                                         string = "arm.ImageParameters"
 	ArmCertificateUrl                                          string = "arm.CertificateUrl"
@@ -29,7 +28,7 @@ const (
 	ArmNicName                                                 string = "arm.NicName"
 	ArmKeyVaultName                                            string = "arm.KeyVaultName"
 	ArmLocation                                                string = "arm.Location"
-	ArmOSDiskVhd                                               string = "arm.OSDiskVhd"
+	ArmOSDiskUri                                               string = "arm.OSDiskUri"
 	ArmAdditionalDiskVhds                                      string = "arm.AdditionalDiskVhds"
 	ArmPublicIPAddressName                                     string = "arm.PublicIPAddressName"
 	ArmResourceGroupName                                       string = "arm.ResourceGroupName"
@@ -54,6 +53,7 @@ const (
 	ArmManagedImageSharedGalleryImageVersionReplicaCount       string = "arm.ArmManagedImageSharedGalleryImageVersionReplicaCount"
 	ArmManagedImageSharedGalleryImageVersionExcludeFromLatest  string = "arm.ArmManagedImageSharedGalleryImageVersionExcludeFromLatest"
 	ArmManagedImageSharedGalleryImageVersionStorageAccountType string = "arm.ArmManagedImageSharedGalleryImageVersionStorageAccountType"
+	ArmSharedImageGalleryDestinationSubscription               string = "arm.ArmSharedImageGalleryDestinationSubscription"
 	ArmSharedImageGalleryDestinationSpecialized                string = "arm.ArmSharedImageGalleryDestinationSpecialized"
 	ArmManagedImageSubscription                                string = "arm.ArmManagedImageSubscription"
 	ArmAsyncResourceGroupDelete                                string = "arm.AsyncResourceGroupDelete"
@@ -61,4 +61,7 @@ const (
 	ArmManagedImageDataDiskSnapshotPrefix                      string = "arm.ManagedImageDataDiskSnapshotPrefix"
 	ArmKeepOSDisk                                              string = "arm.KeepOSDisk"
 	ArmBuildDiskEncryptionSetId                                string = "arm.ArmBuildDiskEncryptionSetId"
+	ArmSubscription                                            string = "arm.Subscription"
+	ArmBuildVMInternalId                                       string = "arm.BuildVMInternalId"
+	DtlLabName                                                 string = "dtl.LabName"
 )

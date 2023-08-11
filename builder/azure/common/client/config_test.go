@@ -8,15 +8,14 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/binary"
-	"fmt"
 	"io"
 	mrand "math/rand"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	jwt "github.com/golang-jwt/jwt"
+	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
@@ -43,13 +42,6 @@ func Test_ClientConfig_RequiredParametersSet(t *testing.T) {
 			name: "use_azure_cli_auth will trigger Azure CLI auth",
 			config: Config{
 				UseAzureCLIAuth: true,
-			},
-			wantErr: false,
-		},
-		{
-			name: "use_interactive_auth will trigger device code flow",
-			config: Config{
-				UseInteractiveAuth: true,
 			},
 			wantErr: false,
 		},
@@ -156,42 +148,13 @@ func Test_ClientConfig_RequiredParametersSet(t *testing.T) {
 	}
 }
 
-func Test_ClientConfig_DeviceLogin(t *testing.T) {
-	getEnvOrSkip(t, "AZURE_DEVICE_LOGIN")
-	cfg := Config{
-		SubscriptionID:   getEnvOrSkip(t, "AZURE_SUBSCRIPTION"),
-		cloudEnvironment: getCloud(),
-	}
-	assertValid(t, cfg)
-
-	spt, sptkv, err := cfg.GetServicePrincipalTokens(
-		func(s string) { fmt.Printf("SAY: %s\n", s) })
-	if err != nil {
-		t.Fatalf("Expected nil err, but got: %v", err)
-	}
-	token := spt.Token()
-	if token.AccessToken == "" {
-		t.Fatal("Expected management token to have non-nil access token")
-	}
-	if token.RefreshToken == "" {
-		t.Fatal("Expected management token to have non-nil refresh token")
-	}
-	kvtoken := sptkv.Token()
-	if kvtoken.AccessToken == "" {
-		t.Fatal("Expected keyvault token to have non-nil access token")
-	}
-	if kvtoken.RefreshToken == "" {
-		t.Fatal("Expected keyvault token to have non-nil refresh token")
-	}
-}
-
 func Test_ClientConfig_AzureCli(t *testing.T) {
 	// Azure CLI tests skipped unless env 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established
 	getEnvOrSkip(t, "AZURE_CLI_AUTH")
 
 	cfg := Config{
 		UseAzureCLIAuth:  true,
-		cloudEnvironment: getCloud(),
+		cloudEnvironment: environments.AzurePublic(),
 	}
 	assertValid(t, cfg)
 
@@ -200,98 +163,8 @@ func Test_ClientConfig_AzureCli(t *testing.T) {
 		t.Fatalf("Expected nil err, but got: %v", err)
 	}
 
-	if cfg.authType != authTypeAzureCLI {
-		t.Fatalf("Expected authType to be %q, but got: %q", authTypeAzureCLI, cfg.authType)
-	}
-}
-
-func Test_ClientConfig_ClientPassword(t *testing.T) {
-	cfg := Config{
-		SubscriptionID:   getEnvOrSkip(t, "AZURE_SUBSCRIPTION"),
-		ClientID:         getEnvOrSkip(t, "AZURE_CLIENTID"),
-		ClientSecret:     getEnvOrSkip(t, "AZURE_CLIENTSECRET"),
-		TenantID:         getEnvOrSkip(t, "AZURE_TENANTID"),
-		cloudEnvironment: getCloud(),
-	}
-	assertValid(t, cfg)
-
-	spt, sptkv, err := cfg.GetServicePrincipalTokens(func(s string) { fmt.Printf("SAY: %s\n", s) })
-	if err != nil {
-		t.Fatalf("Expected nil err, but got: %v", err)
-	}
-	token := spt.Token()
-	if token.AccessToken == "" {
-		t.Fatal("Expected management token to have non-nil access token")
-	}
-	if token.RefreshToken != "" {
-		t.Fatal("Expected management token to have no refresh token")
-	}
-	kvtoken := sptkv.Token()
-	if kvtoken.AccessToken == "" {
-		t.Fatal("Expected keyvault token to have non-nil access token")
-	}
-	if kvtoken.RefreshToken != "" {
-		t.Fatal("Expected keyvault token to have no refresh token")
-	}
-}
-
-func Test_ClientConfig_ClientCert(t *testing.T) {
-	cfg := Config{
-		SubscriptionID:   getEnvOrSkip(t, "AZURE_SUBSCRIPTION"),
-		ClientID:         getEnvOrSkip(t, "AZURE_CLIENTID"),
-		ClientCertPath:   getEnvOrSkip(t, "AZURE_CLIENTCERT"),
-		TenantID:         getEnvOrSkip(t, "AZURE_TENANTID"),
-		cloudEnvironment: getCloud(),
-	}
-	assertValid(t, cfg)
-
-	spt, sptkv, err := cfg.GetServicePrincipalTokens(func(s string) { fmt.Printf("SAY: %s\n", s) })
-	if err != nil {
-		t.Fatalf("Expected nil err, but got: %v", err)
-	}
-	token := spt.Token()
-	if token.AccessToken == "" {
-		t.Fatal("Expected management token to have non-nil access token")
-	}
-	if token.RefreshToken != "" {
-		t.Fatal("Expected management token to have no refresh token")
-	}
-	kvtoken := sptkv.Token()
-	if kvtoken.AccessToken == "" {
-		t.Fatal("Expected keyvault token to have non-nil access token")
-	}
-	if kvtoken.RefreshToken != "" {
-		t.Fatal("Expected keyvault token to have no refresh token")
-	}
-}
-
-func Test_ClientConfig_ClientJWT(t *testing.T) {
-	cfg := Config{
-		SubscriptionID:   getEnvOrSkip(t, "AZURE_SUBSCRIPTION"),
-		ClientID:         getEnvOrSkip(t, "AZURE_CLIENTID"),
-		ClientJWT:        getEnvOrSkip(t, "AZURE_CLIENTJWT"),
-		TenantID:         getEnvOrSkip(t, "AZURE_TENANTID"),
-		cloudEnvironment: getCloud(),
-	}
-	assertValid(t, cfg)
-
-	spt, sptkv, err := cfg.GetServicePrincipalTokens(func(s string) { fmt.Printf("SAY: %s\n", s) })
-	if err != nil {
-		t.Fatalf("Expected nil err, but got: %v", err)
-	}
-	token := spt.Token()
-	if token.AccessToken == "" {
-		t.Fatal("Expected management token to have non-nil access token")
-	}
-	if token.RefreshToken != "" {
-		t.Fatal("Expected management token to have no refresh token")
-	}
-	kvtoken := sptkv.Token()
-	if kvtoken.AccessToken == "" {
-		t.Fatal("Expected keyvault token to have non-nil access token")
-	}
-	if kvtoken.RefreshToken != "" {
-		t.Fatal("Expected keyvault token to have no refresh token")
+	if cfg.AuthType() != AuthTypeAzureCLI {
+		t.Fatalf("Expected authType to be %q, but got: %q", AuthTypeAzureCLI, cfg.AuthType())
 	}
 }
 
@@ -303,35 +176,7 @@ func getEnvOrSkip(t *testing.T, envVar string) string {
 	return v
 }
 
-func getCloud() *azure.Environment {
-	cloudName := os.Getenv("AZURE_CLOUD")
-	if cloudName == "" {
-		cloudName = "AZUREPUBLICCLOUD"
-	}
-	c, _ := azure.EnvironmentFromName(cloudName)
-	return &c
-}
-
 // tests for assertRequiredParametersSet
-
-func Test_ClientConfig_CanUseDeviceCode(t *testing.T) {
-	// TenantID is optional, but Builder will look up tenant ID before requesting
-	t.Run("without TenantID", func(t *testing.T) {
-		cfg := Config{
-			UseInteractiveAuth: true,
-			SubscriptionID:     "12345",
-		}
-		assertValid(t, cfg)
-	})
-	t.Run("with TenantID", func(t *testing.T) {
-		cfg := Config{
-			UseInteractiveAuth: true,
-			SubscriptionID:     "12345",
-			TenantID:           "12345",
-		}
-		assertValid(t, cfg)
-	})
-}
 
 func assertValid(t *testing.T, cfg Config) {
 	errs := &packersdk.MultiError{}
@@ -397,16 +242,6 @@ func Test_ClientConfig_CannotUseBothClientJWTAndSecret(t *testing.T) {
 		ClientID:       "12345",
 		ClientSecret:   "12345",
 		ClientJWT:      getJWT(10*time.Minute, true),
-	}
-
-	assertInvalid(t, cfg)
-}
-
-func Test_ClientConfig_ClientJWTShouldBeValidForAtLeast5Minutes(t *testing.T) {
-	cfg := Config{
-		SubscriptionID: "12345",
-		ClientID:       "12345",
-		ClientJWT:      getJWT(time.Minute, true),
 	}
 
 	assertInvalid(t, cfg)

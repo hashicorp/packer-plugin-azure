@@ -3,7 +3,7 @@
 package arm
 
 import (
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/zclconf/go-cty/cty"
@@ -32,7 +32,6 @@ type FlatConfig struct {
 	TenantID                                   *string                            `mapstructure:"tenant_id" required:"false" cty:"tenant_id" hcl:"tenant_id"`
 	SubscriptionID                             *string                            `mapstructure:"subscription_id" cty:"subscription_id" hcl:"subscription_id"`
 	UseAzureCLIAuth                            *bool                              `mapstructure:"use_azure_cli_auth" required:"false" cty:"use_azure_cli_auth" hcl:"use_azure_cli_auth"`
-	UseInteractiveAuth                         *bool                              `mapstructure:"use_interactive_auth" required:"false" cty:"use_interactive_auth" hcl:"use_interactive_auth"`
 	UserAssignedManagedIdentities              []string                           `mapstructure:"user_assigned_managed_identities" required:"false" cty:"user_assigned_managed_identities" hcl:"user_assigned_managed_identities"`
 	CaptureNamePrefix                          *string                            `mapstructure:"capture_name_prefix" cty:"capture_name_prefix" hcl:"capture_name_prefix"`
 	CaptureContainerName                       *string                            `mapstructure:"capture_container_name" cty:"capture_container_name" hcl:"capture_container_name"`
@@ -82,6 +81,7 @@ type FlatConfig struct {
 	PlanInfo                                   *FlatPlanInformation               `mapstructure:"plan_info" required:"false" cty:"plan_info" hcl:"plan_info"`
 	PollingDurationTimeout                     *string                            `mapstructure:"polling_duration_timeout" required:"false" cty:"polling_duration_timeout" hcl:"polling_duration_timeout"`
 	OSType                                     *string                            `mapstructure:"os_type" required:"false" cty:"os_type" hcl:"os_type"`
+	WinrmExpirationTime                        *string                            `mapstructure:"winrm_expiration_time" required:"false" cty:"winrm_expiration_time" hcl:"winrm_expiration_time"`
 	TempOSDiskName                             *string                            `mapstructure:"temp_os_disk_name" required:"false" cty:"temp_os_disk_name" hcl:"temp_os_disk_name"`
 	OSDiskSizeGB                               *int32                             `mapstructure:"os_disk_size_gb" required:"false" cty:"os_disk_size_gb" hcl:"os_disk_size_gb"`
 	AdditionalDiskSize                         []int32                            `mapstructure:"disk_additional_size" required:"false" cty:"disk_additional_size" hcl:"disk_additional_size"`
@@ -177,7 +177,6 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"tenant_id":                                        &hcldec.AttrSpec{Name: "tenant_id", Type: cty.String, Required: false},
 		"subscription_id":                                  &hcldec.AttrSpec{Name: "subscription_id", Type: cty.String, Required: false},
 		"use_azure_cli_auth":                               &hcldec.AttrSpec{Name: "use_azure_cli_auth", Type: cty.Bool, Required: false},
-		"use_interactive_auth":                             &hcldec.AttrSpec{Name: "use_interactive_auth", Type: cty.Bool, Required: false},
 		"user_assigned_managed_identities":                 &hcldec.AttrSpec{Name: "user_assigned_managed_identities", Type: cty.List(cty.String), Required: false},
 		"capture_name_prefix":                              &hcldec.AttrSpec{Name: "capture_name_prefix", Type: cty.String, Required: false},
 		"capture_container_name":                           &hcldec.AttrSpec{Name: "capture_container_name", Type: cty.String, Required: false},
@@ -227,6 +226,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"plan_info":                                        &hcldec.BlockSpec{TypeName: "plan_info", Nested: hcldec.ObjectSpec((*FlatPlanInformation)(nil).HCL2Spec())},
 		"polling_duration_timeout":                         &hcldec.AttrSpec{Name: "polling_duration_timeout", Type: cty.String, Required: false},
 		"os_type":                                          &hcldec.AttrSpec{Name: "os_type", Type: cty.String, Required: false},
+		"winrm_expiration_time":                            &hcldec.AttrSpec{Name: "winrm_expiration_time", Type: cty.String, Required: false},
 		"temp_os_disk_name":                                &hcldec.AttrSpec{Name: "temp_os_disk_name", Type: cty.String, Required: false},
 		"os_disk_size_gb":                                  &hcldec.AttrSpec{Name: "os_disk_size_gb", Type: cty.Number, Required: false},
 		"disk_additional_size":                             &hcldec.AttrSpec{Name: "disk_additional_size", Type: cty.List(cty.Number), Required: false},
@@ -396,8 +396,8 @@ func (*FlatSharedImageGalleryDestination) HCL2Spec() map[string]hcldec.Spec {
 // FlatSpot is an auto-generated flat version of Spot.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatSpot struct {
-	EvictionPolicy *compute.VirtualMachineEvictionPolicyTypes `mapstructure:"eviction_policy" cty:"eviction_policy" hcl:"eviction_policy"`
-	MaxPrice       *float32                                   `mapstructure:"max_price" cty:"max_price" hcl:"max_price"`
+	EvictionPolicy *virtualmachines.VirtualMachineEvictionPolicyTypes `mapstructure:"eviction_policy" cty:"eviction_policy" hcl:"eviction_policy"`
+	MaxPrice       *float32                                           `mapstructure:"max_price" cty:"max_price" hcl:"max_price"`
 }
 
 // FlatMapstructure returns a new FlatSpot.

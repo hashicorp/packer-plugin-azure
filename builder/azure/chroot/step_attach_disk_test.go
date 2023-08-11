@@ -7,13 +7,10 @@ import (
 	"context"
 	"errors"
 	"io/ioutil"
-	"net/http"
 	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-12-01/compute"
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -70,15 +67,6 @@ func TestStepAttachDisk_Run(t *testing.T) {
 				}
 			}
 
-			dm := compute.NewDisksClient("subscriptionId")
-			dm.Sender = autorest.SenderFunc(func(r *http.Request) (*http.Response, error) {
-				return &http.Response{
-					Request:    r,
-					Body:       ioutil.NopCloser(strings.NewReader(tt.fields.GetDiskResponseBody)),
-					StatusCode: tt.fields.GetDiskResponseCode,
-				}, nil
-			})
-
 			state := new(multistep.BasicStateBag)
 			state.Put("azureclient", &client.AzureClientSetMock{})
 			state.Put("ui", ui)
@@ -106,18 +94,18 @@ type fakeDiskAttacher struct {
 
 var _ DiskAttacher = &fakeDiskAttacher{}
 
-func (da *fakeDiskAttacher) AttachDisk(ctx context.Context, disk string) (lun int32, err error) {
+func (da *fakeDiskAttacher) AttachDisk(ctx context.Context, disk string) (lun int64, err error) {
 	if da.attachError != nil {
 		return 0, da.attachError
 	}
 	return 3, nil
 }
 
-func (da *fakeDiskAttacher) DiskPathForLun(lun int32) string {
+func (da *fakeDiskAttacher) DiskPathForLun(lun int64) string {
 	panic("not implemented")
 }
 
-func (da *fakeDiskAttacher) WaitForDevice(ctx context.Context, lun int32) (device string, err error) {
+func (da *fakeDiskAttacher) WaitForDevice(ctx context.Context, lun int64) (device string, err error) {
 	if da.waitForDeviceError != nil {
 		return "", da.waitForDeviceError
 	}

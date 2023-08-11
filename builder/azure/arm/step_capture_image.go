@@ -7,7 +7,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -15,10 +17,10 @@ import (
 
 type StepCaptureImage struct {
 	client              *AzureClient
-	generalizeVM        func(resourceGroupName, computeName string) error
-	captureVhd          func(ctx context.Context, resourceGroupName string, computeName string, parameters *compute.VirtualMachineCaptureParameters) error
-	captureManagedImage func(ctx context.Context, resourceGroupName string, computeName string, parameters *compute.Image) error
-	get                 func(client *AzureClient) *CaptureTemplate
+	generalizeVM        func(ctx context.Context, vmId virtualmachines.VirtualMachineId) error
+	getVMInternalID     func(ctx context.Context, vmId virtualmachines.VirtualMachineId) (string, error)
+	captureVhd          func(ctx context.Context, vmId virtualmachines.VirtualMachineId, parameters *virtualmachines.VirtualMachineCaptureParameters) error
+	captureManagedImage func(ctx context.Context, subscriptionId string, resourceGroupName string, imageName string, parameters *images.Image) error
 	say                 func(message string)
 	error               func(e error)
 }
@@ -26,9 +28,6 @@ type StepCaptureImage struct {
 func NewStepCaptureImage(client *AzureClient, ui packersdk.Ui) *StepCaptureImage {
 	var step = &StepCaptureImage{
 		client: client,
-		get: func(client *AzureClient) *CaptureTemplate {
-			return client.Template
-		},
 		say: func(message string) {
 			ui.Say(message)
 		},
@@ -40,32 +39,49 @@ func NewStepCaptureImage(client *AzureClient, ui packersdk.Ui) *StepCaptureImage
 	step.generalizeVM = step.generalize
 	step.captureVhd = step.captureImage
 	step.captureManagedImage = step.captureImageFromVM
-
+	step.getVMInternalID = step.getVMID
 	return step
 }
 
-func (s *StepCaptureImage) generalize(resourceGroupName string, computeName string) error {
-	_, err := s.client.Generalize(context.TODO(), resourceGroupName, computeName)
+func (s *StepCaptureImage) generalize(ctx context.Context, vmId virtualmachines.VirtualMachineId) error {
+	_, err := s.client.Generalize(ctx, vmId)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 	}
 	return err
 }
 
-func (s *StepCaptureImage) captureImageFromVM(ctx context.Context, resourceGroupName string, imageName string, image *compute.Image) error {
-	f, err := s.client.ImagesClient.CreateOrUpdate(ctx, resourceGroupName, imageName, *image)
+func (s *StepCaptureImage) captureImageFromVM(ctx context.Context, subscriptionId string, resourceGroupName string, imageName string, image *images.Image) error {
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+	id := images.NewImageID(subscriptionId, resourceGroupName, imageName)
+	err := s.client.ImagesClient.CreateOrUpdateThenPoll(pollingContext, id, *image)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 	}
-	return f.WaitForCompletionRef(ctx, s.client.ImagesClient.Client)
+	return err
 }
 
-func (s *StepCaptureImage) captureImage(ctx context.Context, resourceGroupName string, computeName string, parameters *compute.VirtualMachineCaptureParameters) error {
-	f, err := s.client.VirtualMachinesClient.Capture(ctx, resourceGroupName, computeName, *parameters)
-	if err != nil {
+func (s *StepCaptureImage) captureImage(ctx context.Context, vmId virtualmachines.VirtualMachineId, parameters *virtualmachines.VirtualMachineCaptureParameters) error {
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+	if err := s.client.VirtualMachinesClient.CaptureThenPoll(pollingContext, vmId, *parameters); err != nil {
 		s.say(s.client.LastError.Error())
+		return err
 	}
-	return f.WaitForCompletionRef(ctx, s.client.VirtualMachinesClient.Client)
+	return nil
+}
+
+func (s *StepCaptureImage) getVMID(ctx context.Context, vmId virtualmachines.VirtualMachineId) (string, error) {
+	vmResponse, err := s.client.VirtualMachinesClient.Get(ctx, vmId, virtualmachines.DefaultGetOperationOptions())
+	if err != nil {
+		return "", err
+	}
+	if vmResponse.Model != nil {
+		vmId := vmResponse.Model.Properties.VMId
+		return *vmId, nil
+	}
+	return "", client.NullModelSDKErr
 }
 
 func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -73,25 +89,29 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 	var computeName = state.Get(constants.ArmComputeName).(string)
 	var location = state.Get(constants.ArmLocation).(string)
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
-	var vmCaptureParameters = state.Get(constants.ArmVirtualMachineCaptureParameters).(*compute.VirtualMachineCaptureParameters)
-	var imageParameters = state.Get(constants.ArmImageParameters).(*compute.Image)
-
+	var vmCaptureParameters = state.Get(constants.ArmVirtualMachineCaptureParameters).(*virtualmachines.VirtualMachineCaptureParameters)
+	var imageParameters = state.Get(constants.ArmImageParameters).(*images.Image)
+	var subscriptionId = state.Get(constants.ArmSubscription).(string)
 	var isManagedImage = state.Get(constants.ArmIsManagedImage).(bool)
 	var isSIGImage = state.Get(constants.ArmIsSIGImage).(bool)
 	var skipGeneralization = state.Get(constants.ArmSharedImageGalleryDestinationSpecialized).(bool)
+
+	vmId := virtualmachines.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)
 	s.say(fmt.Sprintf(" -> Compute ResourceGroupName : '%s'", resourceGroupName))
 	s.say(fmt.Sprintf(" -> Compute Name              : '%s'", computeName))
 	s.say(fmt.Sprintf(" -> Compute Location          : '%s'", location))
 
-	var err error
 	if skipGeneralization {
 		s.say("Skipping generalization of Compute Gallery Image")
 	} else {
 		s.say("Generalizing machine ...")
-		err = s.generalizeVM(resourceGroupName, computeName)
-	}
+		err := s.generalizeVM(ctx, vmId)
+		if err != nil {
+			state.Put(constants.Error, err)
+			s.error(err)
 
-	if err == nil {
+			return multistep.ActionHalt
+		}
 		if isManagedImage {
 			s.say("Capturing image ...")
 			var targetManagedImageResourceGroupName = state.Get(constants.ArmManagedImageResourceGroupName).(string)
@@ -100,33 +120,38 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 			s.say(fmt.Sprintf(" -> Image ResourceGroupName   : '%s'", targetManagedImageResourceGroupName))
 			s.say(fmt.Sprintf(" -> Image Name                : '%s'", targetManagedImageName))
 			s.say(fmt.Sprintf(" -> Image Location            : '%s'", targetManagedImageLocation))
-			err = s.captureManagedImage(ctx, targetManagedImageResourceGroupName, targetManagedImageName, imageParameters)
+			err = s.captureManagedImage(ctx, subscriptionId, targetManagedImageResourceGroupName, targetManagedImageName, imageParameters)
+			if err != nil {
+				state.Put(constants.Error, err)
+				s.error(err)
+
+				return multistep.ActionHalt
+			}
 		} else if isSIGImage {
-			// It's possible to create SIG image
+			// It's possible to create SIG image without a managed image
 			return multistep.ActionContinue
 		} else {
+			// VHD Builds are created with a field called the VMId in its name
+			// Get that ID before capturing the VM so that we know where the resultant VHD is stored
+			vmInternalID, err := s.getVMInternalID(ctx, vmId)
+			if err != nil {
+				err = fmt.Errorf("Failed to get build VM before capturing image with err : %s", err)
+				state.Put(constants.Error, err)
+				s.error(err)
+				return multistep.ActionHalt
+			}
+
+			s.say(fmt.Sprintf(" -> VM Internal ID            : '%s'", vmInternalID))
+			state.Put(constants.ArmBuildVMInternalId, vmInternalID)
 			s.say("Capturing VHD ...")
-			err = s.captureVhd(ctx, resourceGroupName, computeName, vmCaptureParameters)
+			err = s.captureVhd(ctx, vmId, vmCaptureParameters)
+			if err != nil {
+				state.Put(constants.Error, err)
+				s.error(err)
+				return multistep.ActionHalt
+			}
 		}
 	}
-	if err != nil {
-		state.Put(constants.Error, err)
-		s.error(err)
-
-		return multistep.ActionHalt
-	}
-
-	// HACK(chrboum): I do not like this.  The capture method should be returning this value
-	// instead having to pass in another lambda.
-	//
-	// Having to resort to capturing the template via an inspector is hack, and once I can
-	// resolve that I can cleanup this code too.  See the comments in azure_client.go for more
-	// details.
-	// [paulmey]: autorest.Future now has access to the last http.Response, but I'm not sure if
-	// the body is still accessible.
-	template := s.get(s.client)
-	state.Put(constants.ArmCaptureTemplate, template)
-
 	return multistep.ActionContinue
 }
 

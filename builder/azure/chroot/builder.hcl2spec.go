@@ -30,7 +30,6 @@ type FlatConfig struct {
 	TenantID                          *string                            `mapstructure:"tenant_id" required:"false" cty:"tenant_id" hcl:"tenant_id"`
 	SubscriptionID                    *string                            `mapstructure:"subscription_id" cty:"subscription_id" hcl:"subscription_id"`
 	UseAzureCLIAuth                   *bool                              `mapstructure:"use_azure_cli_auth" required:"false" cty:"use_azure_cli_auth" hcl:"use_azure_cli_auth"`
-	UseInteractiveAuth                *bool                              `mapstructure:"use_interactive_auth" required:"false" cty:"use_interactive_auth" hcl:"use_interactive_auth"`
 	FromScratch                       *bool                              `mapstructure:"from_scratch" cty:"from_scratch" hcl:"from_scratch"`
 	Source                            *string                            `mapstructure:"source" required:"true" cty:"source" hcl:"source"`
 	CommandWrapper                    *string                            `mapstructure:"command_wrapper" cty:"command_wrapper" hcl:"command_wrapper"`
@@ -41,7 +40,7 @@ type FlatConfig struct {
 	PostMountCommands                 []string                           `mapstructure:"post_mount_commands" cty:"post_mount_commands" hcl:"post_mount_commands"`
 	ChrootMounts                      [][]string                         `mapstructure:"chroot_mounts" cty:"chroot_mounts" hcl:"chroot_mounts"`
 	CopyFiles                         []string                           `mapstructure:"copy_files" cty:"copy_files" hcl:"copy_files"`
-	OSDiskSizeGB                      *int32                             `mapstructure:"os_disk_size_gb" cty:"os_disk_size_gb" hcl:"os_disk_size_gb"`
+	OSDiskSizeGB                      *int64                             `mapstructure:"os_disk_size_gb" cty:"os_disk_size_gb" hcl:"os_disk_size_gb"`
 	OSDiskStorageAccountType          *string                            `mapstructure:"os_disk_storage_account_type" cty:"os_disk_storage_account_type" hcl:"os_disk_storage_account_type"`
 	OSDiskCacheType                   *string                            `mapstructure:"os_disk_cache_type" cty:"os_disk_cache_type" hcl:"os_disk_cache_type"`
 	DataDiskStorageAccountType        *string                            `mapstructure:"data_disk_storage_account_type" cty:"data_disk_storage_account_type" hcl:"data_disk_storage_account_type"`
@@ -88,7 +87,6 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"tenant_id":                       &hcldec.AttrSpec{Name: "tenant_id", Type: cty.String, Required: false},
 		"subscription_id":                 &hcldec.AttrSpec{Name: "subscription_id", Type: cty.String, Required: false},
 		"use_azure_cli_auth":              &hcldec.AttrSpec{Name: "use_azure_cli_auth", Type: cty.Bool, Required: false},
-		"use_interactive_auth":            &hcldec.AttrSpec{Name: "use_interactive_auth", Type: cty.Bool, Required: false},
 		"from_scratch":                    &hcldec.AttrSpec{Name: "from_scratch", Type: cty.Bool, Required: false},
 		"source":                          &hcldec.AttrSpec{Name: "source", Type: cty.String, Required: false},
 		"command_wrapper":                 &hcldec.AttrSpec{Name: "command_wrapper", Type: cty.String, Required: false},

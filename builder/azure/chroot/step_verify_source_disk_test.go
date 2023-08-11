@@ -5,15 +5,12 @@ package chroot
 
 import (
 	"context"
-	"io/ioutil"
-	"net/http"
+	"fmt"
 	"reflect"
 	"regexp"
-	"strings"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
-	"github.com/Azure/go-autorest/autorest"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 )
@@ -23,8 +20,11 @@ func Test_StepVerifySourceDisk_Run(t *testing.T) {
 		SourceDiskResourceID string
 		Location             string
 
-		GetDiskResponseCode int
-		GetDiskResponseBody string
+		GetDiskError    error
+		GetDiskResponse *disks.Disk
+	}
+	diskWithCorrectLocation := disks.Disk{
+		Location: "westus2",
 	}
 	tests := []struct {
 		name       string
@@ -38,8 +38,7 @@ func Test_StepVerifySourceDisk_Run(t *testing.T) {
 				SourceDiskResourceID: "/subscriptions/subid1/resourcegroups/rg1/providers/Microsoft.Compute/disks/disk1",
 				Location:             "westus2",
 
-				GetDiskResponseCode: 200,
-				GetDiskResponseBody: `{"location":"westus2"}`,
+				GetDiskResponse: &diskWithCorrectLocation,
 			},
 			want: multistep.ActionContinue,
 		},
@@ -48,9 +47,6 @@ func Test_StepVerifySourceDisk_Run(t *testing.T) {
 			fields: fields{
 				SourceDiskResourceID: "/other",
 				Location:             "westus2",
-
-				GetDiskResponseCode: 200,
-				GetDiskResponseBody: `{"location":"westus2"}`,
 			},
 			want:       multistep.ActionHalt,
 			errormatch: "Could not parse resource id",
@@ -61,8 +57,8 @@ func Test_StepVerifySourceDisk_Run(t *testing.T) {
 				SourceDiskResourceID: "/subscriptions/subid1/resourcegroups/rg1/providers/Microsoft.Compute/disks/disk1",
 				Location:             "westus2",
 
-				GetDiskResponseCode: 404,
-				GetDiskResponseBody: `{}`,
+				GetDiskError:    fmt.Errorf("404"),
+				GetDiskResponse: nil,
 			},
 			want:       multistep.ActionHalt,
 			errormatch: "Unable to retrieve",
@@ -72,8 +68,6 @@ func Test_StepVerifySourceDisk_Run(t *testing.T) {
 			fields: fields{
 				SourceDiskResourceID: "/subscriptions/subid1/resourcegroups/rg1/providers/Microsoft.Compute/images/image1",
 				Location:             "westus2",
-
-				GetDiskResponseCode: 404,
 			},
 			want:       multistep.ActionHalt,
 			errormatch: "not a managed disk",
@@ -84,8 +78,7 @@ func Test_StepVerifySourceDisk_Run(t *testing.T) {
 				SourceDiskResourceID: "/subscriptions/subid2/resourcegroups/rg1/providers/Microsoft.Compute/disks/disk1",
 				Location:             "westus2",
 
-				GetDiskResponseCode: 200,
-				GetDiskResponseBody: `{"location":"westus2"}`,
+				GetDiskResponse: &diskWithCorrectLocation,
 			},
 			want:       multistep.ActionHalt,
 			errormatch: "different subscription",
@@ -96,8 +89,7 @@ func Test_StepVerifySourceDisk_Run(t *testing.T) {
 				SourceDiskResourceID: "/subscriptions/subid1/resourcegroups/rg1/providers/Microsoft.Compute/disks/disk1",
 				Location:             "eastus",
 
-				GetDiskResponseCode: 200,
-				GetDiskResponseBody: `{"location":"westus2"}`,
+				GetDiskResponse: &diskWithCorrectLocation,
 			},
 			want:       multistep.ActionHalt,
 			errormatch: "different location",
@@ -108,22 +100,18 @@ func Test_StepVerifySourceDisk_Run(t *testing.T) {
 			s := StepVerifySourceDisk{
 				SourceDiskResourceID: tt.fields.SourceDiskResourceID,
 				Location:             tt.fields.Location,
+				get: func(ctx context.Context, azcli client.AzureClientSet, id disks.DiskId) (*disks.Disk, error) {
+					if tt.fields.GetDiskError == nil && tt.fields.GetDiskResponse == nil {
+						t.Fatalf("expected getDisk to not be called but it was")
+					}
+					return tt.fields.GetDiskResponse, tt.fields.GetDiskError
+				},
 			}
-
-			m := compute.NewDisksClient("subscriptionId")
-			m.Sender = autorest.SenderFunc(func(r *http.Request) (*http.Response, error) {
-				return &http.Response{
-					Request:    r,
-					Body:       ioutil.NopCloser(strings.NewReader(tt.fields.GetDiskResponseBody)),
-					StatusCode: tt.fields.GetDiskResponseCode,
-				}, nil
-			})
 
 			ui, getErr := testUI()
 
 			state := new(multistep.BasicStateBag)
 			state.Put("azureclient", &client.AzureClientSetMock{
-				DisksClientMock:    m,
 				SubscriptionIDMock: "subid1",
 			})
 			state.Put("ui", ui)

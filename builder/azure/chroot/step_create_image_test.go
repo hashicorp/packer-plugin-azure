@@ -5,21 +5,20 @@ package chroot
 
 import (
 	"context"
-	"io/ioutil"
-	"net/http"
+	"fmt"
 	"reflect"
-	"regexp"
 	"testing"
 
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
-
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
-	"github.com/Azure/go-autorest/autorest"
 )
 
 func TestStepCreateImage_Run(t *testing.T) {
+	subscriptionID := "12345"
+	resourceGroup := "group1"
+	imageName := "myImage"
 	type fields struct {
 		ImageResourceID            string
 		ImageOSState               string
@@ -30,16 +29,15 @@ func TestStepCreateImage_Run(t *testing.T) {
 		Location                   string
 	}
 	tests := []struct {
-		name        string
-		fields      fields
-		diskset     Diskset
-		want        multistep.StepAction
-		wantPutBody string
+		name    string
+		fields  fields
+		diskset Diskset
+		want    multistep.StepAction
 	}{
 		{
 			name: "happy path",
 			fields: fields{
-				ImageResourceID:            "/subscriptions/12345/resourceGroups/group1/providers/Microsoft.Compute/images/myImage",
+				ImageResourceID:            fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/images/%s", subscriptionID, resourceGroup, imageName),
 				Location:                   "location1",
 				OSDiskStorageAccountType:   "Standard_LRS",
 				OSDiskCacheType:            "ReadWrite",
@@ -52,77 +50,17 @@ func TestStepCreateImage_Run(t *testing.T) {
 				"/subscriptions/12345/resourceGroups/group1/providers/Microsoft.Compute/disks/datadisk1",
 				"/subscriptions/12345/resourceGroups/group1/providers/Microsoft.Compute/disks/datadisk2"),
 			want: multistep.ActionContinue,
-			wantPutBody: `{
-				"location": "location1",
-				"properties": {
-					"storageProfile": {
-						"osDisk": {
-							"osType": "Linux",
-							"managedDisk": {
-								"id": "/subscriptions/12345/resourceGroups/group1/providers/Microsoft.Compute/disks/osdisk"
-							},
-							"caching": "ReadWrite",
-							"storageAccountType": "Standard_LRS"
-						},
-						"dataDisks": [
-							{
-								"lun": 0,
-								"managedDisk": {
-									"id": "/subscriptions/12345/resourceGroups/group1/providers/Microsoft.Compute/disks/datadisk0"
-								},
-								"caching": "ReadOnly",
-								"storageAccountType": "Premium_LRS"
-							},
-							{
-								"lun": 1,
-								"managedDisk": {
-									"id": "/subscriptions/12345/resourceGroups/group1/providers/Microsoft.Compute/disks/datadisk1"
-								},
-								"caching": "ReadOnly",
-								"storageAccountType": "Premium_LRS"
-							},
-							{
-								"lun": 2,
-								"managedDisk": {
-									"id": "/subscriptions/12345/resourceGroups/group1/providers/Microsoft.Compute/disks/datadisk2"
-								},
-								"caching": "ReadOnly",
-								"storageAccountType": "Premium_LRS"
-							}
-						]
-					}
-				}
-			}`,
 		},
 	}
 	for _, tt := range tests {
-
-		ic := compute.NewImagesClient("subscriptionID")
-		ic.Sender = autorest.SenderFunc(func(r *http.Request) (*http.Response, error) {
-			if r.Method != "PUT" {
-				t.Fatal("Expected only a PUT call")
-			}
-			if tt.wantPutBody != "" {
-				b, _ := ioutil.ReadAll(r.Body)
-				expectedPutBody := regexp.MustCompile(`[\s\n]`).ReplaceAllString(tt.wantPutBody, "")
-				if string(b) != expectedPutBody {
-					t.Errorf("expected body to be %v, but got %v", expectedPutBody, string(b))
-				}
-			}
-			return &http.Response{
-				Request:    r,
-				StatusCode: 200,
-			}, nil
-		})
-
 		state := new(multistep.BasicStateBag)
-		state.Put("azureclient", &client.AzureClientSetMock{
-			ImagesClientMock: ic,
-		})
+		state.Put("azureclient", &client.AzureClientSetMock{SubscriptionIDMock: subscriptionID})
 		state.Put("ui", packersdk.TestUi(t))
 		state.Put(stateBagKey_Diskset, tt.diskset)
-
+		expectedImageID := images.NewImageID(subscriptionID, resourceGroup, imageName)
 		t.Run(tt.name, func(t *testing.T) {
+			var actualImageID images.ImageId
+			var actualImage images.Image
 			s := &StepCreateImage{
 				ImageResourceID:            tt.fields.ImageResourceID,
 				ImageOSState:               tt.fields.ImageOSState,
@@ -131,9 +69,27 @@ func TestStepCreateImage_Run(t *testing.T) {
 				DataDiskStorageAccountType: tt.fields.DataDiskStorageAccountType,
 				DataDiskCacheType:          tt.fields.DataDiskCacheType,
 				Location:                   tt.fields.Location,
+				create: func(ctx context.Context, client client.AzureClientSet, id images.ImageId, image images.Image) error {
+					actualImageID = id
+					actualImage = image
+					return nil
+				},
 			}
 			if got := s.Run(context.TODO(), state); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("StepCreateImage.Run() = %v, want %v", got, tt.want)
+			}
+			if expectedImageID != actualImageID {
+				t.Fatalf("Expected StepCreateImage.create called with image ID %s got image ID %s", expectedImageID, actualImageID)
+			}
+
+			if len(*actualImage.Properties.StorageProfile.DataDisks) != 3 {
+				t.Fatalf("Expected 3 data disks attatched to created image got %d", len(*actualImage.Properties.StorageProfile.DataDisks))
+			}
+			if actualImage.Properties.StorageProfile.OsDisk.OsType != "Linux" {
+				t.Fatalf("Expected actual image to be Linux, got %s", actualImage.Properties.StorageProfile.OsDisk.OsType)
+			}
+			if actualImage.Location != tt.fields.Location {
+				t.Fatalf("Expected %s location got %s location", tt.fields.Location, actualImage.Location)
 			}
 		})
 	}

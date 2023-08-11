@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -14,7 +15,7 @@ import (
 
 type StepValidateTemplate struct {
 	client   *AzureClient
-	validate func(ctx context.Context, resourceGroupName string, deploymentName string) error
+	validate func(ctx context.Context, subscriptionId string, resourceGroupName string, deploymentName string) error
 	say      func(message string)
 	error    func(e error)
 	config   *Config
@@ -36,13 +37,13 @@ func NewStepValidateTemplate(client *AzureClient, ui packersdk.Ui, config *Confi
 	return step
 }
 
-func (s *StepValidateTemplate) validateTemplate(ctx context.Context, resourceGroupName string, deploymentName string) error {
+func (s *StepValidateTemplate) validateTemplate(ctx context.Context, subscriptionId string, resourceGroupName string, deploymentName string) error {
 	deployment, err := s.factory(s.config)
 	if err != nil {
 		return err
 	}
-
-	_, err = s.client.DeploymentsClient.Validate(ctx, resourceGroupName, deploymentName, *deployment)
+	id := deployments.NewResourceGroupProviderDeploymentID(subscriptionId, resourceGroupName, deploymentName)
+	_, err = s.client.DeploymentsClient.Validate(ctx, id, *deployment)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 	}
@@ -53,11 +54,12 @@ func (s *StepValidateTemplate) Run(ctx context.Context, state multistep.StateBag
 	s.say("Validating deployment template ...")
 
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
+	var subscriptionId = state.Get(constants.ArmSubscription).(string)
 
 	s.say(fmt.Sprintf(" -> ResourceGroupName : '%s'", resourceGroupName))
 	s.say(fmt.Sprintf(" -> DeploymentName    : '%s'", s.name))
 
-	err := s.validate(ctx, resourceGroupName, s.name)
+	err := s.validate(ctx, subscriptionId, resourceGroupName, s.name)
 	return processStepResult(err, s.error, state)
 }
 

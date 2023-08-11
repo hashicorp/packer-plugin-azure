@@ -36,7 +36,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 )
 
-func TestBuilderAcc_ManagedDisk_Windows(t *testing.T) {
+func TestDTLBuilderAcc_ManagedDisk_Windows(t *testing.T) {
 	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-managedisk-windows",
@@ -52,7 +52,7 @@ func TestBuilderAcc_ManagedDisk_Windows(t *testing.T) {
 		},
 	})
 }
-func TestBuilderAcc_ManagedDisk_Linux_Artifacts(t *testing.T) {
+func TestDTLBuilderAcc_ManagedDisk_Linux_Artifacts(t *testing.T) {
 	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-managedisk-linux",

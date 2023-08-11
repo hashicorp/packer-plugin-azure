@@ -306,7 +306,7 @@
   ```
 
 - `polling_duration_timeout` (duration string | ex: "1h5m2s") - The default PollingDuration for azure is 15mins, this property will override
-  that value. See [Azure DefaultPollingDuration](https://godoc.org/github.com/Azure/go-autorest/autorest#pkg-constants)
+  that value.
   If your Packer build is failing on the
   ARM deployment step with the error `Original Error:
   context deadline exceeded`, then you probably need to increase this timeout from
@@ -317,6 +317,10 @@
   automatically configure authentication credentials for the provisioned
   machine. For Linux this configures an SSH authorized key. For Windows
   this configures a WinRM certificate.
+
+- `winrm_expiration_time` (duration string | ex: "1h5m2s") - A time duration with which to set the WinRM certificate to expire
+  This only works for Windows builds (valid time units include `s` for seconds, `m` for
+  minutes, and `h` for hours.)
 
 - `temp_os_disk_name` (string) - temporary name assigned to the OSDisk. If this
   value is not set, a random value will be assigned. Being able to assign a custom

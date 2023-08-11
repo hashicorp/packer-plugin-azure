@@ -23,8 +23,8 @@ import (
 
 	"github.com/hashicorp/packer-plugin-sdk/random"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/masterzen/winrm"
 
 	azcommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
@@ -112,7 +112,7 @@ type SharedImageGalleryDestination struct {
 
 type Spot struct {
 	// Specify eviction policy for spot instance: "Deallocate" or "Delete". If this is set, a spot instance will be used.
-	EvictionPolicy compute.VirtualMachineEvictionPolicyTypes `mapstructure:"eviction_policy"`
+	EvictionPolicy virtualmachines.VirtualMachineEvictionPolicyTypes `mapstructure:"eviction_policy"`
 	// How much should the VM cost maximally per hour. Specify -1 (or do not specify) to not evict based on price.
 	MaxPrice float32 `mapstructure:"max_price"`
 }
@@ -316,7 +316,7 @@ type Config struct {
 	// type for a managed image. Valid values are Standard_LRS and Premium_LRS.
 	// The default is Standard_LRS.
 	ManagedImageStorageAccountType string `mapstructure:"managed_image_storage_account_type" required:"false"`
-	managedImageStorageAccountType compute.StorageAccountTypes
+	managedImageStorageAccountType virtualmachines.StorageAccountTypes
 	// If
 	// managed_image_os_disk_snapshot_name is set, a snapshot of the OS disk
 	// is created with the same name as this value before the VM is captured.
@@ -483,18 +483,24 @@ type Config struct {
 	//
 	PlanInfo PlanInformation `mapstructure:"plan_info" required:"false"`
 	// The default PollingDuration for azure is 15mins, this property will override
-	// that value. See [Azure DefaultPollingDuration](https://godoc.org/github.com/Azure/go-autorest/autorest#pkg-constants)
+	// that value.
 	// If your Packer build is failing on the
 	// ARM deployment step with the error `Original Error:
 	// context deadline exceeded`, then you probably need to increase this timeout from
 	// its default of "15m" (valid time units include `s` for seconds, `m` for
 	// minutes, and `h` for hours.)
 	PollingDurationTimeout time.Duration `mapstructure:"polling_duration_timeout" required:"false"`
+
 	// If either Linux or Windows is specified Packer will
 	// automatically configure authentication credentials for the provisioned
 	// machine. For Linux this configures an SSH authorized key. For Windows
 	// this configures a WinRM certificate.
 	OSType string `mapstructure:"os_type" required:"false"`
+
+	// A time duration with which to set the WinRM certificate to expire
+	// This only works for Windows builds (valid time units include `s` for seconds, `m` for
+	// minutes, and `h` for hours.)
+	WinrmExpirationTime time.Duration `mapstructure:"winrm_expiration_time" required:"false"`
 	// temporary name assigned to the OSDisk. If this
 	// value is not set, a random value will be assigned. Being able to assign a custom
 	// osDiskName could ease deployment if naming conventions are used.
@@ -524,7 +530,7 @@ type Config struct {
 	// Specify the disk caching type. Valid values
 	// are None, ReadOnly, and ReadWrite. The default value is ReadWrite.
 	DiskCachingType string `mapstructure:"disk_caching_type" required:"false"`
-	diskCachingType compute.CachingTypes
+	diskCachingType virtualmachines.CachingTypes
 	// Specify the list of IP addresses and CIDR blocks that should be
 	// allowed access to the VM. If provided, an Azure Network Security
 	// Group will be created with corresponding rules and be bound to
@@ -639,26 +645,26 @@ func (c *Config) isPublishToSIG() bool {
 	return c.SharedGalleryDestination.SigDestinationGalleryName != ""
 }
 
-func (c *Config) toVirtualMachineCaptureParameters() *compute.VirtualMachineCaptureParameters {
-	return &compute.VirtualMachineCaptureParameters{
-		DestinationContainerName: &c.CaptureContainerName,
-		VhdPrefix:                &c.CaptureNamePrefix,
-		OverwriteVhds:            to.BoolPtr(false),
+func (c *Config) toVirtualMachineCaptureParameters() *virtualmachines.VirtualMachineCaptureParameters {
+	return &virtualmachines.VirtualMachineCaptureParameters{
+		DestinationContainerName: c.CaptureContainerName,
+		VhdPrefix:                c.CaptureNamePrefix,
+		OverwriteVhds:            false,
 	}
 }
 
-func (c *Config) toImageParameters() *compute.Image {
-	return &compute.Image{
-		ImageProperties: &compute.ImageProperties{
-			SourceVirtualMachine: &compute.SubResource{
-				ID: to.StringPtr(c.toVMID()),
+func (c *Config) toImageParameters() *images.Image {
+	return &images.Image{
+		Properties: &images.ImageProperties{
+			SourceVirtualMachine: &images.SubResource{
+				Id: azcommon.StringPtr(c.toVMID()),
 			},
-			StorageProfile: &compute.ImageStorageProfile{
-				ZoneResilient: to.BoolPtr(c.ManagedImageZoneResilient),
+			StorageProfile: &images.ImageStorageProfile{
+				ZoneResilient: azcommon.BoolPtr(c.ManagedImageZoneResilient),
 			},
 		},
-		Location: to.StringPtr(c.Location),
-		Tags:     azcommon.MapToAzureTags(c.AzureTags),
+		Location: *azcommon.StringPtr(c.Location),
+		Tags:     &c.AzureTags,
 	}
 }
 
@@ -984,11 +990,11 @@ func provideDefaultValues(c *Config) {
 	}
 
 	if c.ManagedImageStorageAccountType == "" {
-		c.managedImageStorageAccountType = compute.StorageAccountTypesStandardLRS
+		c.managedImageStorageAccountType = virtualmachines.StorageAccountTypesStandardLRS
 	}
 
 	if c.DiskCachingType == "" {
-		c.diskCachingType = compute.CachingTypesReadWrite
+		c.diskCachingType = virtualmachines.CachingTypesReadWrite
 	}
 
 	if c.ImagePublisher != "" && c.ImageVersion == "" {
@@ -1230,6 +1236,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 	}
 
+	validImageVersion := regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`)
 	if c.SharedGalleryDestination.SigDestinationGalleryName != "" {
 		if c.SharedGalleryDestination.SigDestinationResourceGroup == "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A resource_group must be specified for shared_image_gallery_destination"))
@@ -1237,8 +1244,8 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		if c.SharedGalleryDestination.SigDestinationImageName == "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("An image_name must be specified for shared_image_gallery_destination"))
 		}
-		if c.SharedGalleryDestination.SigDestinationImageVersion == "" {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("An image_version must be specified for shared_image_gallery_destination"))
+		if !validImageVersion.Match([]byte(c.SharedGalleryDestination.SigDestinationImageVersion)) {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("An image_version must be specified for shared_image_gallery_destination and must follow the Major(int).Minor(int).Patch(int) format"))
 		}
 		if c.SharedGalleryDestination.SigDestinationSubscription == "" {
 			c.SharedGalleryDestination.SigDestinationSubscription = c.ClientConfig.SubscriptionID
@@ -1331,22 +1338,22 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	/////////////////////////////////////////////
 	// Storage
 	if c.Spot.EvictionPolicy != "" {
-		if c.Spot.EvictionPolicy != compute.VirtualMachineEvictionPolicyTypesDelete && c.Spot.EvictionPolicy != compute.VirtualMachineEvictionPolicyTypesDeallocate {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The spot.eviction_policy %q is invalid, eviction_policy must be %q, %q, or unset", c.Spot.EvictionPolicy, compute.VirtualMachineEvictionPolicyTypesDelete, compute.VirtualMachineEvictionPolicyTypesDeallocate))
+		if c.Spot.EvictionPolicy != virtualmachines.VirtualMachineEvictionPolicyTypesDelete && c.Spot.EvictionPolicy != virtualmachines.VirtualMachineEvictionPolicyTypesDeallocate {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The spot.eviction_policy %q is invalid, eviction_policy must be %q, %q, or unset", c.Spot.EvictionPolicy, virtualmachines.VirtualMachineEvictionPolicyTypesDelete, virtualmachines.VirtualMachineEvictionPolicyTypesDeallocate))
 		}
 	} else {
 		if c.Spot.MaxPrice != 0 {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Setting a spot.max_price without an spot.eviction_policy is invalid, eviction_policy must be %q or %q if max_price is set", compute.VirtualMachineEvictionPolicyTypesDelete, compute.VirtualMachineEvictionPolicyTypesDeallocate))
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Setting a spot.max_price without an spot.eviction_policy is invalid, eviction_policy must be %q or %q if max_price is set", virtualmachines.VirtualMachineEvictionPolicyTypesDelete, virtualmachines.VirtualMachineEvictionPolicyTypesDeallocate))
 		}
 	}
 
 	/////////////////////////////////////////////
 	// Storage
 	switch c.ManagedImageStorageAccountType {
-	case "", string(compute.StorageAccountTypesStandardLRS):
-		c.managedImageStorageAccountType = compute.StorageAccountTypesStandardLRS
-	case string(compute.StorageAccountTypesPremiumLRS):
-		c.managedImageStorageAccountType = compute.StorageAccountTypesPremiumLRS
+	case "", string(virtualmachines.StorageAccountTypesStandardLRS):
+		c.managedImageStorageAccountType = virtualmachines.StorageAccountTypesStandardLRS
+	case string(virtualmachines.StorageAccountTypesPremiumLRS):
+		c.managedImageStorageAccountType = virtualmachines.StorageAccountTypesPremiumLRS
 	default:
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The managed_image_storage_account_type %q is invalid", c.ManagedImageStorageAccountType))
 	}
@@ -1356,12 +1363,12 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	}
 
 	switch c.DiskCachingType {
-	case string(compute.CachingTypesNone):
-		c.diskCachingType = compute.CachingTypesNone
-	case string(compute.CachingTypesReadOnly):
-		c.diskCachingType = compute.CachingTypesReadOnly
-	case "", string(compute.CachingTypesReadWrite):
-		c.diskCachingType = compute.CachingTypesReadWrite
+	case string(virtualmachines.CachingTypesNone):
+		c.diskCachingType = virtualmachines.CachingTypesNone
+	case string(virtualmachines.CachingTypesReadOnly):
+		c.diskCachingType = virtualmachines.CachingTypesReadOnly
+	case "", string(virtualmachines.CachingTypesReadWrite):
+		c.diskCachingType = virtualmachines.CachingTypesReadWrite
 	default:
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The disk_caching_type %q is invalid", c.DiskCachingType))
 	}

@@ -8,7 +8,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
+	galleryimageversions "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -25,23 +25,23 @@ func TestStepGetSourceImageName(t *testing.T) {
 	vmSourcedSigID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/pkr-Resource-Group-blah/providers/Microsoft.Compute/virtualMachines/pkrvmexample"
 	managedImageSourcedSigID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/pkr-Resource-Group-blah/providers/Microsoft.Compute/images/exampleimage"
 	sigArtifactID := "example-sig-id"
-	vmSourcedSigImageVersion := &compute.GalleryImageVersion{
-		ID: &sigArtifactID,
-		GalleryImageVersionProperties: &compute.GalleryImageVersionProperties{
-			StorageProfile: &compute.GalleryImageVersionStorageProfile{
-				Source: &compute.GalleryArtifactVersionSource{
-					ID: &vmSourcedSigID,
+	vmSourcedSigImageVersion := &galleryimageversions.GalleryImageVersion{
+		Id: &sigArtifactID,
+		Properties: &galleryimageversions.GalleryImageVersionProperties{
+			StorageProfile: galleryimageversions.GalleryImageVersionStorageProfile{
+				Source: &galleryimageversions.GalleryArtifactVersionFullSource{
+					Id: &vmSourcedSigID,
 				},
 			},
 		},
 	}
 
-	managedImageSourcedSigImageVersion := &compute.GalleryImageVersion{
-		ID: &sigArtifactID,
-		GalleryImageVersionProperties: &compute.GalleryImageVersionProperties{
-			StorageProfile: &compute.GalleryImageVersionStorageProfile{
-				Source: &compute.GalleryArtifactVersionSource{
-					ID: &managedImageSourcedSigID,
+	managedImageSourcedSigImageVersion := &galleryimageversions.GalleryImageVersion{
+		Id: &sigArtifactID,
+		Properties: &galleryimageversions.GalleryImageVersionProperties{
+			StorageProfile: galleryimageversions.GalleryImageVersionStorageProfile{
+				Source: &galleryimageversions.GalleryArtifactVersionFullSource{
+					Id: &managedImageSourcedSigID,
 				},
 			},
 		},
@@ -51,7 +51,7 @@ func TestStepGetSourceImageName(t *testing.T) {
 		name               string
 		config             *Config
 		expected           string
-		mockedGalleryImage *compute.GalleryImageVersion
+		mockedGalleryImage *galleryimageversions.GalleryImageVersion
 	}{
 		{
 			name:     "ImageUrl",
@@ -115,11 +115,13 @@ func TestStepGetSourceImageName(t *testing.T) {
 			}
 			if tt.mockedGalleryImage != nil {
 				step = StepGetSourceImageName{
-					config:            tt.config,
-					GeneratedData:     &genData,
-					say:               ui.Say,
-					error:             func(e error) {},
-					getGalleryVersion: func(ctx context.Context) (compute.GalleryImageVersion, error) { return *tt.mockedGalleryImage, nil },
+					config:        tt.config,
+					GeneratedData: &genData,
+					say:           ui.Say,
+					error:         func(e error) {},
+					getGalleryVersion: func(ctx context.Context) (*galleryimageversions.GalleryImageVersion, error) {
+						return tt.mockedGalleryImage, nil
+					},
 				}
 			}
 			step.Run(context.TODO(), state)

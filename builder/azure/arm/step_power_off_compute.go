@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -14,7 +15,7 @@ import (
 
 type StepPowerOffCompute struct {
 	client   *AzureClient
-	powerOff func(ctx context.Context, resourceGroupName string, computeName string) error
+	powerOff func(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) error
 	say      func(message string)
 	error    func(e error)
 }
@@ -30,12 +31,12 @@ func NewStepPowerOffCompute(client *AzureClient, ui packersdk.Ui) *StepPowerOffC
 	return step
 }
 
-func (s *StepPowerOffCompute) powerOffCompute(ctx context.Context, resourceGroupName string, computeName string) error {
+func (s *StepPowerOffCompute) powerOffCompute(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) error {
 	hibernate := false
-	f, err := s.client.VirtualMachinesClient.Deallocate(ctx, resourceGroupName, computeName, &hibernate)
-	if err == nil {
-		err = f.WaitForCompletionRef(ctx, s.client.VirtualMachinesClient.Client)
-	}
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+	vmId := virtualmachines.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)
+	err := s.client.VirtualMachinesClient.DeallocateThenPoll(pollingContext, vmId, virtualmachines.DeallocateOperationOptions{Hibernate: &hibernate})
 	if err != nil {
 		s.say(s.client.LastError.Error())
 	}
@@ -47,11 +48,12 @@ func (s *StepPowerOffCompute) Run(ctx context.Context, state multistep.StateBag)
 
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
 	var computeName = state.Get(constants.ArmComputeName).(string)
+	var subscriptionId = state.Get(constants.ArmSubscription).(string)
 
 	s.say(fmt.Sprintf(" -> ResourceGroupName : '%s'", resourceGroupName))
 	s.say(fmt.Sprintf(" -> ComputeName       : '%s'", computeName))
 
-	err := s.powerOff(ctx, resourceGroupName, computeName)
+	err := s.powerOff(ctx, subscriptionId, resourceGroupName, computeName)
 
 	return processStepResult(err, s.error, state)
 }

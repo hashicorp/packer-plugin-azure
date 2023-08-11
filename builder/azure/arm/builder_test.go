@@ -27,7 +27,6 @@ func TestStateBagShouldBePopulatedExpectedValues(t *testing.T) {
 		constants.ArmNicName,
 		constants.ArmResourceGroupName,
 		constants.ArmStorageAccountName,
-		constants.ArmVirtualMachineCaptureParameters,
 		constants.ArmPublicIPAddressName,
 		constants.ArmAsyncResourceGroupDelete,
 	}
@@ -54,7 +53,7 @@ func TestStateBagShouldPoluateExpectedTags(t *testing.T) {
 		t.Fatalf("failed to prepare: %s", err)
 	}
 
-	tags, ok := testSubject.stateBag.Get(constants.ArmTags).(map[string]*string)
+	tags, ok := testSubject.stateBag.Get(constants.ArmTags).(map[string]string)
 	if !ok {
 		t.Errorf("Expected the builder's state bag to contain tags of type %T, but didn't.", testSubject.config.AzureTags)
 	}
@@ -64,8 +63,8 @@ func TestStateBagShouldPoluateExpectedTags(t *testing.T) {
 	}
 
 	for k, v := range tags {
-		if expectedTags[k] != *v {
-			t.Errorf("expect tag value of %s to be %s, but got %s", k, expectedTags[k], *v)
+		if expectedTags[k] != v {
+			t.Errorf("expect tag value of %s to be %s, but got %s", k, expectedTags[k], v)
 		}
 	}
 

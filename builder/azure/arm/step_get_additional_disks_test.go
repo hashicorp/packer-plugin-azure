@@ -8,8 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
-
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -17,7 +16,7 @@ import (
 
 func TestStepGetAdditionalDiskShouldFailIfGetFails(t *testing.T) {
 	var testSubject = &StepGetDataDisk{
-		query: func(context.Context, string, string) (compute.VirtualMachine, error) {
+		query: func(context.Context, string, string, string) (*virtualmachines.VirtualMachine, error) {
 			return createVirtualMachineWithDataDisksFromUri("test.vhd"), fmt.Errorf("!! Unit Test FAIL !!")
 		},
 		say:   func(message string) {},
@@ -38,7 +37,7 @@ func TestStepGetAdditionalDiskShouldFailIfGetFails(t *testing.T) {
 
 func TestStepGetAdditionalDiskShouldPassIfGetPasses(t *testing.T) {
 	var testSubject = &StepGetDataDisk{
-		query: func(context.Context, string, string) (compute.VirtualMachine, error) {
+		query: func(context.Context, string, string, string) (*virtualmachines.VirtualMachine, error) {
 			return createVirtualMachineWithDataDisksFromUri("test.vhd"), nil
 		},
 		say:   func(message string) {},
@@ -60,12 +59,12 @@ func TestStepGetAdditionalDiskShouldPassIfGetPasses(t *testing.T) {
 func TestStepGetAdditionalDiskShouldTakeValidateArgumentsFromStateBag(t *testing.T) {
 	var actualResourceGroupName string
 	var actualComputeName string
-
+	var actualSubscriptionId string
 	var testSubject = &StepGetDataDisk{
-		query: func(ctx context.Context, resourceGroupName string, computeName string) (compute.VirtualMachine, error) {
+		query: func(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (*virtualmachines.VirtualMachine, error) {
 			actualResourceGroupName = resourceGroupName
 			actualComputeName = computeName
-
+			actualSubscriptionId = subscriptionId
 			return createVirtualMachineWithDataDisksFromUri("test.vhd"), nil
 		},
 		say:   func(message string) {},
@@ -82,6 +81,8 @@ func TestStepGetAdditionalDiskShouldTakeValidateArgumentsFromStateBag(t *testing
 	var expectedComputeName = stateBag.Get(constants.ArmComputeName).(string)
 	var expectedResourceGroupName = stateBag.Get(constants.ArmResourceGroupName).(string)
 
+	var expectedSubscriptionId = stateBag.Get(constants.ArmSubscription).(string)
+
 	if actualComputeName != expectedComputeName {
 		t.Fatal("Expected the step to source 'constants.ArmResourceGroupName' from the state bag, but it did not.")
 	}
@@ -90,6 +91,9 @@ func TestStepGetAdditionalDiskShouldTakeValidateArgumentsFromStateBag(t *testing
 		t.Fatal("Expected the step to source 'constants.ArmResourceGroupName' from the state bag, but it did not.")
 	}
 
+	if actualSubscriptionId != expectedSubscriptionId {
+		t.Fatalf("Expected the step to source 'constants.ArmSubscriptionId' from the state bag, but it did not. %s %s", actualSubscriptionId, expectedSubscriptionId)
+	}
 	expectedAdditionalDiskVhds, ok := stateBag.GetOk(constants.ArmAdditionalDiskVhds)
 	if !ok {
 		t.Fatalf("Expected the state bag to have a value for '%s', but it did not.", constants.ArmAdditionalDiskVhds)
@@ -106,23 +110,24 @@ func createTestStateBagStepGetAdditionalDisks() multistep.StateBag {
 
 	stateBag.Put(constants.ArmComputeName, "Unit Test: ComputeName")
 	stateBag.Put(constants.ArmResourceGroupName, "Unit Test: ResourceGroupName")
+	stateBag.Put(constants.ArmSubscription, "Unit Test: Subscription")
 
 	return stateBag
 }
 
-func createVirtualMachineWithDataDisksFromUri(vhdUri string) compute.VirtualMachine {
-	vm := compute.VirtualMachine{
-		VirtualMachineProperties: &compute.VirtualMachineProperties{
-			StorageProfile: &compute.StorageProfile{
-				OsDisk: &compute.OSDisk{
-					Vhd: &compute.VirtualHardDisk{
-						URI: &vhdUri,
+func createVirtualMachineWithDataDisksFromUri(vhdUri string) *virtualmachines.VirtualMachine {
+	vm := virtualmachines.VirtualMachine{
+		Properties: &virtualmachines.VirtualMachineProperties{
+			StorageProfile: &virtualmachines.StorageProfile{
+				OsDisk: &virtualmachines.OSDisk{
+					Vhd: &virtualmachines.VirtualHardDisk{
+						Uri: &vhdUri,
 					},
 				},
-				DataDisks: &[]compute.DataDisk{
+				DataDisks: &[]virtualmachines.DataDisk{
 					{
-						Vhd: &compute.VirtualHardDisk{
-							URI: &vhdUri,
+						Vhd: &virtualmachines.VirtualHardDisk{
+							Uri: &vhdUri,
 						},
 					},
 				},
@@ -130,5 +135,5 @@ func createVirtualMachineWithDataDisksFromUri(vhdUri string) compute.VirtualMach
 		},
 	}
 
-	return vm
+	return &vm
 }

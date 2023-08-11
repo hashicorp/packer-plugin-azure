@@ -12,12 +12,13 @@ import (
 	"runtime"
 	"strings"
 
-	dtl "github.com/Azure/azure-sdk-for-go/services/devtestlabs/mgmt/2018-09-15/dtl"
-
-	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/golang-jwt/jwt"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/customimages"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/labs"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/virtualnetworks"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	packerAzureCommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
+	commonclient "github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/lin"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
@@ -31,6 +32,8 @@ type Builder struct {
 	stateBag multistep.StateBag
 	runner   multistep.Runner
 }
+
+var ErrNoImage = errors.New("failed to find shared image gallery id in state")
 
 const (
 	DefaultSasBlobContainer = "system/Microsoft.Compute"
@@ -71,20 +74,25 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	b.stateBag.Put("hook", hook)
 	b.stateBag.Put(constants.Ui, ui)
 
-	spnCloud, err := b.getServicePrincipalToken(ui.Say)
-	if err != nil {
-		return nil, err
+	// Pass in relevant auth information for hashicorp/go-azure-sdk
+	authOptions := commonclient.AzureAuthOptions{
+		AuthType:       b.config.ClientConfig.AuthType(),
+		ClientID:       b.config.ClientConfig.ClientID,
+		ClientSecret:   b.config.ClientConfig.ClientSecret,
+		ClientJWT:      b.config.ClientConfig.ClientJWT,
+		ClientCertPath: b.config.ClientConfig.ClientCertPath,
+		TenantID:       b.config.ClientConfig.TenantID,
+		SubscriptionID: b.config.ClientConfig.SubscriptionID,
 	}
-
 	ui.Message("Creating Azure DevTestLab (DTL) client ...")
 	azureClient, err := NewAzureClient(
+		ctx,
 		b.config.ClientConfig.SubscriptionID,
-		b.config.LabResourceGroupName,
 		b.config.ClientConfig.CloudEnvironment(),
 		b.config.SharedGalleryTimeout,
 		b.config.CustomImageCaptureTimeout,
 		b.config.PollingDurationTimeout,
-		spnCloud)
+		authOptions)
 
 	if err != nil {
 		return nil, err
@@ -94,8 +102,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if err := resolver.Resolve(&b.config); err != nil {
 		return nil, err
 	}
+	objectId := azureClient.ObjectId
 	if b.config.ClientConfig.ObjectID == "" {
-		b.config.ClientConfig.ObjectID = getObjectIdFromToken(ui, spnCloud)
+		b.config.ClientConfig.ObjectID = objectId
 	} else {
 		ui.Message("You have provided Object_ID which is no longer needed, azure packer builder determines this dynamically from the authentication token")
 	}
@@ -106,15 +115,15 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	if b.config.isManagedImage() {
 		// If a managed image already exists it cannot be overwritten. We need to delete it if the user has provided  -force flag
-		_, err = azureClient.DtlCustomImageClient.Get(ctx, b.config.ManagedImageResourceGroupName, b.config.LabName, b.config.ManagedImageName, "")
+		customImageResourceId := customimages.NewCustomImageID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName, b.config.LabName, b.config.ManagedImageName)
+		_, err = azureClient.DtlMetaClient.CustomImages.Get(ctx, customImageResourceId, customimages.DefaultGetOperationOptions())
 
 		if err == nil {
 			if b.config.PackerForce {
+				pollingContext, cancel := context.WithTimeout(ctx, azureClient.CustomImageCaptureTimeout)
+				defer cancel()
 				ui.Say(fmt.Sprintf("the managed image named %s already exists, but deleting it due to -force flag", b.config.ManagedImageName))
-				f, err := azureClient.DtlCustomImageClient.Delete(ctx, b.config.ManagedImageResourceGroupName, b.config.LabName, b.config.ManagedImageName)
-				if err == nil {
-					err = f.WaitForCompletionRef(ctx, azureClient.DtlCustomImageClient.Client)
-				}
+				err := azureClient.DtlMetaClient.CustomImages.DeleteThenPoll(pollingContext, customImageResourceId)
 				if err != nil {
 					return nil, fmt.Errorf("failed to delete the managed image named %s : %s", b.config.ManagedImageName, azureClient.LastError.Error())
 				}
@@ -122,10 +131,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				return nil, fmt.Errorf("the managed image named %s already exists in the resource group %s, use the -force option to automatically delete it.", b.config.ManagedImageName, b.config.ManagedImageResourceGroupName)
 			}
 		}
-
-	} else {
-		// User is not using Managed Images to build, warning message here that this path is being deprecated
-		ui.Error("Warning: You are using Azure Packer Builder to create VHDs which is being deprecated, consider using Managed Images. Learn more https://www.packer.io/docs/builders/azure/arm#azure-arm-builder-specific-options")
 	}
 
 	b.config.validateLocationZoneResiliency(ui.Say)
@@ -136,12 +141,16 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	deploymentName := b.stateBag.Get(constants.ArmDeploymentName).(string)
 
+	b.stateBag.Put(constants.DtlLabName, b.config.LabName)
 	// For Managed Images, validate that Shared Gallery Image exists before publishing to SIG
 	if b.config.isManagedImage() && b.config.SharedGalleryDestination.SigDestinationGalleryName != "" {
-		_, err = azureClient.GalleryImagesClient.Get(ctx, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
+		sigSubscriptionID := b.stateBag.Get(constants.ArmSubscription).(string)
+		galleryId := galleryimages.NewGalleryImageID(sigSubscriptionID, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
+		_, err = azureClient.GalleryImagesClient.Get(ctx, galleryId)
 		if err != nil {
-			return nil, fmt.Errorf("The Shared Gallery Image to which to publish the managed image version to does not exist in the resource group %s", b.config.SharedGalleryDestination.SigDestinationResourceGroup)
+			return nil, fmt.Errorf("the Shared Gallery Image '%s' to which to publish the managed image version to does not exist in the resource group '%s' or does not contain managed image '%s'", b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationImageName)
 		}
+
 		// SIG requires that replication regions include the region in which the Managed Image resides
 		managedImageLocation := normalizeAzureRegion(b.stateBag.Get(constants.ArmLocation).(string))
 		foundMandatoryReplicationRegion := false
@@ -155,19 +164,19 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				continue
 			}
 		}
-		if foundMandatoryReplicationRegion == false {
+		if !foundMandatoryReplicationRegion {
 			b.config.SharedGalleryDestination.SigDestinationReplicationRegions = append(normalizedReplicationRegions, managedImageLocation)
 		}
 		b.stateBag.Put(constants.ArmManagedImageSharedGalleryReplicationRegions, b.config.SharedGalleryDestination.SigDestinationReplicationRegions)
 	}
 
 	// Find the lab location
-	lab, err := azureClient.DtlLabsClient.Get(ctx, b.config.LabResourceGroupName, b.config.LabName, "")
+	labResourceId := labs.NewLabID(b.config.ClientConfig.SubscriptionID, b.config.LabResourceGroupName, b.config.LabName)
+	lab, err := azureClient.DtlMetaClient.Labs.Get(ctx, labResourceId, labs.DefaultGetOperationOptions())
 	if err != nil {
 		return nil, fmt.Errorf("Unable to fetch the Lab %s information in %s resource group", b.config.LabName, b.config.LabResourceGroupName)
 	}
-
-	b.config.Location = *lab.Location
+	b.config.Location = *lab.Model.Location
 
 	if b.config.LabVirtualNetworkName == "" || b.config.LabSubnetName == "" {
 		virtualNetwork, subnet, err := b.getSubnetInformation(ctx, ui, *azureClient)
@@ -259,11 +268,11 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		return nil, errors.New("Build was halted.")
 	}
 
-	if b.config.isManagedImage() {
-		managedImageID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/images/%s", b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName, b.config.ManagedImageName)
-		return NewManagedImageArtifact(b.config.OSType, b.config.ManagedImageResourceGroupName, b.config.ManagedImageName, b.config.Location, managedImageID)
+	managedImageID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/images/%s", b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName, b.config.ManagedImageName)
+	if b.config.isPublishToSIG() {
+		return b.managedImageArtifactWithSIGAsDestination(managedImageID)
 	}
-	return &Artifact{}, nil
+	return NewManagedImageArtifact(b.config.OSType, b.config.ManagedImageResourceGroupName, b.config.ManagedImageName, b.config.Location, managedImageID)
 }
 
 func (b *Builder) writeSSHPrivateKey(ui packersdk.Ui, debugKeyPath string) {
@@ -313,6 +322,7 @@ func (b *Builder) configureStateBag(stateBag multistep.StateBag) {
 		stateBag.Put(constants.ArmManagedImageSharedGalleryImageVersion, b.config.SharedGalleryDestination.SigDestinationImageVersion)
 		stateBag.Put(constants.ArmManagedImageSubscription, b.config.ClientConfig.SubscriptionID)
 	}
+	stateBag.Put(constants.ArmSubscription, b.config.ClientConfig.SubscriptionID)
 }
 
 // Parameters that are only known at runtime after querying Azure.
@@ -324,23 +334,21 @@ func (b *Builder) setTemplateParameters(stateBag multistep.StateBag) {
 	stateBag.Put(constants.ArmVirtualMachineCaptureParameters, b.config.toVirtualMachineCaptureParameters())
 }
 
-func (b *Builder) getServicePrincipalToken(say func(string)) (*adal.ServicePrincipalToken, error) {
-	return b.config.ClientConfig.GetServicePrincipalToken(say, b.config.ClientConfig.CloudEnvironment().ResourceManagerEndpoint)
-}
-
 func (b *Builder) getSubnetInformation(ctx context.Context, ui packersdk.Ui, azClient AzureClient) (*string, *string, error) {
-	num := int32(10)
-	virtualNetworkPage, err := azClient.DtlVirtualNetworksClient.List(ctx, b.config.LabResourceGroupName, b.config.LabName, "", "", &num, "")
+	num := int64(10)
+	labResourceId := virtualnetworks.NewLabID(b.config.ClientConfig.SubscriptionID, b.config.LabResourceGroupName, b.config.LabName)
+	virtualNetworkPage, err := azClient.DtlMetaClient.VirtualNetworks.List(ctx, labResourceId, virtualnetworks.ListOperationOptions{Top: &num})
 
 	if err != nil {
 		return nil, nil, fmt.Errorf("Error retrieving Virtual networks in Resourcegroup %s", b.config.LabResourceGroupName)
 	}
 
-	virtualNetworks := virtualNetworkPage.Values()
-	for _, virtualNetwork := range virtualNetworks {
-		for _, subnetOverride := range *virtualNetwork.SubnetOverrides {
+	virtualNetworks := virtualNetworkPage.Model
+	for _, virtualNetwork := range *virtualNetworks {
+		for _, subnetOverride := range *virtualNetwork.Properties.SubnetOverrides {
+
 			// Check if the Subnet is allowed to create VMs having Public IP
-			if subnetOverride.UseInVMCreationPermission == dtl.Allow && subnetOverride.UsePublicIPAddressPermission == dtl.Allow {
+			if *subnetOverride.UseInVMCreationPermission == virtualnetworks.UsagePermissionTypeAllow && *subnetOverride.UsePublicIPAddressPermission == virtualnetworks.UsagePermissionTypeAllow {
 				// Return Virtual Network Name and Subnet Name
 				// Since we cannot query the Usage information from DTL network we cannot know the current remaining capacity.
 				// TODO (vaangadi) : Fix this to query the subnets that actually have space to create VM.
@@ -351,22 +359,22 @@ func (b *Builder) getSubnetInformation(ctx context.Context, ui packersdk.Ui, azC
 	return nil, nil, fmt.Errorf("No available Subnet with available space in resource group %s", b.config.LabResourceGroupName)
 }
 
-func getObjectIdFromToken(ui packersdk.Ui, token *adal.ServicePrincipalToken) string {
-	claims := jwt.MapClaims{}
-	var p jwt.Parser
-
-	var err error
-
-	_, _, err = p.ParseUnverified(token.OAuthToken(), claims)
-
-	if err != nil {
-		ui.Error(fmt.Sprintf("Failed to parse the token,Error: %s", err.Error()))
-		return ""
-	}
-	return claims["oid"].(string)
-
-}
-
 func normalizeAzureRegion(name string) string {
 	return strings.ToLower(strings.Replace(name, " ", "", -1))
+}
+
+func (b *Builder) managedImageArtifactWithSIGAsDestination(managedImageID string) (*Artifact, error) {
+	destinationSharedImageGalleryId := ""
+	if galleryID, ok := b.stateBag.GetOk(constants.ArmManagedImageSharedGalleryId); ok {
+		destinationSharedImageGalleryId = galleryID.(string)
+	} else {
+		return nil, ErrNoImage
+	}
+
+	return NewManagedImageArtifactWithSIGAsDestination(b.config.OSType,
+		b.config.ManagedImageResourceGroupName,
+		b.config.ManagedImageName,
+		b.config.Location,
+		managedImageID,
+		destinationSharedImageGalleryId)
 }

@@ -4,73 +4,69 @@
 package client
 
 import (
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute/computeapi"
-	"github.com/Azure/go-autorest/autorest"
+	"time"
+
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachineimages"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/snapshots"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 )
 
 var _ AzureClientSet = &AzureClientSetMock{}
 
 // AzureClientSetMock provides a generic mock for AzureClientSet
 type AzureClientSetMock struct {
-	DisksClientMock                     computeapi.DisksClientAPI
-	SnapshotsClientMock                 computeapi.SnapshotsClientAPI
-	ImagesClientMock                    computeapi.ImagesClientAPI
-	VirtualMachineImagesClientMock      VirtualMachineImagesClientAPI
-	VirtualMachinesClientMock           computeapi.VirtualMachinesClientAPI
-	VirtualMachineScaleSetVMsClientMock computeapi.VirtualMachineScaleSetVMsClientAPI
-	GalleryImagesClientMock             computeapi.GalleryImagesClientAPI
-	GalleryImageVersionsClientMock      computeapi.GalleryImageVersionsClientAPI
-	PollClientMock                      autorest.Client
-	MetadataClientMock                  MetadataClientAPI
-	SubscriptionIDMock                  string
+	DisksClientMock                disks.DisksClient
+	SnapshotsClientMock            snapshots.SnapshotsClient
+	ImagesClientMock               images.ImagesClient
+	VirtualMachinesClientMock      virtualmachines.VirtualMachinesClient
+	VirtualMachineImagesClientMock virtualmachineimages.VirtualMachineImagesClient
+	GalleryImagesClientMock        galleryimages.GalleryImagesClient
+	GalleryImageVersionsClientMock galleryimageversions.GalleryImageVersionsClient
+	MetadataClientMock             MetadataClientAPI
+	SubscriptionIDMock             string
+	PollingDurationMock            time.Duration
 }
 
-// DisksClient returns a DisksClientAPI
-func (m *AzureClientSetMock) DisksClient() computeapi.DisksClientAPI {
+// DisksClient returns a DisksClient
+func (m *AzureClientSetMock) DisksClient() disks.DisksClient {
 	return m.DisksClientMock
 }
 
-// SnapshotsClient returns a SnapshotsClientAPI
-func (m *AzureClientSetMock) SnapshotsClient() computeapi.SnapshotsClientAPI {
+// SnapshotsClient returns a SnapshotsClient
+func (m *AzureClientSetMock) SnapshotsClient() snapshots.SnapshotsClient {
 	return m.SnapshotsClientMock
 }
 
-// ImagesClient returns a ImagesClientAPI
-func (m *AzureClientSetMock) ImagesClient() computeapi.ImagesClientAPI {
+// ImagesClient returns a ImagesClient
+func (m *AzureClientSetMock) ImagesClient() images.ImagesClient {
 	return m.ImagesClientMock
 }
 
-// VirtualMachineImagesClient returns a VirtualMachineImagesClientAPI
-func (m *AzureClientSetMock) VirtualMachineImagesClient() VirtualMachineImagesClientAPI {
+// VirtualMachineImagesClient returns a VirtualMachineImagesClient
+func (m *AzureClientSetMock) VirtualMachineImagesClient() virtualmachineimages.VirtualMachineImagesClient {
 	return m.VirtualMachineImagesClientMock
 }
 
-// VirtualMachinesClient returns a VirtualMachinesClientAPI
-func (m *AzureClientSetMock) VirtualMachinesClient() computeapi.VirtualMachinesClientAPI {
+// VirtualMachinesClient returns a VirtualMachinesClient
+func (m *AzureClientSetMock) VirtualMachinesClient() virtualmachines.VirtualMachinesClient {
 	return m.VirtualMachinesClientMock
 }
 
-// VirtualMachineScaleSetVMsClient returns a VirtualMachineScaleSetVMsClientAPI
-func (m *AzureClientSetMock) VirtualMachineScaleSetVMsClient() computeapi.VirtualMachineScaleSetVMsClientAPI {
-	return m.VirtualMachineScaleSetVMsClientMock
-}
-
-// GalleryImagesClient returns a GalleryImagesClientAPI
-func (m *AzureClientSetMock) GalleryImagesClient() computeapi.GalleryImagesClientAPI {
+// GalleryImagesClient returns a GalleryImagesClient
+func (m *AzureClientSetMock) GalleryImagesClient() galleryimages.GalleryImagesClient {
 	return m.GalleryImagesClientMock
 }
 
-// GalleryImageVersionsClient returns a GalleryImageVersionsClientAPI
-func (m *AzureClientSetMock) GalleryImageVersionsClient() computeapi.GalleryImageVersionsClientAPI {
+// GalleryImageVersionsClient returns a GalleryImageVersionsClient
+func (m *AzureClientSetMock) GalleryImageVersionsClient() galleryimageversions.GalleryImageVersionsClient {
 	return m.GalleryImageVersionsClientMock
 }
 
-// PollClient returns an autorest Client that can be used for polling async requests
-func (m *AzureClientSetMock) PollClient() autorest.Client {
-	return m.PollClientMock
-}
-
-// MetadataClient returns a MetadataClientAPI
+// MetadataClient returns a MetadataClient
 func (m *AzureClientSetMock) MetadataClient() MetadataClientAPI {
 	return m.MetadataClientMock
 }
@@ -78,4 +74,8 @@ func (m *AzureClientSetMock) MetadataClient() MetadataClientAPI {
 // SubscriptionID returns SubscriptionIDMock
 func (m *AzureClientSetMock) SubscriptionID() string {
 	return m.SubscriptionIDMock
+}
+
+func (m *AzureClientSetMock) PollingDuration() time.Duration {
+	return m.PollingDurationMock
 }
