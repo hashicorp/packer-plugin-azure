@@ -1,0 +1,54 @@
+# taken and modified from https://github.com/hashicorp/go-azure-sdk/blob/main/.github/workflows/pr-acceptance-tests.yml
+name: OIDC Example - Testing OIDC integration in the SDK branch
+on:
+  push:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  secrets-check:
+    runs-on: ubuntu-latest
+    outputs:
+      available: "${{ steps.check-secrets.outputs.available }}"
+    steps:
+      # we check for the ACTIONS_ID_TOKEN_REQUEST_URL variable as a proxy for other secrets
+      # it will be unset when running for a PR from a fork
+      - id: check-secrets
+        run: |
+          if [[ "${ACTIONS_ID_TOKEN_REQUEST_URL}" == "" ]]; then
+            echo "available=false" | tee ${GITHUB_OUTPUT}
+          else
+            echo "available=true" | tee ${GITHUB_OUTPUT}
+          fi
+
+  test-oidc:
+    runs-on: ubuntu-latest
+    needs: [secrets-check]
+    if: needs.secrets-check.outputs.available == 'true'
+    steps:
+      - name: Set OIDC Token
+        run: |
+          echo "ARM_OIDC_TOKEN=$(curl -H "Accept: application/json; api-version=2.0" -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" -H "Content-Type: application/json" -G --data-urlencode "audience=api://AzureADTokenExchange" "${ACTIONS_ID_TOKEN_REQUEST_URL}" | jq -r '.value')"  >>${GITHUB_ENV}
+
+      - name: Install Go
+        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+        with:
+          go-version: '1.19.5'
+
+      - name: Checkout
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      
+      - name: Setup `packer`
+        uses: hashicorp/setup-packer@main
+        id: setup
+
+      - name: Build the plugin
+        run:  make
+      
+      - name: Try to run an AzureARM build with our OIDC token
+        run:  packer build -force ./example/oidc-example.pkr.hcl
+        env: 
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID}}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID}}
