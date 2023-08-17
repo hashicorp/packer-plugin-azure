@@ -52,9 +52,6 @@ jobs:
       - name: Setup `packer`
         uses: hashicorp/setup-packer@main
         id: setup
-        with: 
-          # TODO Update this to latest after v1.9.3 is released
-          version: '1.9.1'
 
       - name: Build the plugin
         run:  make
