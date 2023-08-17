@@ -9,6 +9,8 @@
 name: OIDC Example - Testing OIDC integration in the SDK branch
 on:
   push:
+    branches:
+    - main
 
 permissions:
   contents: read
