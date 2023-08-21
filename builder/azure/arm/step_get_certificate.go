@@ -56,14 +56,15 @@ func (s *StepGetCertificate) Run(ctx context.Context, state multistep.StateBag) 
 	var keyVaultName = state.Get(constants.ArmKeyVaultName).(string)
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
 	var subscriptionId = state.Get(constants.ArmSubscription).(string)
+	var keyVaultSecretName = state.Get(constants.ArmKeyVaultSecretName).(string)
 
 	s.say(fmt.Sprintf(" -> Key Vault Name        : '%s'", keyVaultName))
-	s.say(fmt.Sprintf(" -> Key Vault Secret Name : '%s'", DefaultSecretName))
+	s.say(fmt.Sprintf(" -> Key Vault Secret Name : '%s'", keyVaultSecretName))
 
 	var err error
 	var url string
 	for i := 0; i < 5; i++ {
-		url, err = s.get(ctx, subscriptionId, resourceGroupName, keyVaultName, DefaultSecretName)
+		url, err = s.get(ctx, subscriptionId, resourceGroupName, keyVaultName, keyVaultSecretName)
 		if err == nil {
 			break
 		}

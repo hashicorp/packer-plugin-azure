@@ -49,6 +49,7 @@ func GetKeyVaultDeployment(config *Config, secretValue string, exp *int64) (*dep
 	params := &template.TemplateParameters{
 		KeyVaultName:        &template.TemplateParameter{Value: config.tmpKeyVaultName},
 		KeyVaultSKU:         &template.TemplateParameter{Value: config.BuildKeyVaultSKU},
+		KeyVaultSecretName:  &template.TemplateParameter{Value: config.BuildKeyVaultSecretName},
 		KeyVaultSecretValue: &template.TemplateParameter{Value: secretValue},
 		ObjectId:            &template.TemplateParameter{Value: config.ClientConfig.ObjectID},
 		TenantId:            &template.TemplateParameter{Value: config.ClientConfig.TenantID},

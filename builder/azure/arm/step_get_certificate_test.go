@@ -82,7 +82,10 @@ func TestStepGetCertificateShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 	if actualKeyVaultName != expectedKeyVaultName {
 		t.Fatal("Expected StepGetCertificate to source 'constants.ArmKeyVaultName' from the state bag, but it did not.")
 	}
-	if actualSecretName != DefaultSecretName {
+
+	var expectedKeyVaultSecretName = stateBag.Get(constants.ArmKeyVaultSecretName).(string)
+
+	if actualSecretName != expectedKeyVaultSecretName {
 		t.Fatal("Expected StepGetCertificate to use default value for secret, but it did not.")
 	}
 
@@ -101,5 +104,6 @@ func createTestStateBagStepGetCertificate() multistep.StateBag {
 	stateBag.Put(constants.ArmKeyVaultName, "Unit Test: KeyVaultName")
 	stateBag.Put(constants.ArmSubscription, "testSubscription")
 	stateBag.Put(constants.ArmResourceGroupName, "testResourceGroupName")
+	stateBag.Put(constants.ArmKeyVaultSecretName, "testKeyVaultSecretName")
 	return stateBag
 }

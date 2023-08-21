@@ -363,9 +363,11 @@ type Config struct {
 	TempResourceGroupName string `mapstructure:"temp_resource_group_name"`
 	// Specify an existing resource group to run the build in.
 	BuildResourceGroupName string `mapstructure:"build_resource_group_name"`
-	// Specify an existing key vault to use for uploading certificates to the
+	// Specify an existing key vault to use for uploading the certificate for the
 	// instance to connect.
 	BuildKeyVaultName string `mapstructure:"build_key_vault_name"`
+	// Specify the secret name to use for the certificate created in the key vault.
+	BuildKeyVaultSecretName string `mapstructure:"build_key_vault_secret_name"`
 	// Specify the KeyVault SKU to create during the build. Valid values are
 	// standard or premium. The default value is standard.
 	BuildKeyVaultSKU string `mapstructure:"build_key_vault_sku"`
@@ -586,6 +588,7 @@ type Config struct {
 	tmpPublicIPAddressName string
 	tmpDeploymentName      string
 	tmpKeyVaultName        string
+	tmpKeyVaultSecretName  string
 	tmpOSDiskName          string
 	tmpDataDiskName        string
 	tmpSubnetName          string
@@ -890,6 +893,7 @@ func setRuntimeValues(c *Config) {
 	c.tmpVirtualNetworkName = tempName.VirtualNetworkName
 	c.tmpNsgName = tempName.NsgName
 	c.tmpKeyVaultName = tempName.KeyVaultName
+	c.tmpKeyVaultSecretName = tempName.KeyVaultName
 }
 
 func setUserNamePassword(c *Config) error {
@@ -1003,6 +1007,10 @@ func provideDefaultValues(c *Config) {
 
 	if c.BuildKeyVaultSKU == "" {
 		c.BuildKeyVaultSKU = DefaultKeyVaultSKU
+	}
+
+	if c.BuildKeyVaultSecretName == "" {
+		c.BuildKeyVaultSecretName = DefaultSecretName
 	}
 
 	_ = c.ClientConfig.SetDefaultValues()

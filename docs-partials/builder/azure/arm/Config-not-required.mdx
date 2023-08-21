@@ -194,8 +194,10 @@
 
 - `build_resource_group_name` (string) - Specify an existing resource group to run the build in.
 
-- `build_key_vault_name` (string) - Specify an existing key vault to use for uploading certificates to the
+- `build_key_vault_name` (string) - Specify an existing key vault to use for uploading the certificate for the
   instance to connect.
+
+- `build_key_vault_secret_name` (string) - Specify the secret name to use for the certificate created in the key vault.
 
 - `build_key_vault_sku` (string) - Specify the KeyVault SKU to create during the build. Valid values are
   standard or premium. The default value is standard.

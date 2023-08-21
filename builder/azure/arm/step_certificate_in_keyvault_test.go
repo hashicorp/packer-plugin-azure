@@ -19,6 +19,7 @@ func TestNewStepCertificateInKeyVault(t *testing.T) {
 	state.Put(constants.ArmKeyVaultName, "testKeyVaultName")
 	state.Put(constants.ArmSubscription, "testSubscription")
 	state.Put(constants.ArmResourceGroupName, "testResourceGroupName")
+	state.Put(constants.ArmKeyVaultSecretName, "testKeyVaultSecretName")
 
 	config := &Config{
 		winrmCertificate: "testCertificateString",
@@ -44,6 +45,7 @@ func TestNewStepCertificateInKeyVault_error(t *testing.T) {
 	state.Put(constants.ArmKeyVaultName, "testKeyVaultName")
 	state.Put(constants.ArmSubscription, "testSubscription")
 	state.Put(constants.ArmResourceGroupName, "testResourceGroupName")
+	state.Put(constants.ArmKeyVaultSecretName, "testKeyVaultSecretName")
 
 	config := &Config{
 		winrmCertificate: "testCertificateString",
