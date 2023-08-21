@@ -497,7 +497,6 @@ func (b *Builder) configureStateBag(stateBag multistep.StateBag) {
 	}
 	if b.config.BuildKeyVaultSecretName != "" {
 		stateBag.Put(constants.ArmKeyVaultSecretName, b.config.BuildKeyVaultSecretName)
-		b.config.tmpKeyVaultSecretName = b.config.BuildKeyVaultSecretName
 	}
 
 	stateBag.Put(constants.ArmNicName, b.config.tmpNicName)

@@ -588,7 +588,6 @@ type Config struct {
 	tmpPublicIPAddressName string
 	tmpDeploymentName      string
 	tmpKeyVaultName        string
-	tmpKeyVaultSecretName  string
 	tmpOSDiskName          string
 	tmpDataDiskName        string
 	tmpSubnetName          string
@@ -893,7 +892,6 @@ func setRuntimeValues(c *Config) {
 	c.tmpVirtualNetworkName = tempName.VirtualNetworkName
 	c.tmpNsgName = tempName.NsgName
 	c.tmpKeyVaultName = tempName.KeyVaultName
-	c.tmpKeyVaultSecretName = tempName.KeyVaultName
 }
 
 func setUserNamePassword(c *Config) error {
