@@ -1283,6 +1283,85 @@ func TestConfigShouldAcceptAbsentManagedImageButPresentSharedImageGalleryDestina
 	}
 }
 
+func TestConfigShouldRejectShallowReplicationWithInvalidReplicationCount(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":                        "ignore",
+		"image_publisher":                    "ignore",
+		"image_sku":                          "ignore",
+		"location":                           "ignore",
+		"subscription_id":                    "ignore",
+		"communicator":                       "none",
+		"os_type":                            constants.Target_Linux,
+		"shared_image_gallery_replica_count": "2",
+		"shared_image_gallery_destination": map[string]string{
+			"resource_group":          "ignore",
+			"gallery_name":            "ignore",
+			"image_name":              "ignore",
+			"image_version":           "1.0.1",
+			"replication_regions":     "ignore",
+			"use_shallow_replication": "true",
+		},
+	}
+	expectedErrorMessage := "When using shallow replication the replica count can only be 1, leaving this value unset will default to 1"
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatalf("expected config to reject invalid replica count using shallow replication but it was accepted")
+	} else if !strings.Contains(err.Error(), expectedErrorMessage) {
+		t.Fatalf("unexpected rejection reason, expected %s to contain %s", err.Error(), expectedErrorMessage)
+	}
+}
+
+func TestConfigShouldAcceptShallowReplicationWithWithSetReplicaCount(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":                        "ignore",
+		"image_publisher":                    "ignore",
+		"image_sku":                          "ignore",
+		"location":                           "ignore",
+		"subscription_id":                    "ignore",
+		"communicator":                       "none",
+		"os_type":                            constants.Target_Linux,
+		"shared_image_gallery_replica_count": "1",
+		"shared_image_gallery_destination": map[string]string{
+			"resource_group":          "ignore",
+			"gallery_name":            "ignore",
+			"image_name":              "ignore",
+			"image_version":           "1.0.1",
+			"replication_regions":     "ignore",
+			"use_shallow_replication": "true",
+		},
+	}
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("expected config to accept shallow replication with set replica count (1) build: %v", err)
+	}
+}
+
+func TestConfigShouldAcceptShallowReplicationWithWithUnsetReplicaCount(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":     "ignore",
+		"image_publisher": "ignore",
+		"image_sku":       "ignore",
+		"location":        "ignore",
+		"subscription_id": "ignore",
+		"communicator":    "none",
+		"os_type":         constants.Target_Linux,
+		"shared_image_gallery_destination": map[string]string{
+			"resource_group":          "ignore",
+			"gallery_name":            "ignore",
+			"image_name":              "ignore",
+			"image_version":           "1.0.1",
+			"replication_regions":     "ignore",
+			"use_shallow_replication": "true",
+		},
+	}
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("expected config to accept shallow replication with unset replica count build: %v", err)
+	}
+}
 func TestConfigShouldRejectManagedImageOSDiskSnapshotNameAndManagedImageDataDiskSnapshotPrefixWithCaptureContainerName(t *testing.T) {
 	config := map[string]interface{}{
 		"image_offer":                         "ignore",

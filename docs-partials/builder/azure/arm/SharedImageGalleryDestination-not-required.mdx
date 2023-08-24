@@ -10,11 +10,17 @@
 
 - `image_version` (string) - Sig Destination Image Version
 
-- `replication_regions` ([]string) - Sig Destination Replication Regions
+- `replication_regions` ([]string) - A list of regions to replicate the image version in, by default the build location will be used as a replication region (the build location is either set in the location field, or the location of the resource group used in `build_resource_group_name` will be included.
+  Can not contain any region but the build region when using shallow replication
 
 - `storage_account_type` (string) - Specify a storage account type for the Shared Image Gallery Image Version.
   Defaults to `Standard_LRS`. Accepted values are `Standard_LRS`, `Standard_ZRS` and `Premium_LRS`
 
 - `specialized` (bool) - Set to true if publishing to a Specialized Gallery, this skips a call to set the build VM's OS state as Generalized
+
+- `use_shallow_replication` (bool) - Set to true to set the replication mode to shallow, which will publish the image version without replication.
+  This option results in a faster build but this image version's replication count and regions can not be updated after build when using shallow replication.
+  Setting a `shared_image_gallery_replica_count` or any `replication_regions` is unneccesary for shallow builds, as they can only be replicated to the build region, and must have a replica count of 1
+  Refer to [Shallow Replication](https://learn.microsoft.com/en-us/azure/virtual-machines/shared-image-galleries?tabs=azure-cli#shallow-replication) for details on when to use shallow replication mode.
 
 <!-- End of code generated from the comments of the SharedImageGalleryDestination struct in builder/azure/arm/config.go; -->

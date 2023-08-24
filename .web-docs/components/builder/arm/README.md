@@ -227,9 +227,9 @@ Providing `temp_resource_group_name` or `location` in combination with
 - `shared_gallery_image_version_end_of_life_date` (string) - The end of life date (2006-01-02T15:04:05.99Z) of the gallery Image Version. This property
   can be used for decommissioning purposes.
 
-- `shared_image_gallery_replica_count` (int32) - The number of replicas of the Image Version to be created per region. This
-  property would take effect for a region when regionalReplicaCount is not specified.
+- `shared_image_gallery_replica_count` (int64) - The number of replicas of the Image Version to be created per region.
   Replica count must be between 1 and 100, but 50 replicas should be sufficient for most use cases.
+  This value can only be 1 when using shallow replication
 
 - `shared_gallery_image_version_exclude_from_latest` (bool) - If set to true, Virtual Machines deployed from the latest version of the
   Image Definition won't use this Image Version.
@@ -335,8 +335,10 @@ Providing `temp_resource_group_name` or `location` in combination with
 
 - `build_resource_group_name` (string) - Specify an existing resource group to run the build in.
 
-- `build_key_vault_name` (string) - Specify an existing key vault to use for uploading certificates to the
+- `build_key_vault_name` (string) - Specify an existing key vault to use for uploading the certificate for the
   instance to connect.
+
+- `build_key_vault_secret_name` (string) - Specify the secret name to use for the certificate created in the key vault.
 
 - `build_key_vault_sku` (string) - Specify the KeyVault SKU to create during the build. Valid values are
   standard or premium. The default value is standard.
@@ -638,12 +640,18 @@ The shared_image_gallery_destination block is available for publishing a new ima
 
 - `image_version` (string) - Sig Destination Image Version
 
-- `replication_regions` ([]string) - Sig Destination Replication Regions
+- `replication_regions` ([]string) - A list of regions to replicate the image version in, by default the build location will be used as a replication region (the build location is either set in the location field, or the location of the resource group used in `build_resource_group_name` will be included.
+  Can not contain any region but the build region when using shallow replication
 
 - `storage_account_type` (string) - Specify a storage account type for the Shared Image Gallery Image Version.
   Defaults to `Standard_LRS`. Accepted values are `Standard_LRS`, `Standard_ZRS` and `Premium_LRS`
 
 - `specialized` (bool) - Set to true if publishing to a Specialized Gallery, this skips a call to set the build VM's OS state as Generalized
+
+- `use_shallow_replication` (bool) - Set to true to set the replication mode to shallow, which will publish the image version without replication.
+  This option results in a faster build but this image version's replication count and regions can not be updated after build when using shallow replication.
+  Setting a `shared_image_gallery_replica_count` or any `replication_regions` is unneccesary for shallow builds, as they can only be replicated to the build region, and must have a replica count of 1
+  Refer to [Shallow Replication](https://learn.microsoft.com/en-us/azure/virtual-machines/shared-image-galleries?tabs=azure-cli#shallow-replication) for details on when to use shallow replication mode.
 
 <!-- End of code generated from the comments of the SharedImageGalleryDestination struct in builder/azure/arm/config.go; -->
 

@@ -97,17 +97,24 @@ type SharedImageGallery struct {
 }
 
 type SharedImageGalleryDestination struct {
-	SigDestinationSubscription       string   `mapstructure:"subscription"`
-	SigDestinationResourceGroup      string   `mapstructure:"resource_group"`
-	SigDestinationGalleryName        string   `mapstructure:"gallery_name"`
-	SigDestinationImageName          string   `mapstructure:"image_name"`
-	SigDestinationImageVersion       string   `mapstructure:"image_version"`
+	SigDestinationSubscription  string `mapstructure:"subscription"`
+	SigDestinationResourceGroup string `mapstructure:"resource_group"`
+	SigDestinationGalleryName   string `mapstructure:"gallery_name"`
+	SigDestinationImageName     string `mapstructure:"image_name"`
+	SigDestinationImageVersion  string `mapstructure:"image_version"`
+	// A list of regions to replicate the image version in, by default the build location will be used as a replication region (the build location is either set in the location field, or the location of the resource group used in `build_resource_group_name` will be included.
+	// Can not contain any region but the build region when using shallow replication
 	SigDestinationReplicationRegions []string `mapstructure:"replication_regions"`
 	// Specify a storage account type for the Shared Image Gallery Image Version.
 	// Defaults to `Standard_LRS`. Accepted values are `Standard_LRS`, `Standard_ZRS` and `Premium_LRS`
 	SigDestinationStorageAccountType string `mapstructure:"storage_account_type"`
 	// Set to true if publishing to a Specialized Gallery, this skips a call to set the build VM's OS state as Generalized
 	SigDestinationSpecialized bool `mapstructure:"specialized"`
+	// Set to true to set the replication mode to shallow, which will publish the image version without replication.
+	// This option results in a faster build but this image version's replication count and regions can not be updated after build when using shallow replication.
+	// Setting a `shared_image_gallery_replica_count` or any `replication_regions` is unneccesary for shallow builds, as they can only be replicated to the build region, and must have a replica count of 1
+	// Refer to [Shallow Replication](https://learn.microsoft.com/en-us/azure/virtual-machines/shared-image-galleries?tabs=azure-cli#shallow-replication) for details on when to use shallow replication mode.
+	SigDestinationUseShallowReplicationMode bool `mapstructure:"use_shallow_replication" required:"false"`
 }
 
 type Spot struct {
@@ -212,10 +219,10 @@ type Config struct {
 	// The end of life date (2006-01-02T15:04:05.99Z) of the gallery Image Version. This property
 	// can be used for decommissioning purposes.
 	SharedGalleryImageVersionEndOfLifeDate string `mapstructure:"shared_gallery_image_version_end_of_life_date" required:"false"`
-	// The number of replicas of the Image Version to be created per region. This
-	// property would take effect for a region when regionalReplicaCount is not specified.
+	// The number of replicas of the Image Version to be created per region.
 	// Replica count must be between 1 and 100, but 50 replicas should be sufficient for most use cases.
-	SharedGalleryImageVersionReplicaCount int32 `mapstructure:"shared_image_gallery_replica_count" required:"false"`
+	// This value can only be 1 when using shallow replication
+	SharedGalleryImageVersionReplicaCount int64 `mapstructure:"shared_image_gallery_replica_count" required:"false"`
 	// If set to true, Virtual Machines deployed from the latest version of the
 	// Image Definition won't use this Image Version.
 	SharedGalleryImageVersionExcludeFromLatest bool `mapstructure:"shared_gallery_image_version_exclude_from_latest" required:"false"`
@@ -1255,6 +1262,13 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 		if c.SharedGalleryDestination.SigDestinationSubscription == "" {
 			c.SharedGalleryDestination.SigDestinationSubscription = c.ClientConfig.SubscriptionID
+		}
+
+		if c.SharedGalleryDestination.SigDestinationUseShallowReplicationMode {
+			// When the user doesn't set the replica count it uses the int null value (0) so we have to check for that
+			if c.SharedGalleryImageVersionReplicaCount != 1 && c.SharedGalleryImageVersionReplicaCount != 0 {
+				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("When using shallow replication the replica count can only be 1, leaving this value unset will default to 1"))
+			}
 		}
 	}
 	if c.SharedGalleryTimeout == 0 {
