@@ -6,7 +6,7 @@ package chroot
 import (
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"reflect"
 	"strings"
 	"testing"
@@ -55,7 +55,7 @@ func TestStepAttachDisk_Run(t *testing.T) {
 			errorBuffer := &strings.Builder{}
 			ui := &packersdk.BasicUi{
 				Reader:      strings.NewReader(""),
-				Writer:      ioutil.Discard,
+				Writer:      io.Discard,
 				ErrorWriter: errorBuffer,
 			}
 

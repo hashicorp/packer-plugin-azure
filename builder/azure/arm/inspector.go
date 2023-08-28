@@ -5,7 +5,6 @@ package arm
 
 import (
 	"bytes"
-	"io/ioutil"
 	"log"
 	"net/http"
 
@@ -32,12 +31,12 @@ func handleBody(body io.ReadCloser, maxlen int64) (io.ReadCloser, string) {
 
 	defer body.Close()
 
-	b, err := ioutil.ReadAll(body)
+	b, err := io.ReadAll(body)
 	if err != nil {
 		return nil, ""
 	}
 
-	return ioutil.NopCloser(bytes.NewReader(b)), chop(b, maxlen)
+	return io.NopCloser(bytes.NewReader(b)), chop(b, maxlen)
 }
 
 // WithInspection/ByInspection functions are used to Log requests and responses from Azure
