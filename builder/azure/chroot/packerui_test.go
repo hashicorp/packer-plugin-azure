@@ -4,7 +4,7 @@
 package chroot
 
 import (
-	"io/ioutil"
+	"io"
 	"strings"
 
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -15,7 +15,7 @@ func testUI() (packersdk.Ui, func() string) {
 	errorBuffer := &strings.Builder{}
 	ui := &packersdk.BasicUi{
 		Reader:      strings.NewReader(""),
-		Writer:      ioutil.Discard,
+		Writer:      io.Discard,
 		ErrorWriter: errorBuffer,
 	}
 	return ui, errorBuffer.String

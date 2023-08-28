@@ -5,7 +5,6 @@ package arm
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -2496,7 +2495,7 @@ func TestConfigShouldRejectMalformedUserAssignedManagedIdentities(t *testing.T) 
 }
 
 func TestConfigShouldRejectUserDataAndUserDataFile(t *testing.T) {
-	tmpfile, err := ioutil.TempFile("", "userdata")
+	tmpfile, err := os.CreateTemp("", "userdata")
 	if err != nil {
 		t.Fatalf("failed creating tempfile: %s", err)
 	}
@@ -2527,7 +2526,7 @@ func TestConfigShouldRejectUserDataAndUserDataFile(t *testing.T) {
 }
 
 func TestConfigShouldRejectCustomDataAndCustomDataFile(t *testing.T) {
-	tmpfile, err := ioutil.TempFile("", "customdata")
+	tmpfile, err := os.CreateTemp("", "customdata")
 	if err != nil {
 		t.Fatalf("failed creating tempfile: %s", err)
 	}

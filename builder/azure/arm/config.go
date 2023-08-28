@@ -14,9 +14,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"net"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -952,7 +952,7 @@ func setCustomDataFile(c *Config) error {
 		return nil
 	}
 
-	b, err := ioutil.ReadFile(c.CustomDataFile)
+	b, err := os.ReadFile(c.CustomDataFile)
 	if err != nil {
 		return err
 	}
@@ -975,7 +975,7 @@ func setUserDataFile(c *Config) error {
 		return nil
 	}
 
-	b, err := ioutil.ReadFile(c.UserDataFile)
+	b, err := os.ReadFile(c.UserDataFile)
 	if err != nil {
 		return err
 	}

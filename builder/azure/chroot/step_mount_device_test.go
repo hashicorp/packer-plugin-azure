@@ -6,7 +6,6 @@ package chroot
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"testing"
@@ -23,7 +22,7 @@ func TestStepMountDevice_Run(t *testing.T) {
 	default:
 		t.Skip("Unsupported operating system")
 	}
-	mountPath, err := ioutil.TempDir("", "stepmountdevicetest")
+	mountPath, err := os.MkdirTemp("", "stepmountdevicetest")
 	if err != nil {
 		t.Errorf("Unable to create a temporary directory: %q", err)
 	}

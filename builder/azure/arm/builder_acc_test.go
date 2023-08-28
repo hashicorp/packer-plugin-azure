@@ -31,7 +31,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"testing"
@@ -304,7 +303,7 @@ func TestBuilderAcc_Blob_Linux(t *testing.T) {
 
 func TestBuilderUserData_Linux(t *testing.T) {
 	t.Parallel()
-	tmpfile, err := ioutil.TempFile("", "userdata")
+	tmpfile, err := os.CreateTemp("", "userdata")
 	if err != nil {
 		t.Fatalf("failed creating tempfile: %s", err)
 	}
