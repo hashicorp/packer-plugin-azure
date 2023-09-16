@@ -144,7 +144,6 @@
           }
         },
         "securityProfile": {
-          "encryptionAtHost": false,
           "securityType": "TrustedLaunch",
           "uefiSettings": {
             "secureBootEnabled": true,
