@@ -572,7 +572,7 @@ type Config struct {
 	SecureBootEnabled bool `mapstructure:"secure_boot_enabled" required:"false"`
 	// Specifies if Encryption at host is enabled for the Virtual Machine.
 	// Requires enabling encryption at host in the Subscription read more [here](https://learn.microsoft.com/en-us/azure/virtual-machines/disks-enable-host-based-encryption-portal?tabs=azure-powershell)
-	EncryptionAtHost bool `mapstructure:"encryption_at_host" required:"false"`
+	EncryptionAtHost *bool `mapstructure:"encryption_at_host" required:"false"`
 
 	// Specifies if vTPM (virtual Trusted Platform Module) and Trusted Launch is enabled for the Virtual Machine.
 	VTpmEnabled bool `mapstructure:"vtpm_enabled" required:"false"`

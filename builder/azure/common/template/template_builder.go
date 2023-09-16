@@ -512,7 +512,7 @@ func (s *TemplateBuilder) SetLicenseType(licenseType string) error {
 	return nil
 }
 
-func (s *TemplateBuilder) SetSecurityProfile(secureBootEnabled bool, vtpmEnabled bool, encryptionAtHost bool) error {
+func (s *TemplateBuilder) SetSecurityProfile(secureBootEnabled bool, vtpmEnabled bool, encryptionAtHost *bool) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
@@ -526,7 +526,7 @@ func (s *TemplateBuilder) SetSecurityProfile(secureBootEnabled bool, vtpmEnabled
 		resource.Properties.SecurityProfile.UefiSettings.SecureBootEnabled = common.BoolPtr(secureBootEnabled)
 		resource.Properties.SecurityProfile.UefiSettings.VTpmEnabled = common.BoolPtr(vtpmEnabled)
 	}
-	resource.Properties.SecurityProfile.EncryptionAtHost = common.BoolPtr(encryptionAtHost)
+	resource.Properties.SecurityProfile.EncryptionAtHost = encryptionAtHost
 
 	return nil
 }
