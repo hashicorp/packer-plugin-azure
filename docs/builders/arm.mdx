@@ -28,50 +28,6 @@ There are many configuration options available for the builder. We'll start
 with authentication parameters, then go over the Azure ARM builder specific
 options. In addition to the options listed here, a [communicator](https://packer.io/docs/templates/legacy_json_templates/communicator) can be configured for this builder.
 
-### Authentication options
-
-@include 'builder/azure/common/client/Config.mdx'
-
-#### Managed Identity
-
-If you're running Packer on an Azure VM with a [managed
-identity](https://packer.io/docs/builders/azure#azure-managed-identity) you
-don't need to specify any additional configuration options. As Packer will
-attempt to use the Managed Identity and subscription of the VM that Packer is
-running on.
-
-You can use a different subscription if you set `subscription_id`.  If your VM
-has multiple user assigned managed identities you will need to set `client_id`
-too.
-
-#### Service Principal
-
-To use a [service principal](https://packer.io/docs/builders/azure#azure-active-directory-service-principal)
-you should specify `subscription_id`, `client_id` and one of `client_secret`,
-`client_cert_path` or `client_jwt`.
-
-- `subscription_id` (string) - Subscription under which the build will be
-  performed. **The service principal specified in `client_id` must have full
-  access to this subscription, unless build_resource_group_name option is
-  specified in which case it needs to have owner access to the existing
-  resource group specified in build_resource_group_name parameter.**
-
-- `client_id` (string) - The Active Directory service principal associated with
-  your builder.
-
-- `client_secret` (string) - The password or secret for your service principal.
-
-- `client_cert_path` (string) - The location of a PEM file containing a
-  certificate and private key for service principal.
-
-- `client_cert_token_timeout` (duration string | ex: "1h30m12s") - How long to set the expire time on the token created when using
-  `client_cert_path`.
-
-- `client_jwt` (string) - The bearer JWT assertion signed using a certificate
-  associated with your service principal principal. See [Azure Active
-  Directory docs](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-certificate-credentials)
-  for more information.
-
 ### Azure ARM builder specific options
 
 The Azure builder can create either a VHD, managed image or create a Shared Image Gallery.
@@ -191,8 +147,7 @@ shared images the resulting name will point to the actual source used to create 
 
 Usage example:
 
-<Tabs>
-<Tab heading="HCL2">
+**HCL2**
 
 ```hcl
 // When accessing one of these variables from inside the builder, you need to
@@ -217,8 +172,7 @@ post-processor "manifest" {
     }
 }
 ```
-</Tab>
-<Tab heading="JSON">
+**JSON**
 
 ```json
 "post-processors": [
@@ -233,8 +187,6 @@ post-processor "manifest" {
 ]
 ```
 
-</Tab>
-</Tabs>
 
 ### Communicator Config
 
@@ -250,8 +202,7 @@ In addition to the builder options, a communicator may also be defined:
 
 Here is a basic example for Azure.
 
-<Tabs>
-<Tab heading="HCL2">
+**HCL2**
 
 ```hcl
 source "azure-arm" "basic-example" {
@@ -283,8 +234,7 @@ build {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+**JSON**
 
 ```json
 {
@@ -314,8 +264,6 @@ build {
 }
 ```
 
-</Tab>
-</Tabs>
 
 ## Deprovision
 
@@ -336,8 +284,7 @@ after that. The possible states, in case you want to wait for another state,
 [are documented
 here](https://technet.microsoft.com/en-us/library/hh824815.aspx)
 
-<Tabs>
-<Tab heading="JSON">
+**JSON**
 
 ```json
 {
@@ -356,8 +303,7 @@ here](https://technet.microsoft.com/en-us/library/hh824815.aspx)
 }
 ```
 
-</Tab>
-<Tab heading="HCL2">
+**HCL2**
 
 ```hcl
 provisioner "powershell" {
@@ -371,8 +317,6 @@ provisioner "powershell" {
 }
 ```
 
-</Tab>
-</Tabs>
 
 The Windows Guest Agent participates in the Sysprep process. The agent must be
 fully installed before the VM can be sysprep'ed. To ensure this is true all
@@ -391,8 +335,7 @@ correctly -- for example, if it is waiting for a reboot that you never perform.
 The following provisioner snippet shows how to deprovision a Linux VM.
 Deprovision should be the last operation executed by a build.
 
-<Tabs>
-<Tab heading="JSON">
+**JSON**
 
 ```json
 {
@@ -409,8 +352,7 @@ Deprovision should be the last operation executed by a build.
 }
 ```
 
-</Tab>
-<Tab heading="HCL2">
+**HCL2**
 
 ```hcl
 provisioner "shell" {
@@ -422,8 +364,6 @@ provisioner "shell" {
 }
 ```
 
-</Tab>
-</Tabs>
 
 To learn more about the Linux deprovision process please see WALinuxAgent's
 [README](https://github.com/Azure/WALinuxAgent/blob/master/README.md).
