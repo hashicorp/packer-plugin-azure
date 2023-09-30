@@ -20,7 +20,7 @@ jobs:
   secrets-check:
     runs-on: ubuntu-latest
     outputs:
-      available: "${{ steps.check-secrets.outputs.available }}"
+      available: ${{ steps.check-secrets.outputs.available }}
     steps:
       # we check for the ACTIONS_ID_TOKEN_REQUEST_URL variable as a proxy for other secrets
       # it will be unset when running for a PR from a fork
