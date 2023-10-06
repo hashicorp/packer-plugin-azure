@@ -20,6 +20,7 @@ const (
 	jsonIndent = "  "
 
 	resourceKeyVaults             = "Microsoft.KeyVault/vaults"
+	resourceKeyVaultSecret        = "Microsoft.KeyVault/vaults/secrets"
 	resourceNetworkInterfaces     = "Microsoft.Network/networkInterfaces"
 	resourcePublicIPAddresses     = "Microsoft.Network/publicIPAddresses"
 	resourceVirtualMachine        = "Microsoft.Compute/virtualMachines"
@@ -27,8 +28,6 @@ const (
 	resourceNetworkSecurityGroups = "Microsoft.Network/networkSecurityGroups"
 
 	variableSshKeyPath = "sshKeyPath"
-
-	communityGalleryApiVersion = "2021-07-01"
 )
 
 type TemplateBuilder struct {
@@ -127,12 +126,12 @@ func (s *TemplateBuilder) BuildWindows(communicatorType string, keyVaultName str
 }
 
 func (s *TemplateBuilder) SetSecretExpiry(exp int64) error {
-	resource, err := s.getResourceByType(resourceKeyVaults)
+	resource, err := s.getResourceByType(resourceKeyVaultSecret)
 	if err != nil {
 		return err
 	}
-	resources := *resource.Resources
-	resources[0].Properties.Attributes = &Attributes{
+
+	resource.Properties.Attributes = &Attributes{
 		Exp: exp,
 	}
 	return nil
@@ -147,7 +146,6 @@ func (s *TemplateBuilder) SetIdentity(userAssignedManagedIdentities []string) er
 	var id *Identity
 
 	if len(userAssignedManagedIdentities) != 0 {
-		s.setVariable("apiVersion", "2018-06-01") // Required for user assigned managed identity
 		id = &Identity{
 			Type:                   common.StringPtr("UserAssigned"),
 			UserAssignedIdentities: make(map[string]struct{}),
@@ -212,7 +210,6 @@ func (s *TemplateBuilder) SetSharedGalleryImage(location, imageID string, cachin
 		return err
 	}
 
-	s.setVariable("apiVersion", "2018-06-01") // Required for Shared Image Gallery
 	profile := resource.Properties.StorageProfile
 	profile.ImageReference = &hashiVMSDK.ImageReference{Id: &imageID}
 	profile.OsDisk.OsType = s.osType
@@ -228,7 +225,6 @@ func (s *TemplateBuilder) SetCommunityGalleryImage(location, imageID string, cac
 		return err
 	}
 
-	s.setVariable("apiVersion", communityGalleryApiVersion) // Required for Community Gallery Image
 	profile := resource.Properties.StorageProfile
 	profile.ImageReference = &hashiVMSDK.ImageReference{CommunityGalleryImageId: &imageID}
 	profile.OsDisk.OsType = s.osType
@@ -244,7 +240,6 @@ func (s *TemplateBuilder) SetDirectSharedGalleryImage(location, imageID string, 
 		return err
 	}
 
-	s.setVariable("apiVersion", communityGalleryApiVersion) // Required for DirectShared Gallery Image
 	profile := resource.Properties.StorageProfile
 	profile.ImageReference = &hashiVMSDK.ImageReference{SharedGalleryImageId: &imageID}
 	profile.OsDisk.OsType = s.osType
@@ -393,7 +388,6 @@ func (s *TemplateBuilder) SetCustomData(customData string) error {
 }
 
 func (s *TemplateBuilder) SetUserData(userData string) error {
-	s.setVariable("apiVersion", "2021-03-01") // Userdata value only added in this schema
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
@@ -519,7 +513,6 @@ func (s *TemplateBuilder) SetLicenseType(licenseType string) error {
 }
 
 func (s *TemplateBuilder) SetSecurityProfile(secureBootEnabled bool, vtpmEnabled bool, encryptionAtHost bool) error {
-	s.setVariable("apiVersion", "2020-12-01") // Required for Trusted Launch
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
@@ -626,7 +619,7 @@ func (s *TemplateBuilder) deleteResourceDependency(resource *Resource, predicate
 
 func (s *TemplateBuilder) createNsgResource(srcIpAddresses []string, port int) (*Resource, string, string) {
 	resource := &Resource{
-		ApiVersion: common.StringPtr("[variables('networkSecurityGroupsApiVersion')]"),
+		ApiVersion: common.StringPtr("[variables('networkApiVersion')]"),
 		Name:       common.StringPtr("[parameters('nsgName')]"),
 		Type:       common.StringPtr(resourceNetworkSecurityGroups),
 		Location:   common.StringPtr("[variables('location')]"),
@@ -666,7 +659,7 @@ func (s *TemplateBuilder) createNsgResource(srcIpAddresses []string, port int) (
 //  1. The SDK defines no types for a Key Vault
 //  2. The Key Vault template is relatively simple, and is static.
 const KeyVault = `{
-  "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json",
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
     "keyVaultName": {
@@ -675,25 +668,27 @@ const KeyVault = `{
     "keyVaultSKU": {
       "type": "string"
     },
+    "keyVaultSecretName": {
+      "type": "string"
+    },
     "keyVaultSecretValue": {
       "type": "securestring"
     },
     "objectId": {
-     "type": "string"
+      "type": "string"
     },
     "tenantId": {
       "type": "string"
     }
   },
   "variables": {
-    "apiVersion": "2015-06-01",
-    "location": "[resourceGroup().location]",
-    "keyVaultSecretName": "packerKeyVaultSecret"
+    "apiVersion": "2022-07-01",
+    "location": "[resourceGroup().location]"
   },
   "resources": [
     {
-      "apiVersion": "[variables('apiVersion')]",
       "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "[variables('apiVersion')]",
       "name": "[parameters('keyVaultName')]",
       "location": "[variables('location')]",
       "properties": {
@@ -706,8 +701,8 @@ const KeyVault = `{
             "tenantId": "[parameters('tenantId')]",
             "objectId": "[parameters('objectId')]",
             "permissions": {
-              "keys": [ "all" ],
-              "secrets": [ "all" ]
+              "keys": ["all"],
+              "secrets": ["all"]
             }
           }
         ],
@@ -715,26 +710,24 @@ const KeyVault = `{
           "name": "[parameters('keyVaultSKU')]",
           "family": "A"
         }
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "[variables('apiVersion')]",
+      "name": "[format('{0}/{1}', parameters('keyVaultName'), parameters('keyVaultSecretName'))]",
+      "properties": {
+        "value": "[parameters('keyVaultSecretValue')]"
       },
-      "resources": [
-        {
-          "apiVersion": "[variables('apiVersion')]",
-          "type": "secrets",
-          "name": "[variables('keyVaultSecretName')]",
-          "dependsOn": [
-            "[concat('Microsoft.KeyVault/vaults/', parameters('keyVaultName'))]"
-          ],
-          "properties": {
-            "value": "[parameters('keyVaultSecretValue')]"
-          }
-        }
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults/', parameters('keyVaultName'))]"
       ]
     }
   ]
 }`
 
 const BasicTemplate = `{
-  "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json",
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
     "adminUsername": {
@@ -782,13 +775,9 @@ const BasicTemplate = `{
   },
   "variables": {
     "addressPrefix": "10.0.0.0/16",
-    "apiVersion": "2021-11-01",
-    "managedDiskApiVersion": "2017-03-30",
-    "networkInterfacesApiVersion": "2017-04-01",
-    "publicIPAddressApiVersion": "2017-04-01",
-    "virtualNetworksApiVersion": "2017-04-01",
-    "networkSecurityGroupsApiVersion": "2019-04-01",
+    "computeApiVersion": "2023-03-01",
     "location": "[resourceGroup().location]",
+    "networkApiVersion": "2023-04-01",
     "publicIPAddressType": "Dynamic",
     "sshKeyPath": "[concat('/home/',parameters('adminUsername'),'/.ssh/authorized_keys')]",
     "subnetName": "[parameters('subnetName')]",
@@ -801,8 +790,8 @@ const BasicTemplate = `{
   },
   "resources": [
     {
-      "apiVersion": "[variables('publicIPAddressApiVersion')]",
       "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "[variables('networkApiVersion')]",
       "name": "[parameters('publicIPAddressName')]",
       "location": "[variables('location')]",
       "properties": {
@@ -813,8 +802,8 @@ const BasicTemplate = `{
       }
     },
     {
-      "apiVersion": "[variables('virtualNetworksApiVersion')]",
       "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "[variables('networkApiVersion')]",
       "name": "[variables('virtualNetworkName')]",
       "location": "[variables('location')]",
       "properties": {
@@ -834,8 +823,8 @@ const BasicTemplate = `{
       }
     },
     {
-      "apiVersion": "[variables('networkInterfacesApiVersion')]",
       "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "[variables('networkApiVersion')]",
       "name": "[parameters('nicName')]",
       "location": "[variables('location')]",
       "dependsOn": [
@@ -860,8 +849,8 @@ const BasicTemplate = `{
       }
     },
     {
-      "apiVersion": "[variables('apiVersion')]",
       "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "[variables('computeApiVersion')]",
       "name": "[parameters('vmName')]",
       "location": "[variables('location')]",
       "dependsOn": [
@@ -902,14 +891,14 @@ const BasicTemplate = `{
     },
     {
       "condition": "[not(empty(parameters('commandToExecute')))]",
-      "apiVersion": "2022-08-01",
-      "name": "[concat(parameters('vmName'), '/extension-customscript')]",
       "type": "Microsoft.Compute/virtualMachines/extensions",
+      "apiVersion": "[variables('computeApiVersion')]",
+      "name": "[concat(parameters('vmName'), '/extension-customscript')]",
       "location": "[variables('location')]",
       "properties": {
         "publisher": "Microsoft.Compute",
         "type": "CustomScriptExtension",
-        "typeHandlerVersion": "1.8",
+        "typeHandlerVersion": "1.10",
         "autoUpgradeMinorVersion": true,
         "settings": {
           "commandToExecute": "[parameters('commandToExecute')]"

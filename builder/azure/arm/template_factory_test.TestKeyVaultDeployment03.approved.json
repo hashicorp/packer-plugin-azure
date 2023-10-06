@@ -1,11 +1,14 @@
 {
-  "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json",
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
     "keyVaultName": {
       "type": "string"
     },
     "keyVaultSKU": {
+      "type": "string"
+    },
+    "keyVaultSecretName": {
       "type": "string"
     },
     "keyVaultSecretValue": {
@@ -47,30 +50,32 @@
         },
         "tenantId": "[parameters('tenantId')]"
       },
-      "resources": [
-        {
-          "apiVersion": "[variables('apiVersion')]",
-          "dependsOn": [
-            "[concat('Microsoft.KeyVault/vaults/', parameters('keyVaultName'))]"
-          ],
-          "name": "[variables('keyVaultSecretName')]",
-          "properties": {
-            "value": "[parameters('keyVaultSecretValue')]"
-          },
-          "type": "secrets"
-        }
-      ],
       "tags": {
         "tag01": "value01",
         "tag02": "value02",
         "tag03": "value03"
       },
       "type": "Microsoft.KeyVault/vaults"
+    },
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults/', parameters('keyVaultName'))]"
+      ],
+      "name": "[format('{0}/{1}', parameters('keyVaultName'), parameters('keyVaultSecretName'))]",
+      "properties": {
+        "value": "[parameters('keyVaultSecretValue')]"
+      },
+      "tags": {
+        "tag01": "value01",
+        "tag02": "value02",
+        "tag03": "value03"
+      },
+      "type": "Microsoft.KeyVault/vaults/secrets"
     }
   ],
   "variables": {
-    "apiVersion": "2015-06-01",
-    "keyVaultSecretName": "packerKeyVaultSecret",
+    "apiVersion": "2022-07-01",
     "location": "[resourceGroup().location]"
   }
 }

@@ -488,11 +488,15 @@ func (b *Builder) configureStateBag(stateBag multistep.StateBag) {
 	}
 
 	stateBag.Put(constants.ArmKeyVaultName, b.config.tmpKeyVaultName)
+	stateBag.Put(constants.ArmKeyVaultSecretName, DefaultSecretName)
 	stateBag.Put(constants.ArmIsExistingKeyVault, false)
 	if b.config.BuildKeyVaultName != "" {
 		stateBag.Put(constants.ArmKeyVaultName, b.config.BuildKeyVaultName)
 		b.config.tmpKeyVaultName = b.config.BuildKeyVaultName
 		stateBag.Put(constants.ArmIsExistingKeyVault, true)
+	}
+	if b.config.BuildKeyVaultSecretName != "" {
+		stateBag.Put(constants.ArmKeyVaultSecretName, b.config.BuildKeyVaultSecretName)
 	}
 
 	stateBag.Put(constants.ArmNicName, b.config.tmpNicName)

@@ -27,6 +27,7 @@ const (
 	ArmDeploymentName                                          string = "arm.DeploymentName"
 	ArmNicName                                                 string = "arm.NicName"
 	ArmKeyVaultName                                            string = "arm.KeyVaultName"
+	ArmKeyVaultSecretName                                      string = "arm.KeyVaultSecretName"
 	ArmLocation                                                string = "arm.Location"
 	ArmOSDiskUri                                               string = "arm.OSDiskUri"
 	ArmAdditionalDiskVhds                                      string = "arm.AdditionalDiskVhds"

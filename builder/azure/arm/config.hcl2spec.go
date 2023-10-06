@@ -67,6 +67,7 @@ type FlatConfig struct {
 	TempResourceGroupName                      *string                            `mapstructure:"temp_resource_group_name" cty:"temp_resource_group_name" hcl:"temp_resource_group_name"`
 	BuildResourceGroupName                     *string                            `mapstructure:"build_resource_group_name" cty:"build_resource_group_name" hcl:"build_resource_group_name"`
 	BuildKeyVaultName                          *string                            `mapstructure:"build_key_vault_name" cty:"build_key_vault_name" hcl:"build_key_vault_name"`
+	BuildKeyVaultSecretName                    *string                            `mapstructure:"build_key_vault_secret_name" cty:"build_key_vault_secret_name" hcl:"build_key_vault_secret_name"`
 	BuildKeyVaultSKU                           *string                            `mapstructure:"build_key_vault_sku" cty:"build_key_vault_sku" hcl:"build_key_vault_sku"`
 	DiskEncryptionSetId                        *string                            `mapstructure:"disk_encryption_set_id" cty:"disk_encryption_set_id" hcl:"disk_encryption_set_id"`
 	PrivateVirtualNetworkWithPublicIp          *bool                              `mapstructure:"private_virtual_network_with_public_ip" required:"false" cty:"private_virtual_network_with_public_ip" hcl:"private_virtual_network_with_public_ip"`
@@ -212,6 +213,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"temp_resource_group_name":                &hcldec.AttrSpec{Name: "temp_resource_group_name", Type: cty.String, Required: false},
 		"build_resource_group_name":               &hcldec.AttrSpec{Name: "build_resource_group_name", Type: cty.String, Required: false},
 		"build_key_vault_name":                    &hcldec.AttrSpec{Name: "build_key_vault_name", Type: cty.String, Required: false},
+		"build_key_vault_secret_name":             &hcldec.AttrSpec{Name: "build_key_vault_secret_name", Type: cty.String, Required: false},
 		"build_key_vault_sku":                     &hcldec.AttrSpec{Name: "build_key_vault_sku", Type: cty.String, Required: false},
 		"disk_encryption_set_id":                  &hcldec.AttrSpec{Name: "disk_encryption_set_id", Type: cty.String, Required: false},
 		"private_virtual_network_with_public_ip":  &hcldec.AttrSpec{Name: "private_virtual_network_with_public_ip", Type: cty.Bool, Required: false},

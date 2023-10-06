@@ -61,7 +61,8 @@ func (s *StepCertificateInKeyVault) Run(ctx context.Context, state multistep.Sta
 	var keyVaultName = state.Get(constants.ArmKeyVaultName).(string)
 	var subscriptionId = state.Get(constants.ArmSubscription).(string)
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
-	id := secrets.NewSecretID(subscriptionId, resourceGroupName, keyVaultName, DefaultSecretName)
+	var keyVaultSecretName = state.Get(constants.ArmKeyVaultSecretName).(string)
+	id := secrets.NewSecretID(subscriptionId, resourceGroupName, keyVaultName, keyVaultSecretName)
 	err := s.set(ctx, id)
 	if err != nil {
 		s.error(fmt.Errorf("Error setting winrm cert in custom keyvault: %s", err))
