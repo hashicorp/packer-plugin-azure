@@ -526,7 +526,9 @@ func (s *TemplateBuilder) SetSecurityProfile(secureBootEnabled bool, vtpmEnabled
 		resource.Properties.SecurityProfile.UefiSettings.SecureBootEnabled = common.BoolPtr(secureBootEnabled)
 		resource.Properties.SecurityProfile.UefiSettings.VTpmEnabled = common.BoolPtr(vtpmEnabled)
 	}
-	resource.Properties.SecurityProfile.EncryptionAtHost = encryptionAtHost
+	if encryptionAtHost != nil && *encryptionAtHost {
+		resource.Properties.SecurityProfile.EncryptionAtHost = encryptionAtHost
+	}
 
 	return nil
 }
