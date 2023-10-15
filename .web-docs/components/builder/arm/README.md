@@ -335,8 +335,10 @@ Providing `temp_resource_group_name` or `location` in combination with
 
 - `build_resource_group_name` (string) - Specify an existing resource group to run the build in.
 
-- `build_key_vault_name` (string) - Specify an existing key vault to use for uploading certificates to the
+- `build_key_vault_name` (string) - Specify an existing key vault to use for uploading the certificate for the
   instance to connect.
+
+- `build_key_vault_secret_name` (string) - Specify the secret name to use for the certificate created in the key vault.
 
 - `build_key_vault_sku` (string) - Specify the KeyVault SKU to create during the build. Valid values are
   standard or premium. The default value is standard.
@@ -526,7 +528,7 @@ Providing `temp_resource_group_name` or `location` in combination with
 
 - `secure_boot_enabled` (bool) - Specifies if Secure Boot and Trusted Launch is enabled for the Virtual Machine.
 
-- `encryption_at_host` (bool) - Specifies if Encryption at host is enabled for the Virtual Machine.
+- `encryption_at_host` (\*bool) - Specifies if Encryption at host is enabled for the Virtual Machine.
   Requires enabling encryption at host in the Subscription read more [here](https://learn.microsoft.com/en-us/azure/virtual-machines/disks-enable-host-based-encryption-portal?tabs=azure-powershell)
 
 - `vtpm_enabled` (bool) - Specifies if vTPM (virtual Trusted Platform Module) and Trusted Launch is enabled for the Virtual Machine.
