@@ -345,7 +345,7 @@ func TestAdditionalDiskArtifactString(t *testing.T) {
 	if !strings.Contains(testSubject, "OSType: Linux") {
 		t.Errorf("Expected String() output to contain OSType")
 	}
-	if !strings.Contains(testSubject, "AdditionalDiskUri (datadisk-1): https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/anothercontainername/anotherprefix-datadisk-1.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
+	if !strings.Contains(testSubject, "AdditionalDiskUri (datadisk-1): https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/anothercontainername/anotherprefix-datadisk-0.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
 		t.Errorf("Expected String() output to contain AdditionalDiskUri")
 	}
 }
@@ -394,8 +394,8 @@ func TestAdditionalDiskArtifactProperties(t *testing.T) {
 	if len(*testSubject.AdditionalDisks) != 1 {
 		t.Errorf("Expected AdditionalDisks to have one additional disk, but got %d", len(*testSubject.AdditionalDisks))
 	}
-	if (*testSubject.AdditionalDisks)[0].AdditionalDiskUri != "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-datadisk-1.4085bb15-3644-4641-b9cd-f575918640b4.vhd" {
-		t.Errorf("Expected additional disk uri to be 'https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-datadisk-1.4085bb15-3644-4641-b9cd-f575918640b4.vhd', but got %s", (*testSubject.AdditionalDisks)[0].AdditionalDiskUri)
+	if (*testSubject.AdditionalDisks)[0].AdditionalDiskUri != "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-datadisk-0.4085bb15-3644-4641-b9cd-f575918640b4.vhd" {
+		t.Errorf("Expected additional disk uri to be 'https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-datadisk-0.4085bb15-3644-4641-b9cd-f575918640b4.vhd', but got %s", (*testSubject.AdditionalDisks)[0].AdditionalDiskUri)
 	}
 }
 

@@ -101,7 +101,7 @@ func NewArtifact(vmInternalID string, captureContainerPrefix string, captureCont
 	if additionalDiskCount > 0 {
 		data_disks := make([]AdditionalDiskArtifact, additionalDiskCount)
 		for i := 0; i < additionalDiskCount; i++ {
-			data_disks[i].AdditionalDiskUri = fmt.Sprintf("%ssystem/Microsoft.Compute/Images/%s/%s-datadisk-%d.%s.vhd", storageAccountUrl, captureContainerName, captureContainerPrefix, i+1, vmInternalID)
+			data_disks[i].AdditionalDiskUri = fmt.Sprintf("%ssystem/Microsoft.Compute/Images/%s/%s-datadisk-%d.%s.vhd", storageAccountUrl, captureContainerName, captureContainerPrefix, i, vmInternalID)
 		}
 		additional_disks = &data_disks
 	}
