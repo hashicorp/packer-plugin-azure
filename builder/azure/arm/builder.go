@@ -422,6 +422,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	ui.Say(fmt.Sprintf("%d", len(b.config.AdditionalDiskSize)))
 	return NewArtifact(
 		b.stateBag.Get(constants.ArmBuildVMInternalId).(string),
+		b.config.CaptureNamePrefix,
+		b.config.CaptureContainerName,
 		b.config.storageAccountBlobEndpoint,
 		b.config.StorageAccount,
 		b.config.OSType,

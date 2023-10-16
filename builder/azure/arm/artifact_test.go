@@ -17,7 +17,7 @@ func generatedData() map[string]interface{} {
 }
 
 func TestArtifactIdVHD(t *testing.T) {
-	artifact, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 0, generatedData())
+	artifact, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "packer", "images", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 0, generatedData())
 	if err != nil {
 		t.Fatalf("err=%s", err)
 	}
@@ -306,7 +306,7 @@ SharedImageGalleryReplicatedRegions: fake-region-1, fake-region-2
 }
 
 func TestArtifactString(t *testing.T) {
-	artifact, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 0, generatedData())
+	artifact, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "packer", "images", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 0, generatedData())
 	if err != nil {
 		t.Fatalf("err=%s", err)
 	}
@@ -327,7 +327,7 @@ func TestArtifactString(t *testing.T) {
 }
 
 func TestAdditionalDiskArtifactString(t *testing.T) {
-	artifact, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 1, generatedData())
+	artifact, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "packer", "images", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 1, generatedData())
 	if err != nil {
 		t.Fatalf("err=%s", err)
 	}
@@ -351,7 +351,7 @@ func TestAdditionalDiskArtifactString(t *testing.T) {
 }
 
 func TestArtifactProperties(t *testing.T) {
-	testSubject, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 0, generatedData())
+	testSubject, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "packer", "images", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 0, generatedData())
 	if err != nil {
 		t.Fatalf("err=%s", err)
 	}
@@ -371,7 +371,7 @@ func TestArtifactProperties(t *testing.T) {
 }
 
 func TestAdditionalDiskArtifactProperties(t *testing.T) {
-	testSubject, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 1, generatedData())
+	testSubject, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "packer", "images", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 1, generatedData())
 	if err != nil {
 		t.Fatalf("err=%s", err)
 	}
