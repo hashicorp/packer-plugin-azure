@@ -746,3 +746,37 @@ func TestTrustedLaunch01(t *testing.T) {
 
 	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
+
+func TestEncryptionAtHost01(t *testing.T) {
+	m := getArmBuilderConfiguration()
+	m["encryption_at_host"] = "true"
+
+	var c Config
+	_, err := c.Prepare(m, getPackerConfiguration(), getPackerSSHPasswordCommunicatorConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+func TestEncryptionAtHost02(t *testing.T) {
+	m := getArmBuilderConfiguration()
+	m["encryption_at_host"] = "false"
+
+	var c Config
+	_, err := c.Prepare(m, getPackerConfiguration(), getPackerSSHPasswordCommunicatorConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}

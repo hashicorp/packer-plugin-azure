@@ -143,13 +143,7 @@
             }
           }
         },
-        "securityProfile": {
-          "securityType": "TrustedLaunch",
-          "uefiSettings": {
-            "secureBootEnabled": true,
-            "vTpmEnabled": true
-          }
-        },
+        "securityProfile": {},
         "storageProfile": {
           "imageReference": {
             "offer": "ignored00",

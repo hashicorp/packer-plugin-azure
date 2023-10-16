@@ -284,7 +284,7 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 		}
 	}
 
-	if config.SecureBootEnabled || config.VTpmEnabled || config.EncryptionAtHost {
+	if config.SecureBootEnabled || config.VTpmEnabled || config.EncryptionAtHost != nil {
 		err = builder.SetSecurityProfile(config.SecureBootEnabled, config.VTpmEnabled, config.EncryptionAtHost)
 		if err != nil {
 			return nil, err
