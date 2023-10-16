@@ -6,7 +6,7 @@
 # And add the repository and branch
 # Then set the relevant subscription/client IDs in GitHub Action secrets and you're good to go
 # More detailed instrucitons for configuring GHA Azure OIDC Authentication are available here https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-azure
-name: OIDC Example - Testing OIDC integration in the SDK branch
+name: OIDC Acceptance Test
 on:
   push:
     branches:
