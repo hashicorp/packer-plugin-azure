@@ -327,16 +327,16 @@ func TestArtifactString(t *testing.T) {
 }
 
 func TestAdditionalDiskArtifactString(t *testing.T) {
-	artifact, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "packer", "images", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 1, generatedData())
+	artifact, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "anotherprefix", "anothercontainername", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 1, generatedData())
 	if err != nil {
 		t.Fatalf("err=%s", err)
 	}
 
 	testSubject := artifact.String()
-	if !strings.Contains(testSubject, "OSDiskUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
+	if !strings.Contains(testSubject, "OSDiskUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/anothercontainername/anotherprefix-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
 		t.Errorf("Expected String() output to contain OSDiskUri")
 	}
-	if !strings.Contains(testSubject, "TemplateUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json") {
+	if !strings.Contains(testSubject, "TemplateUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/anothercontainername/anotherprefix-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json") {
 		t.Errorf("Expected String() output to contain TemplateUri")
 	}
 	if !strings.Contains(testSubject, "StorageAccountLocation: southcentralus") {
@@ -345,7 +345,7 @@ func TestAdditionalDiskArtifactString(t *testing.T) {
 	if !strings.Contains(testSubject, "OSType: Linux") {
 		t.Errorf("Expected String() output to contain OSType")
 	}
-	if !strings.Contains(testSubject, "AdditionalDiskUri (datadisk-1): https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-datadisk-1.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
+	if !strings.Contains(testSubject, "AdditionalDiskUri (datadisk-1): https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/anothercontainername/anotherprefix-datadisk-1.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
 		t.Errorf("Expected String() output to contain AdditionalDiskUri")
 	}
 }
