@@ -92,16 +92,16 @@ func NewSharedImageArtifact(osType, destinationSharedImageGalleryId string, loca
 	}, nil
 }
 
-func NewArtifact(vmInternalID string, storageAccountUrl string, storageAccountLocation string, osType string, additionalDiskCount int, generatedData map[string]interface{}) (*Artifact, error) {
-	vhdUri := fmt.Sprintf("%ssystem/Microsoft.Compute/Images/images/packer-osDisk.%s.vhd", storageAccountUrl, vmInternalID)
+func NewArtifact(vmInternalID string, captureContainerPrefix string, captureContainerName string, storageAccountUrl string, storageAccountLocation string, osType string, additionalDiskCount int, generatedData map[string]interface{}) (*Artifact, error) {
+	vhdUri := fmt.Sprintf("%ssystem/Microsoft.Compute/Images/%s/%s-osDisk.%s.vhd", storageAccountUrl, captureContainerName, captureContainerPrefix, vmInternalID)
 
-	templateUri := fmt.Sprintf("%ssystem/Microsoft.Compute/Images/images/packer-vmTemplate.%s.json", storageAccountUrl, vmInternalID)
+	templateUri := fmt.Sprintf("%ssystem/Microsoft.Compute/Images/%s/%s-vmTemplate.%s.json", storageAccountUrl, captureContainerName, captureContainerPrefix, vmInternalID)
 
 	var additional_disks *[]AdditionalDiskArtifact
 	if additionalDiskCount > 0 {
 		data_disks := make([]AdditionalDiskArtifact, additionalDiskCount)
 		for i := 0; i < additionalDiskCount; i++ {
-			data_disks[i].AdditionalDiskUri = fmt.Sprintf("%ssystem/Microsoft.Compute/Images/images/packer-datadisk-%d.%s.vhd", storageAccountUrl, i+1, vmInternalID)
+			data_disks[i].AdditionalDiskUri = fmt.Sprintf("%ssystem/Microsoft.Compute/Images/%s/%s-datadisk-%d.%s.vhd", storageAccountUrl, captureContainerName, captureContainerPrefix, i, vmInternalID)
 		}
 		additional_disks = &data_disks
 	}
