@@ -235,7 +235,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		// We should remove this logic builder and handle this logic via the `Step` pattern
 		if b.config.SharedGalleryDestination.SigDestinationUseShallowReplicationMode {
 			if len(normalizedReplicationRegions) != 1 || !foundMandatoryReplicationRegion {
-				return nil, fmt.Errorf("when `use_shallow_replication` is set the build region (from `location` or `build_resource_group_name`) can only be region set in `replicated_regions`")
+				return nil, fmt.Errorf("when `use_shallow_replication` is enabled the value of `replicated_regions` must match the build region specified by `location` or match the region of`build_resource_group_name`. ")
 			}
 		}
 		b.stateBag.Put(constants.ArmManagedImageSharedGalleryReplicationRegions, b.config.SharedGalleryDestination.SigDestinationReplicationRegions)

@@ -1312,7 +1312,7 @@ func TestConfigShouldRejectShallowReplicationWithInvalidReplicationCount(t *test
 	}
 }
 
-func TestConfigShouldAcceptShallowReplicationWithWithSetReplicaCount(t *testing.T) {
+func TestConfigShouldAcceptShallowReplicationWithReplicaCount(t *testing.T) {
 	config := map[string]interface{}{
 		"image_offer":                        "ignore",
 		"image_publisher":                    "ignore",
