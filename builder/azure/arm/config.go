@@ -1268,7 +1268,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 				c.SharedGalleryImageVersionReplicaCount = 1
 			}
 
-			if c.SharedGalleryImageVersionReplicaCount > 1 {
+			if c.SharedGalleryImageVersionReplicaCount != 1 {
 				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("When using shallow replication the replica count can only be 1, leaving this value unset will default to 1"))
 			}
 		}
