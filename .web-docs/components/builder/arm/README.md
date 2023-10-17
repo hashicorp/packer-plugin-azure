@@ -229,7 +229,7 @@ Providing `temp_resource_group_name` or `location` in combination with
 
 - `shared_image_gallery_replica_count` (int64) - The number of replicas of the Image Version to be created per region.
   Replica count must be between 1 and 100, but 50 replicas should be sufficient for most use cases.
-  This value can only be 1 when using shallow replication
+  When using shallow replication `use_shallow_replication=true` the value can only be 1.
 
 - `shared_gallery_image_version_exclude_from_latest` (bool) - If set to true, Virtual Machines deployed from the latest version of the
   Image Definition won't use this Image Version.
@@ -648,9 +648,7 @@ The shared_image_gallery_destination block is available for publishing a new ima
 
 - `specialized` (bool) - Set to true if publishing to a Specialized Gallery, this skips a call to set the build VM's OS state as Generalized
 
-- `use_shallow_replication` (bool) - Set to true to set the replication mode to shallow, which will publish the image version without replication.
-  This option results in a faster build but this image version's replication count and regions can not be updated after build when using shallow replication.
-  Setting a `shared_image_gallery_replica_count` or any `replication_regions` is unneccesary for shallow builds, as they can only be replicated to the build region, and must have a replica count of 1
+- `use_shallow_replication` (bool) - Setting a `shared_image_gallery_replica_count` or any `replication_regions` is unnecessary for shallow builds, as they can only replicate to the build region and must have a replica count of 1
   Refer to [Shallow Replication](https://learn.microsoft.com/en-us/azure/virtual-machines/shared-image-galleries?tabs=azure-cli#shallow-replication) for details on when to use shallow replication mode.
 
 <!-- End of code generated from the comments of the SharedImageGalleryDestination struct in builder/azure/arm/config.go; -->
