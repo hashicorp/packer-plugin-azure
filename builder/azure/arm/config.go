@@ -1263,13 +1263,14 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		if c.SharedGalleryDestination.SigDestinationSubscription == "" {
 			c.SharedGalleryDestination.SigDestinationSubscription = c.ClientConfig.SubscriptionID
 		}
+		if c.SharedGalleryDestination.SigDestinationUseShallowReplicationMode {
+			if c.SharedGalleryImageVersionReplicaCount == 0 {
+				c.SharedGalleryImageVersionReplicaCount = 1
+			}
 
-		if c.SharedGalleryDestination.SigDestinationUseShallowReplicationMode && c.SharedGalleryImageVersionReplicaCount == 0 {
-			c.SharedGalleryImageVersionReplicaCount = 1
-		}
-
-		if c.SharedGalleryImageVersionReplicaCount > 1 {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("When using shallow replication the replica count can only be 1, leaving this value unset will default to 1"))
+			if c.SharedGalleryImageVersionReplicaCount > 1 {
+				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("When using shallow replication the replica count can only be 1, leaving this value unset will default to 1"))
+			}
 		}
 	}
 	if c.SharedGalleryTimeout == 0 {
