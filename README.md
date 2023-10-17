@@ -19,7 +19,7 @@ Then, run [`packer init`](https://www.packer.io/docs/commands/init).
 packer {
   required_plugins {
     azure = {
-      version = ">= 2.0.0"
+      version = ">= 2.0.1"
       source  = "github.com/hashicorp/azure"
     }
   }
