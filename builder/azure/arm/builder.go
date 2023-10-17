@@ -213,21 +213,30 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			return nil, fmt.Errorf("a gallery image version for image name:version %s:%s already exists in gallery %s", b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationGalleryName)
 		}
 
-		// SIG requires that replication regions include the region in which the Managed Image resides
-		managedImageLocation := normalizeAzureRegion(b.stateBag.Get(constants.ArmLocation).(string))
+		// SIG requires that replication regions include the region in which the created image version resides
+		buildLocation := normalizeAzureRegion(b.stateBag.Get(constants.ArmLocation).(string))
 		foundMandatoryReplicationRegion := false
 		var normalizedReplicationRegions []string
 		for _, region := range b.config.SharedGalleryDestination.SigDestinationReplicationRegions {
 			// change region to lower-case and strip spaces
 			normalizedRegion := normalizeAzureRegion(region)
 			normalizedReplicationRegions = append(normalizedReplicationRegions, normalizedRegion)
-			if strings.EqualFold(normalizedRegion, managedImageLocation) {
+			if strings.EqualFold(normalizedRegion, buildLocation) {
 				foundMandatoryReplicationRegion = true
 				continue
 			}
 		}
 		if foundMandatoryReplicationRegion == false {
-			b.config.SharedGalleryDestination.SigDestinationReplicationRegions = append(normalizedReplicationRegions, managedImageLocation)
+			b.config.SharedGalleryDestination.SigDestinationReplicationRegions = append(normalizedReplicationRegions, buildLocation)
+		}
+		// TODO It would be better if validation could be handled in a central location
+		// Currently we rely on the build Resource Group being queried if used to get the build location
+		// So we have to do this validation afterwards
+		// We should remove this logic builder and handle this logic via the `Step` pattern
+		if b.config.SharedGalleryDestination.SigDestinationUseShallowReplicationMode {
+			if len(b.config.SharedGalleryDestination.SigDestinationReplicationRegions) != 1 {
+				return nil, fmt.Errorf("when `use_shallow_replication` is enabled the value of `replicated_regions` must match the build region specified by `location` or match the region of `build_resource_group_name`.")
+			}
 		}
 		b.stateBag.Put(constants.ArmManagedImageSharedGalleryReplicationRegions, b.config.SharedGalleryDestination.SigDestinationReplicationRegions)
 	}
@@ -534,6 +543,7 @@ func (b *Builder) configureStateBag(stateBag multistep.StateBag) {
 		stateBag.Put(constants.ArmManagedImageSharedGalleryImageVersion, b.config.SharedGalleryDestination.SigDestinationImageVersion)
 		stateBag.Put(constants.ArmManagedImageSharedGalleryImageVersionStorageAccountType, b.config.SharedGalleryDestination.SigDestinationStorageAccountType)
 		stateBag.Put(constants.ArmSharedImageGalleryDestinationSpecialized, b.config.SharedGalleryDestination.SigDestinationSpecialized)
+		stateBag.Put(constants.ArmSharedImageGalleryDestinationShallowReplication, b.config.SharedGalleryDestination.SigDestinationUseShallowReplicationMode)
 		stateBag.Put(constants.ArmManagedImageSubscription, b.config.ClientConfig.SubscriptionID)
 		stateBag.Put(constants.ArmManagedImageSharedGalleryImageVersionEndOfLifeDate, b.config.SharedGalleryImageVersionEndOfLifeDate)
 		stateBag.Put(constants.ArmManagedImageSharedGalleryImageVersionReplicaCount, b.config.SharedGalleryImageVersionReplicaCount)
