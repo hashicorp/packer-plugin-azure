@@ -3,6 +3,10 @@
 
 locals { timestamp = regex_replace(timestamp(), "[- TZ:]", "") }
 
+variable "resource_group_name" {
+  default = "${env("ARM_RESOURCE_GROUP_NAME")}"
+  type    = string
+}
 source "azure-arm" "windows-sig" {
   communicator       = "winrm"
   winrm_timeout      = "5m"
@@ -14,10 +18,10 @@ source "azure-arm" "windows-sig" {
     image_name     = "windows-sig"
     gallery_name   = "acctestgallery"
     image_version  = "1.0.0"
-    resource_group = "packer-acceptance-test"
+    resource_group = var.resource_group_name
   }
   managed_image_name                = "packer-test-windows-sig-${local.timestamp}"
-  managed_image_resource_group_name = "packer-acceptance-test"
+  managed_image_resource_group_name = var.resource_group_name
 
   os_type         = "Windows"
   image_publisher = "MicrosoftWindowsServer"

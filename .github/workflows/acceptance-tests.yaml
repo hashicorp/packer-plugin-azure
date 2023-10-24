@@ -1,0 +1,107 @@
+# taken and modified from https://github.com/hashicorp/go-azure-sdk/blob/main/.github/workflows/pr-acceptance-tests.yml
+# This test requires creating a GitHub OIDC app registration
+# First create an Azure Application Registration
+# Then in `Certificates & secrets` add Federated Credentials
+# select GitHub Actions deploying Azure Resources
+# And add the repository and branch
+# Then set the relevant subscription/client IDs in GitHub Action secrets and you're good to go
+# More detailed instrucitons for configuring GHA Azure OIDC Authentication are available here https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-azure
+name: Acceptance Tests
+on:
+  push:
+    branches:
+    - main
+    - acceptance-tests-terraform
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  secrets-check:
+    runs-on: ubuntu-latest
+    outputs:
+      available: ${{ steps.check-secrets.outputs.available }}
+    steps:
+      # we check for the ACTIONS_ID_TOKEN_REQUEST_URL variable as a proxy for other secrets
+      # it will be unset when running for a PR from a fork
+      - id: check-secrets
+        run: |
+          if [[ "${ACTIONS_ID_TOKEN_REQUEST_URL}" == "" ]]; then
+            echo "available=false" | tee ${GITHUB_OUTPUT}
+          else
+            echo "available=true" | tee ${GITHUB_OUTPUT}
+          fi
+
+  acceptance-tests:
+    runs-on: ubuntu-latest
+    needs: [secrets-check]
+    if: needs.secrets-check.outputs.available == 'true'
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+        with:
+          go-version: '1.19.5'
+
+      - name: Checkout
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      
+      - name: Setup `terraform`
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Run `terraform init` to download Azure Provider
+        run: terraform init
+        working-directory: ./terraform
+     
+      - name: Setup `packer`
+        uses: hashicorp/setup-packer@main
+        id: setup
+
+      - name: Build the plugin
+        run:  make
+      
+      - name: Login to Azure CLI
+        run: az login --output none --tenant="${{ secrets.ARM_TENANT_ID}}" --username="${{ secrets.ARM_CLIENT_ID}}" --password="${{ secrets.ARM_CLIENT_SECRET}}" --service-principal
+        
+      - name: Create SSH Certificate and set envrionment variable for it # Used for Linux specialized ancestry test, so parent and child have to share the same login method
+        run: ssh-keygen -m PEM -t rsa -b 4096 -f example.pem -N '' && echo "ARM_SSH_PRIVATE_KEY_FILE=$(pwd)/example.pem" >> $GITHUB_ENV
+      
+
+      - name: Run `terraform apply` to create resources for acceptance tests
+        working-directory: ./terraform
+        run: terraform apply -auto-approve
+
+      - name: Run Acceptance Tests
+        run:  make testacc
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID}}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET}}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID}}
+          ARM_RESOURCE_GROUP_NAME: "packer-acceptance-test"
+          ARM_STORAGE_ACCOUNT: "packeracctest"
+          AZURE_CLI_AUTH: "1"
+
+      - name: Run `terraform destroy` after test
+        working-directory: ./terraform
+        if: ${{ always() }} # Regardless of failure or cancelation, run terraform destroy
+        run: terraform destroy -auto-approve
+     
+      # Try and upload logs
+      - run: zip arm_failure_logs.zip builder/azure/arm/packer_*txt
+        if: ${{ failure() }}
+      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        if: ${{ failure() }}
+        with:
+          name: "arm_failure_logs.zip"
+          path: "arm_failure_logs.zip"
+          retention-days: 1
+
+      - run: zip dtl_failure_logs.zip builder/azure/dtl/packer_*txt
+        if: ${{ failure() }}
+      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        if: ${{ failure() }}
+        with:
+          name: "dtl_failure_logs.zip"
+          path: "dtl_failure_logs.zip"
+          retention-days: 1
+

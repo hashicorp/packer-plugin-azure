@@ -3,13 +3,12 @@
 
 package dtl
 
-// these tests require the following variables to be set,
-// although some test will only use a subset:
-//
+// Required environment variables
 // * ARM_CLIENT_ID
 // * ARM_CLIENT_SECRET
 // * ARM_SUBSCRIPTION_ID
-// * ARM_OBJECT_ID
+// * ARM_TENANT_ID
+// * ARM_RESOURCE_GROUP_NAME
 //
 // The subscription in question should have a resource group
 // called "packer-acceptance-test" in "South Central US" region.
@@ -33,11 +32,13 @@ import (
 	"os/exec"
 	"testing"
 
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 )
 
 func TestDTLBuilderAcc_ManagedDisk_Windows(t *testing.T) {
 	t.Parallel()
+	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{})
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-managedisk-windows",
 		Type:     "azure-dtl",
@@ -54,6 +55,7 @@ func TestDTLBuilderAcc_ManagedDisk_Windows(t *testing.T) {
 }
 func TestDTLBuilderAcc_ManagedDisk_Linux_Artifacts(t *testing.T) {
 	t.Parallel()
+	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{})
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-managedisk-linux",
 		Type:     "azure-dtl",
@@ -75,6 +77,7 @@ const testBuilderAccManagedDiskWindows = `
 	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
 	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
 	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}",
+	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}",
 	  "tenant_id": "{{env ` + "`ARM_TENANT_ID`" + `}}"
 	},
 	"builders": [{
@@ -85,10 +88,10 @@ const testBuilderAccManagedDiskWindows = `
 	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
 	  "tenant_id": "{{user ` + "`tenant_id`" + `}}",
 
-      "lab_name": "packer-acceptance-test",
-	  "lab_resource_group_name":  "packer-acceptance-test",
+	  "lab_name": "packer-acceptance-test",
+	  "lab_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
 	  "lab_virtual_network_name": "dtlpacker-acceptance-test",
-	  "managed_image_resource_group_name": "packer-acceptance-test",
+	  "managed_image_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
 	  "managed_image_name": "testBuilderAccManagedDiskWindows-{{timestamp}}",
 
 	  "os_type": "Windows",
@@ -114,6 +117,7 @@ const testBuilderAccManagedDiskLinux = `
 	"variables": {
 	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
 	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
+	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}",
 	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}",
 	  "tenant_id": "{{env ` + "`ARM_TENANT_ID`" + `}}"
 	},
@@ -124,11 +128,11 @@ const testBuilderAccManagedDiskLinux = `
 	  "client_secret": "{{user ` + "`client_secret`" + `}}",
 	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
 
+	  "lab_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
 	  "lab_name": "packer-acceptance-test",
-	  "lab_resource_group_name":  "packer-acceptance-test",
 	  "lab_virtual_network_name": "dtlpacker-acceptance-test",
 
-	  "managed_image_resource_group_name": "packer-acceptance-test",
+	  "managed_image_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
 	  "managed_image_name": "testBuilderAccManagedDiskLinux-{{timestamp}}",
 
 	  "os_type": "Linux",

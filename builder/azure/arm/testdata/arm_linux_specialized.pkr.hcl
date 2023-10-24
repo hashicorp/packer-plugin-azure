@@ -6,7 +6,10 @@ variable "ssh_private_key_location" {
   default = "${env("ARM_SSH_PRIVATE_KEY_FILE")}"
   type    = string
 }
-
+variable "resource_group_name" {
+  default = "${env("ARM_RESOURCE_GROUP_NAME")}"
+  type    = string
+}
 source "azure-arm" "linux-sig" {
   image_offer          = "0001-com-ubuntu-server-jammy"
   image_publisher      = "canonical"
@@ -21,7 +24,7 @@ source "azure-arm" "linux-sig" {
     image_name              = "arm-linux-specialized-sig"
     gallery_name            = "acctestgallery"
     image_version           = "1.0.0"
-    resource_group          = "packer-acceptance-test"
+    resource_group          = var.resource_group_name
     specialized             = true
     use_shallow_replication = true
   }
