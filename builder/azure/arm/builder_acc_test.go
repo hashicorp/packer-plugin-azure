@@ -40,6 +40,11 @@ import (
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
+// TODO Add support for variable files with the acceptance testing module in packer-plugin-sdk
+// This will allow easier setting of default values for resource group name, storage account, DTL, and gallery name
+// To allow running in parallel tests in the same subscription
+// Currently this will fail since image gallery's have to be uniquely named within their subscription and not just their resource group
+
 // This test builds two images,
 // First a parent Specialized ARM 64 Linux VM to a Shared Image Gallery/Compute Gallery
 // Then a second Specialized ARM64 Linux VM that uses the first as its source/parent image

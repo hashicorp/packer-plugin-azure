@@ -10,17 +10,9 @@ package dtl
 // * ARM_TENANT_ID
 // * ARM_RESOURCE_GROUP_NAME
 //
-// The subscription in question should have a resource group
-// called "packer-acceptance-test" in "South Central US" region.
-// This also requires a Devtest lab to be created with "packer-acceptance-test"
-// name in "South Central US region. This can be achieved using the following
-// az cli commands "
-// az group create --name packer-acceptance-test --location "South Central US"
-// az deployment group create \
-//  --name ExampleDeployment \
-//  --resource-group packer-acceptance-test \
-//  --template-file acceptancetest.json \
-
+// Your resource group should be the South Central US region
+// This test also requires a DTL (Dev Test Lab) named `packer_acceptance_test`
+// This can be created using the terraform config in the `terraform` folder at the root of this repo
 // In addition, the PACKER_ACC variable should also be set to
 // a non-empty value to enable Packer acceptance tests and the
 // options "-v -timeout 90m" should be provided to the test
