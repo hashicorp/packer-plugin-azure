@@ -1,11 +1,4 @@
-# taken and modified from https://github.com/hashicorp/go-azure-sdk/blob/main/.github/workflows/pr-acceptance-tests.yml
-# This test requires creating a GitHub OIDC app registration
-# First create an Azure Application Registration
-# Then in `Certificates & secrets` add Federated Credentials
-# select GitHub Actions deploying Azure Resources
-# And add the repository and branch
-# Then set the relevant subscription/client IDs in GitHub Action secrets and you're good to go
-# More detailed instrucitons for configuring GHA Azure OIDC Authentication are available here https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-azure
+# This workflow creates the required Azure resources using Terraform for running the Packer Azure plugin acceptance tests for the ARM and DTL Builders
 name: Acceptance Tests
 on:
   push:
