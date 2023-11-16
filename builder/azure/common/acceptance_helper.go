@@ -9,7 +9,6 @@ import (
 type CheckAcceptanceTestEnvVarsParams struct {
 	CheckAzureCLI          bool
 	CheckSSHPrivateKeyFile bool
-	CheckTenantID          bool
 }
 
 func CheckAcceptanceTestEnvVars(t *testing.T, params CheckAcceptanceTestEnvVarsParams) {
@@ -43,10 +42,6 @@ func CheckAcceptanceTestEnvVars(t *testing.T, params CheckAcceptanceTestEnvVarsP
 		t.Fatalf("Test %s requires environment variable ARM_SSH_PRIVATE_KEY_FILE is set", t.Name())
 		return
 	}
-	if params.CheckTenantID && os.Getenv("ARM_TENANT_ID") == "" {
-		t.Fatalf("Test %s requires environment variable ARM_TENANT_ID is set", t.Name())
-		return
-	}
 }
 
 func loggedIntoAzureCLI(t *testing.T) bool {
@@ -58,8 +53,5 @@ func loggedIntoAzureCLI(t *testing.T) bool {
 			"output: \n%s", err, string(commandStdout))
 	}
 
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }

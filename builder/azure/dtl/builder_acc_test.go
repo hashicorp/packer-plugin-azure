@@ -7,7 +7,6 @@ package dtl
 // * ARM_CLIENT_ID
 // * ARM_CLIENT_SECRET
 // * ARM_SUBSCRIPTION_ID
-// * ARM_TENANT_ID
 // * ARM_RESOURCE_GROUP_NAME
 //
 // Your resource group should be the South Central US region
@@ -69,8 +68,7 @@ const testBuilderAccManagedDiskWindows = `
 	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
 	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
 	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}",
-	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}",
-	  "tenant_id": "{{env ` + "`ARM_TENANT_ID`" + `}}"
+	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}"
 	},
 	"builders": [{
 	  "type": "azure-dtl",
@@ -78,7 +76,6 @@ const testBuilderAccManagedDiskWindows = `
 	  "client_id": "{{user ` + "`client_id`" + `}}",
 	  "client_secret": "{{user ` + "`client_secret`" + `}}",
 	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
-	  "tenant_id": "{{user ` + "`tenant_id`" + `}}",
 
 	  "lab_name": "packer-acceptance-test",
 	  "lab_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
@@ -110,8 +107,7 @@ const testBuilderAccManagedDiskLinux = `
 	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
 	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
 	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}",
-	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}",
-	  "tenant_id": "{{env ` + "`ARM_TENANT_ID`" + `}}"
+	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}"
 	},
 	"builders": [{
 	  "type": "azure-dtl",
