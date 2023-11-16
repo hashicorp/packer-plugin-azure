@@ -22,7 +22,7 @@ package arm
 // ** ARM_SSH_PRIVATE_KEY_FILE - the file location of a PEM encoded RSA SSH Private Key (ed25519 is not supported by Azure),
 // ** PACKER_ACC - set to any non 0 value
 //
-// It is reccomended to run the tests with the options "-v -timeout 90m"
+// It is recommended to run the tests with the options "-v -timeout 90m"
 // command, e.g.:
 //   go test -v -timeout 90m -run TestBuilderAcc_.*
 // This is to avoid hitting the default go test timeout, especially in the shared image gallery test
