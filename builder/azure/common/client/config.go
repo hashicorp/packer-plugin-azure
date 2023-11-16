@@ -163,15 +163,6 @@ func (c Config) Validate(errs *packersdk.MultiError) {
 	/////////////////////////////////////////////
 	// Authentication via OAUTH
 
-	// Check if device login is being asked for, and is allowed.
-	//
-	// Device login is enabled if the user only defines SubscriptionID and not
-	// ClientID, ClientSecret, and TenantID.
-	//
-	// Device login is not enabled for Windows because the WinRM certificate is
-	// readable by the ObjectID of the App.  There may be another way to handle
-	// this case, but I am not currently aware of it - send feedback.
-
 	if c.UseCLI() {
 		return
 	}

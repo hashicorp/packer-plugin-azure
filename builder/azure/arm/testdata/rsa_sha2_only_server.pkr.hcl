@@ -20,7 +20,7 @@ source "azure-arm" "ubuntu2204" {
   subscription_id = var.subscription_id
   client_id       = var.client_id
 
-  client_secret   = var.client_secret
+  client_secret = var.client_secret
 
   managed_image_resource_group_name = var.resource_group
   managed_image_name                = "ubuntu-jammay-server-test-${local.timestamp}"
@@ -37,7 +37,7 @@ source "azure-arm" "ubuntu2204" {
 build {
   sources = ["source.azure-arm.ubuntu2204"]
   provisioner "shell" {
-    inline          = ["uname -a"]
+    inline = ["uname -a"]
   }
 }
 

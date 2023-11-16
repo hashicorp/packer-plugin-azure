@@ -13,6 +13,11 @@ variable "ssh_private_key_location" {
   type    = string
 }
 
+variable "resource_group_name" {
+  default = "${env("ARM_RESOURCE_GROUP_NAME")}"
+  type    = string
+}
+
 source "azure-arm" "linux-sig" {
   use_azure_cli_auth   = true
   location             = "South Central US"
@@ -25,13 +30,13 @@ source "azure-arm" "linux-sig" {
     image_name     = "arm-linux-specialized-sig"
     gallery_name   = "acctestgallery"
     image_version  = "1.0.0"
-    resource_group = "packer-acceptance-test"
+    resource_group = var.resource_group_name
   }
   shared_image_gallery_destination {
     image_name              = "arm-linux-specialized-sig"
     gallery_name            = "acctestgallery"
     image_version           = "1.0.1"
-    resource_group          = "packer-acceptance-test"
+    resource_group          = var.resource_group_name
     specialized             = true
     use_shallow_replication = true
   }

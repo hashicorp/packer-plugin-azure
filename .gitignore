@@ -3,3 +3,6 @@ dist/*
 packer-plugin-azure
 .docs
 crash.log
+terraform/.terraform*
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
