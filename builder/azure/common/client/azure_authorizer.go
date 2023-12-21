@@ -52,6 +52,7 @@ func buildAuthorizer(ctx context.Context, authOpts AzureAuthOptions, env environ
 		authConfig = auth.Credentials{
 			Environment:                              env,
 			EnableAuthenticatingUsingManagedIdentity: true,
+			ClientID:                                 authOpts.ClientID,
 		}
 	case AuthTypeClientSecret:
 		authConfig = auth.Credentials{
