@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
 package arm
 
 // Code to resolve resources that are required by the API.  These resources
@@ -13,13 +15,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/subnets"
 )
 
 type resourceResolver struct {
 	client                          *AzureClient
-	findVirtualNetworkResourceGroup func(*AzureClient, string) (string, error)
-	findVirtualNetworkSubnet        func(*AzureClient, string, string) (string, error)
+	findVirtualNetworkResourceGroup func(*AzureClient, string, string) (string, error)
+	findVirtualNetworkSubnet        func(*AzureClient, string, string, string) (string, error)
 }
 
 func newResourceResolver(client *AzureClient) *resourceResolver {
@@ -32,12 +36,12 @@ func newResourceResolver(client *AzureClient) *resourceResolver {
 
 func (s *resourceResolver) Resolve(c *Config) error {
 	if s.shouldResolveResourceGroup(c) {
-		resourceGroupName, err := s.findVirtualNetworkResourceGroup(s.client, c.VirtualNetworkName)
+		resourceGroupName, err := s.findVirtualNetworkResourceGroup(s.client, c.ClientConfig.SubscriptionID, c.VirtualNetworkName)
 		if err != nil {
 			return err
 		}
 
-		subnetName, err := s.findVirtualNetworkSubnet(s.client, resourceGroupName, c.VirtualNetworkName)
+		subnetName, err := s.findVirtualNetworkSubnet(s.client, c.ClientConfig.SubscriptionID, resourceGroupName, c.VirtualNetworkName)
 		if err != nil {
 			return err
 		}
@@ -47,12 +51,12 @@ func (s *resourceResolver) Resolve(c *Config) error {
 	}
 
 	if s.shouldResolveManagedImageName(c) {
-		image, err := findManagedImageByName(s.client, c.CustomManagedImageName, c.CustomManagedImageResourceGroupName)
+		image, err := findManagedImageByName(s.client, c.CustomManagedImageName, c.ClientConfig.SubscriptionID, c.CustomManagedImageResourceGroupName)
 		if err != nil {
 			return err
 		}
 
-		c.customManagedImageID = *image.ID
+		c.customManagedImageID = *image.Id
 	}
 
 	return nil
@@ -72,40 +76,35 @@ func getResourceGroupNameFromId(id string) string {
 	return xs[4]
 }
 
-func findManagedImageByName(client *AzureClient, name, resourceGroupName string) (*compute.Image, error) {
-	images, err := client.ImagesClient.ListByResourceGroupComplete(context.TODO(), resourceGroupName)
+func findManagedImageByName(client *AzureClient, name, subscriptionId, resourceGroupName string) (*images.Image, error) {
+	id := commonids.NewResourceGroupID(subscriptionId, resourceGroupName)
+	images, err := client.ImagesClient.ListByResourceGroupComplete(context.TODO(), id)
 	if err != nil {
 		return nil, err
 	}
 
-	for images.NotDone() {
-		image := images.Value()
+	for _, image := range images.Items {
 		if strings.EqualFold(name, *image.Name) {
 			return &image, nil
-		}
-		if err = images.Next(); err != nil {
-			return nil, err
 		}
 	}
 
 	return nil, fmt.Errorf("Cannot find an image named '%s' in the resource group '%s'", name, resourceGroupName)
 }
 
-func findVirtualNetworkResourceGroup(client *AzureClient, name string) (string, error) {
-	virtualNetworks, err := client.VirtualNetworksClient.ListAllComplete(context.TODO())
+func findVirtualNetworkResourceGroup(client *AzureClient, subscriptionId, name string) (string, error) {
+	vnetListContext, cancel := context.WithTimeout(context.TODO(), client.PollingDuration)
+	defer cancel()
+	virtualNetworks, err := client.NetworkMetaClient.VirtualNetworks.ListAllComplete(vnetListContext, commonids.NewSubscriptionID(subscriptionId))
 	if err != nil {
 		return "", err
 	}
 
 	resourceGroupNames := make([]string, 0)
-	for virtualNetworks.NotDone() {
-		virtualNetwork := virtualNetworks.Value()
+	for _, virtualNetwork := range virtualNetworks.Items {
 		if strings.EqualFold(name, *virtualNetwork.Name) {
-			rgn := getResourceGroupNameFromId(*virtualNetwork.ID)
+			rgn := getResourceGroupNameFromId(*virtualNetwork.Id)
 			resourceGroupNames = append(resourceGroupNames, rgn)
-		}
-		if err = virtualNetworks.Next(); err != nil {
-			return "", err
 		}
 	}
 
@@ -120,13 +119,16 @@ func findVirtualNetworkResourceGroup(client *AzureClient, name string) (string, 
 	return resourceGroupNames[0], nil
 }
 
-func findVirtualNetworkSubnet(client *AzureClient, resourceGroupName string, name string) (string, error) {
-	subnets, err := client.SubnetsClient.List(context.TODO(), resourceGroupName, name)
+func findVirtualNetworkSubnet(client *AzureClient, subscriptionId string, resourceGroupName string, name string) (string, error) {
+
+	subnetListContext, cancel := context.WithTimeout(context.TODO(), client.PollingDuration)
+	defer cancel()
+	subnets, err := client.NetworkMetaClient.Subnets.List(subnetListContext, subnets.NewVirtualNetworkID(subscriptionId, resourceGroupName, name))
 	if err != nil {
 		return "", err
 	}
 
-	subnetList := subnets.Values() // only first page of subnets, but only interested in ==0 or >1
+	subnetList := *subnets.Model
 
 	if len(subnetList) == 0 {
 		return "", fmt.Errorf("Cannot find a subnet in the resource group %q associated with the virtual network called %q", resourceGroupName, name)

@@ -25,8 +25,6 @@
       "gallery_name": "GalleryName",
       "image_name": "ImageName",
       "image_version": "1.0.0",
-      "communityGallery_image_id": "/CommunityGalleries/{cg}/Images/{}/Versions/{}",
-      "directSharedGallery_image_id": "/SharedGalleries/{cg}/Images/{}/Versions/{}"
   }
   "managed_image_name": "TargetImageName",
   "managed_image_resource_group_name": "TargetResourceGroup"
@@ -88,9 +86,9 @@
 - `shared_gallery_image_version_end_of_life_date` (string) - The end of life date (2006-01-02T15:04:05.99Z) of the gallery Image Version. This property
   can be used for decommissioning purposes.
 
-- `shared_image_gallery_replica_count` (int32) - The number of replicas of the Image Version to be created per region. This
-  property would take effect for a region when regionalReplicaCount is not specified.
-  Replica count must be between 1 and 10.
+- `shared_image_gallery_replica_count` (int64) - The number of replicas of the Image Version to be created per region.
+  Replica count must be between 1 and 100, but 50 replicas should be sufficient for most use cases.
+  When using shallow replication `use_shallow_replication=true` the value can only be 1.
 
 - `shared_gallery_image_version_exclude_from_latest` (bool) - If set to true, Virtual Machines deployed from the latest version of the
   Image Definition won't use this Image Version.
@@ -112,6 +110,28 @@
   information. Defaults to `Standard_A1`.
   
   CLI example `az vm list-sizes --location westus`
+
+- `spot` (Spot) - If set use a spot instance during build; spot configuration settings only apply to the virtual machine launched by Packer and will not be persisted on the resulting image artifact.
+  
+  Following is an example.
+  
+  In JSON
+  
+  ```json
+  "spot": {
+      "eviction_policy": "Delete",
+  	   "max_price": "0.4",
+  }
+  ```
+  
+  In HCL2
+  
+  ```hcl
+  spot {
+      eviction_policy = "Delete"
+      max_price = "0.4"
+  }
+  ```
 
 - `managed_image_resource_group_name` (string) - Specify the managed image resource group name where the result of the
   Packer build will be saved. The resource group must already exist. If
@@ -152,7 +172,7 @@
 
 - `azure_tag` ([]{name string, value string}) - Same as [`azure_tags`](#azure_tags) but defined as a singular repeatable block
   containing a `name` and a `value` field. In HCL2 mode the
-  [`dynamic_block`](/docs/templates/hcl_templates/expressions#dynamic-blocks)
+  [`dynamic_block`](/packer/docs/templates/hcl_templates/expressions#dynamic-blocks)
   will allow you to create those programatically.
 
 - `resource_group_name` (string) - Resource group under which the final artifact will be stored.
@@ -174,11 +194,18 @@
 
 - `build_resource_group_name` (string) - Specify an existing resource group to run the build in.
 
-- `build_key_vault_name` (string) - Specify an existing key vault to use for uploading certificates to the
+- `build_key_vault_name` (string) - Specify an existing key vault to use for uploading the certificate for the
   instance to connect.
+
+- `build_key_vault_secret_name` (string) - Specify the secret name to use for the certificate created in the key vault.
 
 - `build_key_vault_sku` (string) - Specify the KeyVault SKU to create during the build. Valid values are
   standard or premium. The default value is standard.
+
+- `disk_encryption_set_id` (string) - Specify the Disk Encryption Set ID to use to encrypt the OS and data disks created with the VM during the build
+  Only supported when publishing to Shared Image Galleries, without a managed image
+  The disk encryption set ID can be found in the properties tab of a disk encryption set on the Azure Portal, and is labeled as its resource ID
+  https://learn.microsoft.com/en-us/azure/virtual-machines/image-version-encryption
 
 - `private_virtual_network_with_public_ip` (bool) - This value allows you to
   set a virtual_network_name and obtain a public IP. If this value is not
@@ -210,6 +237,14 @@
   to learn more about custom data, and how it can be used to influence the
   provisioning process.
 
+- `custom_data` (string) - Specify a Base64-encode custom data to apply when launching the instance.
+  Note that you need to be careful about escaping characters due to the templates being JSON.
+  The custom data will be passed to cloud-init for processing at
+  the time of provisioning. See
+  [documentation](http://cloudinit.readthedocs.io/en/latest/topics/examples.html)
+  to learn more about custom data, and how it can be used to influence the
+  provisioning process.
+
 - `user_data_file` (string) - Specify a file containing user data to inject into the cloud-init
   process. The contents of the file are read and injected into the ARM
   template. The user data will be available from the provision until the vm is
@@ -217,6 +252,25 @@
   from the Azure Instance Metadata Service (IMDS) after provision.
   See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/user-data)
   to learn more about user data.
+
+- `user_data` (string) - Specify a Base64-encode user data to apply
+  Note that you need to be careful about escaping characters due to the templates being JSON.
+  The user data will be available from the provision until the vm is
+  deleted. Any application on the virtual machine can access the user data
+  from the Azure Instance Metadata Service (IMDS) after provision.
+  See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/user-data)
+  to learn more about user data.
+
+- `custom_script` (string) - Used for running a script on VM provision during the image build
+  The following example executes the contents of the file specified by `user_data_file`:
+   ```hcl2
+   custom_script   = "powershell -ExecutionPolicy Unrestricted -NoProfile -NonInteractive -Command \"$userData = (Invoke-RestMethod -Headers @{Metadata=$true} -Method GET -Uri http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01$([char]38)format=text); $contents = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($userData)); set-content -path c:\\Windows\\Temp\\userdata.ps1 -value $contents; . c:\\Windows\\Temp\\userdata.ps1;\""
+   user_data_file  = "./scripts/userdata.ps1"
+   ```
+  Specify a command to inject into the CustomScriptExtension, to run on startup
+  on Windows builds, before the communicator attempts to connect
+  See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/extensions/custom-script-windows)
+  to learn more.
 
 - `plan_info` (PlanInformation) - Used for creating images from Marketplace images. Please refer to
   [Deploy an image with Marketplace
@@ -254,7 +308,7 @@
   ```
 
 - `polling_duration_timeout` (duration string | ex: "1h5m2s") - The default PollingDuration for azure is 15mins, this property will override
-  that value. See [Azure DefaultPollingDuration](https://godoc.org/github.com/Azure/go-autorest/autorest#pkg-constants)
+  that value.
   If your Packer build is failing on the
   ARM deployment step with the error `Original Error:
   context deadline exceeded`, then you probably need to increase this timeout from
@@ -265,6 +319,10 @@
   automatically configure authentication credentials for the provisioned
   machine. For Linux this configures an SSH authorized key. For Windows
   this configures a WinRM certificate.
+
+- `winrm_expiration_time` (duration string | ex: "1h5m2s") - A time duration with which to set the WinRM certificate to expire
+  This only works for Windows builds (valid time units include `s` for seconds, `m` for
+  minutes, and `h` for hours.)
 
 - `temp_os_disk_name` (string) - temporary name assigned to the OSDisk. If this
   value is not set, a random value will be assigned. Being able to assign a custom
@@ -310,6 +368,29 @@
 - `custom_resource_build_prefix` (string) - specify custom azure resource names during build limited to max 10 characters
   this will set the prefix for the resources. The actuall resource names will be
   `custom_resource_build_prefix` + resourcetype + 5 character random alphanumeric string
+
+- `license_type` (string) - Specify a license type for the build VM to enable Azure Hybrid Benefit. If not set, Pay-As-You-Go license
+  model (default) will be used. Valid values are:
+  
+  For Windows:
+  - `Windows_Client`
+  - `Windows_Server`
+  
+  For Linux:
+  - `RHEL_BYOS`
+  - `SLES_BYOS`
+  
+  Refer to the following documentation for more information about Hybrid Benefit:
+  [Windows](https://learn.microsoft.com/en-us/azure/virtual-machines/windows/hybrid-use-benefit-licensing)
+  or
+  [Linux](https://learn.microsoft.com/en-us/azure/virtual-machines/linux/azure-hybrid-benefit-linux)
+
+- `secure_boot_enabled` (bool) - Specifies if Secure Boot and Trusted Launch is enabled for the Virtual Machine.
+
+- `encryption_at_host` (\*bool) - Specifies if Encryption at host is enabled for the Virtual Machine.
+  Requires enabling encryption at host in the Subscription read more [here](https://learn.microsoft.com/en-us/azure/virtual-machines/disks-enable-host-based-encryption-portal?tabs=azure-powershell)
+
+- `vtpm_enabled` (bool) - Specifies if vTPM (virtual Trusted Platform Module) and Trusted Launch is enabled for the Virtual Machine.
 
 - `async_resourcegroup_delete` (bool) - If you want packer to delete the
   temporary resource group asynchronously set this value. It's a boolean

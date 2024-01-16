@@ -1,7 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package arm
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 )
@@ -22,7 +27,6 @@ func TestStateBagShouldBePopulatedExpectedValues(t *testing.T) {
 		constants.ArmNicName,
 		constants.ArmResourceGroupName,
 		constants.ArmStorageAccountName,
-		constants.ArmVirtualMachineCaptureParameters,
 		constants.ArmPublicIPAddressName,
 		constants.ArmAsyncResourceGroupDelete,
 	}
@@ -49,7 +53,7 @@ func TestStateBagShouldPoluateExpectedTags(t *testing.T) {
 		t.Fatalf("failed to prepare: %s", err)
 	}
 
-	tags, ok := testSubject.stateBag.Get(constants.ArmTags).(map[string]*string)
+	tags, ok := testSubject.stateBag.Get(constants.ArmTags).(map[string]string)
 	if !ok {
 		t.Errorf("Expected the builder's state bag to contain tags of type %T, but didn't.", testSubject.config.AzureTags)
 	}
@@ -59,11 +63,21 @@ func TestStateBagShouldPoluateExpectedTags(t *testing.T) {
 	}
 
 	for k, v := range tags {
-		if expectedTags[k] != *v {
-			t.Errorf("expect tag value of %s to be %s, but got %s", k, expectedTags[k], *v)
+		if expectedTags[k] != v {
+			t.Errorf("expect tag value of %s to be %s, but got %s", k, expectedTags[k], v)
 		}
 	}
 
+}
+
+func TestManagedImageArtifactWithSIGAsDestinationNoImage(t *testing.T) {
+	var testSubject Builder
+
+	_, _, err := testSubject.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	assert.NoErrorf(t, err, "failed to prepare: %s", err)
+
+	_, err = testSubject.managedImageArtifactWithSIGAsDestination("fakeID", generatedData())
+	assert.ErrorIs(t, err, ErrNoImage)
 }
 
 func TestBuildSharedImageGalleryArtifact_withState(t *testing.T) {
@@ -77,7 +91,7 @@ func TestBuildSharedImageGalleryArtifact_withState(t *testing.T) {
 	// During the publishing state to a shared image gallery this information is added to the builder StateBag.
 	// Adding it to the test to mimic a successful SIG publishing step.
 	testSubject.stateBag.Put(constants.ArmManagedImageSigPublishResourceGroup, "fakeGalleryResourceGroup")
-	testSubject.stateBag.Put(constants.ArmManagedImageSharedGalleryName, "faleGalleryName")
+	testSubject.stateBag.Put(constants.ArmManagedImageSharedGalleryName, "fakeGalleryName")
 	testSubject.stateBag.Put(constants.ArmManagedImageSharedGalleryImageName, "fakeGalleryImageName")
 	testSubject.stateBag.Put(constants.ArmManagedImageSharedGalleryImageVersion, "fakeGalleryImageVersion")
 	testSubject.stateBag.Put(constants.ArmManagedImageSharedGalleryReplicationRegions, []string{"fake-region-1", "fake-region-2"})
@@ -104,6 +118,11 @@ ManagedImageLocation: fakeLocation
 ManagedImageOSDiskSnapshotName: fakeOsDiskSnapshotName
 ManagedImageDataDiskSnapshotPrefix: fakeDataDiskSnapshotPrefix
 ManagedImageSharedImageGalleryId: fakeSharedImageGallery
+SharedImageGalleryResourceGroup: fakeGalleryResourceGroup
+SharedImageGalleryName: fakeGalleryName
+SharedImageGalleryImageName: fakeGalleryImageName
+SharedImageGalleryImageVersion: fakeGalleryImageVersion
+SharedImageGalleryReplicatedRegions: fake-region-1, fake-region-2
 `
 
 	result := artifact.String()

@@ -1,11 +1,14 @@
 {
-  "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json",
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
     "adminPassword": {
       "type": "securestring"
     },
     "adminUsername": {
+      "type": "string"
+    },
+    "commandToExecute": {
       "type": "string"
     },
     "dataDiskName": {
@@ -44,7 +47,7 @@
   },
   "resources": [
     {
-      "apiVersion": "[variables('publicIPAddressApiVersion')]",
+      "apiVersion": "[variables('networkApiVersion')]",
       "location": "[variables('location')]",
       "name": "[parameters('publicIPAddressName')]",
       "properties": {
@@ -56,7 +59,7 @@
       "type": "Microsoft.Network/publicIPAddresses"
     },
     {
-      "apiVersion": "[variables('virtualNetworksApiVersion')]",
+      "apiVersion": "[variables('networkApiVersion')]",
       "location": "[variables('location')]",
       "name": "[variables('virtualNetworkName')]",
       "properties": {
@@ -77,7 +80,7 @@
       "type": "Microsoft.Network/virtualNetworks"
     },
     {
-      "apiVersion": "[variables('networkInterfacesApiVersion')]",
+      "apiVersion": "[variables('networkApiVersion')]",
       "dependsOn": [
         "[concat('Microsoft.Network/publicIPAddresses/', parameters('publicIPAddressName'))]",
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
@@ -103,7 +106,7 @@
       "type": "Microsoft.Network/networkInterfaces"
     },
     {
-      "apiVersion": "[variables('apiVersion')]",
+      "apiVersion": "[variables('computeApiVersion')]",
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', parameters('nicName'))]"
       ],
@@ -153,16 +156,32 @@
         }
       },
       "type": "Microsoft.Compute/virtualMachines"
+    },
+    {
+      "apiVersion": "[variables('computeApiVersion')]",
+      "condition": "[not(empty(parameters('commandToExecute')))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines/', parameters('vmName'))]"
+      ],
+      "location": "[variables('location')]",
+      "name": "[concat(parameters('vmName'), '/extension-customscript')]",
+      "properties": {
+        "autoUpgradeMinorVersion": true,
+        "publisher": "Microsoft.Compute",
+        "settings": {
+          "commandToExecute": "[parameters('commandToExecute')]"
+        },
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.10"
+      },
+      "type": "Microsoft.Compute/virtualMachines/extensions"
     }
   ],
   "variables": {
     "addressPrefix": "10.0.0.0/16",
-    "apiVersion": "2018-06-01",
+    "computeApiVersion": "2023-03-01",
     "location": "[resourceGroup().location]",
-    "managedDiskApiVersion": "2017-03-30",
-    "networkInterfacesApiVersion": "2017-04-01",
-    "networkSecurityGroupsApiVersion": "2019-04-01",
-    "publicIPAddressApiVersion": "2017-04-01",
+    "networkApiVersion": "2023-04-01",
     "publicIPAddressType": "Dynamic",
     "sshKeyPath": "[concat('/home/',parameters('adminUsername'),'/.ssh/authorized_keys')]",
     "subnetAddressPrefix": "10.0.0.0/24",
@@ -170,7 +189,6 @@
     "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnetName'))]",
     "virtualNetworkName": "[parameters('virtualNetworkName')]",
     "virtualNetworkResourceGroup": "[resourceGroup().name]",
-    "virtualNetworksApiVersion": "2017-04-01",
     "vmStorageAccountContainerName": "images",
     "vnetID": "[resourceId(variables('virtualNetworkResourceGroup'), 'Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
   }

@@ -1,10 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dtl
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -12,7 +15,7 @@ import (
 
 type StepPublishToSharedImageGallery struct {
 	client  *AzureClient
-	publish func(ctx context.Context, mdiID, miSigPubRg, miSIGalleryName, miSGImageName, miSGImageVersion string, miSigReplicationRegions []string, location string, tags map[string]*string) (string, error)
+	publish func(ctx context.Context, subscriptionID, managedImageID, sigDestinationResourceGroup, sigDestinationGalleryName, sigDestinationImageName, sigDestinationImageVersion string, sigReplicationRegions []string, location string, tags map[string]string) (string, error)
 	say     func(message string)
 	error   func(e error)
 	toSIG   func() bool
@@ -36,52 +39,47 @@ func NewStepPublishToSharedImageGallery(client *AzureClient, ui packersdk.Ui, co
 	return step
 }
 
-func (s *StepPublishToSharedImageGallery) publishToSig(ctx context.Context, mdiID string, miSigPubRg string, miSIGalleryName string, miSGImageName string, miSGImageVersion string, miSigReplicationRegions []string, location string, tags map[string]*string) (string, error) {
+func (s *StepPublishToSharedImageGallery) publishToSig(ctx context.Context, subscriptionID, managedImageID, sigDestinationResourceGroup, sigDestinationGalleryName, sigDestinationImageName, sigDestinationImageVersion string, sigReplicationRegions []string, location string, tags map[string]string) (string, error) {
 
-	replicationRegions := make([]compute.TargetRegion, len(miSigReplicationRegions))
-	for i, v := range miSigReplicationRegions {
+	replicationRegions := make([]galleryimageversions.TargetRegion, len(sigReplicationRegions))
+	for i, v := range sigReplicationRegions {
 		regionName := v
-		replicationRegions[i] = compute.TargetRegion{Name: &regionName}
+		replicationRegions[i] = galleryimageversions.TargetRegion{Name: regionName}
 	}
 
-	galleryImageVersion := compute.GalleryImageVersion{
-		Location: &location,
-		Tags:     tags,
-		GalleryImageVersionProperties: &compute.GalleryImageVersionProperties{
-			PublishingProfile: &compute.GalleryImageVersionPublishingProfile{
-				Source: &compute.GalleryArtifactSource{
-					ManagedImage: &compute.ManagedArtifact{
-						ID: &mdiID,
-					},
+	galleryImageVersion := galleryimageversions.GalleryImageVersion{
+		Location: location,
+		Tags:     &tags,
+		Properties: &galleryimageversions.GalleryImageVersionProperties{
+			StorageProfile: galleryimageversions.GalleryImageVersionStorageProfile{
+				Source: &galleryimageversions.GalleryArtifactVersionFullSource{
+					Id: &managedImageID,
 				},
+			},
+			PublishingProfile: &galleryimageversions.GalleryArtifactPublishingProfileBase{
 				TargetRegions: &replicationRegions,
 			},
 		},
 	}
 
-	f, err := s.client.GalleryImageVersionsClient.CreateOrUpdate(ctx, miSigPubRg, miSIGalleryName, miSGImageName, miSGImageVersion, galleryImageVersion)
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.SharedGalleryTimeout)
+	defer cancel()
+	galleryImageVersionId := galleryimageversions.NewImageVersionID(subscriptionID, sigDestinationResourceGroup, sigDestinationGalleryName, sigDestinationImageName, sigDestinationImageVersion)
+	err := s.client.GalleryImageVersionsClient.CreateOrUpdateThenPoll(pollingContext, galleryImageVersionId, galleryImageVersion)
+
+	if err != nil {
+		s.say(s.client.LastError.Error())
+		return "", err
+	}
+	createdSIGImageVersion, err := s.client.GalleryImageVersionsClient.Get(ctx, galleryImageVersionId, galleryimageversions.DefaultGetOperationOptions())
 
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return "", err
 	}
 
-	err = f.WaitForCompletionRef(ctx, s.client.GalleryImageVersionsClient.Client)
-
-	if err != nil {
-		s.say(s.client.LastError.Error())
-		return "", err
-	}
-
-	createdSGImageVersion, err := f.Result(s.client.GalleryImageVersionsClient)
-
-	if err != nil {
-		s.say(s.client.LastError.Error())
-		return "", err
-	}
-
-	s.say(fmt.Sprintf(" -> Shared Gallery Image Version ID : '%s'", *(createdSGImageVersion.ID)))
-	return *(createdSGImageVersion.ID), nil
+	s.say(fmt.Sprintf(" -> Shared Gallery Image Version ID : '%s'", *(createdSIGImageVersion.Model.Id)))
+	return *(createdSIGImageVersion.Model.Id), nil
 }
 
 func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag multistep.StateBag) multistep.StepAction {
@@ -96,20 +94,20 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 	var miSGImageName = stateBag.Get(constants.ArmManagedImageSharedGalleryImageName).(string)
 	var miSGImageVersion = stateBag.Get(constants.ArmManagedImageSharedGalleryImageVersion).(string)
 	var location = stateBag.Get(constants.ArmLocation).(string)
-	var tags = stateBag.Get(constants.ArmTags).(map[string]*string)
+	var tags = stateBag.Get(constants.ArmTags).(map[string]string)
 	var miSigReplicationRegions = stateBag.Get(constants.ArmManagedImageSharedGalleryReplicationRegions).([]string)
 	var targetManagedImageResourceGroupName = stateBag.Get(constants.ArmManagedImageResourceGroupName).(string)
 	var targetManagedImageName = stateBag.Get(constants.ArmManagedImageName).(string)
 	var managedImageSubscription = stateBag.Get(constants.ArmManagedImageSubscription).(string)
-	var mdiID = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/images/%s", managedImageSubscription, targetManagedImageResourceGroupName, targetManagedImageName)
+	var managedImageID = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/images/%s", managedImageSubscription, targetManagedImageResourceGroupName, targetManagedImageName)
 
-	s.say(fmt.Sprintf(" -> MDI ID used for SIG publish     : '%s'", mdiID))
+	s.say(fmt.Sprintf(" -> MDI ID used for SIG publish     : '%s'", managedImageID))
 	s.say(fmt.Sprintf(" -> SIG publish resource group     : '%s'", miSigPubRg))
 	s.say(fmt.Sprintf(" -> SIG gallery name     : '%s'", miSIGalleryName))
 	s.say(fmt.Sprintf(" -> SIG image name     : '%s'", miSGImageName))
 	s.say(fmt.Sprintf(" -> SIG image version     : '%s'", miSGImageVersion))
 	s.say(fmt.Sprintf(" -> SIG replication regions    : '%v'", miSigReplicationRegions))
-	createdGalleryImageVersionID, err := s.publish(ctx, mdiID, miSigPubRg, miSIGalleryName, miSGImageName, miSGImageVersion, miSigReplicationRegions, location, tags)
+	createdGalleryImageVersionID, err := s.publish(ctx, managedImageSubscription, managedImageID, miSigPubRg, miSIGalleryName, miSGImageName, miSGImageVersion, miSigReplicationRegions, location, tags)
 
 	if err != nil {
 		stateBag.Put(constants.Error, err)

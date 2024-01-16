@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package client
 
 import (
@@ -22,7 +25,7 @@ type MetadataClientStub struct {
 	ComputeInfo
 }
 
-//GetComputeInfo implements MetadataClientAPI
+// GetComputeInfo implements MetadataClientAPI
 func (s MetadataClientStub) GetComputeInfo() (*ComputeInfo, error) {
 	return &s.ComputeInfo, nil
 }

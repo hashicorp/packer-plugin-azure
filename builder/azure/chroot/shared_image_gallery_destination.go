@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:generate packer-sdc struct-markdown
 //go:generate packer-sdc mapstructure-to-hcl2 -type SharedImageGalleryDestination,TargetRegion
 
@@ -26,7 +29,7 @@ type TargetRegion struct {
 	// Name of the Azure region
 	Name string `mapstructure:"name" required:"true"`
 	// Number of replicas in this region. Default: 1
-	ReplicaCount int32 `mapstructure:"replicas"`
+	ReplicaCount int64 `mapstructure:"replicas"`
 	// Storage account type: Standard_LRS or Standard_ZRS. Default: Standard_ZRS
 	StorageAccountType string `mapstructure:"storage_account_type"`
 }

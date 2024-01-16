@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package arm
 
 import (
@@ -11,7 +14,7 @@ import (
 
 func TestStepSnapshotOSDiskShouldFailIfSnapshotFails(t *testing.T) {
 	var testSubject = &StepSnapshotOSDisk{
-		create: func(context.Context, string, string, string, map[string]*string, string) error {
+		create: func(context.Context, string, string, string, string, map[string]string, string) error {
 			return fmt.Errorf("!! Unit Test FAIL !!")
 		},
 		say:    func(message string) {},
@@ -33,7 +36,7 @@ func TestStepSnapshotOSDiskShouldFailIfSnapshotFails(t *testing.T) {
 
 func TestStepSnapshotOSDiskShouldNotExecute(t *testing.T) {
 	var testSubject = &StepSnapshotOSDisk{
-		create: func(context.Context, string, string, string, map[string]*string, string) error {
+		create: func(context.Context, string, string, string, string, map[string]string, string) error {
 			return fmt.Errorf("!! Unit Test FAIL !!")
 		},
 		say:    func(message string) {},
@@ -49,7 +52,7 @@ func TestStepSnapshotOSDiskShouldNotExecute(t *testing.T) {
 
 func TestStepSnapshotOSDiskShouldPassIfSnapshotPasses(t *testing.T) {
 	var testSubject = &StepSnapshotOSDisk{
-		create: func(context.Context, string, string, string, map[string]*string, string) error {
+		create: func(context.Context, string, string, string, string, map[string]string, string) error {
 			return nil
 		},
 		say:    func(message string) {},
@@ -76,14 +79,14 @@ func createTestStateBagStepSnapshotOSDisk() multistep.StateBag {
 	stateBag.Put(constants.ArmLocation, "Unit Test: Location")
 
 	value := "Unit Test: Tags"
-	tags := map[string]*string{
-		"tag01": &value,
+	tags := map[string]string{
+		"tag02:": value,
 	}
-
 	stateBag.Put(constants.ArmTags, tags)
 
-	stateBag.Put(constants.ArmOSDiskVhd, "subscriptions/123-456-789/resourceGroups/existingresourcegroup/providers/Microsoft.Compute/disks/osdisk")
+	stateBag.Put(constants.ArmOSDiskUri, "subscriptions/123-456-789/resourceGroups/existingresourcegroup/providers/Microsoft.Compute/disks/osdisk")
 	stateBag.Put(constants.ArmManagedImageOSDiskSnapshotName, "Unit Test: ManagedImageOSDiskSnapshotName")
+	stateBag.Put(constants.ArmSubscription, "Unit Test: Subscription")
 
 	return stateBag
 }

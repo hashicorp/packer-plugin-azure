@@ -1,69 +1,89 @@
-# Azure Plugins
-<!--
-  Include a short overview about the plugin.
-
-  This document is a great location for creating a table of contents for each
-  of the components the plugin may provide. This document should load automatically
-  when navigating to the docs directory for a plugin.
-
--->
+The Azure plugin can be used with HashiCorp Packer to create custom images on Azure.
+To do so, the plugin exposes multiple builders, among which you can choose the one most adapted to your workflow.
 
 ## Installation
 
-### Using pre-built releases
-
-#### Using the `packer init` command
-
-Starting from version 1.7, Packer supports a new `packer init` command allowing
-automatic installation of Packer plugins. Read the
-[Packer documentation](https://www.packer.io/docs/commands/init) for more information.
-
-To install this plugin, copy and paste this code into your Packer configuration .
-Then, run [`packer init`](https://www.packer.io/docs/commands/init).
+To install this plugin, copy and paste this code into your Packer configuration, then run [`packer init`](https://www.packer.io/docs/commands/init).
 
 ```hcl
 packer {
   required_plugins {
     azure = {
-      version = ">= 1.1.0"
       source  = "github.com/hashicorp/azure"
+      version = "~> 2"
     }
   }
 }
 ```
 
-#### Manual installation
+Alternatively, you can use `packer plugins install` to manage installation of this plugin.
 
-You can find pre-built binary releases of the plugin [here](https://github.com/hashicorp/packer-plugin-azure/releases).
-Once you have downloaded the latest archive corresponding to your target OS,
-uncompress it to retrieve the plugin binary file corresponding to your platform.
-To install the plugin, please follow the Packer documentation on
-[installing a plugin](https://www.packer.io/docs/extending/plugins/#installing-plugins).
+```sh
+$ packer plugins install github.com/hashicorp/azure
+```
 
-
-#### From Source
-
-If you prefer to build the plugin from its source code, clone the GitHub
-repository locally and run the command `go build` from the root
-directory. Upon successful compilation, a `packer-plugin-azure` plugin
-binary file can be found in the root directory.
-To install the compiled plugin, please follow the official Packer documentation
-on [installing a plugin](https://www.packer.io/docs/extending/plugins/#installing-plugins).
-
-
-## Plugin Contents
+## Components
 
 Packer can create Azure virtual machine images through variety of ways depending on the strategy that you want to use for building the images.
 
 ### Builders
 
-- [azure-arm](builders/arm.mdx) - The Azure ARM builder supports building Virtual Hard Disks (VHDs) and
+- [azure-arm](/packer/integrations/hashicorp/azure/latest/components/builder/arm) - The Azure ARM builder supports building Virtual Hard Disks (VHDs) and
   Managed Images in Azure Resource Manager.
-- [azure-chroot](builders/chroot.mdx) - The Azure chroot builder supports building a managed disk image without
+- [azure-chroot](/packer/integrations/hashicorp/azure/latest/components/builder/chroot) - The Azure chroot builder supports building a managed disk image without
   launching a new Azure VM for every build, but instead use an already-running Azure VM.
-- [azure-dtl](builders/dtl.mdx) - The Azure DevTest Labs builder builds custom images and uploads them to DevTest Lab image repository automatically.
+- [azure-dtl](/packer/integrations/hashicorp/azure/latest/components/builder/dtl) - The Azure DevTest Labs builder builds custom images and uploads them to DevTest Lab image repository automatically.
 
 ### Provisioners
 
-- [azure-dtlartifact](provisioners/dtlartifact.mdx) - The Azure DevTest Labs provisioner can be used to apply an artifact to a VM - See [Add an artifact to a VM](https://docs.microsoft.com/en-us/azure/devtest-labs/add-artifact-vm)
+- [azure-dtlartifact](/packer/integrations/hashicorp/azure/latest/components/provisioner/dtlartifact) - The Azure DevTest Labs provisioner can be used to apply an artifact to a VM - Refer to [Add an artifact to a VM](https://docs.microsoft.com/en-us/azure/devtest-labs/add-artifact-vm)
 
+## Authentication
+
+@include 'builder/azure/common/client/Config.mdx'
+
+### Managed Identity
+
+If you're running Packer on an Azure VM with a [managed
+identity](https://packer.io/docs/builders/azure#azure-managed-identity) you
+don't need to specify any additional configuration options. As Packer will
+attempt to use the Managed Identity and subscription of the VM that Packer is
+running on.
+
+You can use a different subscription if you set `subscription_id`.  If your VM
+has multiple user assigned managed identities you will need to set `client_id`
+too.
+
+### Interactive User Authentication
+
+To use interactive user authentication, you should specify
+`use_interactive_auth` only.  Packer will use cached credentials or redirect you
+to a website to log in.
+
+### Service Principal
+
+To use a [service principal](https://packer.io/docs/builders/azure#azure-active-directory-service-principal)
+you should specify `subscription_id`, `client_id` and one of `client_secret`,
+`client_cert_path` or `client_jwt`.
+
+- `subscription_id` (string) - Subscription under which the build will be
+  performed. **The service principal specified in `client_id` must have full
+  access to this subscription, unless build_resource_group_name option is
+  specified in which case it needs to have owner access to the existing
+  resource group specified in build_resource_group_name parameter.**
+
+- `client_id` (string) - The Active Directory service principal associated with
+  your builder.
+
+- `client_secret` (string) - The password or secret for your service principal.
+
+- `client_cert_path` (string) - The location of a PEM file containing a
+  certificate and private key for service principal.
+
+- `client_cert_token_timeout` (duration string | ex: "1h30m12s") - How long to set the expire time on the token created when using
+  `client_cert_path`.
+
+- `client_jwt` (string) - The bearer JWT assertion signed using a certificate
+  associated with your service principal principal. See [Azure Active
+  Directory docs](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-certificate-credentials)
+  for more information.

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package arm
 
 import (
@@ -5,8 +8,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/snapshots"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -14,7 +17,7 @@ import (
 
 type StepSnapshotDataDisks struct {
 	client *AzureClient
-	create func(ctx context.Context, resourceGroupName string, srcUriVhd string, location string, tags map[string]*string, dstSnapshotName string) error
+	create func(ctx context.Context, subscriptionId string, resourceGroupName string, srcUriVhd string, location string, tags map[string]string, dstSnapshotName string) error
 	say    func(message string)
 	error  func(e error)
 	enable func() bool
@@ -32,41 +35,34 @@ func NewStepSnapshotDataDisks(client *AzureClient, ui packersdk.Ui, config *Conf
 	return step
 }
 
-func (s *StepSnapshotDataDisks) createDataDiskSnapshot(ctx context.Context, resourceGroupName string, srcUriVhd string, location string, tags map[string]*string, dstSnapshotName string) error {
-
-	srcVhdToSnapshot := compute.Snapshot{
-		SnapshotProperties: &compute.SnapshotProperties{
-			CreationData: &compute.CreationData{
-				CreateOption:     compute.DiskCreateOptionCopy,
-				SourceResourceID: to.StringPtr(srcUriVhd),
+func (s *StepSnapshotDataDisks) createDataDiskSnapshot(ctx context.Context, subscriptionId string, resourceGroupName string, srcUriVhd string, location string, tags map[string]string, dstSnapshotName string) error {
+	srcVhdToSnapshot := snapshots.Snapshot{
+		Properties: &snapshots.SnapshotProperties{
+			CreationData: snapshots.CreationData{
+				CreateOption:     snapshots.DiskCreateOptionCopy,
+				SourceResourceId: common.StringPtr(srcUriVhd),
 			},
 		},
-		Location: to.StringPtr(location),
-		Tags:     tags,
+		Location: *common.StringPtr(location),
+		Tags:     &tags,
 	}
-
-	f, err := s.client.SnapshotsClient.CreateOrUpdate(ctx, resourceGroupName, dstSnapshotName, srcVhdToSnapshot)
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+	id := snapshots.NewSnapshotID(subscriptionId, resourceGroupName, dstSnapshotName)
+	err := s.client.SnapshotsClient.CreateOrUpdateThenPoll(pollingContext, id, srcVhdToSnapshot)
 
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return err
 	}
 
-	err = f.WaitForCompletionRef(ctx, s.client.SnapshotsClient.Client)
-
+	snapshot, err := s.client.SnapshotsClient.Get(ctx, id)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return err
 	}
 
-	createdSnapshot, err := f.Result(s.client.SnapshotsClient)
-
-	if err != nil {
-		s.say(s.client.LastError.Error())
-		return err
-	}
-
-	s.say(fmt.Sprintf(" -> Snapshot ID : '%s'", *(createdSnapshot.ID)))
+	s.say(fmt.Sprintf(" -> Snapshot ID : '%s'", *(snapshot.Model.Id)))
 	return nil
 }
 
@@ -77,9 +73,10 @@ func (s *StepSnapshotDataDisks) Run(ctx context.Context, stateBag multistep.Stat
 
 	var resourceGroupName = stateBag.Get(constants.ArmManagedImageResourceGroupName).(string)
 	var location = stateBag.Get(constants.ArmLocation).(string)
-	var tags = stateBag.Get(constants.ArmTags).(map[string]*string)
+	var tags = stateBag.Get(constants.ArmTags).(map[string]string)
 	var additionalDisks = stateBag.Get(constants.ArmAdditionalDiskVhds).([]string)
 	var dstSnapshotPrefix = stateBag.Get(constants.ArmManagedImageDataDiskSnapshotPrefix).(string)
+	var subscriptionId = stateBag.Get(constants.ArmSubscription).(string)
 
 	s.say("Snapshotting data disk(s) ...")
 
@@ -87,7 +84,7 @@ func (s *StepSnapshotDataDisks) Run(ctx context.Context, stateBag multistep.Stat
 		s.say(fmt.Sprintf(" -> Data Disk   : '%s'", disk))
 
 		dstSnapshotName := dstSnapshotPrefix + strconv.Itoa(i)
-		err := s.create(ctx, resourceGroupName, disk, location, tags, dstSnapshotName)
+		err := s.create(ctx, subscriptionId, resourceGroupName, disk, location, tags, dstSnapshotName)
 
 		if err != nil {
 			stateBag.Put(constants.Error, err)

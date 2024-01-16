@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package version
 
 import (
@@ -6,7 +9,7 @@ import (
 
 var (
 	// Version is the main version number that is being run at the moment.
-	Version = "1.1.0"
+	Version = "2.0.3"
 
 	// VersionPrerelease is A pre-release marker for the Version. If this is ""
 	// (empty string) then it means that it is a final release. Otherwise, this

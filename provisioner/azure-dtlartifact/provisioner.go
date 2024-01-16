@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:generate packer-sdc struct-markdown
 //go:generate packer-sdc mapstructure-to-hcl2 -type Config,DtlArtifact,ArtifactParameter
 
@@ -8,11 +11,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/devtestlabs/mgmt/2018-09-15/dtl"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	dtlBuilder "github.com/hashicorp/packer-plugin-azure/builder/azure/dtl"
 
+	"github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/virtualmachines"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 
 	"github.com/hashicorp/packer-plugin-sdk/common"
@@ -47,7 +50,7 @@ type Config struct {
 	VMName string `mapstructure:"vm_name" required:"true"`
 
 	// The default PollingDuration for azure is 15mins, this property will override
-	// that value. See [Azure DefaultPollingDuration](https://godoc.org/github.com/Azure/go-autorest/autorest#pkg-constants)
+	// that value.
 	// If your Packer build is failing on the
 	// ARM deployment step with the error `Original Error:
 	// context deadline exceeded`, then you probably need to increase this timeout from
@@ -122,20 +125,25 @@ func (p *Provisioner) Provision(ctx context.Context, ui packersdk.Ui, comm packe
 		return err
 	}
 
-	spnCloud, err := p.config.ClientConfig.GetServicePrincipalToken(ui.Say, p.config.ClientConfig.CloudEnvironment().ResourceManagerEndpoint)
-	if err != nil {
-		return err
+	// Pass in relevant auth information for hashicorp/go-azure-sdk
+	authOptions := client.AzureAuthOptions{
+		AuthType:       p.config.ClientConfig.AuthType(),
+		ClientID:       p.config.ClientConfig.ClientID,
+		ClientSecret:   p.config.ClientConfig.ClientSecret,
+		ClientJWT:      p.config.ClientConfig.ClientJWT,
+		ClientCertPath: p.config.ClientConfig.ClientCertPath,
+		TenantID:       p.config.ClientConfig.TenantID,
+		SubscriptionID: p.config.ClientConfig.SubscriptionID,
 	}
-
 	ui.Message("Creating Azure DevTestLab (DTL) client ...")
 	azureClient, err := dtlBuilder.NewAzureClient(
+		ctx,
 		p.config.ClientConfig.SubscriptionID,
-		"",
 		p.config.ClientConfig.CloudEnvironment(),
 		p.config.PollingDurationTimeout,
 		p.config.PollingDurationTimeout,
 		p.config.PollingDurationTimeout,
-		spnCloud)
+		authOptions)
 
 	if err != nil {
 		ui.Say(fmt.Sprintf("Error saving debug key: %s", err))
@@ -143,7 +151,7 @@ func (p *Provisioner) Provision(ctx context.Context, ui packersdk.Ui, comm packe
 	}
 
 	ui.Say("Installing Artifact DTL")
-	dtlArtifacts := []dtl.ArtifactInstallProperties{}
+	dtlArtifacts := []virtualmachines.ArtifactInstallProperties{}
 
 	if p.config.DtlArtifacts != nil {
 		for i := range p.config.DtlArtifacts {
@@ -153,16 +161,16 @@ func (p *Provisioner) Provision(ctx context.Context, ui packersdk.Ui, comm packe
 				p.config.LabName,
 				p.config.DtlArtifacts[i].ArtifactName)
 
-			dparams := []dtl.ArtifactParameterProperties{}
+			dparams := []virtualmachines.ArtifactParameterProperties{}
 			for j := range p.config.DtlArtifacts[i].Parameters {
-				dp := &dtl.ArtifactParameterProperties{}
+				dp := &virtualmachines.ArtifactParameterProperties{}
 				dp.Name = &p.config.DtlArtifacts[i].Parameters[j].Name
 				dp.Value = &p.config.DtlArtifacts[i].Parameters[j].Value
 
 				dparams = append(dparams, *dp)
 			}
-			Aip := dtl.ArtifactInstallProperties{
-				ArtifactID:    &p.config.DtlArtifacts[i].ArtifactId,
+			Aip := virtualmachines.ArtifactInstallProperties{
+				ArtifactId:    &p.config.DtlArtifacts[i].ArtifactId,
 				Parameters:    &dparams,
 				ArtifactTitle: &p.config.DtlArtifacts[i].ArtifactName,
 			}
@@ -170,19 +178,21 @@ func (p *Provisioner) Provision(ctx context.Context, ui packersdk.Ui, comm packe
 		}
 	}
 
-	dtlApplyArifactRequest := dtl.ApplyArtifactsRequest{
+	dtlApplyArifactRequest := virtualmachines.ApplyArtifactsRequest{
 		Artifacts: &dtlArtifacts,
 	}
 
 	ui.Say("Applying artifact ")
-	f, err := azureClient.DtlVirtualMachineClient.ApplyArtifacts(ctx, p.config.ResourceGroupName, p.config.LabName, p.config.VMName, dtlApplyArifactRequest)
 
-	if err == nil {
-		err = f.WaitForCompletionRef(ctx, azureClient.DtlVirtualMachineClient.Client)
-	}
+	pollingContext, cancel := context.WithTimeout(ctx, azureClient.PollingDuration)
+	defer cancel()
+	vmResourceId := virtualmachines.NewVirtualMachineID(p.config.ClientConfig.SubscriptionID, p.config.ResourceGroupName, p.config.LabName, p.config.VMName)
+	err = azureClient.DtlMetaClient.VirtualMachines.ApplyArtifactsThenPoll(pollingContext, vmResourceId, dtlApplyArifactRequest)
+
 	if err != nil {
 		ui.Say(fmt.Sprintf("Error Applying artifact: %s", err))
 	}
+
 	ui.Say("Aftifact installed")
 	return err
 }

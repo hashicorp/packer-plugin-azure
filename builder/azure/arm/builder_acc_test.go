@@ -1,45 +1,127 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package arm
 
-// these tests require the following variables to be set,
-// although some test will only use a subset:
+// Below are the requirements for running the acceptance tests for the Packer Azure plugin ARM Builder
 //
-// * ARM_CLIENT_ID
-// * ARM_CLIENT_SECRET
-// * ARM_SUBSCRIPTION_ID
-// * ARM_STORAGE_ACCOUNT
+// * An Azure subscription, with a resource group, app registration based credentails, a few image galleries, and a dev test lab
+// (You can use the Terraform config in the terraform folder at the base of the repository)
 //
-// The subscription in question should have a resource group
-// called "packer-acceptance-test" in "South Central US" region. The
-// storage account referred to in the above variable should
-// be inside this resource group and in "South Central US" as well.
+// * The Azure CLI installed and logged in for testing CLI based authentication
+// * Env Variables for Auth
+// ** ARM_CLIENT_ID
+// ** ARM_CLIENT_SECRET
+// ** ARM_SUBSCRIPTION_ID
+// *
+// * Env Variables Defining Azure Resources for Packer templates
+// ** ARM_RESOURCE_GROUP_NAME - Resource group
+// ** ARM_STORAGE_ACCOUNT - a storage account located in above resource group
 //
-// In addition, the PACKER_ACC variable should also be set to
-// a non-empty value to enable Packer acceptance tests and the
-// options "-v -timeout 90m" should be provided to the test
+// * As well as the following misc env variables
+// ** ARM_SSH_PRIVATE_KEY_FILE - the file location of a PEM encoded RSA SSH Private Key (ed25519 is not supported by Azure),
+// ** PACKER_ACC - set to any non 0 value
+//
+// It is recommended to run the tests with the options "-v -timeout 90m"
 // command, e.g.:
 //   go test -v -timeout 90m -run TestBuilderAcc_.*
+// This is to avoid hitting the default go test timeout, especially in the shared image gallery test
 
 import (
 	"bytes"
-	"context"
 	_ "embed"
-	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
-	"strings"
 	"testing"
 
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
-const DeviceLoginAcceptanceTest = "DEVICELOGIN_TEST"
+// TODO Add support for variable files with the acceptance testing module in packer-plugin-sdk
+// This will allow easier setting of default values for resource group name, storage account, DTL, and gallery name
+// To allow running in parallel tests in the same subscription
+// Currently this will fail since image gallery's have to be uniquely named within their subscription and not just their resource group
+
+// This test builds two images,
+// First a parent Specialized ARM 64 Linux VM to a Shared Image Gallery/Compute Gallery
+// Then a second Specialized ARM64 Linux VM that uses the first as its source/parent image
+func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG_WithChildImage(t *testing.T) {
+	t.Parallel()
+	common.CheckAcceptanceTestEnvVars(t,
+		common.CheckAcceptanceTestEnvVarsParams{
+			CheckAzureCLI:          true,
+			CheckSSHPrivateKeyFile: true,
+		},
+	)
+	subscriptionID := os.Getenv("ARM_SUBSCRIPTION_ID")
+	resourceGroupName := os.Getenv("ARM_RESOURCE_GROUP_NAME")
+
+	// After test finishes try and delete the created versions
+	defer deleteGalleryVersions(t, subscriptionID, resourceGroupName, "acctestgallery", "arm-linux-specialized-sig", []string{"1.0.0", "1.0.1"})
+	// Create parent specialized shared gallery image
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-specialized-linux-sig",
+		Type:     "azure-arm",
+		Template: string(armLinuxSpecialziedSIGTemplate),
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
+	})
+
+	// Create child image from a specialized parent
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-specialized-linux-sig-child",
+		Type:     "azure-arm",
+		Template: string(armLinuxChildFromSpecializedParent),
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
+	})
+
+}
+
+func TestBuilderAcc_SharedImageGallery_WindowsSIG(t *testing.T) {
+	t.Parallel()
+	common.CheckAcceptanceTestEnvVars(t,
+		common.CheckAcceptanceTestEnvVarsParams{
+			CheckAzureCLI: true,
+		},
+	)
+
+	subscriptionID := os.Getenv("ARM_SUBSCRIPTION_ID")
+	resourceGroupName := os.Getenv("ARM_RESOURCE_GROUP_NAME")
+	defer deleteGalleryVersions(t, subscriptionID, resourceGroupName, "acctestgallery", "windows-sig", []string{"1.0.0"})
+
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-windows-sig",
+		Type:     "azure-arm",
+		Template: string(windowsSIGTemplate),
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
+	})
+}
 
 func TestBuilderAcc_ManagedDisk_Windows(t *testing.T) {
+	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-managedisk-windows",
 		Type:     "azure-arm",
@@ -55,7 +137,13 @@ func TestBuilderAcc_ManagedDisk_Windows(t *testing.T) {
 	})
 }
 
+// TODO Implement this test to validate client cert auth
+func TestBuilderAcc_ClientCertificateAuth(t *testing.T) {
+	t.Skip("Unimplemented Client Cert Auth Acceptance test")
+}
+
 func TestBuilderAcc_ManagedDisk_Windows_Build_Resource_Group(t *testing.T) {
+	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-managedisk-windows-build-resource-group",
 		Type:     "azure-arm",
@@ -72,6 +160,7 @@ func TestBuilderAcc_ManagedDisk_Windows_Build_Resource_Group(t *testing.T) {
 }
 
 func TestBuilderAcc_ManagedDisk_Windows_Build_Resource_Group_Additional_Disk(t *testing.T) {
+	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-managedisk-windows-build-resource-group-additional-disk",
 		Type:     "azure-arm",
@@ -87,29 +176,8 @@ func TestBuilderAcc_ManagedDisk_Windows_Build_Resource_Group_Additional_Disk(t *
 	})
 }
 
-func TestBuilderAcc_ManagedDisk_Windows_DeviceLogin(t *testing.T) {
-	if os.Getenv(DeviceLoginAcceptanceTest) == "" {
-		t.Skip(fmt.Sprintf(
-			"Device Login Acceptance tests skipped unless env '%s' set, as its requires manual step during execution",
-			DeviceLoginAcceptanceTest))
-		return
-	}
-	acctest.TestPlugin(t, &acctest.PluginTestCase{
-		Name:     "test-azure-managedisk-windows-devicelogin",
-		Type:     "azure-arm",
-		Template: testBuilderAccManagedDiskWindowsDeviceLogin,
-		Check: func(buildCommand *exec.Cmd, logfile string) error {
-			if buildCommand.ProcessState != nil {
-				if buildCommand.ProcessState.ExitCode() != 0 {
-					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
-				}
-			}
-			return nil
-		},
-	})
-}
-
 func TestBuilderAcc_ManagedDisk_Linux(t *testing.T) {
+	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-managedisk-linux",
 		Type:     "azure-arm",
@@ -125,34 +193,11 @@ func TestBuilderAcc_ManagedDisk_Linux(t *testing.T) {
 	})
 }
 
-func TestBuilderAcc_ManagedDisk_Linux_DeviceLogin(t *testing.T) {
-	if os.Getenv(DeviceLoginAcceptanceTest) == "" {
-		t.Skip(fmt.Sprintf(
-			"Device Login Acceptance tests skipped unless env '%s' set, as its requires manual step during execution",
-			DeviceLoginAcceptanceTest))
-		return
-	}
-	acctest.TestPlugin(t, &acctest.PluginTestCase{
-		Name:     "test-azure-managedisk-linux-device-login",
-		Type:     "azure-arm",
-		Template: testBuilderAccManagedDiskLinuxDeviceLogin,
-		Check: func(buildCommand *exec.Cmd, logfile string) error {
-			if buildCommand.ProcessState != nil {
-				if buildCommand.ProcessState.ExitCode() != 0 {
-					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
-				}
-			}
-			return nil
-		},
-	})
-}
-
 func TestBuilderAcc_ManagedDisk_Linux_AzureCLI(t *testing.T) {
-	if os.Getenv("AZURE_CLI_AUTH") == "" {
-		t.Skip("Azure CLI Acceptance tests skipped unless env 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established")
-		return
-	}
-
+	t.Parallel()
+	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{
+		CheckAzureCLI: true,
+	})
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-managedisk-linux-azurecli",
 		Type:     "azure-arm",
@@ -165,14 +210,11 @@ func TestBuilderAcc_ManagedDisk_Linux_AzureCLI(t *testing.T) {
 			}
 			return nil
 		},
-		//Check: func([]packersdk.Artifact) error {
-		//checkTemporaryGroupDeleted(t, &b)
-		//return nil
-		//},
 	})
 }
 
 func TestBuilderAcc_Blob_Windows(t *testing.T) {
+	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-blob-windows",
 		Type:     "azure-arm",
@@ -189,8 +231,7 @@ func TestBuilderAcc_Blob_Windows(t *testing.T) {
 }
 
 func TestBuilderAcc_Blob_Linux(t *testing.T) {
-	b := Builder{}
-	_, _, _ = b.Prepare()
+	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-blob-linux",
 		Type:     "azure-arm",
@@ -203,17 +244,12 @@ func TestBuilderAcc_Blob_Linux(t *testing.T) {
 			}
 			return nil
 		},
-		//Check: func([]packersdk.Artifact) error {
-		//checkUnmanagedVHDDeleted(t, &b)
-		//return nil
-		//},
 	})
 }
 
 func TestBuilderUserData_Linux(t *testing.T) {
-	b := Builder{}
-	_, _, _ = b.Prepare()
-	tmpfile, err := ioutil.TempFile("", "userdata")
+	t.Parallel()
+	tmpfile, err := os.CreateTemp("", "userdata")
 	if err != nil {
 		t.Fatalf("failed creating tempfile: %s", err)
 	}
@@ -245,10 +281,17 @@ func TestBuilderUserData_Linux(t *testing.T) {
 //go:embed testdata/rsa_sha2_only_server.pkr.hcl
 var rsaSHA2OnlyTemplate []byte
 
-func TestBuilderAcc_rsaSHA2OnlyServer(t *testing.T) {
-	b := Builder{}
-	_, _, _ = b.Prepare()
+//go:embed testdata/windows_sig.pkr.hcl
+var windowsSIGTemplate []byte
 
+//go:embed testdata/arm_linux_specialized.pkr.hcl
+var armLinuxSpecialziedSIGTemplate []byte
+
+//go:embed testdata/child_from_specialized_parent.pkr.hcl
+var armLinuxChildFromSpecializedParent []byte
+
+func TestBuilderAcc_rsaSHA2OnlyServer(t *testing.T) {
+	t.Parallel()
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-ubuntu-jammy-linux",
 		Type:     "azure-arm",
@@ -264,93 +307,26 @@ func TestBuilderAcc_rsaSHA2OnlyServer(t *testing.T) {
 	})
 }
 
-//Following functions are left in as they are part of newer Packer plugin acceptance testing framework
-//See https://github.com/hashicorp/packer-plugin-azure/pull/200#discussion_r879529490
-//nolint
-func testAuthPreCheck(t *testing.T) {
-	_, err := auth.NewAuthorizerFromEnvironment()
-	if err != nil {
-		t.Fatalf("failed to auth to azure: %s", err)
+func deleteGalleryVersions(t *testing.T, subscriptionID string, resourceGroupName string, galleryName string, galleryImageName string, imageVersions []string) {
+	for _, imageVersion := range imageVersions {
+		// If we fail to delete a gallery version we should still try to delete other versions and the gallery
+		// Its possible a build was canceled or failed mid test that would leave any of the builds incomplete
+		// We still want to try and delete the Gallery to not leave behind orphaned resources to manually clean up
+		deleteCommand := exec.Command(
+			"az", "sig", "image-version", "delete",
+			fmt.Sprintf("--gallery-image-definition=%s", galleryImageName),
+			fmt.Sprintf("--gallery-image-version=%s", imageVersion),
+			fmt.Sprintf("--gallery-name=%s", galleryName),
+			fmt.Sprintf("-g=%s", resourceGroupName),
+		)
+		deleteStdout, err := deleteCommand.CombinedOutput()
+		if err != nil {
+			t.Logf("failed to delete Gallery Image Version %s:%s %s", galleryImageName, imageVersion, err)
+			t.Logf("Failed command output \n%s", string(deleteStdout))
+		}
 	}
 }
 
-//nolint
-func checkTemporaryGroupDeleted(t *testing.T, b *Builder) {
-	ui := testUi()
-
-	spnCloud, spnKeyVault, err := b.getServicePrincipalTokens(ui.Say)
-	if err != nil {
-		t.Fatalf("failed getting azure tokens: %s", err)
-	}
-
-	ui.Message("Creating test Azure Resource Manager (ARM) client ...")
-	azureClient, err := NewAzureClient(
-		b.config.ClientConfig.SubscriptionID,
-		b.config.SharedGalleryDestination.SigDestinationSubscription,
-		b.config.ResourceGroupName,
-		b.config.StorageAccount,
-		b.config.ClientConfig.CloudEnvironment(),
-		b.config.SharedGalleryTimeout,
-		b.config.PollingDurationTimeout,
-		spnCloud,
-		spnKeyVault)
-
-	if err != nil {
-		t.Fatalf("failed to create azure client: %s", err)
-	}
-
-	// Validate resource group has been deleted
-	_, err = azureClient.GroupsClient.Get(context.Background(), b.config.tmpResourceGroupName)
-	if err == nil || !resourceNotFound(err) {
-		t.Fatalf("failed validating resource group deletion: %s", err)
-	}
-}
-
-//nolint
-func checkUnmanagedVHDDeleted(t *testing.T, b *Builder) {
-	ui := testUi()
-
-	spnCloud, spnKeyVault, err := b.getServicePrincipalTokens(ui.Say)
-	if err != nil {
-		t.Fatalf("failed getting azure tokens: %s", err)
-	}
-
-	azureClient, err := NewAzureClient(
-		b.config.ClientConfig.SubscriptionID,
-		b.config.SharedGalleryDestination.SigDestinationSubscription,
-		b.config.ResourceGroupName,
-		b.config.StorageAccount,
-		b.config.ClientConfig.CloudEnvironment(),
-		b.config.SharedGalleryTimeout,
-		b.config.PollingDurationTimeout,
-		spnCloud,
-		spnKeyVault)
-
-	if err != nil {
-		t.Fatalf("failed to create azure client: %s", err)
-	}
-
-	// validate temporary os blob was deleted
-	blob := azureClient.BlobStorageClient.GetContainerReference("images").GetBlobReference(b.config.tmpOSDiskName)
-	_, err = blob.BreakLease(nil)
-	if err != nil && !strings.Contains(err.Error(), "BlobNotFound") {
-		t.Fatalf("failed validating deletion of unmanaged vhd: %s", err)
-	}
-
-	// Validate resource group has been deleted
-	_, err = azureClient.GroupsClient.Get(context.Background(), b.config.tmpResourceGroupName)
-	if err == nil || !resourceNotFound(err) {
-		t.Fatalf("failed validating resource group deletion: %s", err)
-	}
-}
-
-//nolint
-func resourceNotFound(err error) bool {
-	derr := autorest.DetailedError{}
-	return errors.As(err, &derr) && derr.StatusCode == 404
-}
-
-//nolint
 func testUi() *packersdk.BasicUi {
 	return &packersdk.BasicUi{
 		Reader:      new(bytes.Buffer),
@@ -366,7 +342,8 @@ func testBuilderUserDataLinux(userdata string) string {
 	  "client_id": "{{env `+"`ARM_CLIENT_ID`"+`}}",
 	  "client_secret": "{{env `+"`ARM_CLIENT_SECRET`"+`}}",
 	  "subscription_id": "{{env `+"`ARM_SUBSCRIPTION_ID`"+`}}",
-	  "storage_account": "{{env `+"`ARM_STORAGE_ACCOUNT`"+`}}"
+	  "storage_account": "{{env `+"`ARM_STORAGE_ACCOUNT`"+`}}",
+	  "resource_group_name": "{{env `+"`ARM_RESOURCE_GROUP_NAME`"+`}}"
 	},
 	"builders": [{
 	  "type": "azure-arm",
@@ -376,7 +353,7 @@ func testBuilderUserDataLinux(userdata string) string {
 	  "subscription_id": "{{user `+"`subscription_id`"+`}}",
 
 	  "storage_account": "{{user `+"`storage_account`"+`}}",
-	  "resource_group_name": "packer-acceptance-test",
+	  "resource_group_name": "{{user `+"`resource_group_name`"+`}}",
 	  "capture_container_name": "test",
 	  "capture_name_prefix": "testBuilderUserDataLinux",
 
@@ -403,6 +380,7 @@ const testBuilderAccManagedDiskWindows = `
 	"variables": {
 	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
 	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
+	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}",
 	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}"
 	},
 	"builders": [{
@@ -412,7 +390,7 @@ const testBuilderAccManagedDiskWindows = `
 	  "client_secret": "{{user ` + "`client_secret`" + `}}",
 	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
 
-	  "managed_image_resource_group_name": "packer-acceptance-test",
+	  "managed_image_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
 	  "managed_image_name": "testBuilderAccManagedDiskWindows-{{timestamp}}",
 
 	  "os_type": "Windows",
@@ -438,7 +416,8 @@ const testBuilderAccManagedDiskWindowsBuildResourceGroup = `
 	"variables": {
 	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
 	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
-	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}"
+	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}",
+	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}"
 	},
 	"builders": [{
 	  "type": "azure-arm",
@@ -447,8 +426,8 @@ const testBuilderAccManagedDiskWindowsBuildResourceGroup = `
 	  "client_secret": "{{user ` + "`client_secret`" + `}}",
 	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
 
-	  "build_resource_group_name" : "packer-acceptance-test",
-	  "managed_image_resource_group_name": "packer-acceptance-test",
+	  "build_resource_group_name" : "{{user ` + "`resource_group_name`" + `}}",
+	  "managed_image_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
 	  "managed_image_name": "testBuilderAccManagedDiskWindowsBuildResourceGroup-{{timestamp}}",
 
 	  "os_type": "Windows",
@@ -461,7 +440,6 @@ const testBuilderAccManagedDiskWindowsBuildResourceGroup = `
 	  "winrm_insecure": "true",
 	  "winrm_timeout": "3m",
 	  "winrm_username": "packer",
-	  "async_resourcegroup_delete": "true",
 
 	  "vm_size": "Standard_DS2_v2"
 	}]
@@ -473,7 +451,8 @@ const testBuilderAccManagedDiskWindowsBuildResourceGroupAdditionalDisk = `
 	"variables": {
 	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
 	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
-	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}"
+	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}",
+	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}"
 	},
 	"builders": [{
 	  "type": "azure-arm",
@@ -482,8 +461,8 @@ const testBuilderAccManagedDiskWindowsBuildResourceGroupAdditionalDisk = `
 	  "client_secret": "{{user ` + "`client_secret`" + `}}",
 	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
 
-	  "build_resource_group_name" : "packer-acceptance-test",
-	  "managed_image_resource_group_name": "packer-acceptance-test",
+	  "build_resource_group_name" : "{{user ` + "`resource_group_name`" + `}}",
+	  "managed_image_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
 	  "managed_image_name": "testBuilderAccManagedDiskWindowsBuildResourceGroupAdditionDisk-{{timestamp}}",
 
 	  "os_type": "Windows",
@@ -504,42 +483,13 @@ const testBuilderAccManagedDiskWindowsBuildResourceGroupAdditionalDisk = `
 }
 `
 
-const testBuilderAccManagedDiskWindowsDeviceLogin = `
-{
-	"variables": {
-	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}"
-	},
-	"builders": [{
-	  "type": "azure-arm",
-
-	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
-
-	  "managed_image_resource_group_name": "packer-acceptance-test",
-	  "managed_image_name": "testBuilderAccManagedDiskWindowsDeviceLogin-{{timestamp}}",
-
-	  "os_type": "Windows",
-	  "image_publisher": "MicrosoftWindowsServer",
-	  "image_offer": "WindowsServer",
-	  "image_sku": "2012-R2-Datacenter",
-
-	  "communicator": "winrm",
-	  "winrm_use_ssl": "true",
-	  "winrm_insecure": "true",
-	  "winrm_timeout": "3m",
-	  "winrm_username": "packer",
-
-	  "location": "South Central US",
-	  "vm_size": "Standard_DS2_v2"
-	}]
-}
-`
-
 const testBuilderAccManagedDiskLinux = `
 {
 	"variables": {
 	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
 	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
-	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}"
+	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}",
+	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}"
 	},
 	"builders": [{
 	  "type": "azure-arm",
@@ -548,7 +498,7 @@ const testBuilderAccManagedDiskLinux = `
 	  "client_secret": "{{user ` + "`client_secret`" + `}}",
 	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
 
-	  "managed_image_resource_group_name": "packer-acceptance-test",
+	  "managed_image_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
 	  "managed_image_name": "testBuilderAccManagedDiskLinux-{{timestamp}}",
 
 	  "os_type": "Linux",
@@ -566,38 +516,14 @@ const testBuilderAccManagedDiskLinux = `
 }
 `
 
-const testBuilderAccManagedDiskLinuxDeviceLogin = `
-{
-	"variables": {
-	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}"
-	},
-	"builders": [{
-	  "type": "azure-arm",
-
-	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
-
-	  "managed_image_resource_group_name": "packer-acceptance-test",
-	  "managed_image_name": "testBuilderAccManagedDiskLinuxDeviceLogin-{{timestamp}}",
-
-	  "os_type": "Linux",
-	  "image_publisher": "Canonical",
-	  "image_offer": "UbuntuServer",
-	  "image_sku": "16.04-LTS",
-	  "async_resourcegroup_delete": "true",
-
-	  "location": "South Central US",
-	  "vm_size": "Standard_DS2_v2"
-	}]
-}
-`
-
 const testBuilderAccBlobWindows = `
 {
 	"variables": {
 	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
 	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
 	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}",
-	  "storage_account": "{{env ` + "`ARM_STORAGE_ACCOUNT`" + `}}"
+	  "storage_account": "{{env ` + "`ARM_STORAGE_ACCOUNT`" + `}}",
+	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}"
 	},
 	"builders": [{
 	  "type": "azure-arm",
@@ -607,7 +533,7 @@ const testBuilderAccBlobWindows = `
 	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
 
 	  "storage_account": "{{user ` + "`storage_account`" + `}}",
-	  "resource_group_name": "packer-acceptance-test",
+	  "resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
 	  "capture_container_name": "azure-arm",
 	  "capture_name_prefix": "testBuilderAccBlobWin",
 
@@ -632,6 +558,7 @@ const testBuilderAccBlobLinux = `
 {
 	"variables": {
 	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
+	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}",
 	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
 	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}",
 	  "storage_account": "{{env ` + "`ARM_STORAGE_ACCOUNT`" + `}}"
@@ -644,7 +571,7 @@ const testBuilderAccBlobLinux = `
 	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
 
 	  "storage_account": "{{user ` + "`storage_account`" + `}}",
-	  "resource_group_name": "packer-acceptance-test",
+	  "resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
 	  "capture_container_name": "test",
 	  "capture_name_prefix": "testBuilderAccBlobLinux",
 
@@ -661,12 +588,15 @@ const testBuilderAccBlobLinux = `
 
 const testBuilderAccManagedDiskLinuxAzureCLI = `
 {
+	"variables": {
+	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}"
+	},
 	"builders": [{
 	  "type": "azure-arm",
 
 	  "use_azure_cli_auth": true,
 
-	  "managed_image_resource_group_name": "packer-acceptance-test",
+	  "managed_image_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
 	  "managed_image_name": "testBuilderAccManagedDiskLinuxAzureCLI-{{timestamp}}",
 	  "temp_resource_group_name": "packer-acceptance-test-managed-cli",
 

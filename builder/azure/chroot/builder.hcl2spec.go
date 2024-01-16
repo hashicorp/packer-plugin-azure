@@ -24,7 +24,7 @@ type FlatConfig struct {
 	ClientID                          *string                            `mapstructure:"client_id" cty:"client_id" hcl:"client_id"`
 	ClientSecret                      *string                            `mapstructure:"client_secret" cty:"client_secret" hcl:"client_secret"`
 	ClientCertPath                    *string                            `mapstructure:"client_cert_path" cty:"client_cert_path" hcl:"client_cert_path"`
-	ClientCertExpireTimeout           *string                            `mapstructure:"client_cert_token_timeout" required:"false" cty:"client_cert_token_timeout" hcl:"client_cert_token_timeout"`
+	ClientCertPassword                *string                            `mapstructure:"client_cert_password" cty:"client_cert_password" hcl:"client_cert_password"`
 	ClientJWT                         *string                            `mapstructure:"client_jwt" cty:"client_jwt" hcl:"client_jwt"`
 	ObjectID                          *string                            `mapstructure:"object_id" cty:"object_id" hcl:"object_id"`
 	TenantID                          *string                            `mapstructure:"tenant_id" required:"false" cty:"tenant_id" hcl:"tenant_id"`
@@ -40,7 +40,7 @@ type FlatConfig struct {
 	PostMountCommands                 []string                           `mapstructure:"post_mount_commands" cty:"post_mount_commands" hcl:"post_mount_commands"`
 	ChrootMounts                      [][]string                         `mapstructure:"chroot_mounts" cty:"chroot_mounts" hcl:"chroot_mounts"`
 	CopyFiles                         []string                           `mapstructure:"copy_files" cty:"copy_files" hcl:"copy_files"`
-	OSDiskSizeGB                      *int32                             `mapstructure:"os_disk_size_gb" cty:"os_disk_size_gb" hcl:"os_disk_size_gb"`
+	OSDiskSizeGB                      *int64                             `mapstructure:"os_disk_size_gb" cty:"os_disk_size_gb" hcl:"os_disk_size_gb"`
 	OSDiskStorageAccountType          *string                            `mapstructure:"os_disk_storage_account_type" cty:"os_disk_storage_account_type" hcl:"os_disk_storage_account_type"`
 	OSDiskCacheType                   *string                            `mapstructure:"os_disk_cache_type" cty:"os_disk_cache_type" hcl:"os_disk_cache_type"`
 	DataDiskStorageAccountType        *string                            `mapstructure:"data_disk_storage_account_type" cty:"data_disk_storage_account_type" hcl:"data_disk_storage_account_type"`
@@ -81,7 +81,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"client_id":                       &hcldec.AttrSpec{Name: "client_id", Type: cty.String, Required: false},
 		"client_secret":                   &hcldec.AttrSpec{Name: "client_secret", Type: cty.String, Required: false},
 		"client_cert_path":                &hcldec.AttrSpec{Name: "client_cert_path", Type: cty.String, Required: false},
-		"client_cert_token_timeout":       &hcldec.AttrSpec{Name: "client_cert_token_timeout", Type: cty.String, Required: false},
+		"client_cert_password":            &hcldec.AttrSpec{Name: "client_cert_password", Type: cty.String, Required: false},
 		"client_jwt":                      &hcldec.AttrSpec{Name: "client_jwt", Type: cty.String, Required: false},
 		"object_id":                       &hcldec.AttrSpec{Name: "object_id", Type: cty.String, Required: false},
 		"tenant_id":                       &hcldec.AttrSpec{Name: "tenant_id", Type: cty.String, Required: false},

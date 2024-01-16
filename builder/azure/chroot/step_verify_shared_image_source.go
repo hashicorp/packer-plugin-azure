@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package chroot
 
 import (
@@ -6,8 +9,8 @@ import (
 	"log"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -21,6 +24,15 @@ type StepVerifySharedImageSource struct {
 	SharedImageID  string
 	SubscriptionID string
 	Location       string
+
+	getVersion func(context.Context, client.AzureClientSet, galleryimageversions.ImageVersionId) (*galleryimageversions.GalleryImageVersion, error)
+	getImage   func(context.Context, client.AzureClientSet, galleryimages.GalleryImageId) (*galleryimages.GalleryImage, error)
+}
+
+func NewStepVerifySharedImageSource(step *StepVerifySharedImageSource) *StepVerifySharedImageSource {
+	step.getImage = step.getGalleryImage
+	step.getVersion = step.getGalleryVersion
+	return step
 }
 
 // Run retrieves the image metadata from Azure and compares the location to Location. Verifies the OS Type.
@@ -49,35 +61,36 @@ func (s *StepVerifySharedImageSource) Run(ctx context.Context, state multistep.S
 	ui.Say(fmt.Sprintf("Validating that shared image version %q exists",
 		s.SharedImageID))
 
-	version, err := azcli.GalleryImageVersionsClient().Get(ctx,
+	galleryImageVersionID := galleryimageversions.NewImageVersionID(
+		azcli.SubscriptionID(),
 		resource.ResourceGroup,
 		resource.ResourceName[0],
 		resource.ResourceName[1],
 		resource.ResourceName[2],
-		"")
+	)
+	version, err := s.getVersion(ctx, azcli, galleryImageVersionID)
 
 	if err != nil {
 		return errorMessage("Error retrieving shared image version %q: %+v ", s.SharedImageID, err)
 	}
 
-	if version.ID == nil || *version.ID == "" {
+	if version.Id == nil || *version.Id == "" {
 		return errorMessage("Error retrieving shared image version %q: ID field in response is empty", s.SharedImageID)
 	}
 
-	if version.GalleryImageVersionProperties == nil ||
-		version.GalleryImageVersionProperties.PublishingProfile == nil ||
-		version.GalleryImageVersionProperties.PublishingProfile.TargetRegions == nil {
+	if version.Properties == nil ||
+		version.Properties.PublishingProfile == nil ||
+		version.Properties.PublishingProfile.TargetRegions == nil {
 		return errorMessage("Could not retrieve shared image version properties for image %q.", s.SharedImageID)
 	}
 
-	targetLocations := make([]string, 0, len(*version.GalleryImageVersionProperties.PublishingProfile.TargetRegions))
+	targetLocations := make([]string, 0, len(*version.Properties.PublishingProfile.TargetRegions))
 	vmLocation := client.NormalizeLocation(s.Location)
 	locationFound := false
-	for _, tr := range *version.GalleryImageVersionProperties.PublishingProfile.TargetRegions {
-		l := to.String(tr.Name)
-		l = client.NormalizeLocation(l)
-		targetLocations = append(targetLocations, l)
-		if strings.EqualFold(vmLocation, l) {
+	for _, tr := range *version.Properties.PublishingProfile.TargetRegions {
+		location := client.NormalizeLocation(tr.Name)
+		targetLocations = append(targetLocations, location)
+		if strings.EqualFold(vmLocation, location) {
 			locationFound = true
 			break
 		}
@@ -88,32 +101,34 @@ func (s *StepVerifySharedImageSource) Run(ctx context.Context, state multistep.S
 	}
 
 	imageResource, _ := resource.Parent()
-	image, err := azcli.GalleryImagesClient().Get(ctx,
+	galleryImageID := galleryimages.NewGalleryImageID(
+		azcli.SubscriptionID(),
 		resource.ResourceGroup,
 		resource.ResourceName[0],
-		resource.ResourceName[1])
-
+		resource.ResourceName[1],
+	)
+	image, err := s.getImage(ctx, azcli, galleryImageID)
 	if err != nil {
 		return errorMessage("Error retrieving shared image %q: %+v ", imageResource.String(), err)
 	}
 
-	if image.ID == nil || *image.ID == "" {
+	if image.Id == nil || *image.Id == "" {
 		return errorMessage("Error retrieving shared image %q: ID field in response is empty", imageResource.String())
 	}
 
-	if image.GalleryImageProperties == nil {
+	if image.Properties == nil {
 		return errorMessage("Could not retrieve shared image properties for image %q.", imageResource.String())
 	}
 
-	log.Printf("StepVerifySharedImageSource:Run: Image %q, HvGen: %q, osState: %q",
-		to.String(image.ID),
-		image.GalleryImageProperties.HyperVGeneration,
-		image.GalleryImageProperties.OsState)
+	log.Printf("StepVerifySharedImageSource:Run: Image %+v, HvGen: %+v, osState: %+v",
+		&image.Id,
+		image.Properties.HyperVGeneration,
+		image.Properties.OsState)
 
-	if image.GalleryImageProperties.OsType != compute.OperatingSystemTypesLinux {
+	if image.Properties.OsType != galleryimages.OperatingSystemTypesLinux {
 		return errorMessage("The shared image (%q) is not a Linux image (found %q). Currently only Linux images are supported.",
-			to.String(image.ID),
-			image.GalleryImageProperties.OsType)
+			&image.Id,
+			image.Properties.OsType)
 	}
 
 	ui.Say(fmt.Sprintf("Found image source image version %q, available in location %s",
@@ -123,4 +138,25 @@ func (s *StepVerifySharedImageSource) Run(ctx context.Context, state multistep.S
 	return multistep.ActionContinue
 }
 
+func (s *StepVerifySharedImageSource) getGalleryVersion(ctx context.Context, azcli client.AzureClientSet, id galleryimageversions.ImageVersionId) (*galleryimageversions.GalleryImageVersion, error) {
+	res, err := azcli.GalleryImageVersionsClient().Get(ctx, id, galleryimageversions.DefaultGetOperationOptions())
+	if err != nil {
+		return nil, err
+	}
+	if res.Model == nil {
+		return nil, client.NullModelSDKErr
+	}
+	return res.Model, nil
+}
+
+func (s *StepVerifySharedImageSource) getGalleryImage(ctx context.Context, azcli client.AzureClientSet, id galleryimages.GalleryImageId) (*galleryimages.GalleryImage, error) {
+	res, err := azcli.GalleryImagesClient().Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if res.Model == nil {
+		return nil, client.NullModelSDKErr
+	}
+	return res.Model, nil
+}
 func (*StepVerifySharedImageSource) Cleanup(multistep.StateBag) {}

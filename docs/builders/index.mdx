@@ -14,12 +14,12 @@ Packer can create Azure virtual machine images through variety of ways
 depending on the strategy that you want to use for building the images.
 Packer supports the following builders for Azure images at the moment:
 
-- [azure-arm](/docs/builders/azure-arm) - Uses Azure Resource
+- [azure-arm](/packer/plugins/builders/azure/arm) - Uses Azure Resource
   Manager (ARM) to launch a virtual machine (VM) from which a new image is
   captured after provisioning. If in doubt, use this builder; it is the
   easiest builder to get started with.
 
-- [azure-chroot](/docs/builders/azure-chroot) - Uses ARM to create
+- [azure-chroot](/packer/plugins/builders/azure/chroot) - Uses ARM to create
   a managed disk that is attached to an existing Azure VM that Packer is
   running on. Provisioning leverages [Chroot](https://en.wikipedia.org/wiki/Chroot)
   environment. After provisioning, the disk is detached an image is created
@@ -28,42 +28,26 @@ Packer supports the following builders for Azure images at the moment:
   Azure.
 
 -> **Don't know which builder to use?** If in doubt, use the [azure-arm
-builder](/docs/builders/azure-arm). It is much easier to use.
+builder](/packer/plugins/builders/azure/arm). It is much easier to use.
 
 # Authentication for Azure
 
 The Packer Azure builders provide a couple of ways to authenticate to Azure. The
 following methods are available and are explained below:
 
-- Azure Active Directory interactive login. Interactive login is available
-  for the Public and US Gov clouds only.
 - Azure Managed Identity
 - Azure Active Directory Service Principal
 - Azure CLI
 
--> **Don't know which authentication method to use?** Go with interactive
-login to try out the builders. If you need Packer to run automatically,
-switch to using a Service Principal or Managed Identity.
+-> **Don't know which authentication method to use?** 
+
+It is reccomended to use 'use_azure_cli_auth' to enable Azure CLI authentication
 
 No matter which method you choose, the identity you use will need the
 appropriate permissions on Azure resources for Packer to operate. The minimal
 set of permissions is highly dependent on the builder and its configuration.
 An easy way to get started is to assign the identity the `Contributor` role at
 the subscription level.
-
-## Azure Active Directory interactive login
-
-If your organization allows it, you can use a command line interactive login
-method based on oAuth 'device code flow'. Packer will select this method when
-you only specify a `subscription_id` in your builder configuration. When you
-run Packer, it will ask you to visit a web site and input a code. This web site
-will then authenticate you, satisfying any two-factor authentication policies
-that your organization might have. The tokens are cached under the `.azure/packer`
-directory in your home directory and will be reused if they are still valid
-on subsequent runs.
-
-Please note that the interactive login is only available on the Azure public
-cloud, not on sovereign/government clouds.
 
 ## Azure Managed Identity
 

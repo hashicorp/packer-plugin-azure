@@ -28,52 +28,13 @@ There are many configuration options available for the builder. We'll start
 with authentication parameters, then go over the Azure ARM builder specific
 options. In addition to the options listed here, a [communicator](https://packer.io/docs/templates/legacy_json_templates/communicator) can be configured for this builder.
 
-### Authentication options
-
-@include 'builder/azure/common/client/Config.mdx'
-
-#### Managed Identity
-
-If you're running Packer on an Azure VM with a [managed identity](https://packer.io/docs/builders/azure#azure-managed-identity) you don't need to specify any additional configuration options. As Packer will attempt to use the Managed Identity and subscription of the VM that Packer is running on.
-
-#### Interactive User Authentication
-
-To use interactive user authentication, you should specify `subscription_id` only.
-Packer will use cached credentials or redirect you to a website to log in.
-
-#### Service Principal
-
-To use a [service principal](https://packer.io/docs/builders/azure#azure-active-directory-service-principal)
-you should specify `subscription_id`, `client_id` and one of `client_secret`,
-`client_cert_path` or `client_jwt`.
-
-- `subscription_id` (string) - Subscription under which the build will be
-  performed. **The service principal specified in `client_id` must have full
-  access to this subscription, unless build_resource_group_name option is
-  specified in which case it needs to have owner access to the existing
-  resource group specified in build_resource_group_name parameter.**
-
-- `client_id` (string) - The Active Directory service principal associated with
-  your builder.
-
-- `client_secret` (string) - The password or secret for your service principal.
-
-- `client_cert_path` (string) - The location of a PEM file containing a
-  certificate and private key for service principal.
-
-- `client_cert_token_timeout` (duration string | ex: "1h30m12s") - How long to set the expire time on the token created when using
-  `client_cert_path`.
-
-- `client_jwt` (string) - The bearer JWT assertion signed using a certificate
-  associated with your service principal principal. See [Azure Active
-  Directory docs](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-certificate-credentials)
-  for more information.
-
 ### Azure ARM builder specific options
 
-The Azure builder can create either a VHD or a managed image. If you are
-creating a VHD, you **must** start with a VHD. Likewise, if you want to create
+The Azure builder can create either a VHD, managed image or create a Shared Image Gallery.
+If you are creating a VHD, you **must** start with a VHD. Likewise, if you want to create
 a managed image you **must** start with a managed image.
+Managed images can also be published to shared image galleries,
+but a managed image definition is not required to publish to a gallery.
 
 ### Required:
 
@@ -111,7 +72,7 @@ When creating a managed image the following additional options are required:
   [documentation](https://docs.microsoft.com/en-us/azure/storage/storage-managed-disks-overview#images)
   to learn more about managed images.
 
-Creating a managed image using a [Shared Gallery image](https://azure.microsoft.com/en-us/blog/announcing-the-public-preview-of-shared-image-gallery/) as the source can be achieved by specifying the [shared_image_gallery](#shared_image_gallery) configuration option.
+Creating a managed image using a [Shared Gallery image](https://azure.microsoft.com/en-us/blog/announcing-the-public-preview-of-shared-image-gallery/) as the source can be achieved by specifying the [shared_image_gallery](#shared-image-gallery) configuration option.
 
 #### Resource Group Usage
 
@@ -152,6 +113,28 @@ Providing `temp_resource_group_name` or `location` in combination with
 
 @include 'builder/azure/common/Config-not-required.mdx'
 
+
+### Shared Image Gallery
+
+The shared_image_gallery block is available for building a new image from a private or [community shared imaged gallery](https://docs.microsoft.com/en-us/azure/virtual-machines/azure-compute-gallery#community-gallery-preview) owned gallery.
+
+@include 'builder/azure/arm/SharedImageGallery-not-required.mdx'
+
+
+### Shared Image Gallery Destination
+
+The shared_image_gallery_destination block is available for publishing a new image version to an existing shared image gallery.
+
+@include 'builder/azure/arm/SharedImageGalleryDestination-not-required.mdx'
+
+
+### Spot
+
+The `spot` block is available to use a spot instance during build.
+
+@include 'builder/azure/arm/Spot-not-required.mdx'
+
+
 ## Build Shared Information Variables
 
 This builder generates data that are shared with provisioner and post-processor via build function of [template engine](https://packer.io/docs/templates/legacy_json_templates/engine) for JSON and [contextual variables](https://packer.io/docs/templates/hcl_templates/contextual-variables) for HCL2.
@@ -164,8 +147,7 @@ shared images the resulting name will point to the actual source used to create 
 
 Usage example:
 
-<Tabs>
-<Tab heading="HCL2">
+**HCL2**
 
 ```hcl
 // When accessing one of these variables from inside the builder, you need to
@@ -190,8 +172,7 @@ post-processor "manifest" {
     }
 }
 ```
-</Tab>
-<Tab heading="JSON">
+**JSON**
 
 ```json
 "post-processors": [
@@ -206,8 +187,6 @@ post-processor "manifest" {
 ]
 ```
 
-</Tab>
-</Tabs>
 
 ### Communicator Config
 
@@ -223,8 +202,7 @@ In addition to the builder options, a communicator may also be defined:
 
 Here is a basic example for Azure.
 
-<Tabs>
-<Tab heading="HCL2">
+**HCL2**
 
 ```hcl
 source "azure-arm" "basic-example" {
@@ -256,8 +234,7 @@ build {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+**JSON**
 
 ```json
 {
@@ -287,8 +264,6 @@ build {
 }
 ```
 
-</Tab>
-</Tabs>
 
 ## Deprovision
 
@@ -309,8 +284,7 @@ after that. The possible states, in case you want to wait for another state,
 [are documented
 here](https://technet.microsoft.com/en-us/library/hh824815.aspx)
 
-<Tabs>
-<Tab heading="JSON">
+**JSON**
 
 ```json
 {
@@ -318,10 +292,8 @@ here](https://technet.microsoft.com/en-us/library/hh824815.aspx)
     {
       "type": "powershell",
       "inline": [
-        " # NOTE: the following *3* lines are only needed if the you have installed the Guest Agent.",
-        "  while ((Get-Service RdAgent).Status -ne 'Running') { Start-Sleep -s 5 }",
-        "  while ((Get-Service WindowsAzureTelemetryService).Status -ne 'Running') { Start-Sleep -s 5 }",
-        "  while ((Get-Service WindowsAzureGuestAgent).Status -ne 'Running') { Start-Sleep -s 5 }",
+        "# If Guest Agent services are installed, make sure that they have started.",
+        "foreach ($service in Get-Service -Name RdAgent, WindowsAzureTelemetryService, WindowsAzureGuestAgent -ErrorAction SilentlyContinue) { while ((Get-Service $service.Name).Status -ne 'Running') { Start-Sleep -s 5 } }",
 
         "& $env:SystemRoot\\System32\\Sysprep\\Sysprep.exe /oobe /generalize /quiet /quit /mode:vm",
         "while($true) { $imageState = Get-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Setup\\State | Select ImageState; if($imageState.ImageState -ne 'IMAGE_STATE_GENERALIZE_RESEAL_TO_OOBE') { Write-Output $imageState.ImageState; Start-Sleep -s 10  } else { break } }"
@@ -331,16 +303,13 @@ here](https://technet.microsoft.com/en-us/library/hh824815.aspx)
 }
 ```
 
-</Tab>
-<Tab heading="HCL2">
+**HCL2**
 
 ```hcl
 provisioner "powershell" {
    inline = [
-        " # NOTE: the following *3* lines are only needed if the you have installed the Guest Agent.",
-        "  while ((Get-Service RdAgent).Status -ne 'Running') { Start-Sleep -s 5 }",
-        "  while ((Get-Service WindowsAzureTelemetryService).Status -ne 'Running') { Start-Sleep -s 5 }",
-        "  while ((Get-Service WindowsAzureGuestAgent).Status -ne 'Running') { Start-Sleep -s 5 }",
+        "# If Guest Agent services are installed, make sure that they have started.",
+        "foreach ($service in Get-Service -Name RdAgent, WindowsAzureTelemetryService, WindowsAzureGuestAgent -ErrorAction SilentlyContinue) { while ((Get-Service $service.Name).Status -ne 'Running') { Start-Sleep -s 5 } }",
 
         "& $env:SystemRoot\\System32\\Sysprep\\Sysprep.exe /oobe /generalize /quiet /quit /mode:vm",
         "while($true) { $imageState = Get-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Setup\\State | Select ImageState; if($imageState.ImageState -ne 'IMAGE_STATE_GENERALIZE_RESEAL_TO_OOBE') { Write-Output $imageState.ImageState; Start-Sleep -s 10  } else { break } }"
@@ -348,8 +317,6 @@ provisioner "powershell" {
 }
 ```
 
-</Tab>
-</Tabs>
 
 The Windows Guest Agent participates in the Sysprep process. The agent must be
 fully installed before the VM can be sysprep'ed. To ensure this is true all
@@ -368,8 +335,7 @@ correctly -- for example, if it is waiting for a reboot that you never perform.
 The following provisioner snippet shows how to deprovision a Linux VM.
 Deprovision should be the last operation executed by a build.
 
-<Tabs>
-<Tab heading="JSON">
+**JSON**
 
 ```json
 {
@@ -386,8 +352,7 @@ Deprovision should be the last operation executed by a build.
 }
 ```
 
-</Tab>
-<Tab heading="HCL2">
+**HCL2**
 
 ```hcl
 provisioner "shell" {
@@ -399,8 +364,6 @@ provisioner "shell" {
 }
 ```
 
-</Tab>
-</Tabs>
 
 To learn more about the Linux deprovision process please see WALinuxAgent's
 [README](https://github.com/Azure/WALinuxAgent/blob/master/README.md).
@@ -502,27 +465,6 @@ prevent running afoul of Azure decency controls.
 
 The password alphabet used for random values is
 **0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ**.
-
-### Deprecation Warning
-
-You may see a scary-looking deprecation warning when you run the Azure builder:
-
-```
-==> azure-arm: Warning: You are using Azure Packer Builder to create VHDs which
-is being deprecated, consider using Managed Images. Learn more
-http://aka.ms/packermanagedimage
-```
-
-Don't panic. Your build won't stop working next week.
-
-Long-term, Azure wants everyone to move to using managed images and managed
-disks because they hide the complexity with respect to storage account
-performance. Managed disks can be exported to a VHD. If this is deprecated,
-it will be done in a transparent process by the Microsoft team who help
-maintain Packer.
-
-In the future, Packer may remove VHD support but add a post-processor that can
-automate the export to a storage account.
 
 ### Windows
 

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package common_test
 
 import (
@@ -10,7 +13,7 @@ import (
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 )
 
-func TestSkipCreateImage(t *testing.T) {
+func TestSkipCreateImageFalse(t *testing.T) {
 	var said []string
 
 	say := func(what string) {
@@ -30,11 +33,25 @@ func TestSkipCreateImage(t *testing.T) {
 	}
 
 	assert.Equal(t, said, []string{message})
+}
 
-	said = nil
-	config.SkipCreateImage = true
+func TestSkipCreateImageTrue(t *testing.T) {
+	var said []string
 
-	steps = config.CaptureSteps(say, common.NewStepNotify(message, say))
+	say := func(what string) {
+		said = append(said, what)
+	}
+
+	config := common.Config{
+		SkipCreateImage: true,
+	}
+
+	message := "Capture Image"
+
+	steps := config.CaptureSteps(say, common.NewStepNotify(message, say))
+	state := &multistep.BasicStateBag{}
+
+	ctx := context.Background()
 
 	for _, step := range steps {
 		step.Run(ctx, state)

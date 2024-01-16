@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package chroot
 
 import (
@@ -5,10 +8,9 @@ import (
 	"fmt"
 	"log"
 	"sort"
-	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -19,6 +21,13 @@ type StepCreateSharedImageVersion struct {
 	OSDiskCacheType   string
 	DataDiskCacheType string
 	Location          string
+
+	create func(context.Context, client.AzureClientSet, galleryimageversions.ImageVersionId, galleryimageversions.GalleryImageVersion) error
+}
+
+func NewStepCreateSharedImageVersion(step *StepCreateSharedImageVersion) *StepCreateSharedImageVersion {
+	step.create = step.createImageVersion
+	return step
 }
 
 func (s *StepCreateSharedImageVersion) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -30,68 +39,69 @@ func (s *StepCreateSharedImageVersion) Run(ctx context.Context, state multistep.
 		s.Destination.ResourceID(azcli.SubscriptionID()),
 		snapshotset.OS()))
 
-	var targetRegions []compute.TargetRegion
+	var targetRegions []galleryimageversions.TargetRegion
 	// transform target regions to API objects
 	for _, tr := range s.Destination.TargetRegions {
-		apiObject := compute.TargetRegion{
-			Name:                 to.StringPtr(tr.Name),
-			RegionalReplicaCount: to.Int32Ptr(tr.ReplicaCount),
-			StorageAccountType:   compute.StorageAccountType(tr.StorageAccountType),
+		trStorageAccountType := galleryimageversions.StorageAccountType(tr.StorageAccountType)
+		apiObject := galleryimageversions.TargetRegion{
+			Name:                 tr.Name,
+			RegionalReplicaCount: &tr.ReplicaCount,
+			StorageAccountType:   &trStorageAccountType,
 		}
 		targetRegions = append(targetRegions, apiObject)
 	}
 
-	imageVersion := compute.GalleryImageVersion{
-		Location: to.StringPtr(s.Location),
-		GalleryImageVersionProperties: &compute.GalleryImageVersionProperties{
-			StorageProfile: &compute.GalleryImageVersionStorageProfile{
-				OsDiskImage: &compute.GalleryOSDiskImage{
-					Source:      &compute.GalleryArtifactVersionSource{ID: to.StringPtr(snapshotset.OS().String())},
-					HostCaching: compute.HostCaching(s.OSDiskCacheType),
+	osDiskSource := snapshotset.OS().String()
+	hostCaching := galleryimageversions.HostCaching(s.OSDiskCacheType)
+	imageVersion := galleryimageversions.GalleryImageVersion{
+		Location: s.Location,
+		Properties: &galleryimageversions.GalleryImageVersionProperties{
+			StorageProfile: galleryimageversions.GalleryImageVersionStorageProfile{
+				OsDiskImage: &galleryimageversions.GalleryDiskImage{
+					Source:      &galleryimageversions.GalleryDiskImageSource{Id: &osDiskSource},
+					HostCaching: &hostCaching,
 				},
 			},
-			PublishingProfile: &compute.GalleryImageVersionPublishingProfile{
+			PublishingProfile: &galleryimageversions.GalleryArtifactPublishingProfileBase{
 				TargetRegions:     &targetRegions,
-				ExcludeFromLatest: to.BoolPtr(s.Destination.ExcludeFromLatest),
+				ExcludeFromLatest: common.BoolPtr(s.Destination.ExcludeFromLatest),
 			},
 		},
 	}
 
-	var datadisks []compute.GalleryDataDiskImage
+	var datadisks []galleryimageversions.GalleryDataDiskImage
 	for lun, resource := range snapshotset {
 		if lun != -1 {
 			ui.Say(fmt.Sprintf("   using %q for data disk (lun %d).", resource, lun))
 
-			datadisks = append(datadisks, compute.GalleryDataDiskImage{
-				Lun:         to.Int32Ptr(lun),
-				Source:      &compute.GalleryArtifactVersionSource{ID: to.StringPtr(resource.String())},
-				HostCaching: compute.HostCaching(s.DataDiskCacheType),
+			hostCaching := galleryimageversions.HostCaching(s.DataDiskCacheType)
+			datadisks = append(datadisks, galleryimageversions.GalleryDataDiskImage{
+				Lun:         lun,
+				Source:      &galleryimageversions.GalleryDiskImageSource{Id: common.StringPtr(resource.String())},
+				HostCaching: &hostCaching,
 			})
 		}
 	}
 	if datadisks != nil {
 		// sort by lun
 		sort.Slice(datadisks, func(i, j int) bool {
-			return *datadisks[i].Lun < *datadisks[j].Lun
+			return datadisks[i].Lun < datadisks[j].Lun
 		})
-		imageVersion.GalleryImageVersionProperties.StorageProfile.DataDiskImages = &datadisks
+		imageVersion.Properties.StorageProfile.DataDiskImages = &datadisks
 	}
 
-	f, err := azcli.GalleryImageVersionsClient().CreateOrUpdate(
-		ctx,
+	galleryImageVersionID := galleryimageversions.NewImageVersionID(
+		azcli.SubscriptionID(),
 		s.Destination.ResourceGroup,
 		s.Destination.GalleryName,
 		s.Destination.ImageName,
 		s.Destination.ImageVersion,
+	)
+	err := s.create(
+		ctx,
+		azcli,
+		galleryImageVersionID,
 		imageVersion)
-	if err == nil {
-		log.Println("Shared image version creation in process...")
-		pollClient := azcli.PollClient()
-		pollClient.PollingDelay = 10 * time.Second
-		ctx, cancel := context.WithTimeout(ctx, time.Hour*12)
-		defer cancel()
-		err = f.WaitForCompletionRef(ctx, pollClient)
-	}
 	if err != nil {
 		log.Printf("StepCreateSharedImageVersion.Run: error: %+v", err)
 		err := fmt.Errorf(
@@ -100,9 +110,18 @@ func (s *StepCreateSharedImageVersion) Run(ctx context.Context, state multistep.
 		ui.Error(err.Error())
 		return multistep.ActionHalt
 	}
-	log.Printf("Image creation complete: %s", f.Status())
+	log.Printf("Image creation complete")
 
 	return multistep.ActionContinue
+}
+
+func (s *StepCreateSharedImageVersion) createImageVersion(ctx context.Context, azcli client.AzureClientSet, galleryImageVersionID galleryimageversions.ImageVersionId, imageVersion galleryimageversions.GalleryImageVersion) error {
+	pollingContext, cancel := context.WithTimeout(ctx, azcli.PollingDuration())
+	defer cancel()
+	return azcli.GalleryImageVersionsClient().CreateOrUpdateThenPoll(
+		pollingContext,
+		galleryImageVersionID,
+		imageVersion)
 }
 
 func (*StepCreateSharedImageVersion) Cleanup(multistep.StateBag) {}

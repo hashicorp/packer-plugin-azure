@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:generate packer-sdc struct-markdown
 //go:generate packer-sdc mapstructure-to-hcl2 -type Config
 
@@ -15,6 +18,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	azcommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
@@ -27,8 +32,6 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-12-01/compute"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -85,7 +88,7 @@ type Config struct {
 
 	// Try to resize the OS disk to this size on the first copy. Disks can only be englarged. If not specified,
 	// the disk will keep its original size. Required when using `from_scratch`
-	OSDiskSizeGB int32 `mapstructure:"os_disk_size_gb"`
+	OSDiskSizeGB int64 `mapstructure:"os_disk_size_gb"`
 	// The [storage SKU](https://docs.microsoft.com/en-us/rest/api/compute/disks/createorupdate#diskstorageaccounttypes)
 	// to use for the OS Disk. Defaults to `Standard_LRS`.
 	OSDiskStorageAccountType string `mapstructure:"os_disk_storage_account_type"`
@@ -259,23 +262,23 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	}
 
 	if b.config.OSDiskStorageAccountType == "" {
-		b.config.OSDiskStorageAccountType = string(compute.PremiumLRS)
+		b.config.OSDiskStorageAccountType = string(virtualmachines.StorageAccountTypesPremiumLRS)
 	}
 
 	if b.config.OSDiskCacheType == "" {
-		b.config.OSDiskCacheType = string(compute.CachingTypesReadOnly)
+		b.config.OSDiskCacheType = string(virtualmachines.CachingTypesReadOnly)
 	}
 
 	if b.config.DataDiskStorageAccountType == "" {
-		b.config.DataDiskStorageAccountType = string(compute.PremiumLRS)
+		b.config.DataDiskStorageAccountType = string(virtualmachines.StorageAccountTypesPremiumLRS)
 	}
 
 	if b.config.DataDiskCacheType == "" {
-		b.config.DataDiskCacheType = string(compute.CachingTypesReadOnly)
+		b.config.DataDiskCacheType = string(virtualmachines.CachingTypesReadOnly)
 	}
 
 	if b.config.ImageHyperVGeneration == "" {
-		b.config.ImageHyperVGeneration = string(compute.V1)
+		b.config.ImageHyperVGeneration = string(virtualmachines.HyperVGenerationTypeVOne)
 	}
 
 	// checks, accumulate any errors or warnings
@@ -330,10 +333,10 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	}
 
 	if b.config.ImageResourceID != "" {
-		r, err := azure.ParseResourceID(b.config.ImageResourceID)
+		r, err := client.ParseResourceID(b.config.ImageResourceID)
 		if err != nil ||
 			!strings.EqualFold(r.Provider, "Microsoft.Compute") ||
-			!strings.EqualFold(r.ResourceType, "images") {
+			!strings.EqualFold(r.ResourceType.String(), "images") {
 			errs = packersdk.MultiErrorAppend(fmt.Errorf(
 				"image_resource_id: %q is not a valid image resource id", b.config.ImageResourceID))
 		}
@@ -368,33 +371,33 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 }
 
 func checkDiskCacheType(s string) interface{} {
-	for _, v := range compute.PossibleCachingTypesValues() {
-		if compute.CachingTypes(s) == v {
+	for _, v := range virtualmachines.PossibleValuesForCachingTypes() {
+		if string(virtualmachines.CachingTypes(s)) == v {
 			return nil
 		}
 	}
 	return fmt.Errorf("%q is not a valid value %v",
-		s, compute.PossibleCachingTypesValues())
+		s, virtualmachines.PossibleValuesForCachingTypes())
 }
 
 func checkStorageAccountType(s string) interface{} {
-	for _, v := range compute.PossibleDiskStorageAccountTypesValues() {
-		if compute.DiskStorageAccountTypes(s) == v {
+	for _, v := range virtualmachines.PossibleValuesForStorageAccountTypes() {
+		if string(virtualmachines.StorageAccountTypes(s)) == v {
 			return nil
 		}
 	}
 	return fmt.Errorf("%q is not a valid value %v",
-		s, compute.PossibleDiskStorageAccountTypesValues())
+		s, virtualmachines.PossibleValuesForStorageAccountTypes())
 }
 
 func checkHyperVGeneration(s string) interface{} {
-	for _, v := range compute.PossibleHyperVGenerationValues() {
-		if compute.HyperVGeneration(s) == v {
+	for _, v := range virtualmachines.PossibleValuesForHyperVGenerationType() {
+		if string(virtualmachines.HyperVGenerationType(s)) == v {
 			return nil
 		}
 	}
 	return fmt.Errorf("%q is not a valid value %v",
-		s, compute.PossibleHyperVGenerationValues())
+		s, virtualmachines.PossibleValuesForHyperVGenerationType())
 }
 
 func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook) (packersdk.Artifact, error) {
@@ -500,38 +503,41 @@ func buildsteps(
 	if hasValidSharedImage {
 		// validate destination early
 		addSteps(
-			&StepVerifySharedImageDestination{
-				Image:    config.SharedImageGalleryDestination,
-				Location: info.Location,
-			},
+			NewStepVerifySharedImageDestination(
+				&StepVerifySharedImageDestination{
+					Image:    config.SharedImageGalleryDestination,
+					Location: info.Location,
+				}),
 		)
 	}
 
 	if config.FromScratch {
-		addSteps(&StepCreateNewDiskset{
-			OSDiskID:                 config.TemporaryOSDiskID,
-			OSDiskSizeGB:             config.OSDiskSizeGB,
-			OSDiskStorageAccountType: config.OSDiskStorageAccountType,
-			HyperVGeneration:         config.ImageHyperVGeneration,
-			Location:                 info.Location})
+		addSteps(NewStepCreateNewDiskset(
+			&StepCreateNewDiskset{
+				OSDiskID:                 config.TemporaryOSDiskID,
+				OSDiskSizeGB:             config.OSDiskSizeGB,
+				OSDiskStorageAccountType: config.OSDiskStorageAccountType,
+				HyperVGeneration:         config.ImageHyperVGeneration,
+				Location:                 info.Location}))
 	} else {
 		switch config.sourceType {
 		case sourcePlatformImage:
 			if pi, err := client.ParsePlatformImageURN(config.Source); err == nil {
 				if strings.EqualFold(pi.Version, "latest") {
 					addSteps(
-						&StepResolvePlatformImageVersion{
+						NewStepResolvePlatformImageVersion(&StepResolvePlatformImageVersion{
 							PlatformImage: pi,
 							Location:      info.Location,
-						})
+						}),
+					)
 				}
 				addSteps(
-					&StepGetSourceImageName{
+					NewStepGetSourceImageName(&StepGetSourceImageName{
 						GeneratedData:       generatedData,
 						SourcePlatformImage: pi,
 						Location:            info.Location,
-					},
-					&StepCreateNewDiskset{
+					}),
+					NewStepCreateNewDiskset(&StepCreateNewDiskset{
 						OSDiskID:                 config.TemporaryOSDiskID,
 						OSDiskSizeGB:             config.OSDiskSizeGB,
 						OSDiskStorageAccountType: config.OSDiskStorageAccountType,
@@ -540,7 +546,7 @@ func buildsteps(
 						SourcePlatformImage:      pi,
 
 						SkipCleanup: config.SkipCleanup,
-					},
+					}),
 				)
 			} else {
 				panic("Couldn't parse platfrom image urn: " + config.Source + " err: " + err.Error())
@@ -548,16 +554,16 @@ func buildsteps(
 
 		case sourceDisk:
 			addSteps(
-				&StepVerifySourceDisk{
+				NewStepVerifySourceDisk(&StepVerifySourceDisk{
 					SourceDiskResourceID: config.Source,
 					Location:             info.Location,
-				},
-				&StepGetSourceImageName{
+				}),
+				NewStepGetSourceImageName(&StepGetSourceImageName{
 					GeneratedData:          generatedData,
 					SourceOSDiskResourceID: config.Source,
 					Location:               info.Location,
-				},
-				&StepCreateNewDiskset{
+				}),
+				NewStepCreateNewDiskset(&StepCreateNewDiskset{
 					OSDiskID:                 config.TemporaryOSDiskID,
 					OSDiskSizeGB:             config.OSDiskSizeGB,
 					OSDiskStorageAccountType: config.OSDiskStorageAccountType,
@@ -566,22 +572,22 @@ func buildsteps(
 					Location:                 info.Location,
 
 					SkipCleanup: config.SkipCleanup,
-				},
+				}),
 			)
 
 		case sourceSharedImage:
 			addSteps(
-				&StepVerifySharedImageSource{
+				NewStepVerifySharedImageSource(&StepVerifySharedImageSource{
 					SharedImageID:  config.Source,
 					SubscriptionID: info.SubscriptionID,
 					Location:       info.Location,
-				},
-				&StepGetSourceImageName{
+				}),
+				NewStepGetSourceImageName(&StepGetSourceImageName{
 					GeneratedData:         generatedData,
 					SourceImageResourceID: config.Source,
 					Location:              info.Location,
-				},
-				&StepCreateNewDiskset{
+				}),
+				NewStepCreateNewDiskset(&StepCreateNewDiskset{
 					OSDiskID:                   config.TemporaryOSDiskID,
 					DataDiskIDPrefix:           config.TemporaryDataDiskIDPrefix,
 					OSDiskSizeGB:               config.OSDiskSizeGB,
@@ -591,7 +597,7 @@ func buildsteps(
 					Location:                   info.Location,
 
 					SkipCleanup: config.SkipCleanup,
-				},
+				}),
 			)
 
 		default:
@@ -627,32 +633,32 @@ func buildsteps(
 	if config.ImageResourceID != "" {
 		captureSteps = append(
 			captureSteps,
-			&StepCreateImage{
+			NewStepCreateImage(&StepCreateImage{
 				ImageResourceID:          config.ImageResourceID,
-				ImageOSState:             string(compute.Generalized),
+				ImageOSState:             string(images.OperatingSystemStateTypesGeneralized),
 				OSDiskCacheType:          config.OSDiskCacheType,
 				OSDiskStorageAccountType: config.OSDiskStorageAccountType,
 				Location:                 info.Location,
-			},
+			}),
 		)
 	}
 	if hasValidSharedImage {
 		captureSteps = append(
 			captureSteps,
-			&StepCreateSnapshotset{
+			NewStepCreateSnapshotset(&StepCreateSnapshotset{
 				OSDiskSnapshotID:         config.TemporaryOSDiskSnapshotID,
 				DataDiskSnapshotIDPrefix: config.TemporaryDataDiskSnapshotIDPrefix,
 				Location:                 info.Location,
 				SkipCleanup:              config.SkipCleanup,
-			},
+			}),
 		)
 		captureSteps = append(
 			captureSteps,
-			&StepCreateSharedImageVersion{
+			NewStepCreateSharedImageVersion(&StepCreateSharedImageVersion{
 				Destination:     config.SharedImageGalleryDestination,
 				OSDiskCacheType: config.OSDiskCacheType,
 				Location:        info.Location,
-			},
+			}),
 		)
 	}
 

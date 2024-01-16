@@ -1,9 +1,10 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 changelog:
   exclude:
     labels:
       - ignore-for-release
-    authors:
-      - dependabot
   categories:
     - title: Breaking Changes 🛠
       labels:

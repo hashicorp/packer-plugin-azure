@@ -1,0 +1,24 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+name: build-and-persist-plugin-binary
+inputs:
+  GOOS:
+    required: true
+  GOARCH:
+    required: true
+runs:
+  using: composite
+  steps:
+  - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+  - run: "GOOS=${{ inputs.GOOS }} GOARCH=${{ inputs.GOARCH }} go build -o ./pkg/packer_plugin_azure_${{ inputs.GOOS }}_${{ inputs.GOARCH }} ."
+    shell: bash
+  - run: zip ./pkg/packer_plugin_azure_${{ inputs.GOOS }}_${{ inputs.GOARCH }}.zip ./pkg/packer_plugin_azure_${{ inputs.GOOS }}_${{ inputs.GOARCH }}
+    shell: bash
+  - run: rm ./pkg/packer_plugin_azure_${{ inputs.GOOS }}_${{ inputs.GOARCH }}
+    shell: bash
+  - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+    with:
+      name: "packer_plugin_azure_${{ inputs.GOOS }}_${{ inputs.GOARCH }}.zip"
+      path: "pkg/packer_plugin_azure_${{ inputs.GOOS }}_${{ inputs.GOARCH }}.zip"
+      retention-days: 30

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package arm
 
 import (
@@ -5,8 +8,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
 	approvaltests "github.com/approvals/go-approval-tests"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/template"
 )
@@ -23,8 +26,8 @@ func TestVirtualMachineDeployment00(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if deployment.Properties.Mode != resources.Incremental {
-		t.Errorf("Expected deployment.Properties.Mode to be %s, but got %s", resources.Incremental, deployment.Properties.Mode)
+	if deployment.Properties.Mode != deployments.DeploymentModeIncremental {
+		t.Errorf("Expected deployment.Properties.Mode to be %s, but got %s", deployments.DeploymentModeIncremental, deployment.Properties.Mode)
 	}
 
 	if deployment.Properties.ParametersLink != nil {
@@ -480,6 +483,44 @@ func TestVirtualMachineDeployment14(t *testing.T) {
 	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
+// Ensure the VM template is correct when using a spot VM.
+func TestVirtualMachineDeployment15(t *testing.T) {
+	m := getArmBuilderConfiguration()
+	m["spot"] = map[string]interface{}{
+		"eviction_policy": "Deallocate",
+		"max_price":       100,
+	}
+
+	var c Config
+	_, err := c.Prepare(m, getPackerConfiguration(), getPackerSSHPasswordCommunicatorConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+// Ensure Specialized VMs don't set OsProfile}
+func TestVirtualMachineDeployment16(t *testing.T) {
+	m := getArmBuilderConfiguration()
+
+	var c Config
+	_, err := c.Prepare(m, getPackerConfiguration(), getPackerSSHPasswordCommunicatorConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := GetSpecializedVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
 // Ensure the link values are not set, and the concrete values are set.
 func TestKeyVaultDeployment00(t *testing.T) {
 	var c Config
@@ -487,13 +528,13 @@ func TestKeyVaultDeployment00(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetKeyVaultDeployment(&c)
+	deployment, err := GetKeyVaultDeployment(&c, "secret", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if deployment.Properties.Mode != resources.Incremental {
-		t.Errorf("Expected deployment.Properties.Mode to be %s, but got %s", resources.Incremental, deployment.Properties.Mode)
+	if deployment.Properties.Mode != deployments.DeploymentModeIncremental {
+		t.Errorf("Expected deployment.Properties.Mode to be %s, but got %s", deployments.DeploymentModeIncremental, deployment.Properties.Mode)
 	}
 
 	if deployment.Properties.ParametersLink != nil {
@@ -520,7 +561,7 @@ func TestKeyVaultDeployment01(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetKeyVaultDeployment(&c)
+	deployment, err := GetKeyVaultDeployment(&c, "secret", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -538,7 +579,7 @@ func TestKeyVaultDeployment02(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetKeyVaultDeployment(&c)
+	deployment, err := GetKeyVaultDeployment(&c, c.winrmCertificate, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -568,6 +609,37 @@ func TestKeyVaultDeployment02(t *testing.T) {
 	}
 }
 
+// Ensure no licenseType is set when not specified in config
+func TestVirtualMachineDeploymentLicenseType01(t *testing.T) {
+	var c Config
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+// Ensure licenseType is set if specifed in config
+func TestVirtualMachineDeploymentLicenseType02(t *testing.T) {
+	var c Config
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.LicenseType = constants.License_Windows_Server
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
 // Ensure the KeyVault template is correct when tags are supplied.
 func TestKeyVaultDeployment03(t *testing.T) {
 	tags := map[string]interface{}{
@@ -583,7 +655,25 @@ func TestKeyVaultDeployment03(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetKeyVaultDeployment(&c)
+	deployment, err := GetKeyVaultDeployment(&c, c.winrmCertificate, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+// Ensure the KeyVault template is correct when tags are supplied.
+func TestKeyVaultDeployment04(t *testing.T) {
+
+	var c Config
+	_, err := c.Prepare(getArmBuilderConfigurationWithWindows(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// January 1st 2100
+	expiry := int64(4102444800)
+	deployment, err := GetKeyVaultDeployment(&c, c.winrmCertificate, &expiry)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -628,6 +718,58 @@ func TestPlanInfo02(t *testing.T) {
 
 	var c Config
 	_, err := c.Prepare(planInfo, getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+func TestTrustedLaunch01(t *testing.T) {
+	m := getArmBuilderConfiguration()
+	m["secure_boot_enabled"] = "true"
+	m["vtpm_enabled"] = "true"
+
+	var c Config
+	_, err := c.Prepare(m, getPackerConfiguration(), getPackerSSHPasswordCommunicatorConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+func TestEncryptionAtHost01(t *testing.T) {
+	m := getArmBuilderConfiguration()
+	m["encryption_at_host"] = "true"
+
+	var c Config
+	_, err := c.Prepare(m, getPackerConfiguration(), getPackerSSHPasswordCommunicatorConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+func TestEncryptionAtHost02(t *testing.T) {
+	m := getArmBuilderConfiguration()
+	m["encryption_at_host"] = "false"
+
+	var c Config
+	_, err := c.Prepare(m, getPackerConfiguration(), getPackerSSHPasswordCommunicatorConfiguration())
 	if err != nil {
 		t.Fatal(err)
 	}

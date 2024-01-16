@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package arm
 
 import (
@@ -11,7 +14,7 @@ import (
 
 func TestStepValidateTemplateShouldFailIfValidateFails(t *testing.T) {
 	var testSubject = &StepValidateTemplate{
-		validate: func(context.Context, string, string) error { return fmt.Errorf("!! Unit Test FAIL !!") },
+		validate: func(context.Context, string, string, string) error { return fmt.Errorf("!! Unit Test FAIL !!") },
 		say:      func(message string) {},
 		error:    func(e error) {},
 	}
@@ -30,7 +33,7 @@ func TestStepValidateTemplateShouldFailIfValidateFails(t *testing.T) {
 
 func TestStepValidateTemplateShouldPassIfValidatePasses(t *testing.T) {
 	var testSubject = &StepValidateTemplate{
-		validate: func(context.Context, string, string) error { return nil },
+		validate: func(context.Context, string, string, string) error { return nil },
 		say:      func(message string) {},
 		error:    func(e error) {},
 	}
@@ -47,15 +50,14 @@ func TestStepValidateTemplateShouldPassIfValidatePasses(t *testing.T) {
 	}
 }
 
-func TestStepValidateTemplateShouldTakeStepArgumentsFromStateBag(t *testing.T) {
+func TestStepValidateTemplateShouldTakeResourceGroupNameArgumentFromStateBag(t *testing.T) {
 	var actualResourceGroupName string
-	var actualDeploymentName string
+	var actualSubscriptionId string
 
 	var testSubject = &StepValidateTemplate{
-		validate: func(ctx context.Context, resourceGroupName string, deploymentName string) error {
+		validate: func(ctx context.Context, subscriptionId string, resourceGroupName string, deploymentName string) error {
 			actualResourceGroupName = resourceGroupName
-			actualDeploymentName = deploymentName
-
+			actualSubscriptionId = subscriptionId
 			return nil
 		},
 		say:   func(message string) {},
@@ -69,15 +71,42 @@ func TestStepValidateTemplateShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 		t.Fatalf("Expected the step to return 'ActionContinue', but got '%d'.", result)
 	}
 
-	var expectedDeploymentName = stateBag.Get(constants.ArmDeploymentName).(string)
 	var expectedResourceGroupName = stateBag.Get(constants.ArmResourceGroupName).(string)
-
-	if actualDeploymentName != expectedDeploymentName {
-		t.Fatal("Expected the step to source 'constants.ArmDeploymentName' from the state bag, but it did not.")
-	}
+	var expectedSubscriptionId = stateBag.Get(constants.ArmSubscription).(string)
 
 	if actualResourceGroupName != expectedResourceGroupName {
 		t.Fatal("Expected the step to source 'constants.ArmResourceGroupName' from the state bag, but it did not.")
+	}
+
+	if actualSubscriptionId != expectedSubscriptionId {
+		t.Fatal("Expected the step to source 'constants.ArmSubscription' from the state bag, but it did not.")
+	}
+}
+
+func TestStepValidateTemplateShouldTakeDeploymentNameArgumentFromParam(t *testing.T) {
+	var actualDeploymentName string
+	var expectedDeploymentName = "Unit Test: DeploymentName"
+
+	stateBag := createTestStateBagStepValidateTemplate()
+	var testSubject = &StepValidateTemplate{
+		validate: func(ctx context.Context, subscriptionId string, resourceGroupName string, deploymentName string) error {
+			actualDeploymentName = deploymentName
+
+			return nil
+		},
+		say:   func(message string) {},
+		error: func(e error) {},
+		name:  expectedDeploymentName,
+	}
+
+	var result = testSubject.Run(context.Background(), stateBag)
+
+	if result != multistep.ActionContinue {
+		t.Fatalf("Expected the step to return 'ActionContinue', but got '%d'.", result)
+	}
+
+	if actualDeploymentName != expectedDeploymentName {
+		t.Fatal("Expected the step to source 'deploymentName' from parameter, but it did not.")
 	}
 }
 
@@ -86,6 +115,7 @@ func createTestStateBagStepValidateTemplate() multistep.StateBag {
 
 	stateBag.Put(constants.ArmDeploymentName, "Unit Test: DeploymentName")
 	stateBag.Put(constants.ArmResourceGroupName, "Unit Test: ResourceGroupName")
+	stateBag.Put(constants.ArmSubscription, "Unit Test: Subscription")
 
 	return stateBag
 }

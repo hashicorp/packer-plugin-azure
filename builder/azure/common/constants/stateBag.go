@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package constants
 
 // complete flags
@@ -12,12 +15,11 @@ const (
 
 // Default replica count for image versions in shared image gallery
 const (
-	SharedImageGalleryImageVersionDefaultMinReplicaCount int32 = 1
-	SharedImageGalleryImageVersionDefaultMaxReplicaCount int32 = 10
+	SharedImageGalleryImageVersionDefaultMinReplicaCount int64 = 1
+	SharedImageGalleryImageVersionDefaultMaxReplicaCount int64 = 100
 )
 
 const (
-	ArmCaptureTemplate                                         string = "arm.CaptureTemplate"
 	ArmComputeName                                             string = "arm.ComputeName"
 	ArmImageParameters                                         string = "arm.ImageParameters"
 	ArmCertificateUrl                                          string = "arm.CertificateUrl"
@@ -25,8 +27,9 @@ const (
 	ArmDeploymentName                                          string = "arm.DeploymentName"
 	ArmNicName                                                 string = "arm.NicName"
 	ArmKeyVaultName                                            string = "arm.KeyVaultName"
+	ArmKeyVaultSecretName                                      string = "arm.KeyVaultSecretName"
 	ArmLocation                                                string = "arm.Location"
-	ArmOSDiskVhd                                               string = "arm.OSDiskVhd"
+	ArmOSDiskUri                                               string = "arm.OSDiskUri"
 	ArmAdditionalDiskVhds                                      string = "arm.AdditionalDiskVhds"
 	ArmPublicIPAddressName                                     string = "arm.PublicIPAddressName"
 	ArmResourceGroupName                                       string = "arm.ResourceGroupName"
@@ -38,6 +41,7 @@ const (
 	ArmIsExistingResourceGroup                                 string = "arm.IsExistingResourceGroup"
 	ArmIsExistingKeyVault                                      string = "arm.IsExistingKeyVault"
 	ArmIsManagedImage                                          string = "arm.IsManagedImage"
+	ArmIsSIGImage                                              string = "arm.IsSIGImage"
 	ArmManagedImageResourceGroupName                           string = "arm.ManagedImageResourceGroupName"
 	ArmManagedImageName                                        string = "arm.ManagedImageName"
 	ArmManagedImageSigPublishResourceGroup                     string = "arm.ManagedImageSigPublishResourceGroup"
@@ -50,9 +54,16 @@ const (
 	ArmManagedImageSharedGalleryImageVersionReplicaCount       string = "arm.ArmManagedImageSharedGalleryImageVersionReplicaCount"
 	ArmManagedImageSharedGalleryImageVersionExcludeFromLatest  string = "arm.ArmManagedImageSharedGalleryImageVersionExcludeFromLatest"
 	ArmManagedImageSharedGalleryImageVersionStorageAccountType string = "arm.ArmManagedImageSharedGalleryImageVersionStorageAccountType"
+	ArmSharedImageGalleryDestinationSubscription               string = "arm.ArmSharedImageGalleryDestinationSubscription"
+	ArmSharedImageGalleryDestinationSpecialized                string = "arm.ArmSharedImageGalleryDestinationSpecialized"
+	ArmSharedImageGalleryDestinationShallowReplication         string = "arm.ArmSharedImageGalleryDestinationShallowReplication"
 	ArmManagedImageSubscription                                string = "arm.ArmManagedImageSubscription"
 	ArmAsyncResourceGroupDelete                                string = "arm.AsyncResourceGroupDelete"
 	ArmManagedImageOSDiskSnapshotName                          string = "arm.ManagedImageOSDiskSnapshotName"
 	ArmManagedImageDataDiskSnapshotPrefix                      string = "arm.ManagedImageDataDiskSnapshotPrefix"
 	ArmKeepOSDisk                                              string = "arm.KeepOSDisk"
+	ArmBuildDiskEncryptionSetId                                string = "arm.ArmBuildDiskEncryptionSetId"
+	ArmSubscription                                            string = "arm.Subscription"
+	ArmBuildVMInternalId                                       string = "arm.BuildVMInternalId"
+	DtlLabName                                                 string = "dtl.LabName"
 )

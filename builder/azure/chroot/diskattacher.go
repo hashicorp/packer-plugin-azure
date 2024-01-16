@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package chroot
 
 import (
@@ -7,15 +10,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
+	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
 type DiskAttacher interface {
-	AttachDisk(ctx context.Context, disk string) (lun int32, err error)
-	WaitForDevice(ctx context.Context, i int32) (device string, err error)
+	AttachDisk(ctx context.Context, disk string) (lun int64, err error)
+	WaitForDevice(ctx context.Context, i int64) (device string, err error)
 	DetachDisk(ctx context.Context, disk string) (err error)
 	WaitForDetach(ctx context.Context, diskID string) error
 }
@@ -35,26 +37,27 @@ type diskAttacher struct {
 }
 
 var DiskNotFoundError = errors.New("Disk not found")
+var AzureAPIDiskError = errors.New("Azure API returned invalid disk")
 
 func (da *diskAttacher) DetachDisk(ctx context.Context, diskID string) error {
 	log.Println("Fetching list of disks currently attached to VM")
 	currentDisks, err := da.getDisks(ctx)
 	if err != nil {
 		log.Printf("DetachDisk.getDisks: error: %+v\n", err)
-		log.Println("Checking to see if instance is part of a VM scale set before giving up.")
-		da.ui.Say("Initial call for fetching VM instance disks returned an error. Checking to see if instance is part of a VM scale set before giving up.")
-		currentDisks, err = da.getScaleSetDisks(ctx)
-		if err != nil {
-			return err
-		}
+		return err
 	}
 
 	log.Printf("Removing %q from list of disks currently attached to VM", diskID)
-	newDisks := []compute.DataDisk{}
+	newDisks := []hashiVMSDK.DataDisk{}
 	for _, disk := range currentDisks {
-		if disk.ManagedDisk != nil &&
-			!strings.EqualFold(to.String(disk.ManagedDisk.ID), diskID) {
-			newDisks = append(newDisks, disk)
+		if disk.ManagedDisk != nil {
+			if disk.ManagedDisk.Id == nil {
+				log.Println("DetatchDisks failure: Azure Client returned a disk without an ID")
+				return AzureAPIDiskError
+			}
+			if !strings.EqualFold(*disk.ManagedDisk.Id, diskID) {
+				newDisks = append(newDisks, disk)
+			}
 		}
 	}
 	if len(currentDisks) == len(newDisks) {
@@ -65,12 +68,8 @@ func (da *diskAttacher) DetachDisk(ctx context.Context, diskID string) error {
 	err = da.setDisks(ctx, newDisks)
 	if err != nil {
 		log.Printf("DetachDisk.setDisks: error: %+v\n", err)
-		log.Println("Checking to see if instance is part of a VM scale set before giving up.")
-		da.ui.Say("Initial call for setting VM instance disks returned an error. Checking to see if instance is part of a VM scale set before giving up.")
-		err = da.setScaleSetDisks(ctx, newDisks)
-		if err != nil {
-			return err
-		}
+		return err
+
 	}
 
 	return nil
@@ -81,11 +80,7 @@ func (da *diskAttacher) WaitForDetach(ctx context.Context, diskID string) error 
 		list, err := da.getDisks(ctx)
 		if err != nil {
 			log.Printf("WaitForDetach.getDisks: error: %+v\n", err)
-			log.Println("Checking to see if instance is part of a VM scale set before giving up.")
-			list, err = da.getScaleSetDisks(ctx)
-			if err != nil {
-				return err
-			}
+			return err
 		}
 		if findDiskInList(list, diskID) == nil {
 			log.Println("Disk is no longer in VM model, assuming detached")
@@ -100,36 +95,31 @@ func (da *diskAttacher) WaitForDetach(ctx context.Context, diskID string) error 
 	}
 }
 
-func (da *diskAttacher) AttachDisk(ctx context.Context, diskID string) (int32, error) {
+func (da *diskAttacher) AttachDisk(ctx context.Context, diskID string) (int64, error) {
 	dataDisks, err := da.getDisks(ctx)
 	if err != nil {
 		log.Printf("AttachDisk.getDisks: error: %+v\n", err)
-		log.Println("Checking to see if instance is part of a VM scale set before giving up.")
-		da.ui.Say("Initial call for fetching VM instance disks returned an error. Checking to see if instance is part of a VM scale set before giving up.")
-		dataDisks, err = da.getScaleSetDisks(ctx)
-		if err != nil {
-			return -1, err
-		}
+		return -1, err
 	}
 
 	// check to see if disk is already attached, remember lun if found
 	if disk := findDiskInList(dataDisks, diskID); disk != nil {
 		// disk is already attached, just take this lun
-		if disk.Lun == nil {
+		if disk.Lun == 0 {
 			return -1, errors.New("disk is attached, but lun was not set in VM model (possibly an error in the Azure APIs)")
 		}
-		return to.Int32(disk.Lun), nil
+		return disk.Lun, nil
 	}
 
 	// disk was not found on VM, go and actually attach it
 
 	// TODO This assignment looks like it would do nothing, consider removing it
 	//nolint
-	var lun int32 = -1
+	var lun int64 = -1
 findFreeLun:
 	for lun = 0; lun < 64; lun++ {
 		for _, v := range dataDisks {
-			if to.Int32(v.Lun) == lun {
+			if v.Lun == lun {
 				continue findFreeLun
 			}
 		}
@@ -138,127 +128,76 @@ findFreeLun:
 	}
 
 	// append new data disk to collection
-	dataDisks = append(dataDisks, compute.DataDisk{
-		CreateOption: compute.DiskCreateOptionTypesAttach,
-		ManagedDisk: &compute.ManagedDiskParameters{
-			ID: to.StringPtr(diskID),
+	dataDisks = append(dataDisks, hashiVMSDK.DataDisk{
+		CreateOption: hashiVMSDK.DiskCreateOptionTypesAttach,
+		ManagedDisk: &hashiVMSDK.ManagedDiskParameters{
+			Id: &diskID,
 		},
-		Lun: to.Int32Ptr(lun),
+		Lun: lun,
 	})
 
 	// prepare resource object for update operation
 	err = da.setDisks(ctx, dataDisks)
 	if err != nil {
 		log.Printf("AttachDisk.setDisks: error: %+v\n", err)
-		log.Println("Checking to see if instance is part of a VM scale set before giving up.")
-		da.ui.Say("Initial call for setting VM instance disks returned an error. Checking to see if instance is part of a VM scale set before giving up.")
-		err = da.setScaleSetDisks(ctx, dataDisks)
-		if err != nil {
-			return -1, err
-		}
+		return -1, err
 	}
 
 	return lun, nil
 }
 
-func (da *diskAttacher) getThisVM(ctx context.Context) (compute.VirtualMachine, error) {
+func (da *diskAttacher) getThisVM(ctx context.Context) (hashiVMSDK.VirtualMachine, error) {
 	// getting resource info for this VM
 	if da.vm == nil {
 		vm, err := da.azcli.MetadataClient().GetComputeInfo()
 		if err != nil {
-			return compute.VirtualMachine{}, err
+			return hashiVMSDK.VirtualMachine{}, err
 		}
 		da.vm = vm
 	}
 
+	vmID := hashiVMSDK.NewVirtualMachineID(da.azcli.SubscriptionID(), da.vm.ResourceGroupName, da.vm.Name)
 	// retrieve actual VM
-	vmResource, err := da.azcli.VirtualMachinesClient().Get(ctx, da.vm.ResourceGroupName, da.vm.Name, "")
+	vmResource, err := da.azcli.VirtualMachinesClient().Get(ctx, vmID, hashiVMSDK.DefaultGetOperationOptions())
 	if err != nil {
-		return compute.VirtualMachine{}, err
+		return hashiVMSDK.VirtualMachine{}, err
 	}
-	if vmResource.StorageProfile == nil {
-		return compute.VirtualMachine{}, errors.New("properties.storageProfile is not set on VM, this is unexpected")
+	if vmResource.Model.Properties.StorageProfile == nil {
+		return hashiVMSDK.VirtualMachine{}, errors.New("properties.storageProfile is not set on VM, this is unexpected")
 	}
 
-	return vmResource, nil
+	return *vmResource.Model, nil
 }
 
-func (da *diskAttacher) getThisScaleSetVM(ctx context.Context) (compute.VirtualMachineScaleSetVM, error) {
-	// getting resource info for this VM
-	if da.vm == nil {
-		vm, err := da.azcli.MetadataClient().GetComputeInfo()
-		if err != nil {
-			return compute.VirtualMachineScaleSetVM{}, err
-		}
-		da.vm = vm
-	}
-
-	// retrieve actual VM
-	scaleSetVMInstanceID := da.vm.ResourceID[strings.LastIndex(da.vm.ResourceID, "/")+1:]
-	vmResource, err := da.azcli.VirtualMachineScaleSetVMsClient().Get(ctx, da.vm.ResourceGroupName, da.vm.VmScaleSetName, scaleSetVMInstanceID, "")
-	if err != nil {
-		return compute.VirtualMachineScaleSetVM{}, err
-	}
-	if vmResource.StorageProfile == nil {
-		return compute.VirtualMachineScaleSetVM{}, errors.New("properties.storageProfile is not set on VM, this is unexpected")
-	}
-
-	return vmResource, nil
-}
-
-func (da diskAttacher) getDisks(ctx context.Context) ([]compute.DataDisk, error) {
+func (da diskAttacher) getDisks(ctx context.Context) ([]hashiVMSDK.DataDisk, error) {
 	vmResource, err := da.getThisVM(ctx)
 	if err != nil {
-		return []compute.DataDisk{}, err
+		return []hashiVMSDK.DataDisk{}, err
 	}
 
-	return *vmResource.StorageProfile.DataDisks, nil
+	return *vmResource.Properties.StorageProfile.DataDisks, nil
 }
 
-func (da diskAttacher) getScaleSetDisks(ctx context.Context) ([]compute.DataDisk, error) {
-	vmResource, err := da.getThisScaleSetVM(ctx)
-	if err != nil {
-		return []compute.DataDisk{}, err
-	}
-
-	return *vmResource.StorageProfile.DataDisks, nil
-}
-
-func (da diskAttacher) setDisks(ctx context.Context, disks []compute.DataDisk) error {
+func (da diskAttacher) setDisks(ctx context.Context, disks []hashiVMSDK.DataDisk) error {
 	vmResource, err := da.getThisVM(ctx)
 	if err != nil {
 		return err
 	}
 
-	vmResource.StorageProfile.DataDisks = &disks
+	vmResource.Properties.StorageProfile.DataDisks = &disks
 	vmResource.Resources = nil
 
+	vmID := hashiVMSDK.NewVirtualMachineID(da.azcli.SubscriptionID(), da.vm.ResourceGroupName, da.vm.Name)
 	// update the VM resource, attach disk
-	_, err = da.azcli.VirtualMachinesClient().CreateOrUpdate(ctx, da.vm.ResourceGroupName, da.vm.Name, vmResource)
+	_, err = da.azcli.VirtualMachinesClient().CreateOrUpdate(ctx, vmID, vmResource)
 
 	return err
 }
 
-func (da diskAttacher) setScaleSetDisks(ctx context.Context, disks []compute.DataDisk) error {
-	vmResource, err := da.getThisScaleSetVM(ctx)
-	if err != nil {
-		return err
-	}
-
-	vmResource.StorageProfile.DataDisks = &disks
-	vmResource.Resources = nil
-
-	// update the VM resource, attach disk
-	scaleSetVMInstanceID := da.vm.ResourceID[strings.LastIndex(da.vm.ResourceID, "/")+1:]
-	_, err = da.azcli.VirtualMachineScaleSetVMsClient().Update(ctx, da.vm.ResourceGroupName, da.vm.VmScaleSetName, scaleSetVMInstanceID, vmResource)
-
-	return err
-}
-
-func findDiskInList(list []compute.DataDisk, diskID string) *compute.DataDisk {
+func findDiskInList(list []hashiVMSDK.DataDisk, diskID string) *hashiVMSDK.DataDisk {
 	for _, disk := range list {
 		if disk.ManagedDisk != nil &&
-			strings.EqualFold(to.String(disk.ManagedDisk.ID), diskID) {
+			strings.EqualFold(*(disk.ManagedDisk.Id), diskID) {
 			return &disk
 		}
 	}

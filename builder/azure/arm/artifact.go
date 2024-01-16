@@ -1,11 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package arm
 
 import (
 	"bytes"
 	"fmt"
-	"log"
-	"net/url"
-	"path"
 	"strings"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
@@ -17,8 +17,7 @@ const (
 )
 
 type AdditionalDiskArtifact struct {
-	AdditionalDiskUri            string
-	AdditionalDiskUriReadOnlySas string
+	AdditionalDiskUri string
 }
 
 type Artifact struct {
@@ -29,8 +28,6 @@ type Artifact struct {
 	StorageAccountLocation string
 	OSDiskUri              string
 	TemplateUri            string
-	OSDiskUriReadOnlySas   string
-	TemplateUriReadOnlySas string
 
 	// Managed Image
 	ManagedImageResourceGroupName      string
@@ -39,8 +36,11 @@ type Artifact struct {
 	ManagedImageId                     string
 	ManagedImageOSDiskSnapshotName     string
 	ManagedImageDataDiskSnapshotPrefix string
+
+	// Shared Image Gallery
 	// ARM resource id for Shared Image Gallery
 	ManagedImageSharedImageGalleryId string
+	SharedImageGalleryLocation       string
 
 	// Additional Disks
 	AdditionalDisks *[]AdditionalDiskArtifact
@@ -50,7 +50,7 @@ type Artifact struct {
 	StateData map[string]interface{}
 }
 
-func NewManagedImageArtifact(osType, resourceGroup, name, location, id, osDiskSnapshotName, dataDiskSnapshotPrefix string, generatedData map[string]interface{}, keepOSDisk bool, template *CaptureTemplate, getSasUrl func(name string) string) (*Artifact, error) {
+func NewManagedImageArtifact(osType, resourceGroup, name, location, id, osDiskSnapshotName, dataDiskSnapshotPrefix string, generatedData map[string]interface{}, osDiskUri string) (*Artifact, error) {
 	res := Artifact{
 		ManagedImageResourceGroupName:      resourceGroup,
 		ManagedImageName:                   name,
@@ -62,25 +62,8 @@ func NewManagedImageArtifact(osType, resourceGroup, name, location, id, osDiskSn
 		StateData:                          generatedData,
 	}
 
-	if keepOSDisk {
-		if template == nil {
-			log.Printf("artifact error: nil capture template")
-			return &res, nil
-		}
-
-		if len(template.Resources) != 1 {
-			log.Printf("artifact error: malformed capture template, expected one resource")
-			return &res, nil
-		}
-
-		vhdUri, err := url.Parse(template.Resources[0].Properties.StorageProfile.OSDisk.Image.Uri)
-		if err != nil {
-			log.Printf("artifact error: Error parsing osdisk url: %s", err)
-			return &res, nil
-		}
-
-		res.OSDiskUri = vhdUri.String()
-		res.OSDiskUriReadOnlySas = getSasUrl(getStorageUrlPath(vhdUri))
+	if osDiskUri != "" {
+		res.OSDiskUri = osDiskUri
 	}
 
 	return &res, nil
@@ -100,82 +83,48 @@ func NewManagedImageArtifactWithSIGAsDestination(osType, resourceGroup, name, lo
 	}, nil
 }
 
-func NewArtifact(template *CaptureTemplate, getSasUrl func(name string) string, osType string, generatedData map[string]interface{}) (*Artifact, error) {
-	if template == nil {
-		return nil, fmt.Errorf("nil capture template")
-	}
+func NewSharedImageArtifact(osType, destinationSharedImageGalleryId string, location string, generatedData map[string]interface{}) (*Artifact, error) {
+	return &Artifact{
+		OSType:                           osType,
+		ManagedImageSharedImageGalleryId: destinationSharedImageGalleryId,
+		StateData:                        generatedData,
+		SharedImageGalleryLocation:       location,
+	}, nil
+}
 
-	if len(template.Resources) != 1 {
-		return nil, fmt.Errorf("malformed capture template, expected one resource")
-	}
+func NewArtifact(vmInternalID string, captureContainerPrefix string, captureContainerName string, storageAccountUrl string, storageAccountLocation string, osType string, additionalDiskCount int, generatedData map[string]interface{}) (*Artifact, error) {
+	vhdUri := fmt.Sprintf("%ssystem/Microsoft.Compute/Images/%s/%s-osDisk.%s.vhd", storageAccountUrl, captureContainerName, captureContainerPrefix, vmInternalID)
 
-	vhdUri, err := url.Parse(template.Resources[0].Properties.StorageProfile.OSDisk.Image.Uri)
-	if err != nil {
-		return nil, err
-	}
-
-	templateUri, err := storageUriToTemplateUri(vhdUri)
-	if err != nil {
-		return nil, err
-	}
+	templateUri := fmt.Sprintf("%ssystem/Microsoft.Compute/Images/%s/%s-vmTemplate.%s.json", storageAccountUrl, captureContainerName, captureContainerPrefix, vmInternalID)
 
 	var additional_disks *[]AdditionalDiskArtifact
-	if template.Resources[0].Properties.StorageProfile.DataDisks != nil {
-		data_disks := make([]AdditionalDiskArtifact, len(template.Resources[0].Properties.StorageProfile.DataDisks))
-		for i, additionaldisk := range template.Resources[0].Properties.StorageProfile.DataDisks {
-			additionalVhdUri, err := url.Parse(additionaldisk.Image.Uri)
-			if err != nil {
-				return nil, err
-			}
-			data_disks[i].AdditionalDiskUri = additionalVhdUri.String()
-			data_disks[i].AdditionalDiskUriReadOnlySas = getSasUrl(getStorageUrlPath(additionalVhdUri))
+	if additionalDiskCount > 0 {
+		data_disks := make([]AdditionalDiskArtifact, additionalDiskCount)
+		for i := 0; i < additionalDiskCount; i++ {
+			data_disks[i].AdditionalDiskUri = fmt.Sprintf("%ssystem/Microsoft.Compute/Images/%s/%s-datadisk-%d.%s.vhd", storageAccountUrl, captureContainerName, captureContainerPrefix, i, vmInternalID)
 		}
 		additional_disks = &data_disks
 	}
 
 	return &Artifact{
-		OSType:                 osType,
-		OSDiskUri:              vhdUri.String(),
-		OSDiskUriReadOnlySas:   getSasUrl(getStorageUrlPath(vhdUri)),
-		TemplateUri:            templateUri.String(),
-		TemplateUriReadOnlySas: getSasUrl(getStorageUrlPath(templateUri)),
+		OSType:      osType,
+		OSDiskUri:   vhdUri,
+		TemplateUri: templateUri,
 
 		AdditionalDisks: additional_disks,
 
-		StorageAccountLocation: template.Resources[0].Location,
+		StorageAccountLocation: storageAccountLocation,
 
 		StateData: generatedData,
 	}, nil
 }
 
-func getStorageUrlPath(u *url.URL) string {
-	parts := strings.Split(u.Path, "/")
-	return strings.Join(parts[3:], "/")
-}
-
-func storageUriToTemplateUri(su *url.URL) (*url.URL, error) {
-	// packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd -> 4085bb15-3644-4641-b9cd-f575918640b4
-	filename := path.Base(su.Path)
-	parts := strings.Split(filename, ".")
-
-	if len(parts) < 3 {
-		return nil, fmt.Errorf("malformed URL")
-	}
-
-	// packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd -> packer
-	prefixParts := strings.Split(parts[0], "-")
-	prefix := strings.Join(prefixParts[:len(prefixParts)-1], "-")
-
-	templateFilename := fmt.Sprintf("%s-vmTemplate.%s.json", prefix, parts[1])
-
-	// https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd"
-	//   ->
-	// https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json"
-	return url.Parse(strings.Replace(su.String(), filename, templateFilename, 1))
-}
-
 func (a *Artifact) isManagedImage() bool {
 	return a.ManagedImageResourceGroupName != ""
+}
+
+func (a *Artifact) isPublishedToSIG() bool {
+	return a.ManagedImageSharedImageGalleryId != ""
 }
 
 func (*Artifact) BuilderId() string {
@@ -190,7 +139,13 @@ func (a *Artifact) Id() string {
 	if a.OSDiskUri != "" {
 		return a.OSDiskUri
 	}
-	return a.ManagedImageId
+	if a.ManagedImageId != "" {
+		return a.ManagedImageId
+	}
+	if a.ManagedImageSharedImageGalleryId != "" {
+		return a.ManagedImageSharedImageGalleryId
+	}
+	return "UNKNOWN ID"
 }
 
 func (a *Artifact) State(name string) interface{} {
@@ -221,26 +176,35 @@ func (a *Artifact) String() string {
 		if a.ManagedImageDataDiskSnapshotPrefix != "" {
 			buf.WriteString(fmt.Sprintf("ManagedImageDataDiskSnapshotPrefix: %s\n", a.ManagedImageDataDiskSnapshotPrefix))
 		}
-		if a.ManagedImageSharedImageGalleryId != "" {
-			buf.WriteString(fmt.Sprintf("ManagedImageSharedImageGalleryId: %s\n", a.ManagedImageSharedImageGalleryId))
-		}
 		if a.OSDiskUri != "" {
 			buf.WriteString(fmt.Sprintf("OSDiskUri: %s\n", a.OSDiskUri))
 		}
-		if a.OSDiskUriReadOnlySas != "" {
-			buf.WriteString(fmt.Sprintf("OSDiskUriReadOnlySas: %s\n", a.OSDiskUriReadOnlySas))
-		}
-	} else {
+	} else if !a.isPublishedToSIG() {
 		buf.WriteString(fmt.Sprintf("StorageAccountLocation: %s\n", a.StorageAccountLocation))
 		buf.WriteString(fmt.Sprintf("OSDiskUri: %s\n", a.OSDiskUri))
-		buf.WriteString(fmt.Sprintf("OSDiskUriReadOnlySas: %s\n", a.OSDiskUriReadOnlySas))
 		buf.WriteString(fmt.Sprintf("TemplateUri: %s\n", a.TemplateUri))
-		buf.WriteString(fmt.Sprintf("TemplateUriReadOnlySas: %s\n", a.TemplateUriReadOnlySas))
 		if a.AdditionalDisks != nil {
 			for i, additionaldisk := range *a.AdditionalDisks {
 				buf.WriteString(fmt.Sprintf("AdditionalDiskUri (datadisk-%d): %s\n", i+1, additionaldisk.AdditionalDiskUri))
-				buf.WriteString(fmt.Sprintf("AdditionalDiskUriReadOnlySas (datadisk-%d): %s\n", i+1, additionaldisk.AdditionalDiskUriReadOnlySas))
 			}
+		}
+	}
+	if a.isPublishedToSIG() {
+		buf.WriteString(fmt.Sprintf("ManagedImageSharedImageGalleryId: %s\n", a.ManagedImageSharedImageGalleryId))
+		if x, ok := a.State(constants.ArmManagedImageSigPublishResourceGroup).(string); ok {
+			buf.WriteString(fmt.Sprintf("SharedImageGalleryResourceGroup: %s\n", x))
+		}
+		if x, ok := a.State(constants.ArmManagedImageSharedGalleryName).(string); ok {
+			buf.WriteString(fmt.Sprintf("SharedImageGalleryName: %s\n", x))
+		}
+		if x, ok := a.State(constants.ArmManagedImageSharedGalleryImageName).(string); ok {
+			buf.WriteString(fmt.Sprintf("SharedImageGalleryImageName: %s\n", x))
+		}
+		if x, ok := a.State(constants.ArmManagedImageSharedGalleryImageVersion).(string); ok {
+			buf.WriteString(fmt.Sprintf("SharedImageGalleryImageVersion: %s\n", x))
+		}
+		if rr, ok := a.State(constants.ArmManagedImageSharedGalleryReplicationRegions).([]string); ok {
+			buf.WriteString(fmt.Sprintf("SharedImageGalleryReplicatedRegions: %s\n", strings.Join(rr, ", ")))
 		}
 	}
 
@@ -263,24 +227,26 @@ func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
 		sourceID = sourceImage
 	}
 
+	labels := make(map[string]interface{})
+
+	if a.isPublishedToSIG() {
+		labels["sig_resource_group"] = a.State(constants.ArmManagedImageSigPublishResourceGroup).(string)
+		labels["sig_name"] = a.State(constants.ArmManagedImageSharedGalleryName).(string)
+		labels["sig_image_name"] = a.State(constants.ArmManagedImageSharedGalleryImageName).(string)
+		labels["sig_image_version"] = a.State(constants.ArmManagedImageSharedGalleryImageVersion).(string)
+		if rr, ok := a.State(constants.ArmManagedImageSharedGalleryReplicationRegions).([]string); ok {
+			labels["sig_replicated_regions"] = strings.Join(rr, ", ")
+		}
+	}
+
+	// If image is captured as a managed image
 	if a.isManagedImage() {
 		id := a.ManagedImageId
 		location := a.ManagedImageLocation
 
-		labels := make(map[string]interface{})
 		labels["os_type"] = a.OSType
 		labels["managed_image_resourcegroup_name"] = a.ManagedImageResourceGroupName
 		labels["managed_image_name"] = a.ManagedImageName
-
-		if a.ManagedImageSharedImageGalleryId != "" {
-			labels["sig_resource_group"] = a.State(constants.ArmManagedImageSigPublishResourceGroup).(string)
-			labels["sig_name"] = a.State(constants.ArmManagedImageSharedGalleryName).(string)
-			labels["sig_image_name"] = a.State(constants.ArmManagedImageSharedGalleryImageName).(string)
-			labels["sig_image_version"] = a.State(constants.ArmManagedImageSharedGalleryImageVersion).(string)
-			if rr, ok := a.State(constants.ArmManagedImageSharedGalleryReplicationRegions).([]string); ok {
-				labels["sig_replicated_regions"] = strings.Join(rr, ", ")
-			}
-		}
 
 		if a.OSDiskUri != "" {
 			labels["os_disk_uri"] = a.OSDiskUri
@@ -297,7 +263,19 @@ func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
 		return img
 	}
 
-	labels := make(map[string]interface{})
+	if a.isPublishedToSIG() {
+		img, _ := registryimage.FromArtifact(a,
+			registryimage.WithID(a.ManagedImageSharedImageGalleryId),
+			registryimage.WithRegion(a.SharedImageGalleryLocation),
+			registryimage.WithProvider("azure"),
+			registryimage.WithSourceID(sourceID),
+			registryimage.SetLabels(labels),
+		)
+
+		return img
+	}
+
+	// If image is a VHD
 	labels["storage_account_location"] = a.StorageAccountLocation
 	labels["template_uri"] = a.TemplateUri
 

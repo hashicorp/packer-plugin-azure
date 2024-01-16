@@ -1,14 +1,18 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package template
 
 import (
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	approvaltests "github.com/approvals/go-approval-tests"
+	compute "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 )
 
 // Ensure that a Linux template is configured as expected.
-//  * Include SSH configuration: authorized key, and key path.
+// Include SSH configuration: authorized key, and key path.
 func TestBuildLinux00(t *testing.T) {
 	testSubject, err := NewTemplateBuilder(BasicTemplate)
 	if err != nil {
@@ -92,15 +96,15 @@ func TestBuildLinux02(t *testing.T) {
 }
 
 // Ensure that a Windows template is configured as expected.
-//  * Include WinRM configuration.
-//  * Include KeyVault configuration, which is needed for WinRM.
+// * Include WinRM configuration.
+// * Include KeyVault configuration, which is needed for WinRM.
 func TestBuildWindows00(t *testing.T) {
 	testSubject, err := NewTemplateBuilder(BasicTemplate)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = testSubject.BuildWindows("--test-key-vault-name", "--test-winrm-certificate-url--")
+	err = testSubject.BuildWindows("winrm", "--test-key-vault-name", "--test-winrm-certificate-url--")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,17 +129,17 @@ func TestBuildWindows01(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = testSubject.BuildWindows("--test-key-vault-name", "--test-winrm-certificate-url--")
+	err = testSubject.BuildWindows("winrm", "--test-key-vault-name", "--test-winrm-certificate-url--")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = testSubject.SetManagedMarketplaceImage("MicrosoftWindowsServer", "WindowsServer", "2012-R2-Datacenter", "latest", "2015-1", "1", "Premium_LRS", compute.CachingTypesReadWrite)
+	err = testSubject.SetManagedMarketplaceImage("WindowsServer", "2012-R2-Datacenter", "latest", "2015-1", "Premium_LRS", compute.CachingTypesReadWrite)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = testSubject.SetAdditionalDisks([]int32{32, 64}, "datadisk", true, compute.CachingTypesReadWrite)
+	err = testSubject.SetAdditionalDisks([]int32{32, 64}, "datadisk", false, compute.CachingTypesReadWrite)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,11 +159,70 @@ func TestBuildWindows02(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = testSubject.BuildWindows("--test-key-vault-name", "--test-winrm-certificate-url--")
+	err = testSubject.BuildWindows("winrm", "--test-key-vault-name", "--test-winrm-certificate-url--")
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	err = testSubject.SetAdditionalDisks([]int32{32, 64}, "datadisk", true, compute.CachingTypesReadWrite)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	doc, err := testSubject.ToJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
+}
+
+// Ensure that a Windows template is configured as expected.
+//   - Include SSH configuration.
+func TestBuildWindows03(t *testing.T) {
+	testSubject, err := NewTemplateBuilder(BasicTemplate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = testSubject.BuildWindows("ssh", "--test-key-vault-name", "--test-ssh-certificate-url--")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = testSubject.SetMarketPlaceImage("MicrosoftWindowsServer", "WindowsServer", "2012-R2-Datacenter", "latest", compute.CachingTypesReadWrite)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	doc, err := testSubject.ToJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
+}
+
+// Windows build with additional disk for an managed build
+func TestBuildEncryptedWindows(t *testing.T) {
+	testSubject, err := NewTemplateBuilder(BasicTemplate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = testSubject.BuildWindows("winrm", "--test-key-vault-name", "--test-winrm-certificate-url--")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = testSubject.SetManagedMarketplaceImage("WindowsServer", "2012-R2-Datacenter", "latest", "2015-1", "Premium_LRS", compute.CachingTypesReadWrite)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = testSubject.SetDiskEncryptionSetID("encrypted")
+	if err != nil {
+		t.Fatal(err)
+	}
 	err = testSubject.SetAdditionalDisks([]int32{32, 64}, "datadisk", false, compute.CachingTypesReadWrite)
 	if err != nil {
 		t.Fatal(err)
@@ -297,6 +360,49 @@ func TestSetIdentity00(t *testing.T) {
 	}
 
 	if err = testSubject.SetIdentity([]string{"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg1/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id"}); err != nil {
+		t.Fatal(err)
+	}
+
+	doc, err := testSubject.ToJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
+}
+
+// Test with no license type
+func TestLicenseType00(t *testing.T) {
+	testSubject, err := NewTemplateBuilder(BasicTemplate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = testSubject.BuildLinux("--test-ssh-authorized-key--", true); err != nil {
+		t.Fatal(err)
+	}
+
+	doc, err := testSubject.ToJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
+}
+
+// Test with specified license type
+func TestLicenseType01(t *testing.T) {
+	testSubject, err := NewTemplateBuilder(BasicTemplate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = testSubject.BuildLinux("--test-ssh-authorized-key--", true); err != nil {
+		t.Fatal(err)
+	}
+
+	err = testSubject.SetLicenseType(constants.License_SUSE)
+	if err != nil {
 		t.Fatal(err)
 	}
 

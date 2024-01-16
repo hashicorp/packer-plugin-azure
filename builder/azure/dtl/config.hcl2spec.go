@@ -51,7 +51,7 @@ type FlatConfig struct {
 	ClientID                            *string                            `mapstructure:"client_id" cty:"client_id" hcl:"client_id"`
 	ClientSecret                        *string                            `mapstructure:"client_secret" cty:"client_secret" hcl:"client_secret"`
 	ClientCertPath                      *string                            `mapstructure:"client_cert_path" cty:"client_cert_path" hcl:"client_cert_path"`
-	ClientCertExpireTimeout             *string                            `mapstructure:"client_cert_token_timeout" required:"false" cty:"client_cert_token_timeout" hcl:"client_cert_token_timeout"`
+	ClientCertPassword                  *string                            `mapstructure:"client_cert_password" cty:"client_cert_password" hcl:"client_cert_password"`
 	ClientJWT                           *string                            `mapstructure:"client_jwt" cty:"client_jwt" hcl:"client_jwt"`
 	ObjectID                            *string                            `mapstructure:"object_id" cty:"object_id" hcl:"object_id"`
 	TenantID                            *string                            `mapstructure:"tenant_id" required:"false" cty:"tenant_id" hcl:"tenant_id"`
@@ -75,7 +75,7 @@ type FlatConfig struct {
 	ManagedImageResourceGroupName       *string                            `mapstructure:"managed_image_resource_group_name" required:"true" cty:"managed_image_resource_group_name" hcl:"managed_image_resource_group_name"`
 	ManagedImageName                    *string                            `mapstructure:"managed_image_name" required:"true" cty:"managed_image_name" hcl:"managed_image_name"`
 	ManagedImageStorageAccountType      *string                            `mapstructure:"managed_image_storage_account_type" required:"false" cty:"managed_image_storage_account_type" hcl:"managed_image_storage_account_type"`
-	AzureTags                           map[string]*string                 `mapstructure:"azure_tags" required:"false" cty:"azure_tags" hcl:"azure_tags"`
+	AzureTags                           map[string]string                  `mapstructure:"azure_tags" required:"false" cty:"azure_tags" hcl:"azure_tags"`
 	PlanID                              *string                            `mapstructure:"plan_id" required:"false" cty:"plan_id" hcl:"plan_id"`
 	PollingDurationTimeout              *string                            `mapstructure:"polling_duration_timeout" required:"false" cty:"polling_duration_timeout" hcl:"polling_duration_timeout"`
 	OSType                              *string                            `mapstructure:"os_type" required:"false" cty:"os_type" hcl:"os_type"`
@@ -169,7 +169,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"client_id":                                &hcldec.AttrSpec{Name: "client_id", Type: cty.String, Required: false},
 		"client_secret":                            &hcldec.AttrSpec{Name: "client_secret", Type: cty.String, Required: false},
 		"client_cert_path":                         &hcldec.AttrSpec{Name: "client_cert_path", Type: cty.String, Required: false},
-		"client_cert_token_timeout":                &hcldec.AttrSpec{Name: "client_cert_token_timeout", Type: cty.String, Required: false},
+		"client_cert_password":                     &hcldec.AttrSpec{Name: "client_cert_password", Type: cty.String, Required: false},
 		"client_jwt":                               &hcldec.AttrSpec{Name: "client_jwt", Type: cty.String, Required: false},
 		"object_id":                                &hcldec.AttrSpec{Name: "object_id", Type: cty.String, Required: false},
 		"tenant_id":                                &hcldec.AttrSpec{Name: "tenant_id", Type: cty.String, Required: false},

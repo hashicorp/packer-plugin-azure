@@ -1,11 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package arm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
-
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -14,7 +17,7 @@ import (
 
 type StepGetOSDisk struct {
 	client *AzureClient
-	query  func(ctx context.Context, resourceGroupName string, computeName string) (compute.VirtualMachine, error)
+	query  func(ctx context.Context, resourceGroupName string, computeName string, subscriptionId string) (*virtualmachines.VirtualMachine, error)
 	say    func(message string)
 	error  func(e error)
 }
@@ -30,12 +33,17 @@ func NewStepGetOSDisk(client *AzureClient, ui packersdk.Ui) *StepGetOSDisk {
 	return step
 }
 
-func (s *StepGetOSDisk) queryCompute(ctx context.Context, resourceGroupName string, computeName string) (compute.VirtualMachine, error) {
-	vm, err := s.client.VirtualMachinesClient.Get(ctx, resourceGroupName, computeName, "")
+func (s *StepGetOSDisk) queryCompute(ctx context.Context, resourceGroupName string, computeName string, subscriptionId string) (*virtualmachines.VirtualMachine, error) {
+	vmID := virtualmachines.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)
+	vm, err := s.client.VirtualMachinesClient.Get(ctx, vmID, virtualmachines.DefaultGetOperationOptions())
 	if err != nil {
 		s.say(s.client.LastError.Error())
+		return nil, err
 	}
-	return vm, err
+	if model := vm.Model; model != nil {
+		return model, nil
+	}
+	return nil, errors.New("TODO")
 }
 
 func (s *StepGetOSDisk) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -43,11 +51,12 @@ func (s *StepGetOSDisk) Run(ctx context.Context, state multistep.StateBag) multi
 
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
 	var computeName = state.Get(constants.ArmComputeName).(string)
+	var subscriptionId = state.Get(constants.ArmSubscription).(string)
 
 	s.say(fmt.Sprintf(" -> ResourceGroupName : '%s'", resourceGroupName))
 	s.say(fmt.Sprintf(" -> ComputeName       : '%s'", computeName))
 
-	vm, err := s.query(ctx, resourceGroupName, computeName)
+	vm, err := s.query(ctx, resourceGroupName, computeName, subscriptionId)
 	if err != nil {
 		state.Put(constants.Error, err)
 		s.error(err)
@@ -55,16 +64,16 @@ func (s *StepGetOSDisk) Run(ctx context.Context, state multistep.StateBag) multi
 		return multistep.ActionHalt
 	}
 
-	var vhdUri string
-	if vm.StorageProfile.OsDisk.Vhd != nil {
-		vhdUri = *vm.StorageProfile.OsDisk.Vhd.URI
-		s.say(fmt.Sprintf(" -> OS Disk           : '%s'", vhdUri))
+	var diskUri string
+	if vm.Properties.StorageProfile.OsDisk.Vhd != nil {
+		diskUri = *vm.Properties.StorageProfile.OsDisk.Vhd.Uri
+		s.say(fmt.Sprintf(" -> OS Disk           : '%s'", diskUri))
 	} else {
-		vhdUri = *vm.StorageProfile.OsDisk.ManagedDisk.ID
-		s.say(fmt.Sprintf(" -> Managed OS Disk   : '%s'", vhdUri))
+		diskUri = *vm.Properties.StorageProfile.OsDisk.ManagedDisk.Id
+		s.say(fmt.Sprintf(" -> Managed OS Disk   : '%s'", diskUri))
 	}
 
-	state.Put(constants.ArmOSDiskVhd, vhdUri)
+	state.Put(constants.ArmOSDiskUri, diskUri)
 	return multistep.ActionContinue
 }
 

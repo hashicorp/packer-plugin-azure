@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 /*
 OpenSSH migrated the ssh-rsa key type, which historically used the ssh-rsa
 signature algorithm based on SHA-1, to the new rsa-sha2-256 and rsa-sha2-512 signature algorithms.
@@ -17,7 +20,7 @@ source "azure-arm" "ubuntu2204" {
   subscription_id = var.subscription_id
   client_id       = var.client_id
 
-  client_secret   = var.client_secret
+  client_secret = var.client_secret
 
   managed_image_resource_group_name = var.resource_group
   managed_image_name                = "ubuntu-jammay-server-test-${local.timestamp}"
@@ -34,7 +37,7 @@ source "azure-arm" "ubuntu2204" {
 build {
   sources = ["source.azure-arm.ubuntu2204"]
   provisioner "shell" {
-    inline          = ["uname -a"]
+    inline = ["uname -a"]
   }
 }
 

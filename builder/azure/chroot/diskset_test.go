@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package chroot
 
 import "github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
@@ -10,7 +13,7 @@ func diskset(ids ...string) Diskset {
 		if err != nil {
 			panic(err)
 		}
-		diskset[int32(i-1)] = r
+		diskset[int64(i-1)] = r
 	}
 	return diskset
 }

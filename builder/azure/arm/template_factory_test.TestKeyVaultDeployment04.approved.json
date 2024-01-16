@@ -1,0 +1,74 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "keyVaultName": {
+      "type": "string"
+    },
+    "keyVaultSKU": {
+      "type": "string"
+    },
+    "keyVaultSecretName": {
+      "type": "string"
+    },
+    "keyVaultSecretValue": {
+      "type": "securestring"
+    },
+    "objectId": {
+      "type": "string"
+    },
+    "tenantId": {
+      "type": "string"
+    }
+  },
+  "resources": [
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "location": "[variables('location')]",
+      "name": "[parameters('keyVaultName')]",
+      "properties": {
+        "accessPolicies": [
+          {
+            "objectId": "[parameters('objectId')]",
+            "permissions": {
+              "keys": [
+                "all"
+              ],
+              "secrets": [
+                "all"
+              ]
+            },
+            "tenantId": "[parameters('tenantId')]"
+          }
+        ],
+        "enableSoftDelete": "true",
+        "enabledForDeployment": "true",
+        "enabledForTemplateDeployment": "true",
+        "sku": {
+          "family": "A",
+          "name": "[parameters('keyVaultSKU')]"
+        },
+        "tenantId": "[parameters('tenantId')]"
+      },
+      "type": "Microsoft.KeyVault/vaults"
+    },
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults/', parameters('keyVaultName'))]"
+      ],
+      "name": "[format('{0}/{1}', parameters('keyVaultName'), parameters('keyVaultSecretName'))]",
+      "properties": {
+        "attributes": {
+          "exp": 4102444800
+        },
+        "value": "[parameters('keyVaultSecretValue')]"
+      },
+      "type": "Microsoft.KeyVault/vaults/secrets"
+    }
+  ],
+  "variables": {
+    "apiVersion": "2022-07-01",
+    "location": "[resourceGroup().location]"
+  }
+}

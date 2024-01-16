@@ -1,12 +1,17 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package arm
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	sdkconfig "github.com/hashicorp/packer-plugin-sdk/template/config"
 )
@@ -15,8 +20,6 @@ import (
 var requiredConfigValues = []string{
 	"capture_name_prefix",
 	"capture_container_name",
-	"client_id",
-	"client_secret",
 	"image_offer",
 	"image_publisher",
 	"image_sku",
@@ -24,7 +27,6 @@ var requiredConfigValues = []string{
 	"os_type",
 	"storage_account",
 	"resource_group_name",
-	"subscription_id",
 }
 
 func TestConfigShouldProvideReasonableDefaultValues(t *testing.T) {
@@ -73,8 +75,8 @@ func TestConfigUserNameOverride(t *testing.T) {
 	if c.Password != c.tmpAdminPassword {
 		t.Errorf("Expected 'Password' to be set to generated password, but found %q!", c.Password)
 	}
-	if c.Comm.SSHPassword != "" {
-		t.Errorf("Expected 'c.Comm.SSHPassword' to be empty, but found %q!", c.Comm.SSHPassword)
+	if c.Comm.SSHPassword != c.tmpAdminPassword {
+		t.Errorf("Expected 'c.Comm.SSHPassword' to set to generated password, but found %q!", c.Comm.SSHPassword)
 	}
 	if c.UserName != "override_username" {
 		t.Errorf("Expected 'UserName' to be set to 'override_username', but found %q!", c.UserName)
@@ -125,11 +127,11 @@ func TestConfigShouldBeAbleToOverrideDefaultedValues(t *testing.T) {
 		t.Errorf("Expected 'vm_size' to be set to 'override_vm_size', but found %q!", c.VMSize)
 	}
 
-	if c.managedImageStorageAccountType != compute.StorageAccountTypesPremiumLRS {
+	if c.managedImageStorageAccountType != virtualmachines.StorageAccountTypesPremiumLRS {
 		t.Errorf("Expected 'managed_image_storage_account_type' to be set to 'Premium_LRS', but found %q!", c.managedImageStorageAccountType)
 	}
 
-	if c.diskCachingType != compute.CachingTypesNone {
+	if c.diskCachingType != virtualmachines.CachingTypesNone {
 		t.Errorf("Expected 'disk_caching_type' to be set to 'None', but found %q!", c.diskCachingType)
 	}
 
@@ -502,8 +504,8 @@ func TestConfigShouldDefaultToPublicCloud(t *testing.T) {
 		t.Errorf("Expected 'CloudEnvironmentName' to default to 'Public', but got '%s'.", c.ClientConfig.CloudEnvironmentName)
 	}
 
-	if c.ClientConfig.CloudEnvironment() == nil || c.ClientConfig.CloudEnvironment().Name != "AzurePublicCloud" {
-		t.Errorf("Expected 'cloudEnvironment' to be set to 'AzurePublicCloud', but got '%s'.", c.ClientConfig.CloudEnvironment())
+	if c.ClientConfig.CloudEnvironment() == nil || c.ClientConfig.CloudEnvironment().Name != "Public" {
+		t.Errorf("Expected 'cloudEnvironment' to be set to 'Public', but got '%s'.", c.ClientConfig.CloudEnvironment().Name)
 	}
 }
 
@@ -522,25 +524,25 @@ func TestConfigInstantiatesCorrectAzureEnvironment(t *testing.T) {
 		"communicator":           "none",
 	}
 
-	// user input is fun :)
+	// user input is fun :D
 	var table = []struct {
 		name            string
 		environmentName string
 	}{
-		{"China", "AzureChinaCloud"},
-		{"ChinaCloud", "AzureChinaCloud"},
-		{"AzureChinaCloud", "AzureChinaCloud"},
-		{"aZuReChInAcLoUd", "AzureChinaCloud"},
+		{"China", "China"},
+		{"ChinaCloud", "China"},
+		{"AzureChinaCloud", "China"},
+		{"aZuReChInAcLoUd", "China"},
 
-		{"USGovernment", "AzureUSGovernmentCloud"},
-		{"USGovernmentCloud", "AzureUSGovernmentCloud"},
-		{"AzureUSGovernmentCloud", "AzureUSGovernmentCloud"},
-		{"aZuReUsGoVeRnMeNtClOuD", "AzureUSGovernmentCloud"},
+		{"USGovernment", "USGovernment"},
+		{"USGovernmentCloud", "USGovernment"},
+		{"AzureUSGovernmentCloud", "USGovernment"},
+		{"aZuReUsGoVeRnMeNtClOuD", "USGovernment"},
 
-		{"Public", "AzurePublicCloud"},
-		{"PublicCloud", "AzurePublicCloud"},
-		{"AzurePublicCloud", "AzurePublicCloud"},
-		{"aZuRePuBlIcClOuD", "AzurePublicCloud"},
+		{"Public", "Public"},
+		{"PublicCloud", "Public"},
+		{"AzurePublicCloud", "Public"},
+		{"aZuRePuBlIcClOuD", "Public"},
 	}
 
 	packerConfiguration := getPackerConfiguration()
@@ -554,7 +556,7 @@ func TestConfigInstantiatesCorrectAzureEnvironment(t *testing.T) {
 		}
 
 		if c.ClientConfig.CloudEnvironment() == nil || c.ClientConfig.CloudEnvironment().Name != x.environmentName {
-			t.Errorf("Expected 'cloudEnvironment' to be set to '%s', but got '%s'.", x.environmentName, c.ClientConfig.CloudEnvironment())
+			t.Errorf("Expected 'cloudEnvironment' to be set to '%s', but got '%s'.", x.environmentName, c.ClientConfig.CloudEnvironment().Name)
 		}
 	}
 }
@@ -630,15 +632,15 @@ func TestConfigShouldTransformToVirtualMachineCaptureParameters(t *testing.T) {
 	}
 	parameters := c.toVirtualMachineCaptureParameters()
 
-	if *parameters.DestinationContainerName != c.CaptureContainerName {
-		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", *parameters.DestinationContainerName, c.CaptureContainerName)
+	if parameters.DestinationContainerName != c.CaptureContainerName {
+		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", parameters.DestinationContainerName, c.CaptureContainerName)
 	}
 
-	if *parameters.VhdPrefix != c.CaptureNamePrefix {
-		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", *parameters.VhdPrefix, c.CaptureNamePrefix)
+	if parameters.VhdPrefix != c.CaptureNamePrefix {
+		t.Errorf("Expected DestinationContainerName to be equal to config's CaptureContainerName, but they were '%s' and '%s' respectively.", parameters.VhdPrefix, c.CaptureNamePrefix)
 	}
 
-	if *parameters.OverwriteVhds != false {
+	if parameters.OverwriteVhds != false {
 		t.Error("Expected OverwriteVhds to be false, but it was not.")
 	}
 }
@@ -1094,7 +1096,7 @@ func TestConfigZoneResilientShouldDefaultToFalse(t *testing.T) {
 	}
 
 	p := c.toImageParameters()
-	if *p.ImageProperties.StorageProfile.ZoneResilient {
+	if *p.Properties.StorageProfile.ZoneResilient {
 		t.Fatal("expected zone resilient default to be false")
 	}
 }
@@ -1118,7 +1120,7 @@ func TestConfigZoneResilientSetFromConfig(t *testing.T) {
 	}
 
 	p := c.toImageParameters()
-	if *p.ImageProperties.StorageProfile.ZoneResilient == false {
+	if *p.Properties.StorageProfile.ZoneResilient == false {
 		t.Fatal("expected managed image zone resilient to be true from config")
 	}
 }
@@ -1254,6 +1256,112 @@ func TestConfigShouldAcceptManagedImageOSDiskSnapshotNameAndManagedImageDataDisk
 	}
 }
 
+func TestConfigShouldAcceptAbsentManagedImageButPresentSharedImageGalleryDestination(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":     "ignore",
+		"image_publisher": "ignore",
+		"image_sku":       "ignore",
+		"location":        "ignore",
+		"subscription_id": "ignore",
+		"communicator":    "none",
+		// Does not matter for this test case, just pick one.
+		"os_type": constants.Target_Linux,
+
+		"shared_image_gallery_destination": map[string]string{
+			"resource_group":      "ignore",
+			"gallery_name":        "ignore",
+			"image_name":          "ignore",
+			"image_version":       "1.0.1",
+			"replication_regions": "ignore",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("expected config to accept platform managed image build: %v", err)
+	}
+}
+
+func TestConfigShouldRejectShallowReplicationWithInvalidReplicationCount(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":                        "ignore",
+		"image_publisher":                    "ignore",
+		"image_sku":                          "ignore",
+		"location":                           "ignore",
+		"subscription_id":                    "ignore",
+		"communicator":                       "none",
+		"os_type":                            constants.Target_Linux,
+		"shared_image_gallery_replica_count": "2",
+		"shared_image_gallery_destination": map[string]string{
+			"resource_group":          "ignore",
+			"gallery_name":            "ignore",
+			"image_name":              "ignore",
+			"image_version":           "1.0.1",
+			"replication_regions":     "ignore",
+			"use_shallow_replication": "true",
+		},
+	}
+	expectedErrorMessage := "When using shallow replication the replica count can only be 1, leaving this value unset will default to 1"
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatalf("expected config to reject invalid replica count using shallow replication but it was accepted")
+	} else if !strings.Contains(err.Error(), expectedErrorMessage) {
+		t.Fatalf("unexpected rejection reason, expected %s to contain %s", err.Error(), expectedErrorMessage)
+	}
+}
+
+func TestConfigShouldAcceptShallowReplicationWithReplicaCount(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":                        "ignore",
+		"image_publisher":                    "ignore",
+		"image_sku":                          "ignore",
+		"location":                           "ignore",
+		"subscription_id":                    "ignore",
+		"communicator":                       "none",
+		"os_type":                            constants.Target_Linux,
+		"shared_image_gallery_replica_count": "1",
+		"shared_image_gallery_destination": map[string]string{
+			"resource_group":          "ignore",
+			"gallery_name":            "ignore",
+			"image_name":              "ignore",
+			"image_version":           "1.0.1",
+			"replication_regions":     "ignore",
+			"use_shallow_replication": "true",
+		},
+	}
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("expected config to accept shallow replication with set replica count (1) build: %v", err)
+	}
+}
+
+func TestConfigShouldAcceptShallowReplicationWithWithUnsetReplicaCount(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":     "ignore",
+		"image_publisher": "ignore",
+		"image_sku":       "ignore",
+		"location":        "ignore",
+		"subscription_id": "ignore",
+		"communicator":    "none",
+		"os_type":         constants.Target_Linux,
+		"shared_image_gallery_destination": map[string]string{
+			"resource_group":          "ignore",
+			"gallery_name":            "ignore",
+			"image_name":              "ignore",
+			"image_version":           "1.0.1",
+			"replication_regions":     "ignore",
+			"use_shallow_replication": "true",
+		},
+	}
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("expected config to accept shallow replication with unset replica count build: %v", err)
+	}
+}
 func TestConfigShouldRejectManagedImageOSDiskSnapshotNameAndManagedImageDataDiskSnapshotPrefixWithCaptureContainerName(t *testing.T) {
 	config := map[string]interface{}{
 		"image_offer":                         "ignore",
@@ -1298,6 +1406,88 @@ func TestConfigShouldRejectManagedImageOSDiskSnapshotNameAndManagedImageDataDisk
 	}
 }
 
+func TestConfigShouldRejectSecureBootWhenPublishingToAManagedImage(t *testing.T) {
+	expectedErrorMessage := "A managed image (managed_image_name, managed_image_resource_group_name) can not set SecureBoot or VTpm, these features are only supported when directly publishing to a Shared Image Gallery"
+	config := map[string]interface{}{
+		"image_offer":                       "ignore",
+		"image_publisher":                   "ignore",
+		"image_sku":                         "ignore",
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"communicator":                      "none",
+		"managed_image_resource_group_name": "ignore",
+		"managed_image_name":                "ignore",
+		"secure_boot_enabled":               "true",
+
+		// Does not matter for this test case, just pick one.
+		"os_type": constants.Target_Linux,
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("expected config to reject managed image with secure boot, secure boot is only allowed when direct publishing to SIG")
+	} else if !strings.Contains(err.Error(), expectedErrorMessage) {
+		t.Fatalf("unexpected rejection reason, expected %s to contain %s", err.Error(), expectedErrorMessage)
+	}
+}
+
+func TestConfigShouldRejectVTPMWhenPublishingToAManagedImage(t *testing.T) {
+	expectedErrorMessage := "A managed image (managed_image_name, managed_image_resource_group_name) can not set SecureBoot or VTpm, these features are only supported when directly publishing to a Shared Image Gallery"
+	config := map[string]interface{}{
+		"image_offer":                       "ignore",
+		"image_publisher":                   "ignore",
+		"image_sku":                         "ignore",
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"communicator":                      "none",
+		"managed_image_resource_group_name": "ignore",
+		"managed_image_name":                "ignore",
+		"vtpm_enabled":                      "true",
+
+		// Does not matter for this test case, just pick one.
+		"os_type": constants.Target_Linux,
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("expected config to reject managed image with secure boot, secure boot is only allowed when direct publishing to SIG")
+	} else if !strings.Contains(err.Error(), expectedErrorMessage) {
+		t.Fatalf("unexpected rejection reason, expected %s to contain %s", err.Error(), expectedErrorMessage)
+	}
+}
+
+func TestConfigShouldRejectSpecializedWhenPublishingManagedImage(t *testing.T) {
+	expectedErrorMessage := "A managed image (managed_image_name, managed_image_resource_group_name) can not be Specialized (shared_image_gallery_destination.specialized can not be set), Specialized images are only supported when directly publishing to a Shared Image Gallery"
+	config := map[string]interface{}{
+		"image_offer":                       "ignore",
+		"image_publisher":                   "ignore",
+		"image_sku":                         "ignore",
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"communicator":                      "none",
+		"managed_image_resource_group_name": "ignore",
+		"managed_image_name":                "ignore",
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.0",
+			"specialized":    "true",
+		},
+		// Does not matter for this test case, just pick one.
+		"os_type": constants.Target_Linux,
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("expected config to reject managed image with secure boot, secure boot is only allowed when direct publishing to SIG")
+	} else if !strings.Contains(err.Error(), expectedErrorMessage) {
+		t.Fatalf("unexpected rejection reason, expected %s to contain %s", err.Error(), expectedErrorMessage)
+	}
+}
 func TestConfigShouldAcceptPlatformManagedImageBuild(t *testing.T) {
 	config := map[string]interface{}{
 		"image_offer":                       "ignore",
@@ -1959,9 +2149,11 @@ func TestConfigShouldAllowAsyncResourceGroupOverrideBadValue(t *testing.T) {
 }
 func TestConfigShouldAllowSharedImageGalleryOptions(t *testing.T) {
 	config := map[string]interface{}{
-		"location":        "ignore",
-		"subscription_id": "ignore",
-		"os_type":         "linux",
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           "linux",
+		"managed_image_name":                "ignore",
+		"managed_image_resource_group_name": "ignore",
 		"shared_image_gallery": map[string]string{
 			"subscription":   "ignore",
 			"resource_group": "ignore",
@@ -1973,8 +2165,87 @@ func TestConfigShouldAllowSharedImageGalleryOptions(t *testing.T) {
 
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Errorf("expected config to accept Shared Image Gallery options - but failed with %q", err)
+	}
+}
+
+func TestConfigShouldRejectSharedImageGalleryDestinationNoVersionSet(t *testing.T) {
+	config := map[string]interface{}{
+		"location":        "ignore",
+		"subscription_id": "ignore",
+		"os_type":         "linux",
+		"image_sku":       "ignore",
+		"image_offer":     "ignore",
+		"image_publisher": "ignore",
+		"shared_image_gallery_destination": map[string]string{
+			"resource_group":      "ignore",
+			"gallery_name":        "ignore",
+			"image_name":          "ignore",
+			"replication_regions": "ignore",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
 	if err == nil {
-		t.Log("expected config to accept Shared Image Gallery options", err)
+		t.Fatal("expected config to reject invalid shared image gallery destination version", err)
+	}
+	errorMessage := "An image_version must be specified for shared_image_gallery_destination and must follow the Major(int).Minor(int).Patch(int) format"
+	if !strings.Contains(err.Error(), errorMessage) {
+		t.Errorf("expected config to reject with error containing %s but got %s", errorMessage, err)
+	}
+}
+
+func TestConfigShouldRejectSharedImageGalleryDestinationInvalidVersion(t *testing.T) {
+	config := map[string]interface{}{
+		"location":        "ignore",
+		"subscription_id": "ignore",
+		"os_type":         "linux",
+		"image_sku":       "ignore",
+		"image_offer":     "ignore",
+		"image_publisher": "ignore",
+		"shared_image_gallery_destination": map[string]string{
+			"resource_group":      "ignore",
+			"gallery_name":        "ignore",
+			"image_name":          "ignore",
+			"image_version":       "a.0.1",
+			"replication_regions": "ignore",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("expected config to reject invalid shared image gallery destination version", err)
+	}
+	errorMessage := "An image_version must be specified for shared_image_gallery_destination and must follow the Major(int).Minor(int).Patch(int) format"
+	if !strings.Contains(err.Error(), errorMessage) {
+		t.Errorf("expected config to reject with error containing %s but got %s", errorMessage, err)
+	}
+}
+
+func TestSharedImageGalleryWithSkipImageCreateOptions(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           "linux",
+		"managed_image_name":                "ignore",
+		"managed_image_resource_group_name": "ignore",
+		"skip_create_image":                 true,
+		"shared_image_gallery": map[string]string{
+			"subscription":   "ignore",
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "ignore",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Errorf("expected config to accept Shared Image Gallery with skip create options - but failed with %q", err)
 	}
 
 }
@@ -1988,7 +2259,7 @@ func TestConfigShouldAllowCommunityGalleryOptions(t *testing.T) {
 		"managed_image_resource_group_name": "ignore",
 		"async_resourcegroup_delete":        "true",
 		"shared_image_gallery": map[string]string{
-			"communityGallery_image_id": "/CommunityGalleries/cg/Images/img",
+			"community_gallery_image_id": "/CommunityGalleries/cg/Images/img",
 		},
 	}
 
@@ -2000,7 +2271,7 @@ func TestConfigShouldAllowCommunityGalleryOptions(t *testing.T) {
 
 }
 
-func TestConfigShouldAllowDirestSharedGalleryOptions(t *testing.T) {
+func TestConfigShouldAllowDirectSharedGalleryOptions(t *testing.T) {
 	config := map[string]interface{}{
 		"location":                          "ignore",
 		"subscription_id":                   "ignore",
@@ -2009,7 +2280,7 @@ func TestConfigShouldAllowDirestSharedGalleryOptions(t *testing.T) {
 		"managed_image_resource_group_name": "ignore",
 		"async_resourcegroup_delete":        "true",
 		"shared_image_gallery": map[string]string{
-			"directSharedGallery_image_id": "/SharedGalleries/cg/Images/img",
+			"direct_shared_gallery_image_id": "/SharedGalleries/cg/Images/img",
 		},
 	}
 
@@ -2017,6 +2288,53 @@ func TestConfigShouldAllowDirestSharedGalleryOptions(t *testing.T) {
 	_, err := c.Prepare(config, getPackerConfiguration())
 	if err != nil {
 		t.Errorf("direct shared gallery might not be accepted - failed with %q", err)
+	}
+
+}
+
+func TestConfigShouldNotAllowBothDirectSharedGalleryAndCommunityGalleryOptions(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           "linux",
+		"managed_image_name":                "ignore",
+		"managed_image_resource_group_name": "ignore",
+		"async_resourcegroup_delete":        "true",
+		"shared_image_gallery": map[string]string{
+			"direct_shared_gallery_image_id": "/SharedGalleries/cg/Images/img",
+			"community_gallery_image_id":     "/CommunityGalleries/cg/Images/img",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Errorf("Provided both direct shared and community gallery as inputs and did not get error.")
+	}
+
+}
+
+func TestConfigShouldNotAllowBothCommunityAndSharedImageGalleryOptions(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           "linux",
+		"managed_image_name":                "ignore",
+		"managed_image_resource_group_name": "ignore",
+		"shared_image_gallery": map[string]string{
+			"subscription":               "ignore",
+			"resource_group":             "ignore",
+			"gallery_name":               "ignore",
+			"image_name":                 "ignore",
+			"image_version":              "ignore",
+			"community_gallery_image_id": "/CommunityGalleries/cg/Images/img",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Errorf("Provided both normal private gallery and community gallery as inputs and did not get error.")
 	}
 
 }
@@ -2180,6 +2498,8 @@ func getArmBuilderConfigurationWithWindows() map[string]string {
 
 	m["object_id"] = "ignored00"
 	m["tenant_id"] = "ignored00"
+	m["subscription_id"] = "ignored00"
+	m["use_azure_cli_auth"] = "true"
 	m["winrm_username"] = "ignored00"
 	m["communicator"] = "winrm"
 	m["os_type"] = constants.Target_Windows
@@ -2250,5 +2570,316 @@ func TestConfigShouldRejectMalformedUserAssignedManagedIdentities(t *testing.T) 
 		if _, err := c.Prepare(config, getPackerConfiguration()); err == nil {
 			t.Errorf("Expected test to fail, but it succeeded with the malformed user_assigned_managed_identities set to %q.", x)
 		}
+	}
+}
+
+func TestConfigShouldRejectUserDataAndUserDataFile(t *testing.T) {
+	tmpfile, err := os.CreateTemp("", "userdata")
+	if err != nil {
+		t.Fatalf("failed creating tempfile: %s", err)
+	}
+	config := map[string]interface{}{
+		"capture_container_name": "ignore",
+		"capture_name_prefix":    "ignore",
+		"image_publisher":        "ignore",
+		"image_offer":            "ignore",
+		"image_sku":              "ignore",
+		"location":               "ignore",
+		"storage_account":        "ignore",
+		"resource_group_name":    "ignore",
+		"subscription_id":        "ignore",
+		"os_type":                constants.Target_Linux,
+		"communicator":           "none",
+		// custom may define one or the other, but not both
+		"user_data":      "user_data",
+		"user_data_file": tmpfile.Name(),
+	}
+
+	var c Config
+	_, err = c.Prepare(config, getPackerConfiguration())
+
+	defer os.Remove(tmpfile.Name())
+	if err == nil {
+		t.Fatal("expected config to reject the use of both user_data and user_data_file")
+	}
+}
+
+func TestConfigShouldRejectCustomDataAndCustomDataFile(t *testing.T) {
+	tmpfile, err := os.CreateTemp("", "customdata")
+	if err != nil {
+		t.Fatalf("failed creating tempfile: %s", err)
+	}
+	config := map[string]interface{}{
+		"capture_container_name": "ignore",
+		"capture_name_prefix":    "ignore",
+		"image_publisher":        "ignore",
+		"image_offer":            "ignore",
+		"image_sku":              "ignore",
+		"location":               "ignore",
+		"storage_account":        "ignore",
+		"resource_group_name":    "ignore",
+		"subscription_id":        "ignore",
+		"os_type":                constants.Target_Linux,
+		"communicator":           "none",
+		// custom may define one or the other, but not both
+		"custom_data":      "custom_data",
+		"custom_data_file": tmpfile.Name(),
+	}
+
+	var c Config
+	_, err = c.Prepare(config, getPackerConfiguration())
+
+	defer os.Remove(tmpfile.Name())
+	if err == nil {
+		t.Fatal("expected config to reject the use of both custom_data and custom_data_file")
+	}
+}
+
+func TestConfigShouldRejectInvalidCustomResourceBuildPrefix(t *testing.T) {
+	config := map[string]interface{}{
+		"location":               "ignore",
+		"subscription_id":        "ignore",
+		"image_offer":            "ignore",
+		"image_publisher":        "ignore",
+		"image_sku":              "ignore",
+		"os_type":                "linux",
+		"resource_group_name":    "ignore",
+		"storage_account":        "ignore",
+		"capture_container_name": "ignore",
+		"capture_name_prefix":    "ignore",
+	}
+
+	badResourcePrefixes := []string{"pkr_123456", "pkr-1234567", "-pkr123", "pkr.123"}
+	for _, resourcePrefix := range badResourcePrefixes {
+		config["custom_resource_build_prefix"] = resourcePrefix
+		var c Config
+		_, err := c.Prepare(config, getPackerConfiguration())
+		if err == nil {
+			t.Fatalf("expected config to reject %s as custom_resource_build_prefix", resourcePrefix)
+		}
+	}
+}
+
+func TestConfigShouldAcceptValidCustomResourceBuildPrefix(t *testing.T) {
+	config := map[string]interface{}{
+		"location":               "ignore",
+		"subscription_id":        "ignore",
+		"image_offer":            "ignore",
+		"image_publisher":        "ignore",
+		"image_sku":              "ignore",
+		"os_type":                "linux",
+		"resource_group_name":    "ignore",
+		"storage_account":        "ignore",
+		"capture_container_name": "ignore",
+		"capture_name_prefix":    "ignore",
+	}
+
+	goodResourcePrefixes := []string{"pkr-123456", "pkr-12345-", "pkr123"}
+	for _, resourcePrefix := range goodResourcePrefixes {
+		config["custom_resource_build_prefix"] = resourcePrefix
+		var c Config
+		_, err := c.Prepare(config, getPackerConfiguration())
+		if err != nil {
+			t.Fatalf("expected config to accept %s as custom_resource_build_prefix but got error: %s", resourcePrefix, err)
+		}
+	}
+}
+
+func TestConfigShouldNormalizeLicenseTypeCase(t *testing.T) {
+	config := map[string]string{
+		"capture_name_prefix":    "ignore",
+		"capture_container_name": "ignore",
+		"location":               "ignore",
+		"image_url":              "ignore",
+		"storage_account":        "ignore",
+		"resource_group_name":    "ignore",
+		"subscription_id":        "ignore",
+		"communicator":           "none",
+	}
+
+	test_inputs := map[string]map[string][]string{
+		constants.Target_Linux: {
+			constants.License_RHEL: {"rhel_byos", "rHEL_byos"},
+			constants.License_SUSE: {"sles_byos", "sLes_BYoS"},
+		},
+		constants.Target_Windows: {
+			constants.License_Windows_Client: {"windows_client", "WINdOWS_CLIenT"},
+			constants.License_Windows_Server: {"windows_server", "WINdOWS_SErVER"},
+		},
+	}
+
+	for os_type, license_types := range test_inputs {
+		for expected, v := range license_types {
+			for _, license_type := range v {
+				config["license_type"] = license_type
+				config["os_type"] = os_type
+				var c Config
+				_, err := c.Prepare(config, getPackerConfiguration())
+				if err != nil {
+					t.Fatalf("Expected config to accept the value %q, but it did not", license_type)
+				}
+
+				if c.LicenseType != expected {
+					t.Fatalf("Expected config to normalize the value %q to %q, but it did not", license_type, expected)
+				}
+			}
+		}
+	}
+}
+
+func TestConfigShouldValidateLicenseType(t *testing.T) {
+	config := map[string]string{
+		"capture_name_prefix":    "ignore",
+		"capture_container_name": "ignore",
+		"location":               "ignore",
+		"image_url":              "ignore",
+		"storage_account":        "ignore",
+		"resource_group_name":    "ignore",
+		"subscription_id":        "ignore",
+		"communicator":           "none",
+	}
+
+	good_inputs := map[string]map[string][]string{
+		constants.Target_Linux: {
+			constants.License_RHEL: {"rhel_byos", "rHEL_byos"},
+			constants.License_SUSE: {"sles_byos", "sLes_BYoS"},
+		},
+		constants.Target_Windows: {
+			constants.License_Windows_Client: {"windows_client", "WINdOWS_CLIenT"},
+			constants.License_Windows_Server: {"windows_server", "WINdOWS_SErVER"},
+		},
+	}
+
+	for os_type, license_types := range good_inputs {
+		for _, v := range license_types {
+			for _, license_type := range v {
+				config["license_type"] = license_type
+				config["os_type"] = os_type
+				var c Config
+				_, err := c.Prepare(config, getPackerConfiguration())
+				if err != nil {
+					t.Fatalf("Expected config to accept the value %q, but it did not", license_type)
+				}
+			}
+		}
+	}
+
+	bad_inputs := map[string]map[string][]string{
+		constants.Target_Linux: {
+			constants.License_RHEL: {"windows_client", "windows"},
+			constants.License_SUSE: {"WINdOWS_CLIenT", "server"},
+		},
+		constants.Target_Windows: {
+			constants.License_Windows_Client: {"sles_byos", "rHEL"},
+			constants.License_Windows_Server: {"rhel_byos", "sLes"},
+		},
+	}
+
+	for os_type, license_types := range bad_inputs {
+		for _, v := range license_types {
+			for _, license_type := range v {
+				config["license_type"] = license_type
+				config["os_type"] = os_type
+				var c Config
+				_, err := c.Prepare(config, getPackerConfiguration())
+				if err == nil {
+					t.Fatalf("Expected config to not accept the value %q for os_type %q, but it did", license_type, os_type)
+				}
+			}
+		}
+	}
+}
+
+func TestConfigSpot(t *testing.T) {
+	config := map[string]interface{}{
+		"capture_container_name": "ignore",
+		"capture_name_prefix":    "ignore",
+		"image_publisher":        "ignore",
+		"image_offer":            "ignore",
+		"image_sku":              "ignore",
+		"location":               "ignore",
+		"storage_account":        "ignore",
+		"resource_group_name":    "ignore",
+		"subscription_id":        "ignore",
+		"os_type":                constants.Target_Linux,
+		"communicator":           "none",
+		"spot": map[string]interface{}{
+			"eviction_policy": "Deallocate",
+		},
+	}
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal("expected config to accept spot settings", err)
+	}
+}
+
+func TestConfigSpotInvalidEvictionPolicy(t *testing.T) {
+	config := map[string]interface{}{
+		"capture_container_name": "ignore",
+		"capture_name_prefix":    "ignore",
+		"image_publisher":        "ignore",
+		"image_offer":            "ignore",
+		"image_sku":              "ignore",
+		"location":               "ignore",
+		"storage_account":        "ignore",
+		"resource_group_name":    "ignore",
+		"subscription_id":        "ignore",
+		"os_type":                constants.Target_Linux,
+		"communicator":           "none",
+		"spot": map[string]interface{}{
+			"eviction_policy": "test",
+		},
+	}
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("expected config to not accept spot settings", err)
+	}
+}
+
+func TestConfigSpotEmptyEvictionPolicy(t *testing.T) {
+	config := map[string]interface{}{
+		"capture_container_name": "ignore",
+		"capture_name_prefix":    "ignore",
+		"image_publisher":        "ignore",
+		"image_offer":            "ignore",
+		"image_sku":              "ignore",
+		"location":               "ignore",
+		"storage_account":        "ignore",
+		"resource_group_name":    "ignore",
+		"subscription_id":        "ignore",
+		"os_type":                constants.Target_Linux,
+		"communicator":           "none",
+		"spot":                   map[string]interface{}{},
+	}
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal("expected config to accept spot settings", err)
+	}
+}
+
+func TestConfigSpotEmptyEvictionPolicyMaxPriceSet(t *testing.T) {
+	config := map[string]interface{}{
+		"capture_container_name": "ignore",
+		"capture_name_prefix":    "ignore",
+		"image_publisher":        "ignore",
+		"image_offer":            "ignore",
+		"image_sku":              "ignore",
+		"location":               "ignore",
+		"storage_account":        "ignore",
+		"resource_group_name":    "ignore",
+		"subscription_id":        "ignore",
+		"os_type":                constants.Target_Linux,
+		"communicator":           "none",
+		"spot": map[string]interface{}{
+			"max_price": 100,
+		},
+	}
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("expected config to not accept spot settings", err)
 	}
 }

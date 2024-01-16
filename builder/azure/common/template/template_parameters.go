@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package template
 
 // The intent of these types to facilitate interchange with Azure in the
@@ -20,9 +23,11 @@ type TemplateParameter struct {
 type TemplateParameters struct {
 	AdminUsername              *TemplateParameter `json:"adminUsername,omitempty"`
 	AdminPassword              *TemplateParameter `json:"adminPassword,omitempty"`
+	CommandToExecute           *TemplateParameter `json:"commandToExecute,omitempty"`
 	DnsNameForPublicIP         *TemplateParameter `json:"dnsNameForPublicIP,omitempty"`
 	KeyVaultName               *TemplateParameter `json:"keyVaultName,omitempty"`
 	KeyVaultSKU                *TemplateParameter `json:"keyVaultSKU,omitempty"`
+	KeyVaultSecretName         *TemplateParameter `json:"keyVaultSecretName,omitempty"`
 	KeyVaultSecretValue        *TemplateParameter `json:"keyVaultSecretValue,omitempty"`
 	ObjectId                   *TemplateParameter `json:"objectId,omitempty"`
 	NicName                    *TemplateParameter `json:"nicName,omitempty"`

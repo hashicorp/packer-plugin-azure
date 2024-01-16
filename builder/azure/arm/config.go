@@ -1,5 +1,8 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:generate packer-sdc struct-markdown
-//go:generate packer-sdc mapstructure-to-hcl2 -type Config,SharedImageGallery,SharedImageGalleryDestination,PlanInformation
+//go:generate packer-sdc mapstructure-to-hcl2 -type Config,SharedImageGallery,SharedImageGalleryDestination,PlanInformation,Spot
 
 package arm
 
@@ -11,17 +14,17 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"net"
+	"os"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/packer-plugin-sdk/random"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/masterzen/winrm"
 
 	azcommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
@@ -55,7 +58,6 @@ const (
 	// This is not an exhaustive match, but it should be extremely close.
 	validResourceGroupNameRe = "^[^_\\W][\\w-._\\(\\)]{0,89}$"
 	validManagedDiskName     = "^[^_\\W][\\w-._)]{0,79}$"
-	validResourceNamePrefix  = "^[^_\\W][\\w-._)]{0,10}$"
 )
 
 var (
@@ -65,7 +67,7 @@ var (
 	reResourceGroupName    = regexp.MustCompile(validResourceGroupNameRe)
 	reSnapshotName         = regexp.MustCompile(`^[A-Za-z0-9_]{1,79}$`)
 	reSnapshotPrefix       = regexp.MustCompile(`^[A-Za-z0-9_]{1,59}$`)
-	reResourceNamePrefix   = regexp.MustCompile(validResourceNamePrefix)
+	reResourceNamePrefix   = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]{0,9}$`)
 )
 
 type PlanInformation struct {
@@ -78,7 +80,7 @@ type PlanInformation struct {
 type SharedImageGallery struct {
 	Subscription  string `mapstructure:"subscription"`
 	ResourceGroup string `mapstructure:"resource_group"`
-	GalleryName   string `mapstructure:"gallery_name"`
+	GalleryName   string `mapstructure:"gallery_name"` //Gallery resource name
 	ImageName     string `mapstructure:"image_name"`
 	// Specify a specific version of an OS to boot from.
 	// Defaults to latest. There may be a difference in versions available
@@ -87,23 +89,39 @@ type SharedImageGallery struct {
 	// regions where you are deploying.
 	ImageVersion string `mapstructure:"image_version" required:"false"`
 
-	// Id of the community gallery image : /CommunityGalleries/{cgName}/Images/{img}[/Versions/{}] (Versions part is optional)
-	CommunityGalleryImageId string `mapstructure:"communityGallery_image_id" required:"false"`
+	// Id of the community gallery image : /CommunityGalleries/{galleryUniqueName}/Images/{img}[/Versions/{}] (Versions part is optional)
+	CommunityGalleryImageId string `mapstructure:"community_gallery_image_id" required:"false"`
 
-	// Id of the direct shared gallery image : /sharedGalleries/{cgName}/Images/{img}[/Versions/{}] (Versions part is optional)
-	SharedGalleryImageID string `mapstructure:"directSharedGallery_image_id" required:"false"`
+	// Id of the direct shared gallery image : /sharedGalleries/{galleryUniqueName}/Images/{img}[/Versions/{}] (Versions part is optional)
+	DirectSharedGalleryImageID string `mapstructure:"direct_shared_gallery_image_id" required:"false"`
 }
 
 type SharedImageGalleryDestination struct {
-	SigDestinationSubscription       string   `mapstructure:"subscription"`
-	SigDestinationResourceGroup      string   `mapstructure:"resource_group"`
-	SigDestinationGalleryName        string   `mapstructure:"gallery_name"`
-	SigDestinationImageName          string   `mapstructure:"image_name"`
-	SigDestinationImageVersion       string   `mapstructure:"image_version"`
+	SigDestinationSubscription  string `mapstructure:"subscription"`
+	SigDestinationResourceGroup string `mapstructure:"resource_group"`
+	SigDestinationGalleryName   string `mapstructure:"gallery_name"`
+	SigDestinationImageName     string `mapstructure:"image_name"`
+	SigDestinationImageVersion  string `mapstructure:"image_version"`
+	// A list of regions to replicate the image version in, by default the build location will be used as a replication region (the build location is either set in the location field, or the location of the resource group used in `build_resource_group_name` will be included.
+	// Can not contain any region but the build region when using shallow replication
 	SigDestinationReplicationRegions []string `mapstructure:"replication_regions"`
 	// Specify a storage account type for the Shared Image Gallery Image Version.
 	// Defaults to `Standard_LRS`. Accepted values are `Standard_LRS`, `Standard_ZRS` and `Premium_LRS`
 	SigDestinationStorageAccountType string `mapstructure:"storage_account_type"`
+	// Set to true if publishing to a Specialized Gallery, this skips a call to set the build VM's OS state as Generalized
+	SigDestinationSpecialized bool `mapstructure:"specialized"`
+	// Set to true to use shallow replication mode, which will publish the image version without replication. This option results in a faster build, but the image version's replication count and regions are not modifiable builds with shallow replication enabled.
+
+	// Setting a `shared_image_gallery_replica_count` or any `replication_regions` is unnecessary for shallow builds, as they can only replicate to the build region and must have a replica count of 1
+	// Refer to [Shallow Replication](https://learn.microsoft.com/en-us/azure/virtual-machines/shared-image-galleries?tabs=azure-cli#shallow-replication) for details on when to use shallow replication mode.
+	SigDestinationUseShallowReplicationMode bool `mapstructure:"use_shallow_replication" required:"false"`
+}
+
+type Spot struct {
+	// Specify eviction policy for spot instance: "Deallocate" or "Delete". If this is set, a spot instance will be used.
+	EvictionPolicy virtualmachines.VirtualMachineEvictionPolicyTypes `mapstructure:"eviction_policy"`
+	// How much should the VM cost maximally per hour. Specify -1 (or do not specify) to not evict based on price.
+	MaxPrice float32 `mapstructure:"max_price"`
 }
 
 type Config struct {
@@ -140,8 +158,6 @@ type Config struct {
 	//     "gallery_name": "GalleryName",
 	//     "image_name": "ImageName",
 	//     "image_version": "1.0.0",
-	//     "communityGallery_image_id": "/CommunityGalleries/{cg}/Images/{}/Versions/{}",
-	//     "directSharedGallery_image_id": "/SharedGalleries/{cg}/Images/{}/Versions/{}"
 	// }
 	// "managed_image_name": "TargetImageName",
 	// "managed_image_resource_group_name": "TargetResourceGroup"
@@ -203,10 +219,10 @@ type Config struct {
 	// The end of life date (2006-01-02T15:04:05.99Z) of the gallery Image Version. This property
 	// can be used for decommissioning purposes.
 	SharedGalleryImageVersionEndOfLifeDate string `mapstructure:"shared_gallery_image_version_end_of_life_date" required:"false"`
-	// The number of replicas of the Image Version to be created per region. This
-	// property would take effect for a region when regionalReplicaCount is not specified.
-	// Replica count must be between 1 and 10.
-	SharedGalleryImageVersionReplicaCount int32 `mapstructure:"shared_image_gallery_replica_count" required:"false"`
+	// The number of replicas of the Image Version to be created per region.
+	// Replica count must be between 1 and 100, but 50 replicas should be sufficient for most use cases.
+	// When using shallow replication `use_shallow_replication=true` the value can only be 1.
+	SharedGalleryImageVersionReplicaCount int64 `mapstructure:"shared_image_gallery_replica_count" required:"false"`
 	// If set to true, Virtual Machines deployed from the latest version of the
 	// Image Definition won't use this Image Version.
 	SharedGalleryImageVersionExcludeFromLatest bool `mapstructure:"shared_gallery_image_version_exclude_from_latest" required:"false"`
@@ -269,6 +285,29 @@ type Config struct {
 	// CLI example `az vm list-sizes --location westus`
 	VMSize string `mapstructure:"vm_size" required:"false"`
 
+	// If set use a spot instance during build; spot configuration settings only apply to the virtual machine launched by Packer and will not be persisted on the resulting image artifact.
+	//
+	// Following is an example.
+	//
+	// In JSON
+	//
+	// ```json
+	// "spot": {
+	//     "eviction_policy": "Delete",
+	// 	   "max_price": "0.4",
+	// }
+	// ```
+	//
+	// In HCL2
+	//
+	// ```hcl
+	// spot {
+	//     eviction_policy = "Delete"
+	//     max_price = "0.4"
+	// }
+	// ```
+	Spot Spot `mapstructure:"spot" required:"false"`
+
 	// Specify the managed image resource group name where the result of the
 	// Packer build will be saved. The resource group must already exist. If
 	// this value is set, the value managed_image_name must also be set. See
@@ -284,7 +323,7 @@ type Config struct {
 	// type for a managed image. Valid values are Standard_LRS and Premium_LRS.
 	// The default is Standard_LRS.
 	ManagedImageStorageAccountType string `mapstructure:"managed_image_storage_account_type" required:"false"`
-	managedImageStorageAccountType compute.StorageAccountTypes
+	managedImageStorageAccountType virtualmachines.StorageAccountTypes
 	// If
 	// managed_image_os_disk_snapshot_name is set, a snapshot of the OS disk
 	// is created with the same name as this value before the VM is captured.
@@ -309,7 +348,7 @@ type Config struct {
 	AzureTags map[string]string `mapstructure:"azure_tags" required:"false"`
 	// Same as [`azure_tags`](#azure_tags) but defined as a singular repeatable block
 	// containing a `name` and a `value` field. In HCL2 mode the
-	// [`dynamic_block`](/docs/templates/hcl_templates/expressions#dynamic-blocks)
+	// [`dynamic_block`](/packer/docs/templates/hcl_templates/expressions#dynamic-blocks)
 	// will allow you to create those programatically.
 	AzureTag config.NameValues `mapstructure:"azure_tag" required:"false"`
 	// Resource group under which the final artifact will be stored.
@@ -331,12 +370,21 @@ type Config struct {
 	TempResourceGroupName string `mapstructure:"temp_resource_group_name"`
 	// Specify an existing resource group to run the build in.
 	BuildResourceGroupName string `mapstructure:"build_resource_group_name"`
-	// Specify an existing key vault to use for uploading certificates to the
+	// Specify an existing key vault to use for uploading the certificate for the
 	// instance to connect.
 	BuildKeyVaultName string `mapstructure:"build_key_vault_name"`
+	// Specify the secret name to use for the certificate created in the key vault.
+	BuildKeyVaultSecretName string `mapstructure:"build_key_vault_secret_name"`
 	// Specify the KeyVault SKU to create during the build. Valid values are
 	// standard or premium. The default value is standard.
-	BuildKeyVaultSKU           string `mapstructure:"build_key_vault_sku"`
+	BuildKeyVaultSKU string `mapstructure:"build_key_vault_sku"`
+
+	// Specify the Disk Encryption Set ID to use to encrypt the OS and data disks created with the VM during the build
+	// Only supported when publishing to Shared Image Galleries, without a managed image
+	// The disk encryption set ID can be found in the properties tab of a disk encryption set on the Azure Portal, and is labeled as its resource ID
+	// https://learn.microsoft.com/en-us/azure/virtual-machines/image-version-encryption
+	DiskEncryptionSetId string `mapstructure:"disk_encryption_set_id"`
+
 	storageAccountBlobEndpoint string
 	// This value allows you to
 	// set a virtual_network_name and obtain a public IP. If this value is not
@@ -369,6 +417,14 @@ type Config struct {
 	// provisioning process.
 	CustomDataFile string `mapstructure:"custom_data_file" required:"false"`
 	customData     string
+	// Specify a Base64-encode custom data to apply when launching the instance.
+	// Note that you need to be careful about escaping characters due to the templates being JSON.
+	// The custom data will be passed to cloud-init for processing at
+	// the time of provisioning. See
+	// [documentation](http://cloudinit.readthedocs.io/en/latest/topics/examples.html)
+	// to learn more about custom data, and how it can be used to influence the
+	// provisioning process.
+	CustomData string `mapstructure:"custom_data" required:"false"`
 	// Specify a file containing user data to inject into the cloud-init
 	// process. The contents of the file are read and injected into the ARM
 	// template. The user data will be available from the provision until the vm is
@@ -378,6 +434,27 @@ type Config struct {
 	// to learn more about user data.
 	UserDataFile string `mapstructure:"user_data_file" required:"false"`
 	userData     string
+	// Specify a Base64-encode user data to apply
+	// Note that you need to be careful about escaping characters due to the templates being JSON.
+	// The user data will be available from the provision until the vm is
+	// deleted. Any application on the virtual machine can access the user data
+	// from the Azure Instance Metadata Service (IMDS) after provision.
+	// See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/user-data)
+	// to learn more about user data.
+	UserData string `mapstructure:"user_data" required:"false"`
+
+	// Used for running a script on VM provision during the image build
+	// The following example executes the contents of the file specified by `user_data_file`:
+	//  ```hcl2
+	//  custom_script   = "powershell -ExecutionPolicy Unrestricted -NoProfile -NonInteractive -Command \"$userData = (Invoke-RestMethod -Headers @{Metadata=$true} -Method GET -Uri http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01$([char]38)format=text); $contents = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($userData)); set-content -path c:\\Windows\\Temp\\userdata.ps1 -value $contents; . c:\\Windows\\Temp\\userdata.ps1;\""
+	//  user_data_file  = "./scripts/userdata.ps1"
+	//  ```
+	// Specify a command to inject into the CustomScriptExtension, to run on startup
+	// on Windows builds, before the communicator attempts to connect
+	// See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/extensions/custom-script-windows)
+	// to learn more.
+	CustomScript string `mapstructure:"custom_script" required:"false"`
+
 	// Used for creating images from Marketplace images. Please refer to
 	// [Deploy an image with Marketplace
 	// terms](https://aka.ms/azuremarketplaceapideployment) for more details.
@@ -415,18 +492,24 @@ type Config struct {
 	//
 	PlanInfo PlanInformation `mapstructure:"plan_info" required:"false"`
 	// The default PollingDuration for azure is 15mins, this property will override
-	// that value. See [Azure DefaultPollingDuration](https://godoc.org/github.com/Azure/go-autorest/autorest#pkg-constants)
+	// that value.
 	// If your Packer build is failing on the
 	// ARM deployment step with the error `Original Error:
 	// context deadline exceeded`, then you probably need to increase this timeout from
 	// its default of "15m" (valid time units include `s` for seconds, `m` for
 	// minutes, and `h` for hours.)
 	PollingDurationTimeout time.Duration `mapstructure:"polling_duration_timeout" required:"false"`
+
 	// If either Linux or Windows is specified Packer will
 	// automatically configure authentication credentials for the provisioned
 	// machine. For Linux this configures an SSH authorized key. For Windows
 	// this configures a WinRM certificate.
 	OSType string `mapstructure:"os_type" required:"false"`
+
+	// A time duration with which to set the WinRM certificate to expire
+	// This only works for Windows builds (valid time units include `s` for seconds, `m` for
+	// minutes, and `h` for hours.)
+	WinrmExpirationTime time.Duration `mapstructure:"winrm_expiration_time" required:"false"`
 	// temporary name assigned to the OSDisk. If this
 	// value is not set, a random value will be assigned. Being able to assign a custom
 	// osDiskName could ease deployment if naming conventions are used.
@@ -456,7 +539,7 @@ type Config struct {
 	// Specify the disk caching type. Valid values
 	// are None, ReadOnly, and ReadWrite. The default value is ReadWrite.
 	DiskCachingType string `mapstructure:"disk_caching_type" required:"false"`
-	diskCachingType compute.CachingTypes
+	diskCachingType virtualmachines.CachingTypes
 	// Specify the list of IP addresses and CIDR blocks that should be
 	// allowed access to the VM. If provided, an Azure Network Security
 	// Group will be created with corresponding rules and be bound to
@@ -475,6 +558,31 @@ type Config struct {
 	// this will set the prefix for the resources. The actuall resource names will be
 	// `custom_resource_build_prefix` + resourcetype + 5 character random alphanumeric string
 	CustomResourcePrefix string `mapstructure:"custom_resource_build_prefix" required:"false"`
+
+	// Specify a license type for the build VM to enable Azure Hybrid Benefit. If not set, Pay-As-You-Go license
+	// model (default) will be used. Valid values are:
+	//
+	// For Windows:
+	// - `Windows_Client`
+	// - `Windows_Server`
+	//
+	// For Linux:
+	// - `RHEL_BYOS`
+	// - `SLES_BYOS`
+	//
+	// Refer to the following documentation for more information about Hybrid Benefit:
+	// [Windows](https://learn.microsoft.com/en-us/azure/virtual-machines/windows/hybrid-use-benefit-licensing)
+	// or
+	// [Linux](https://learn.microsoft.com/en-us/azure/virtual-machines/linux/azure-hybrid-benefit-linux)
+	LicenseType string `mapstructure:"license_type" required:"false"`
+	// Specifies if Secure Boot and Trusted Launch is enabled for the Virtual Machine.
+	SecureBootEnabled bool `mapstructure:"secure_boot_enabled" required:"false"`
+	// Specifies if Encryption at host is enabled for the Virtual Machine.
+	// Requires enabling encryption at host in the Subscription read more [here](https://learn.microsoft.com/en-us/azure/virtual-machines/disks-enable-host-based-encryption-portal?tabs=azure-powershell)
+	EncryptionAtHost *bool `mapstructure:"encryption_at_host" required:"false"`
+
+	// Specifies if vTPM (virtual Trusted Platform Module) and Trusted Launch is enabled for the Virtual Machine.
+	VTpmEnabled bool `mapstructure:"vtpm_enabled" required:"false"`
 
 	// Runtime Values
 	UserName               string `mapstructure-to-hcl2:",skip"`
@@ -515,6 +623,19 @@ type keyVaultCertificate struct {
 	Password string `json:"password,omitempty"`
 }
 
+func (c *Config) getSourceSharedImageGalleryID() string {
+	id := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/galleries/%s/images/%s",
+		c.SharedGallery.Subscription,
+		c.SharedGallery.ResourceGroup,
+		c.SharedGallery.GalleryName,
+		c.SharedGallery.ImageName)
+	if c.SharedGallery.ImageVersion != "" {
+		id += fmt.Sprintf("/versions/%s",
+			c.SharedGallery.ImageVersion)
+	}
+	return id
+}
+
 func (c *Config) toVMID() string {
 	var resourceGroupName string
 	if c.tmpResourceGroupName != "" {
@@ -529,26 +650,30 @@ func (c *Config) isManagedImage() bool {
 	return c.ManagedImageName != ""
 }
 
-func (c *Config) toVirtualMachineCaptureParameters() *compute.VirtualMachineCaptureParameters {
-	return &compute.VirtualMachineCaptureParameters{
-		DestinationContainerName: &c.CaptureContainerName,
-		VhdPrefix:                &c.CaptureNamePrefix,
-		OverwriteVhds:            to.BoolPtr(false),
+func (c *Config) isPublishToSIG() bool {
+	return c.SharedGalleryDestination.SigDestinationGalleryName != ""
+}
+
+func (c *Config) toVirtualMachineCaptureParameters() *virtualmachines.VirtualMachineCaptureParameters {
+	return &virtualmachines.VirtualMachineCaptureParameters{
+		DestinationContainerName: c.CaptureContainerName,
+		VhdPrefix:                c.CaptureNamePrefix,
+		OverwriteVhds:            false,
 	}
 }
 
-func (c *Config) toImageParameters() *compute.Image {
-	return &compute.Image{
-		ImageProperties: &compute.ImageProperties{
-			SourceVirtualMachine: &compute.SubResource{
-				ID: to.StringPtr(c.toVMID()),
+func (c *Config) toImageParameters() *images.Image {
+	return &images.Image{
+		Properties: &images.ImageProperties{
+			SourceVirtualMachine: &images.SubResource{
+				Id: azcommon.StringPtr(c.toVMID()),
 			},
-			StorageProfile: &compute.ImageStorageProfile{
-				ZoneResilient: to.BoolPtr(c.ManagedImageZoneResilient),
+			StorageProfile: &images.ImageStorageProfile{
+				ZoneResilient: azcommon.BoolPtr(c.ManagedImageZoneResilient),
 			},
 		},
-		Location: to.StringPtr(c.Location),
-		Tags:     azcommon.MapToAzureTags(c.AzureTags),
+		Location: *azcommon.StringPtr(c.Location),
+		Tags:     &c.AzureTags,
 	}
 }
 
@@ -558,7 +683,10 @@ func (c *Config) createCertificate() (string, error) {
 		err = fmt.Errorf("Failed to Generate Private Key: %s", err)
 		return "", err
 	}
+	return c.formatCertificateForKeyVault(privateKey)
+}
 
+func (c *Config) formatCertificateForKeyVault(privateKey *rsa.PrivateKey) (string, error) {
 	host := fmt.Sprintf("%s.cloudapp.net", c.tmpComputeName)
 	notBefore := time.Now()
 	notAfter := notBefore.Add(24 * time.Hour)
@@ -644,7 +772,17 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		return nil, err
 	}
 
+	err = setCustomDataFile(c)
+	if err != nil {
+		return nil, err
+	}
+
 	err = setUserData(c)
+	if err != nil {
+		return nil, err
+	}
+
+	err = setUserDataFile(c)
 	if err != nil {
 		return nil, err
 	}
@@ -784,6 +922,9 @@ func setUserNamePassword(c *Config) error {
 	}
 
 	if c.Comm.Type == "ssh" {
+		if c.Comm.SSHPassword == "" {
+			c.Comm.SSHPassword = c.Password
+		}
 		return nil
 	}
 
@@ -807,11 +948,20 @@ func setUserNamePassword(c *Config) error {
 }
 
 func setCustomData(c *Config) error {
+	if c.CustomData == "" {
+		return nil
+	}
+
+	c.customData = c.CustomData
+	return nil
+}
+
+func setCustomDataFile(c *Config) error {
 	if c.CustomDataFile == "" {
 		return nil
 	}
 
-	b, err := ioutil.ReadFile(c.CustomDataFile)
+	b, err := os.ReadFile(c.CustomDataFile)
 	if err != nil {
 		return err
 	}
@@ -821,11 +971,20 @@ func setCustomData(c *Config) error {
 }
 
 func setUserData(c *Config) error {
+	if c.UserData == "" {
+		return nil
+	}
+
+	c.userData = c.UserData
+	return nil
+}
+
+func setUserDataFile(c *Config) error {
 	if c.UserDataFile == "" {
 		return nil
 	}
 
-	b, err := ioutil.ReadFile(c.UserDataFile)
+	b, err := os.ReadFile(c.UserDataFile)
 	if err != nil {
 		return err
 	}
@@ -840,11 +999,11 @@ func provideDefaultValues(c *Config) {
 	}
 
 	if c.ManagedImageStorageAccountType == "" {
-		c.managedImageStorageAccountType = compute.StorageAccountTypesStandardLRS
+		c.managedImageStorageAccountType = virtualmachines.StorageAccountTypesStandardLRS
 	}
 
 	if c.DiskCachingType == "" {
-		c.diskCachingType = compute.CachingTypesReadWrite
+		c.diskCachingType = virtualmachines.CachingTypesReadWrite
 	}
 
 	if c.ImagePublisher != "" && c.ImageVersion == "" {
@@ -853,6 +1012,10 @@ func provideDefaultValues(c *Config) {
 
 	if c.BuildKeyVaultSKU == "" {
 		c.BuildKeyVaultSKU = DefaultKeyVaultSKU
+	}
+
+	if c.BuildKeyVaultSecretName == "" {
+		c.BuildKeyVaultSecretName = DefaultSecretName
 	}
 
 	_ = c.ClientConfig.SetDefaultValues()
@@ -901,12 +1064,12 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	/////////////////////////////////////////////
 	// Capture
-	if c.CaptureContainerName == "" && c.ManagedImageName == "" {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_container_name or managed_image_name must be specified"))
+	if c.CaptureContainerName == "" && c.ManagedImageName == "" && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_container_name, managed_image_name or shared_image_gallery_destination must be specified"))
 	}
 
-	if c.CaptureNamePrefix == "" && c.ManagedImageResourceGroupName == "" {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_name_prefix or managed_image_resource_group_name must be specified"))
+	if c.CaptureNamePrefix == "" && c.ManagedImageResourceGroupName == "" && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_name_prefix, managed_image_resource_group_name or shared_image_gallery_destination must be specified"))
 	}
 
 	if (c.CaptureNamePrefix != "" || c.CaptureContainerName != "") && (c.ManagedImageResourceGroupName != "" || c.ManagedImageName != "") {
@@ -955,7 +1118,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	isImageUrl := c.ImageUrl != ""
 	isCustomManagedImage := c.CustomManagedImageName != "" || c.CustomManagedImageResourceGroupName != ""
-	isSharedGallery := c.SharedGallery.GalleryName != "" || c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.SharedGalleryImageID != ""
+	isSharedGallery := c.SharedGallery.GalleryName != "" || c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.DirectSharedGalleryImageID != ""
 	isPlatformImage := c.ImagePublisher != "" || c.ImageOffer != "" || c.ImageSku != ""
 
 	countSourceInputs := toInt(isImageUrl) + toInt(isCustomManagedImage) + toInt(isPlatformImage) + toInt(isSharedGallery)
@@ -968,12 +1131,31 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A managed image must be created from a managed image, it cannot be created from a VHD."))
 	}
 
-	if c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.SharedGalleryImageID != "" {
+	if c.ManagedImageName != "" || c.ManagedImageResourceGroupName != "" {
+		if c.SecureBootEnabled || c.VTpmEnabled {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A managed image (managed_image_name, managed_image_resource_group_name) can not set SecureBoot or VTpm, these features are only supported when directly publishing to a Shared Image Gallery"))
+		}
+		if c.SharedGalleryDestination.SigDestinationSpecialized {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A managed image (managed_image_name, managed_image_resource_group_name) can not be Specialized (shared_image_gallery_destination.specialized can not be set), Specialized images are only supported when directly publishing to a Shared Image Gallery"))
+		}
+	}
+
+	if (c.CaptureContainerName != "" || c.CaptureNamePrefix != "" || c.ManagedImageName != "") && c.DiskEncryptionSetId != "" {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Setting a disk encryption set ID is not allowed when building a VHD or creating a Managed Image, only when publishing directly to Shared Image Gallery"))
+	}
+
+	if c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.DirectSharedGalleryImageID != "" {
+		if c.SharedGallery.GalleryName != "" {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Cannot specify 2 kinds of azure compute gallery sources"))
+		}
 		if c.CaptureContainerName != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_container_name] is not supported when using Shared Image Gallery as source. Use managed_image_resource_group_name instead."))
 		}
 		if c.CaptureNamePrefix != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_name_prefix] is not supported when using Shared Image Gallery as source. Use managed_image_name instead."))
+		}
+		if c.SharedGallery.CommunityGalleryImageId != "" && c.SharedGallery.DirectSharedGalleryImageID != "" {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Cannot specify both community gallery and direct shared gallery as a source"))
 		}
 	} else if c.SharedGallery.GalleryName != "" {
 		if c.SharedGallery.Subscription == "" {
@@ -1026,15 +1208,15 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		return (a || b) && !(a && b)
 	}
 
-	if !xor((c.StorageAccount != "" || c.ResourceGroupName != ""), (c.ManagedImageName != "" || c.ManagedImageResourceGroupName != "")) {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Specify either a VHD (storage_account and resource_group_name) or Managed Image (managed_image_resource_group_name and managed_image_name) output"))
+	if !xor(c.StorageAccount != "" || c.ResourceGroupName != "", c.ManagedImageName != "" || c.ManagedImageResourceGroupName != "" || c.SharedGalleryDestination.SigDestinationGalleryName != "") {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Specify either a VHD (storage_account and resource_group_name), a Managed Image (managed_image_resource_group_name and managed_image_name) or a Shared Image Gallery (shared_image_gallery_destination) output (Managed Images can also be published to Shared Image Galleries)"))
 	}
 
 	if !xor(c.Location != "", c.BuildResourceGroupName != "") {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Specify either a location to create the resource group in or an existing build_resource_group_name, but not both."))
 	}
 
-	if c.ManagedImageName == "" && c.ManagedImageResourceGroupName == "" {
+	if c.ManagedImageName == "" && c.ManagedImageResourceGroupName == "" && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
 		if c.StorageAccount == "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A storage_account must be specified"))
 		}
@@ -1067,21 +1249,28 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 	}
 
-	if c.ManagedImageName != "" && c.ManagedImageResourceGroupName != "" && c.SharedGalleryDestination.SigDestinationGalleryName != "" {
+	validImageVersion := regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`)
+	if c.SharedGalleryDestination.SigDestinationGalleryName != "" {
 		if c.SharedGalleryDestination.SigDestinationResourceGroup == "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A resource_group must be specified for shared_image_gallery_destination"))
 		}
 		if c.SharedGalleryDestination.SigDestinationImageName == "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("An image_name must be specified for shared_image_gallery_destination"))
 		}
-		if c.SharedGalleryDestination.SigDestinationImageVersion == "" {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("An image_version must be specified for shared_image_gallery_destination"))
-		}
-		if len(c.SharedGalleryDestination.SigDestinationReplicationRegions) == 0 {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A list of replication_regions must be specified for shared_image_gallery_destination"))
+		if !validImageVersion.Match([]byte(c.SharedGalleryDestination.SigDestinationImageVersion)) {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("An image_version must be specified for shared_image_gallery_destination and must follow the Major(int).Minor(int).Patch(int) format"))
 		}
 		if c.SharedGalleryDestination.SigDestinationSubscription == "" {
 			c.SharedGalleryDestination.SigDestinationSubscription = c.ClientConfig.SubscriptionID
+		}
+		if c.SharedGalleryDestination.SigDestinationUseShallowReplicationMode {
+			if c.SharedGalleryImageVersionReplicaCount == 0 {
+				c.SharedGalleryImageVersionReplicaCount = 1
+			}
+
+			if c.SharedGalleryImageVersionReplicaCount != 1 {
+				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("When using shallow replication the replica count can only be 1, leaving this value unset will default to 1"))
+			}
 		}
 	}
 	if c.SharedGalleryTimeout == 0 {
@@ -1124,6 +1313,14 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 	}
 
+	if c.UserData != "" && c.UserDataFile != "" {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Only one of user_data or user_data_file can be specified."))
+	}
+
+	if c.CustomData != "" && c.CustomDataFile != "" {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Only one of custom_data or custom_data_file can be specified."))
+	}
+
 	/////////////////////////////////////////////
 	// Plan Info
 	if c.PlanInfo.PlanName != "" || c.PlanInfo.PlanProduct != "" || c.PlanInfo.PlanPublisher != "" || c.PlanInfo.PlanPromotionCode != "" {
@@ -1162,11 +1359,23 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	/////////////////////////////////////////////
 	// Storage
+	if c.Spot.EvictionPolicy != "" {
+		if c.Spot.EvictionPolicy != virtualmachines.VirtualMachineEvictionPolicyTypesDelete && c.Spot.EvictionPolicy != virtualmachines.VirtualMachineEvictionPolicyTypesDeallocate {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The spot.eviction_policy %q is invalid, eviction_policy must be %q, %q, or unset", c.Spot.EvictionPolicy, virtualmachines.VirtualMachineEvictionPolicyTypesDelete, virtualmachines.VirtualMachineEvictionPolicyTypesDeallocate))
+		}
+	} else {
+		if c.Spot.MaxPrice != 0 {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Setting a spot.max_price without an spot.eviction_policy is invalid, eviction_policy must be %q or %q if max_price is set", virtualmachines.VirtualMachineEvictionPolicyTypesDelete, virtualmachines.VirtualMachineEvictionPolicyTypesDeallocate))
+		}
+	}
+
+	/////////////////////////////////////////////
+	// Storage
 	switch c.ManagedImageStorageAccountType {
-	case "", string(compute.StorageAccountTypesStandardLRS):
-		c.managedImageStorageAccountType = compute.StorageAccountTypesStandardLRS
-	case string(compute.StorageAccountTypesPremiumLRS):
-		c.managedImageStorageAccountType = compute.StorageAccountTypesPremiumLRS
+	case "", string(virtualmachines.StorageAccountTypesStandardLRS):
+		c.managedImageStorageAccountType = virtualmachines.StorageAccountTypesStandardLRS
+	case string(virtualmachines.StorageAccountTypesPremiumLRS):
+		c.managedImageStorageAccountType = virtualmachines.StorageAccountTypesPremiumLRS
 	default:
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The managed_image_storage_account_type %q is invalid", c.ManagedImageStorageAccountType))
 	}
@@ -1176,14 +1385,38 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	}
 
 	switch c.DiskCachingType {
-	case string(compute.CachingTypesNone):
-		c.diskCachingType = compute.CachingTypesNone
-	case string(compute.CachingTypesReadOnly):
-		c.diskCachingType = compute.CachingTypesReadOnly
-	case "", string(compute.CachingTypesReadWrite):
-		c.diskCachingType = compute.CachingTypesReadWrite
+	case string(virtualmachines.CachingTypesNone):
+		c.diskCachingType = virtualmachines.CachingTypesNone
+	case string(virtualmachines.CachingTypesReadOnly):
+		c.diskCachingType = virtualmachines.CachingTypesReadOnly
+	case "", string(virtualmachines.CachingTypesReadWrite):
+		c.diskCachingType = virtualmachines.CachingTypesReadWrite
 	default:
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The disk_caching_type %q is invalid", c.DiskCachingType))
+	}
+
+	/////////////////////////////////////////////
+	// License Type (Azure Hybrid Benefit)
+	if c.LicenseType != "" {
+		// Assumes OS is case-sensitive match as it has already been
+		// normalized earlier in function
+		if c.OSType == constants.Target_Linux {
+			if strings.EqualFold(c.LicenseType, constants.License_RHEL) {
+				c.LicenseType = constants.License_RHEL
+			} else if strings.EqualFold(c.LicenseType, constants.License_SUSE) {
+				c.LicenseType = constants.License_SUSE
+			} else {
+				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The license_type %q is invalid for Linux, only RHEL_BYOS or SLES_BYOS are supported", c.LicenseType))
+			}
+		} else if c.OSType == constants.Target_Windows {
+			if strings.EqualFold(c.LicenseType, constants.License_Windows_Client) {
+				c.LicenseType = constants.License_Windows_Client
+			} else if strings.EqualFold(c.LicenseType, constants.License_Windows_Server) {
+				c.LicenseType = constants.License_Windows_Server
+			} else {
+				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The license_type %q is invalid for Windows, use Windows_Client or Windows_Server", c.LicenseType))
+			}
+		}
 	}
 }
 
@@ -1209,8 +1442,8 @@ func assertManagedImageDataDiskSnapshotName(name, setting string) (bool, error) 
 }
 
 func assertResourceNamePrefix(name, setting string) (bool, error) {
-	if !isValidAzureName(reResourceNamePrefix, name) {
-		return false, fmt.Errorf("The setting %s must only contain characters from a-z, A-Z, 0-9 and _ and the maximum length is 10 characters", setting)
+	if !reResourceNamePrefix.MatchString(name) {
+		return false, fmt.Errorf("The setting %s must only contain characters from a-z, A-Z, 0-9 and - and the maximum length is 10 characters", setting)
 	}
 	return true, nil
 }

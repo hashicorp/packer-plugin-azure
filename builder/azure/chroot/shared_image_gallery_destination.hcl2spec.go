@@ -46,7 +46,7 @@ func (*FlatSharedImageGalleryDestination) HCL2Spec() map[string]hcldec.Spec {
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatTargetRegion struct {
 	Name               *string `mapstructure:"name" required:"true" cty:"name" hcl:"name"`
-	ReplicaCount       *int32  `mapstructure:"replicas" cty:"replicas" hcl:"replicas"`
+	ReplicaCount       *int64  `mapstructure:"replicas" cty:"replicas" hcl:"replicas"`
 	StorageAccountType *string `mapstructure:"storage_account_type" cty:"storage_account_type" hcl:"storage_account_type"`
 }
 

@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dtl
 
 import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -31,11 +35,10 @@ func NewStepPowerOffCompute(client *AzureClient, ui packersdk.Ui, config *Config
 }
 
 func (s *StepPowerOffCompute) powerOffCompute(ctx context.Context, resourceGroupName string, labName, computeName string) error {
-	//f, err := s.client.VirtualMachinesClient.Deallocate(ctx, resourceGroupName, computeName)
-	f, err := s.client.DtlVirtualMachineClient.Stop(ctx, resourceGroupName, labName, computeName)
-	if err == nil {
-		err = f.WaitForCompletionRef(ctx, s.client.DtlVirtualMachineClient.Client)
-	}
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+	vmResourceId := virtualmachines.NewVirtualMachineID(s.config.ClientConfig.SubscriptionID, s.config.tmpResourceGroupName, labName, computeName)
+	err := s.client.DtlMetaClient.VirtualMachines.StopThenPoll(pollingContext, vmResourceId)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 	}

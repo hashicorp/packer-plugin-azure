@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package arm
 
 import (
@@ -11,7 +14,9 @@ import (
 
 func TestStepGetCertificateShouldFailIfGetFails(t *testing.T) {
 	var testSubject = &StepGetCertificate{
-		get:   func(string, string) (string, error) { return "", fmt.Errorf("!! Unit Test FAIL !!") },
+		get: func(context.Context, string, string, string, string) (string, error) {
+			return "", fmt.Errorf("!! Unit Test FAIL !!")
+		},
 		say:   func(message string) {},
 		error: func(e error) {},
 		pause: func() {},
@@ -31,7 +36,7 @@ func TestStepGetCertificateShouldFailIfGetFails(t *testing.T) {
 
 func TestStepGetCertificateShouldPassIfGetPasses(t *testing.T) {
 	var testSubject = &StepGetCertificate{
-		get:   func(string, string) (string, error) { return "", nil },
+		get:   func(context.Context, string, string, string, string) (string, error) { return "", nil },
 		say:   func(message string) {},
 		error: func(e error) {},
 		pause: func() {},
@@ -54,7 +59,7 @@ func TestStepGetCertificateShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 	var actualSecretName string
 
 	var testSubject = &StepGetCertificate{
-		get: func(keyVaultName string, secretName string) (string, error) {
+		get: func(ctx context.Context, subscriptionId string, resourceGroupName string, keyVaultName string, secretName string) (string, error) {
 			actualKeyVaultName = keyVaultName
 			actualSecretName = secretName
 
@@ -77,7 +82,10 @@ func TestStepGetCertificateShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 	if actualKeyVaultName != expectedKeyVaultName {
 		t.Fatal("Expected StepGetCertificate to source 'constants.ArmKeyVaultName' from the state bag, but it did not.")
 	}
-	if actualSecretName != DefaultSecretName {
+
+	var expectedKeyVaultSecretName = stateBag.Get(constants.ArmKeyVaultSecretName).(string)
+
+	if actualSecretName != expectedKeyVaultSecretName {
 		t.Fatal("Expected StepGetCertificate to use default value for secret, but it did not.")
 	}
 
@@ -94,6 +102,8 @@ func TestStepGetCertificateShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 func createTestStateBagStepGetCertificate() multistep.StateBag {
 	stateBag := new(multistep.BasicStateBag)
 	stateBag.Put(constants.ArmKeyVaultName, "Unit Test: KeyVaultName")
-
+	stateBag.Put(constants.ArmSubscription, "testSubscription")
+	stateBag.Put(constants.ArmResourceGroupName, "testResourceGroupName")
+	stateBag.Put(constants.ArmKeyVaultSecretName, "testKeyVaultSecretName")
 	return stateBag
 }

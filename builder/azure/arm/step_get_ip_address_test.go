@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package arm
 
 import (
@@ -14,7 +17,7 @@ func TestStepGetIPAddressShouldFailIfGetFails(t *testing.T) {
 
 	for _, endpoint := range endpoints {
 		var testSubject = &StepGetIPAddress{
-			get: func(context.Context, string, string, string) (string, error) {
+			get: func(context.Context, string, string, string, string) (string, error) {
 				return "", fmt.Errorf("!! Unit Test FAIL !!")
 			},
 			endpoint: endpoint,
@@ -40,7 +43,7 @@ func TestStepGetIPAddressShouldPassIfGetPasses(t *testing.T) {
 
 	for _, endpoint := range endpoints {
 		var testSubject = &StepGetIPAddress{
-			get:      func(context.Context, string, string, string) (string, error) { return "", nil },
+			get:      func(context.Context, string, string, string, string) (string, error) { return "", nil },
 			endpoint: endpoint,
 			say:      func(message string) {},
 			error:    func(e error) {},
@@ -63,15 +66,16 @@ func TestStepGetIPAddressShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 	var actualResourceGroupName string
 	var actualIPAddressName string
 	var actualNicName string
+	var actualSubscriptionID string
 	endpoints := []EndpointType{PublicEndpoint, PublicEndpointInPrivateNetwork}
 
 	for _, endpoint := range endpoints {
 		var testSubject = &StepGetIPAddress{
-			get: func(ctx context.Context, resourceGroupName string, ipAddressName string, nicName string) (string, error) {
+			get: func(ctx context.Context, subscriptionID string, resourceGroupName string, ipAddressName string, nicName string) (string, error) {
 				actualResourceGroupName = resourceGroupName
 				actualIPAddressName = ipAddressName
 				actualNicName = nicName
-
+				actualSubscriptionID = subscriptionID
 				return "127.0.0.1", nil
 			},
 			endpoint: endpoint,
@@ -89,6 +93,7 @@ func TestStepGetIPAddressShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 		var expectedResourceGroupName = stateBag.Get(constants.ArmResourceGroupName).(string)
 		var expectedIPAddressName = stateBag.Get(constants.ArmPublicIPAddressName).(string)
 		var expectedNicName = stateBag.Get(constants.ArmNicName).(string)
+		var expectedSubscriptionID = stateBag.Get(constants.ArmSubscription).(string)
 
 		if actualIPAddressName != expectedIPAddressName {
 			t.Fatal("Expected StepGetIPAddress to source 'constants.ArmIPAddressName' from the state bag, but it did not.")
@@ -101,7 +106,9 @@ func TestStepGetIPAddressShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 		if actualNicName != expectedNicName {
 			t.Fatalf("Expected StepGetIPAddress to source 'constants.ArmNetworkInterfaceName' from the state bag, but it did not.")
 		}
-
+		if actualSubscriptionID != expectedSubscriptionID {
+			t.Fatalf("Expected StepGetIPAddress to source 'constants.ArmNetworkInterfaceName' from the state bag, but it did not.")
+		}
 		expectedIPAddress, ok := stateBag.GetOk(constants.SSHHost)
 		if !ok {
 			t.Fatalf("Expected the state bag to have a value for '%s', but it did not.", constants.SSHHost)
@@ -119,6 +126,7 @@ func createTestStateBagStepGetIPAddress() multistep.StateBag {
 	stateBag.Put(constants.ArmPublicIPAddressName, "Unit Test: PublicIPAddressName")
 	stateBag.Put(constants.ArmNicName, "Unit Test: NicName")
 	stateBag.Put(constants.ArmResourceGroupName, "Unit Test: ResourceGroupName")
+	stateBag.Put(constants.ArmSubscription, "Unit Test: SubscriptionID")
 
 	return stateBag
 }

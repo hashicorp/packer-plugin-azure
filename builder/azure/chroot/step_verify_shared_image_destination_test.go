@@ -1,19 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package chroot
 
 import (
 	"context"
-	"io/ioutil"
-	"net/http"
+	"fmt"
 	"reflect"
-	"strings"
 	"testing"
 
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
-
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-11-01/compute"
-	"github.com/Azure/go-autorest/autorest"
 )
 
 func TestStepVerifySharedImageDestination_Run(t *testing.T) {
@@ -44,7 +45,7 @@ func TestStepVerifySharedImageDestination_Run(t *testing.T) {
 		{
 			name:    "not found",
 			want:    multistep.ActionHalt,
-			wantErr: `Error retrieving shared image "/subscriptions/subscriptionID/resourcegroup/other-rg/providers/Microsoft.Compute/galleries/gallery/images/image": compute.GalleryImagesClient#Get: Failure responding to request: StatusCode=404 -- Original Error: autorest/azure: Service returned an error. Status=404 Code="NotFound" Message="Not found" `,
+			wantErr: "Error retrieving shared image \"/subscriptions/subscriptionID/resourcegroup/other-rg/providers/Microsoft.Compute/galleries/gallery/images/image\": Not Found ",
 			fields: fields{
 				Image: SharedImageGalleryDestination{
 					ResourceGroup: "other-rg",
@@ -58,7 +59,7 @@ func TestStepVerifySharedImageDestination_Run(t *testing.T) {
 		{
 			name:    "wrong region",
 			want:    multistep.ActionHalt,
-			wantErr: "Destination shared image resource \"image-resourceid-goes-here\" is in a different location (\"region1\") than this VM (\"other-region\"). Packer does not know how to handle that.",
+			wantErr: "Destination shared image resource \"image-resourceid-goes-here\" is in a different location (\"region1\") than this VM (\"other-region\").",
 			fields: fields{
 				Image: SharedImageGalleryDestination{
 					ResourceGroup: "rg",
@@ -99,70 +100,9 @@ func TestStepVerifySharedImageDestination_Run(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		gi := compute.NewGalleryImagesClient("subscriptionID")
-		gi.Sender = autorest.SenderFunc(func(r *http.Request) (*http.Response, error) {
-			switch {
-			case r.Method == "GET" && strings.HasPrefix(r.URL.RequestURI(),
-				"/subscriptions/subscriptionID/resourceGroups/rg/providers/Microsoft.Compute/galleries/gallery/images/image"):
-				return &http.Response{
-					Request: r,
-					Body: ioutil.NopCloser(strings.NewReader(`{
-						"id": "image-resourceid-goes-here",
-						"location": "region1",
-						"properties": {
-							"osType": "Linux"
-						}
-					}`)),
-					StatusCode: 200,
-				}, nil
-			case r.Method == "GET" && strings.HasPrefix(r.URL.RequestURI(),
-				"/subscriptions/subscriptionID/resourceGroups/rg/providers/Microsoft.Compute/galleries/gallery/images/windowsimage"):
-				return &http.Response{
-					Request: r,
-					Body: ioutil.NopCloser(strings.NewReader(`{
-						"id": "windows-image-resourceid-goes-here",
-						"location": "region1",
-						"properties": {
-							"osType": "Windows"
-						}
-					}`)),
-					StatusCode: 200,
-				}, nil
-			}
-			return &http.Response{
-				Request: r,
-				Body: ioutil.NopCloser(strings.NewReader(`{
-					"Code": "NotFound",
-					"Message": "Not found"
-				}`)),
-				StatusCode: 404,
-			}, nil
-		})
-
-		giv := compute.NewGalleryImageVersionsClient("subscriptionID")
-		giv.Sender = autorest.SenderFunc(func(r *http.Request) (*http.Response, error) {
-			if !(r.Method == "GET" && strings.HasPrefix(r.URL.RequestURI(),
-				"/subscriptions/subscriptionID/resourceGroups/rg/providers/Microsoft.Compute/galleries/gallery/images/image/versions")) {
-				t.Errorf("Unexpected HTTP call: %s %s", r.Method, r.URL.RequestURI())
-			}
-			return &http.Response{
-				Request: r,
-				Body: ioutil.NopCloser(strings.NewReader(`{
-						"value": [
-							{
-								"name": "2.3.4"
-							}
-						]
-					}`)),
-				StatusCode: 200,
-			}, nil
-		})
-
 		state := new(multistep.BasicStateBag)
 		state.Put("azureclient", &client.AzureClientSetMock{
-			SubscriptionIDMock:             "subscriptionID",
-			GalleryImagesClientMock:        gi,
-			GalleryImageVersionsClientMock: giv,
+			SubscriptionIDMock: "subscriptionID",
 		})
 		state.Put("ui", packersdk.TestUi(t))
 
@@ -170,17 +110,47 @@ func TestStepVerifySharedImageDestination_Run(t *testing.T) {
 			s := &StepVerifySharedImageDestination{
 				Image:    tt.fields.Image,
 				Location: tt.fields.Location,
+				getImage: func(ctx context.Context, acs client.AzureClientSet, id galleryimages.GalleryImageId) (*galleryimages.GalleryImage, error) {
+					switch {
+					case id.ImageName == "image" && id.GalleryName == "gallery" && id.ResourceGroupName == "rg":
+						return &galleryimages.GalleryImage{
+							Id:       common.StringPtr("image-resourceid-goes-here"),
+							Location: "region1",
+							Properties: &galleryimages.GalleryImageProperties{
+								OsType: galleryimages.OperatingSystemTypesLinux,
+							},
+						}, nil
+					case id.ImageName == "windowsimage" && id.GalleryName == "gallery" && id.ResourceGroupName == "rg":
+						return &galleryimages.GalleryImage{
+							Id:       common.StringPtr("windows-image-resourceid-goes-here"),
+							Location: "region1",
+							Properties: &galleryimages.GalleryImageProperties{
+								OsType: galleryimages.OperatingSystemTypesWindows,
+							},
+						}, nil
+					}
+					return nil, fmt.Errorf("Not Found")
+				},
+				listVersions: func(ctx context.Context, acs client.AzureClientSet, id galleryimageversions.GalleryImageId) ([]galleryimageversions.GalleryImageVersion, error) {
+					return []galleryimageversions.GalleryImageVersion{
+						{
+							Name: common.StringPtr("2.3.4"),
+						},
+					}, nil
+				},
 			}
+
 			if got := s.Run(context.TODO(), state); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("StepVerifySharedImageDestination.Run() = %v, want %v", got, tt.want)
 			}
-		})
-		if err, ok := state.GetOk("error"); ok {
-			if err.(error).Error() != tt.wantErr {
-				t.Errorf("Unexpected error, got: %q, want: %q", err, tt.wantErr)
+
+			if err, ok := state.GetOk("error"); ok {
+				if err.(error).Error() != tt.wantErr {
+					t.Errorf("Unexpected error, got: %q, want: %q", err, tt.wantErr)
+				}
+			} else if tt.wantErr != "" {
+				t.Errorf("Expected error, but didn't get any")
 			}
-		} else if tt.wantErr != "" {
-			t.Errorf("Expected error, but didn't get any")
-		}
+		})
 	}
 }

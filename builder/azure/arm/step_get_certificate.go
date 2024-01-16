@@ -1,10 +1,15 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package arm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/secrets"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -12,7 +17,7 @@ import (
 
 type StepGetCertificate struct {
 	client *AzureClient
-	get    func(keyVaultName string, secretName string) (string, error)
+	get    func(ctx context.Context, subscriptionId, resourceGroupName string, keyVaultName string, secretName string) (string, error)
 	say    func(message string)
 	error  func(e error)
 	pause  func()
@@ -30,28 +35,36 @@ func NewStepGetCertificate(client *AzureClient, ui packersdk.Ui) *StepGetCertifi
 	return step
 }
 
-func (s *StepGetCertificate) getCertificateUrl(keyVaultName string, secretName string) (string, error) {
-	secret, err := s.client.GetSecret(keyVaultName, secretName)
+func (s *StepGetCertificate) getCertificateUrl(ctx context.Context, subscriptionId string, resourceGroupName string, keyVaultName string, secretName string) (string, error) {
+	id := secrets.NewSecretID(subscriptionId, resourceGroupName, keyVaultName, secretName)
+	secret, err := s.client.SecretsClient.Get(ctx, id)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return "", err
 	}
 
-	return *secret.ID, err
+	if secret.Model == nil {
+		err = errors.New("TODO")
+
+	}
+	return *secret.Model.Properties.SecretUriWithVersion, err
 }
 
 func (s *StepGetCertificate) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	s.say("Getting the certificate's URL ...")
 
 	var keyVaultName = state.Get(constants.ArmKeyVaultName).(string)
+	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
+	var subscriptionId = state.Get(constants.ArmSubscription).(string)
+	var keyVaultSecretName = state.Get(constants.ArmKeyVaultSecretName).(string)
 
 	s.say(fmt.Sprintf(" -> Key Vault Name        : '%s'", keyVaultName))
-	s.say(fmt.Sprintf(" -> Key Vault Secret Name : '%s'", DefaultSecretName))
+	s.say(fmt.Sprintf(" -> Key Vault Secret Name : '%s'", keyVaultSecretName))
 
 	var err error
 	var url string
 	for i := 0; i < 5; i++ {
-		url, err = s.get(keyVaultName, DefaultSecretName)
+		url, err = s.get(ctx, subscriptionId, resourceGroupName, keyVaultName, keyVaultSecretName)
 		if err == nil {
 			break
 		}

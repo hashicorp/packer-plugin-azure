@@ -1,9 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package chroot
 
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"testing"
@@ -20,7 +22,7 @@ func TestStepMountDevice_Run(t *testing.T) {
 	default:
 		t.Skip("Unsupported operating system")
 	}
-	mountPath, err := ioutil.TempDir("", "stepmountdevicetest")
+	mountPath, err := os.MkdirTemp("", "stepmountdevicetest")
 	if err != nil {
 		t.Errorf("Unable to create a temporary directory: %q", err)
 	}
@@ -31,8 +33,7 @@ func TestStepMountDevice_Run(t *testing.T) {
 	}
 
 	var gotCommand string
-	var wrapper common.CommandWrapper
-	wrapper = func(ran string) (string, error) {
+	var wrapper common.CommandWrapper = func(ran string) (string, error) {
 		gotCommand = ran
 		return "", nil
 	}
