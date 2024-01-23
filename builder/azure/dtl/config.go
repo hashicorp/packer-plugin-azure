@@ -507,6 +507,7 @@ func setRuntimeValues(c *Config) {
 	var tempName = NewTempName(c)
 
 	c.tmpAdminPassword = tempName.AdminPassword
+	// filter out the password from logs
 	packersdk.LogSecretFilter.Set(c.tmpAdminPassword)
 
 	c.tmpCertificatePassword = tempName.CertificatePassword
