@@ -6,8 +6,9 @@ package chroot
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
+
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachineimages"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"

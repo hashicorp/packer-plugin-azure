@@ -6,8 +6,9 @@ package chroot
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
+
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 
 	"github.com/hashicorp/go-azure-helpers/polling"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
