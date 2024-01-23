@@ -867,7 +867,7 @@ func setRuntimeValues(c *Config) {
 	var tempName = NewTempName(c.CustomResourcePrefix)
 
 	c.tmpAdminPassword = tempName.AdminPassword
-	// store so that we can access this later during provisioning
+	// filter out the password from logs
 	packersdk.LogSecretFilter.Set(c.tmpAdminPassword)
 
 	c.tmpCertificatePassword = tempName.CertificatePassword
