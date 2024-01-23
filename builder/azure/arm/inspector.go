@@ -5,7 +5,6 @@ package arm
 
 import (
 	"bytes"
-	"log"
 	"net/http"
 
 	"io"
@@ -14,6 +13,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/hashicorp/go-azure-sdk/sdk/client"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/logutil"
 )
 

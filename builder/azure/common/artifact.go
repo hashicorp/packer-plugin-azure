@@ -6,9 +6,10 @@ package common
 import (
 	"context"
 	"fmt"
-	"log"
 	"sort"
 	"strings"
+
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"

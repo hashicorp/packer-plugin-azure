@@ -6,8 +6,9 @@ package chroot
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
+
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"

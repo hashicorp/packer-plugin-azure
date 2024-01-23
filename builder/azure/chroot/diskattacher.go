@@ -6,9 +6,10 @@ package chroot
 import (
 	"context"
 	"errors"
-	"log"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 
 	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"

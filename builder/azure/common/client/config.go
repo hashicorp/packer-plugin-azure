@@ -9,11 +9,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 
 	"github.com/Azure/go-autorest/autorest/azure/cli"
 	jwt "github.com/golang-jwt/jwt"
