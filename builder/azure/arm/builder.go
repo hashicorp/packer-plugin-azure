@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/multistep/commonsteps"
+	"github.com/hashicorp/packer-plugin-sdk/packer"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
 	"golang.org/x/crypto/ssh"
@@ -312,6 +313,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			if err != nil {
 				return nil, err
 			}
+
+			packer.LogSecretFilter.Set(secret)
+
 			steps = append(steps, NewStepCertificateInKeyVault(azureClient, ui, &b.config, secret, b.config.WinrmExpirationTime))
 		}
 		steps = append(steps,

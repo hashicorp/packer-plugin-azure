@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/random"
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
@@ -858,6 +859,10 @@ func setWinRMCertificate(c *Config) error {
 		}
 
 	cert, err := c.createCertificate()
+
+	// Hide the generated certificate from logs
+	packer.LogSecretFilter.Set(cert)
+
 	c.winrmCertificate = cert
 
 	return err
