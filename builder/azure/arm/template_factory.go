@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/template"
+	"github.com/hashicorp/packer-plugin-sdk/packer"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -34,6 +35,10 @@ func GetCommunicatorSpecificKeyVaultDeployment(config *Config) (*deployments.Dep
 		if err != nil {
 			return nil, err
 		}
+
+		// Hide the secret key pair blob from logs
+		packer.LogSecretFilter.Set(secret)
+
 		return GetKeyVaultDeployment(config, secret, nil)
 	} else {
 		var exp *int64
