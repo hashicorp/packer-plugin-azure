@@ -213,22 +213,35 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			return nil, fmt.Errorf("a gallery image version for image name:version %s:%s already exists in gallery %s", b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationGalleryName)
 		}
 
+		if (len(b.config.SharedGalleryDestination.SigDestinationReplicationRegions) > 0) && (len(b.config.SharedGalleryDestination.SigDestinationTargetRegions) > 0) {
+			return nil, fmt.Errorf("`replicated_regions` can not be defined when `target_regions` match the build region specified by `location` or match the region of `build_resource_group_name`.")
+		}
 		// SIG requires that replication regions include the region in which the created image version resides
 		buildLocation := normalizeAzureRegion(b.stateBag.Get(constants.ArmLocation).(string))
-		foundMandatoryReplicationRegion := false
-		var normalizedReplicationRegions []string
-		for _, region := range b.config.SharedGalleryDestination.SigDestinationReplicationRegions {
-			// change region to lower-case and strip spaces
-			normalizedRegion := normalizeAzureRegion(region)
-			normalizedReplicationRegions = append(normalizedReplicationRegions, normalizedRegion)
-			if strings.EqualFold(normalizedRegion, buildLocation) {
-				foundMandatoryReplicationRegion = true
-				continue
+
+		for i, tr := range b.config.SharedGalleryDestination.SigDestinationTargetRegions {
+			tr.Name = normalizeAzureRegion(tr.Name)
+			b.config.SharedGalleryDestination.SigDestinationTargetRegions[i] = tr
+			b.config.SharedGalleryDestination.SigDestinationReplicationRegions = append(b.config.SharedGalleryDestination.SigDestinationReplicationRegions, tr.Name)
+		}
+
+		if len(b.config.SharedGalleryDestination.SigDestinationTargetRegions) == 0 {
+			foundMandatoryReplicationRegion := false
+			var normalizedReplicationRegions []string
+			for _, region := range b.config.SharedGalleryDestination.SigDestinationReplicationRegions {
+				// change region to lower-case and strip spaces
+				normalizedRegion := normalizeAzureRegion(region)
+				normalizedReplicationRegions = append(normalizedReplicationRegions, normalizedRegion)
+				if strings.EqualFold(normalizedRegion, buildLocation) {
+					foundMandatoryReplicationRegion = true
+					continue
+				}
+			}
+			if foundMandatoryReplicationRegion == false {
+				b.config.SharedGalleryDestination.SigDestinationReplicationRegions = append(normalizedReplicationRegions, buildLocation)
 			}
 		}
-		if foundMandatoryReplicationRegion == false {
-			b.config.SharedGalleryDestination.SigDestinationReplicationRegions = append(normalizedReplicationRegions, buildLocation)
-		}
+
 		// TODO It would be better if validation could be handled in a central location
 		// Currently we rely on the build Resource Group being queried if used to get the build location
 		// So we have to do this validation afterwards
@@ -238,8 +251,10 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				return nil, fmt.Errorf("when `use_shallow_replication` is enabled the value of `replicated_regions` must match the build region specified by `location` or match the region of `build_resource_group_name`.")
 			}
 		}
+
 		b.stateBag.Put(constants.ArmManagedImageSharedGalleryReplicationRegions, b.config.SharedGalleryDestination.SigDestinationReplicationRegions)
 	}
+
 	sourceImageSpecialized := false
 	if b.config.SharedGallery.GalleryName != "" {
 		client := azureClient.GalleryImagesClient
