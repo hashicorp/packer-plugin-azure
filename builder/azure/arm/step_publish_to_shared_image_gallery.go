@@ -74,6 +74,15 @@ func getSigDestination(state multistep.StateBag) SharedImageGalleryDestination {
 	replicationRegions := state.Get(constants.ArmManagedImageSharedGalleryReplicationRegions).([]string)
 	storageAccountType := state.Get(constants.ArmManagedImageSharedGalleryImageVersionStorageAccountType).(string)
 
+	targetReplicationRegions, ok := state.Get(constants.ArmManagedImageSharedGalleryTargetReplicationRegions).([]TargetRegion)
+	if !ok {
+		targetRegions := make([]TargetRegion, 0, len(replicationRegions))
+		for _, region := range replicationRegions {
+			targetRegions = append(targetRegions, TargetRegion{Name: region})
+		}
+		targetReplicationRegions = targetRegions
+	}
+
 	return SharedImageGalleryDestination{
 		SigDestinationSubscription:       subscription,
 		SigDestinationResourceGroup:      resourceGroup,
@@ -81,32 +90,33 @@ func getSigDestination(state multistep.StateBag) SharedImageGalleryDestination {
 		SigDestinationImageName:          imageName,
 		SigDestinationImageVersion:       imageVersion,
 		SigDestinationReplicationRegions: replicationRegions,
+		SigDestinationTargetRegions:      targetReplicationRegions,
 		SigDestinationStorageAccountType: storageAccountType,
 	}
 }
 
-func (s *StepPublishToSharedImageGallery) publishToSig(ctx context.Context, args PublishArgs) (string, error) {
-	replicationRegions := make([]galleryimageversions.TargetRegion, len(args.SharedImageGallery.SigDestinationReplicationRegions))
-	for i, v := range args.SharedImageGallery.SigDestinationReplicationRegions {
-		regionName := v
-		replicationRegions[i] = galleryimageversions.TargetRegion{Name: regionName}
+func configureTargetRegions(in []TargetRegion) []galleryimageversions.TargetRegion {
+	targetRegions := make([]galleryimageversions.TargetRegion, 0, len(in))
+	for _, tr := range in {
+		r := galleryimageversions.TargetRegion{Name: tr.Name}
+		if tr.DiskEncryptionSetID != "" {
+			r.Encryption = &galleryimageversions.EncryptionImages{
+				OsDiskImage: &galleryimageversions.OSDiskImageEncryption{
+					DiskEncryptionSetId: &tr.DiskEncryptionSetID,
+				},
+			}
+		}
+		targetRegions = append(targetRegions, r)
 	}
+	return targetRegions
+}
+func (s *StepPublishToSharedImageGallery) publishToSig(ctx context.Context, args PublishArgs) (string, error) {
+	replicationRegions := configureTargetRegions(args.SharedImageGallery.SigDestinationTargetRegions)
 
 	storageAccountType, err := getSigDestinationStorageAccountType(args.SharedImageGallery.SigDestinationStorageAccountType)
 	if err != nil {
 		s.error(err)
 		return "", err
-	}
-
-	if args.DiskEncryptionSetId != "" {
-		for index, targetRegion := range replicationRegions {
-			targetRegion.Encryption = &galleryimageversions.EncryptionImages{
-				OsDiskImage: &galleryimageversions.OSDiskImageEncryption{
-					DiskEncryptionSetId: &args.DiskEncryptionSetId,
-				},
-			}
-			replicationRegions[index] = targetRegion
-		}
 	}
 
 	galleryImageVersion := galleryimageversions.GalleryImageVersion{

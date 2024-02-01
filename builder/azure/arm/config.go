@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 //go:generate packer-sdc struct-markdown
-//go:generate packer-sdc mapstructure-to-hcl2 -type Config,SharedImageGallery,SharedImageGalleryDestination,PlanInformation,Spot
+//go:generate packer-sdc mapstructure-to-hcl2 -type Config,SharedImageGallery,SharedImageGalleryDestination,PlanInformation,Spot,TargetRegion
 
 package arm
 
@@ -104,7 +104,8 @@ type SharedImageGalleryDestination struct {
 	SigDestinationImageVersion  string `mapstructure:"image_version"`
 	// A list of regions to replicate the image version in, by default the build location will be used as a replication region (the build location is either set in the location field, or the location of the resource group used in `build_resource_group_name` will be included.
 	// Can not contain any region but the build region when using shallow replication
-	SigDestinationReplicationRegions []string `mapstructure:"replication_regions"`
+	SigDestinationReplicationRegions []string       `mapstructure:"replication_regions"`
+	SigDestinationTargetRegions      []TargetRegion `mapstructure:"target_regions"`
 	// Specify a storage account type for the Shared Image Gallery Image Version.
 	// Defaults to `Standard_LRS`. Accepted values are `Standard_LRS`, `Standard_ZRS` and `Premium_LRS`
 	SigDestinationStorageAccountType string `mapstructure:"storage_account_type"`
@@ -115,6 +116,21 @@ type SharedImageGalleryDestination struct {
 	// Setting a `shared_image_gallery_replica_count` or any `replication_regions` is unnecessary for shallow builds, as they can only replicate to the build region and must have a replica count of 1
 	// Refer to [Shallow Replication](https://learn.microsoft.com/en-us/azure/virtual-machines/shared-image-galleries?tabs=azure-cli#shallow-replication) for details on when to use shallow replication mode.
 	SigDestinationUseShallowReplicationMode bool `mapstructure:"use_shallow_replication" required:"false"`
+}
+
+// TargetRegion describes a region where the shared image should be replicated
+type TargetRegion struct {
+	// Name of the Azure region
+	Name string `mapstructure:"name" required:"true"`
+	// EncryptionSetID for Disk Encryption Set in Region. Needed for supporting
+	// the replication of encrypted disks across regions. CMKs must
+	// already existing within the target region.
+	DiskEncryptionSetID string `mapstructure:"disk_encryption_set_id"`
+
+	//StorageAccountType
+	// Specify a storage account type for the Shared Image Gallery Image Version replicas.
+	// Defaults to `Standard_LRS`. Accepted values are `Standard_LRS`, `Standard_ZRS` and `Premium_LRS`
+	StorageAccountType string `mapstructure:"storage_account_type"`
 }
 
 type Spot struct {

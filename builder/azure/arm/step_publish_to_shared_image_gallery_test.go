@@ -11,6 +11,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -76,6 +77,10 @@ func TestStepPublishToSharedImageGalleryShouldPublishForNonManagedImageWithSig(t
 				"ManagedImageSharedGalleryReplicationRegionA",
 				"ManagedImageSharedGalleryReplicationRegionB",
 			},
+			SigDestinationTargetRegions: []TargetRegion{
+				{Name: "ManagedImageSharedGalleryReplicationRegionA"},
+				{Name: "ManagedImageSharedGalleryReplicationRegionB"},
+			},
 			SigDestinationStorageAccountType: "Standard_LRS",
 		},
 		Tags: map[string]string{"tag01": "Unit Test: Tags"},
@@ -124,6 +129,10 @@ func TestStepPublishToSharedImageGalleryShouldPublishWithShallowReplication(t *t
 			SigDestinationReplicationRegions: []string{
 				"ManagedImageSharedGalleryReplicationRegionA",
 				"ManagedImageSharedGalleryReplicationRegionB",
+			},
+			SigDestinationTargetRegions: []TargetRegion{
+				{Name: "ManagedImageSharedGalleryReplicationRegionA"},
+				{Name: "ManagedImageSharedGalleryReplicationRegionB"},
 			},
 			SigDestinationStorageAccountType: "Standard_LRS",
 		},
@@ -175,6 +184,10 @@ func TestStepPublishToSharedImageGalleryShouldPublishWithReplicationCount(t *tes
 				"ManagedImageSharedGalleryReplicationRegionA",
 				"ManagedImageSharedGalleryReplicationRegionB",
 			},
+			SigDestinationTargetRegions: []TargetRegion{
+				{Name: "ManagedImageSharedGalleryReplicationRegionA"},
+				{Name: "ManagedImageSharedGalleryReplicationRegionB"},
+			},
 			SigDestinationStorageAccountType: "Standard_LRS",
 		},
 		Tags: map[string]string{"tag01": "Unit Test: Tags"},
@@ -205,6 +218,42 @@ func TestStepPublishToSharedImageGalleryShouldPublishWithReplicationCount(t *tes
 	}...); diff != "" {
 		t.Fatalf("Unexpected diff %s", diff)
 	}
+}
+
+func TestPublishToSharedImageGalleryConfigureTargetRegions(t *testing.T) {
+	tt := []struct {
+		name string
+		in   []TargetRegion
+		want []galleryimageversions.TargetRegion
+	}{
+		{name: "empty regions", in: nil, want: make([]galleryimageversions.TargetRegion, 0, 0)},
+		{name: "empty regions non nil", in: make([]TargetRegion, 0), want: make([]galleryimageversions.TargetRegion, 0, 0)},
+		{name: "one named region", in: []TargetRegion{{Name: "unit-test-location"}}, want: []galleryimageversions.TargetRegion{{Name: "unit-test-location"}}},
+		{
+			name: "named region with encryption",
+			in:   []TargetRegion{{Name: "unit-test-location", DiskEncryptionSetID: "boguskey"}},
+			want: []galleryimageversions.TargetRegion{{Name: "unit-test-location", Encryption: &galleryimageversions.EncryptionImages{OsDiskImage: &galleryimageversions.OSDiskImageEncryption{}}}},
+		},
+	}
+
+	for _, tc := range tt {
+		got := configureTargetRegions(tc.in)
+		if len(got) != len(tc.want) {
+			t.Errorf("expected configureTargetRegion() to have same region count: got %d expected %d", len(tc.in), len(tc.want))
+		}
+
+		for i, tr := range got {
+			inputRegion := tc.in[i]
+			if tr.Name != inputRegion.Name {
+				t.Errorf("expected configured region to contain same name as input %q but got %q", inputRegion.Name, tr.Name)
+			}
+
+			if (inputRegion.DiskEncryptionSetID != "") && (*tr.Encryption.OsDiskImage.DiskEncryptionSetId != inputRegion.DiskEncryptionSetID) {
+				t.Errorf("expected configured region to contain set DES Id %q but got %q", inputRegion.DiskEncryptionSetID, *tr.Encryption.OsDiskImage.DiskEncryptionSetId)
+			}
+		}
+	}
+
 }
 
 func createTestStateBagStepPublishToSharedImageGallery(managed bool) multistep.StateBag {

@@ -49,6 +49,7 @@ const (
 	ArmManagedImageSharedGalleryImageName                      string = "arm.ManagedImageSharedGalleryImageName"
 	ArmManagedImageSharedGalleryImageVersion                   string = "arm.ManagedImageSharedGalleryImageVersion"
 	ArmManagedImageSharedGalleryReplicationRegions             string = "arm.ManagedImageSharedGalleryReplicationRegions"
+	ArmManagedImageSharedGalleryTargetReplicationRegions       string = "arm.ManagedImageSharedGalleryTargetReplicationRegions"
 	ArmManagedImageSharedGalleryId                             string = "arm.ArmManagedImageSharedGalleryId"
 	ArmManagedImageSharedGalleryImageVersionEndOfLifeDate      string = "arm.ArmManagedImageSharedGalleryImageVersionEndOfLifeDate"
 	ArmManagedImageSharedGalleryImageVersionReplicaCount       string = "arm.ArmManagedImageSharedGalleryImageVersionReplicaCount"
