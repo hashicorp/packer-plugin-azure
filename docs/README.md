@@ -87,3 +87,13 @@ you should specify `subscription_id`, `client_id` and one of `client_secret`,
   associated with your service principal principal. See [Azure Active
   Directory docs](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-certificate-credentials)
   for more information.
+
+## Troubleshooting
+
+As with any Packer plugin, you may produce verbose logs to troubleshoot if the default output does not help narrow down the issue.
+To do so, you can set the `PACKER_LOG` environment variable to a non-zero value (e.g. "1" or any non-empty string) to enable verbose logs that can help you figure out which part of the process errors, and hopefully why.
+
+In addition to this, you may also enable the `PACKER_AZURE_DEBUG_LOG` environment variable alongside `PACKER_LOG` for visibility into the API calls being made to the Azure platform.
+Enabling this will add HTTP response inspection in the logs and the body sent with each request to the Azure APIs.
+
+~> Warning: the `PACKER_AZURE_DEBUG_LOG` variable contains a high degree of verbosity and may expose sensitive information in the logs. For this reason, we strongly advise only enabling this in a trusted environment and only for a temporary debugging session.
