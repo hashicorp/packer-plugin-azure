@@ -76,6 +76,10 @@ func TestStepPublishToSharedImageGalleryShouldPublishForNonManagedImageWithSig(t
 				"ManagedImageSharedGalleryReplicationRegionA",
 				"ManagedImageSharedGalleryReplicationRegionB",
 			},
+			SigDestinationTargetRegions: []TargetRegion{
+				{Name: "ManagedImageSharedGalleryReplicationRegionA"},
+				{Name: "ManagedImageSharedGalleryReplicationRegionB"},
+			},
 			SigDestinationStorageAccountType: "Standard_LRS",
 		},
 		Tags: map[string]string{"tag01": "Unit Test: Tags"},
@@ -124,6 +128,10 @@ func TestStepPublishToSharedImageGalleryShouldPublishWithShallowReplication(t *t
 			SigDestinationReplicationRegions: []string{
 				"ManagedImageSharedGalleryReplicationRegionA",
 				"ManagedImageSharedGalleryReplicationRegionB",
+			},
+			SigDestinationTargetRegions: []TargetRegion{
+				{Name: "ManagedImageSharedGalleryReplicationRegionA"},
+				{Name: "ManagedImageSharedGalleryReplicationRegionB"},
 			},
 			SigDestinationStorageAccountType: "Standard_LRS",
 		},
@@ -175,6 +183,10 @@ func TestStepPublishToSharedImageGalleryShouldPublishWithReplicationCount(t *tes
 				"ManagedImageSharedGalleryReplicationRegionA",
 				"ManagedImageSharedGalleryReplicationRegionB",
 			},
+			SigDestinationTargetRegions: []TargetRegion{
+				{Name: "ManagedImageSharedGalleryReplicationRegionA"},
+				{Name: "ManagedImageSharedGalleryReplicationRegionB"},
+			},
 			SigDestinationStorageAccountType: "Standard_LRS",
 		},
 		Tags: map[string]string{"tag01": "Unit Test: Tags"},
@@ -207,6 +219,105 @@ func TestStepPublishToSharedImageGalleryShouldPublishWithReplicationCount(t *tes
 	}
 }
 
+func TestStepPublishToSharedImageGalleryShouldPublishTargetRegions(t *testing.T) {
+	var actualPublishArgs PublishArgs
+	expectedPublishArgs := PublishArgs{
+		SubscriptionID:  "Unit Test: ManagedImageSubscription",
+		ReplicaCount:    1,
+		ReplicationMode: "Full",
+		Location:        "Unit Test: Location",
+		SourceID:        "Unit Test: VM ID",
+		SharedImageGallery: SharedImageGalleryDestination{
+			SigDestinationGalleryName:   "Unit Test: ManagedImageSharedGalleryName",
+			SigDestinationImageName:     "Unit Test: ManagedImageSharedGalleryImageName",
+			SigDestinationSubscription:  "Unit Test: ManagedImageSubscription",
+			SigDestinationImageVersion:  "Unit Test: ManagedImageSharedGalleryImageVersion",
+			SigDestinationResourceGroup: "Unit Test: ManagedImageSigPublishResourceGroup",
+			SigDestinationReplicationRegions: []string{
+				"ManagedImageSharedGalleryReplicationRegionA",
+				"ManagedImageSharedGalleryReplicationRegionB",
+			},
+			SigDestinationTargetRegions: []TargetRegion{
+				{Name: "ManagedImageSharedGalleryReplicationRegionA"},
+				{Name: "ManagedImageSharedGalleryReplicationRegionB"},
+			},
+			SigDestinationStorageAccountType: "Standard_LRS",
+		},
+		Tags: map[string]string{"tag01": "Unit Test: Tags"},
+	}
+	var testSubject = &StepPublishToSharedImageGallery{
+		publish: func(ctx context.Context, args PublishArgs) (string, error) {
+			actualPublishArgs = args
+			return "", nil
+		},
+		say:   func(message string) {},
+		error: func(e error) {},
+		toSIG: func() bool { return true },
+	}
+
+	stateBag := createTestStateBagStepPublishToSharedImageGallery(false)
+	stateBag.Put(constants.ArmSharedImageGalleryDestinationTargetRegions, []TargetRegion{
+		{Name: "ManagedImageSharedGalleryReplicationRegionA"},
+		{Name: "ManagedImageSharedGalleryReplicationRegionB"},
+	})
+	var result = testSubject.Run(context.Background(), stateBag)
+	if result != multistep.ActionContinue {
+		t.Fatalf("Expected the step to return 'ActionContinue', but got '%d'.", result)
+	}
+
+	if _, ok := stateBag.GetOk(constants.Error); ok == true {
+		t.Fatalf("Expected the step to not set stateBag['%s'], but it was.", constants.Error)
+	}
+
+	if diff := cmp.Diff(actualPublishArgs, expectedPublishArgs, []cmp.Option{
+		cmpopts.IgnoreUnexported(PublishArgs{}),
+	}...); diff != "" {
+		t.Fatalf("Unexpected diff %s", diff)
+	}
+}
+
+func TestPublishToSharedImageGalleryBuildAzureImageTargetRegions(t *testing.T) {
+	tt := []struct {
+		name            string
+		in              []TargetRegion
+		expectedRegions int
+	}{
+		{name: "empty regions", in: nil, expectedRegions: 0},
+		{name: "empty regions non nil", in: make([]TargetRegion, 0), expectedRegions: 0},
+		{name: "one named region", in: []TargetRegion{{Name: "unit-test-location"}}, expectedRegions: 1},
+		{name: "two named region", in: []TargetRegion{{Name: "unit-test-location"}, {Name: "unit-test-location-2"}}, expectedRegions: 2},
+		{
+			name:            "named region with encryption",
+			in:              []TargetRegion{{Name: "unit-test-location", DiskEncryptionSetId: "boguskey"}},
+			expectedRegions: 1,
+		},
+		{
+			name:            "two named region with encryption",
+			in:              []TargetRegion{{Name: "unit-test-location", DiskEncryptionSetId: "boguskey"}, {Name: "unit-test-location-west", DiskEncryptionSetId: "boguskeywest"}},
+			expectedRegions: 2,
+		},
+	}
+
+	for _, tc := range tt {
+		got := buildAzureImageTargetRegions(tc.in)
+		if len(got) != tc.expectedRegions {
+			t.Errorf("expected configureTargetRegion() to have same region count: got %d expected %d", len(tc.in), tc.expectedRegions)
+		}
+
+		for i, tr := range got {
+			inputRegion := tc.in[i]
+			if tr.Name != inputRegion.Name {
+				t.Errorf("expected configured region to contain same name as input %q but got %q", inputRegion.Name, tr.Name)
+			}
+
+			if (inputRegion.DiskEncryptionSetId != "") && (*tr.Encryption.OsDiskImage.DiskEncryptionSetId != inputRegion.DiskEncryptionSetId) {
+				t.Errorf("[%q]: expected configured region to contain set DES Id %q but got %q", tc.name, inputRegion.DiskEncryptionSetId, *tr.Encryption.OsDiskImage.DiskEncryptionSetId)
+			}
+		}
+	}
+
+}
+
 func createTestStateBagStepPublishToSharedImageGallery(managed bool) multistep.StateBag {
 	stateBag := new(multistep.BasicStateBag)
 
@@ -220,7 +331,10 @@ func createTestStateBagStepPublishToSharedImageGallery(managed bool) multistep.S
 		"tag01": value,
 	}
 	stateBag.Put(constants.ArmTags, tags)
-	stateBag.Put(constants.ArmManagedImageSharedGalleryReplicationRegions, []string{"ManagedImageSharedGalleryReplicationRegionA", "ManagedImageSharedGalleryReplicationRegionB"})
+	stateBag.Put(constants.ArmSharedImageGalleryDestinationTargetRegions, []TargetRegion{
+		{Name: "ManagedImageSharedGalleryReplicationRegionA"},
+		{Name: "ManagedImageSharedGalleryReplicationRegionB"},
+	})
 	stateBag.Put(constants.ArmManagedImageSharedGalleryImageVersionStorageAccountType, "Standard_LRS")
 	if managed {
 		stateBag.Put(constants.ArmManagedImageResourceGroupName, "Unit Test: ManagedImageResourceGroupName")
