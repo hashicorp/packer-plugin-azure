@@ -428,7 +428,7 @@ func (*FlatSpot) HCL2Spec() map[string]hcldec.Spec {
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatTargetRegion struct {
 	Name                *string `mapstructure:"name" required:"true" cty:"name" hcl:"name"`
-	DiskEncryptionSetID *string `mapstructure:"disk_encryption_set_id" cty:"disk_encryption_set_id" hcl:"disk_encryption_set_id"`
+	DiskEncryptionSetId *string `mapstructure:"disk_encryption_set_id" cty:"disk_encryption_set_id" hcl:"disk_encryption_set_id"`
 	StorageAccountType  *string `mapstructure:"storage_account_type" cty:"storage_account_type" hcl:"storage_account_type"`
 }
 

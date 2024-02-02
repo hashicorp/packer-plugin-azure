@@ -104,8 +104,13 @@ type SharedImageGalleryDestination struct {
 	SigDestinationImageVersion  string `mapstructure:"image_version"`
 	// A list of regions to replicate the image version in, by default the build location will be used as a replication region (the build location is either set in the location field, or the location of the resource group used in `build_resource_group_name` will be included.
 	// Can not contain any region but the build region when using shallow replication
-	SigDestinationReplicationRegions []string       `mapstructure:"replication_regions"`
-	SigDestinationTargetRegions      []TargetRegion `mapstructure:"target_region"`
+	SigDestinationReplicationRegions []string `mapstructure:"replication_regions"`
+	// A target region to store the image version in. The attribute supersedes `replication_regions` which is now considered deprecated.
+	// One or more target_region blocks can be specified for storing an imager version to various regions. In addition to specifying a region,
+	// a DiskEncryptionSetId can be specified for each target region to support multi-region disk encryption, as well as a StorageAccountType to customize storage per region.
+	// At a minimum their must be one target region entry for the primary build region where the image version will be stored.
+	// Target region must only contain one entry matching the build region when using shallow replication.
+	SigDestinationTargetRegions []TargetRegion `mapstructure:"target_region"`
 	// Specify a storage account type for the Shared Image Gallery Image Version.
 	// Defaults to `Standard_LRS`. Accepted values are `Standard_LRS`, `Standard_ZRS` and `Premium_LRS`
 	SigDestinationStorageAccountType string `mapstructure:"storage_account_type"`
@@ -118,17 +123,16 @@ type SharedImageGalleryDestination struct {
 	SigDestinationUseShallowReplicationMode bool `mapstructure:"use_shallow_replication" required:"false"`
 }
 
-// TargetRegion describes a region where the shared image should be replicated
+// TargetRegion describes a destination region for storing the image version of a Shard Image Gallery.
 type TargetRegion struct {
 	// Name of the Azure region
 	Name string `mapstructure:"name" required:"true"`
 	// EncryptionSetID for Disk Encryption Set in Region. Needed for supporting
 	// the replication of encrypted disks across regions. CMKs must
-	// already existing within the target region.
-	DiskEncryptionSetID string `mapstructure:"disk_encryption_set_id"`
+	// already exist within the target regions.
+	DiskEncryptionSetId string `mapstructure:"disk_encryption_set_id"`
 
-	//StorageAccountType
-	// Specify a storage account type for the Shared Image Gallery Image Version replicas.
+	//StorageAccountType a storage account type for the Shared Image Gallery Image Version.
 	// Defaults to `Standard_LRS`. Accepted values are `Standard_LRS`, `Standard_ZRS` and `Premium_LRS`
 	StorageAccountType string `mapstructure:"storage_account_type"`
 }

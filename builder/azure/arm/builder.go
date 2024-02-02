@@ -213,34 +213,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			return nil, fmt.Errorf("a gallery image version for image name:version %s:%s already exists in gallery %s", b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationGalleryName)
 		}
 
+		// Validate target region settings; it can be the deprecated replicated_regsions attribute or multiple target_region blocks
 		if (len(b.config.SharedGalleryDestination.SigDestinationReplicationRegions) > 0) && (len(b.config.SharedGalleryDestination.SigDestinationTargetRegions) > 0) {
-			return nil, fmt.Errorf("`replicated_regions` can not be defined when `target_regions` match the build region specified by `location` or match the region of `build_resource_group_name`.")
-		}
-		// SIG requires that replication regions include the region in which the created image version resides
-		buildLocation := normalizeAzureRegion(b.stateBag.Get(constants.ArmLocation).(string))
-
-		for i, tr := range b.config.SharedGalleryDestination.SigDestinationTargetRegions {
-			tr.Name = normalizeAzureRegion(tr.Name)
-			b.config.SharedGalleryDestination.SigDestinationTargetRegions[i] = tr
-			b.config.SharedGalleryDestination.SigDestinationReplicationRegions = append(b.config.SharedGalleryDestination.SigDestinationReplicationRegions, tr.Name)
-		}
-		b.stateBag.Put(constants.ArmSharedImageGalleryDestinationTargetRegions, b.config.SharedGalleryDestination.SigDestinationTargetRegions)
-
-		if len(b.config.SharedGalleryDestination.SigDestinationTargetRegions) == 0 {
-			foundMandatoryReplicationRegion := false
-			var normalizedReplicationRegions []string
-			for _, region := range b.config.SharedGalleryDestination.SigDestinationReplicationRegions {
-				// change region to lower-case and strip spaces
-				normalizedRegion := normalizeAzureRegion(region)
-				normalizedReplicationRegions = append(normalizedReplicationRegions, normalizedRegion)
-				if strings.EqualFold(normalizedRegion, buildLocation) {
-					foundMandatoryReplicationRegion = true
-					continue
-				}
-			}
-			if foundMandatoryReplicationRegion == false {
-				b.config.SharedGalleryDestination.SigDestinationReplicationRegions = append(normalizedReplicationRegions, buildLocation)
-			}
+			return nil, fmt.Errorf("`replicated_regions` can not be defined alongside `target_regions`; you can defined a target_region for each destination region you wish to replicate to.")
 		}
 
 		// TODO It would be better if validation could be handled in a central location
@@ -248,12 +223,53 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		// So we have to do this validation afterwards
 		// We should remove this logic builder and handle this logic via the `Step` pattern
 		if b.config.SharedGalleryDestination.SigDestinationUseShallowReplicationMode {
-			if len(b.config.SharedGalleryDestination.SigDestinationReplicationRegions) != 1 {
-				return nil, fmt.Errorf("when `use_shallow_replication` is enabled the value of `replicated_regions` must match the build region specified by `location` or match the region of `build_resource_group_name`.")
+			err := errors.New("when `use_shallow_replication` there can only be one destination region defined and it must match `location` or match the region of `build_resource_group_name`.")
+			switch {
+			case len(b.config.SharedGalleryDestination.SigDestinationTargetRegions) > 1:
+				return nil, err
+			case len(b.config.SharedGalleryDestination.SigDestinationReplicationRegions) > 1:
+				return nil, err
 			}
 		}
 
-		b.stateBag.Put(constants.ArmManagedImageSharedGalleryReplicationRegions, b.config.SharedGalleryDestination.SigDestinationReplicationRegions)
+		if len(b.config.SharedGalleryDestination.SigDestinationTargetRegions) > 0 {
+			normalizedRegions := make([]TargetRegion, 0, len(b.config.SharedGalleryDestination.SigDestinationTargetRegions))
+			for _, tr := range b.config.SharedGalleryDestination.SigDestinationTargetRegions {
+				tr.Name = normalizeAzureRegion(tr.Name)
+				normalizedRegions = append(normalizedRegions, tr)
+			}
+			b.config.SharedGalleryDestination.SigDestinationTargetRegions = normalizedRegions
+		}
+
+		// Convert deprecated replication_regions to []TargetRegion
+		if len(b.config.SharedGalleryDestination.SigDestinationReplicationRegions) > 0 {
+			var foundMandatoryReplicationRegion bool
+			buildLocation := normalizeAzureRegion(b.stateBag.Get(constants.ArmLocation).(string))
+			normalizedRegions := make([]TargetRegion, 0, len(b.config.SharedGalleryDestination.SigDestinationReplicationRegions))
+			for _, region := range b.config.SharedGalleryDestination.SigDestinationReplicationRegions {
+				region := normalizeAzureRegion(region)
+				if strings.EqualFold(region, buildLocation) {
+					// backwards compatibility DiskEncryptionSetId was set on the global config not on the target region.
+					// Users using target_region blocks are responsible for setting the DES within the block
+					normalizedRegions = append(normalizedRegions, TargetRegion{Name: region, DiskEncryptionSetId: b.config.DiskEncryptionSetId})
+					foundMandatoryReplicationRegion = true
+					continue
+				}
+				normalizedRegions = append(normalizedRegions, TargetRegion{Name: region})
+			}
+			// SIG requires that replication regions include the region in which the created image version resides
+			if foundMandatoryReplicationRegion == false {
+				normalizedRegions = append(normalizedRegions, TargetRegion{Name: buildLocation, DiskEncryptionSetId: b.config.DiskEncryptionSetId})
+			}
+			b.config.SharedGalleryDestination.SigDestinationTargetRegions = normalizedRegions
+		}
+
+		if len(b.config.SharedGalleryDestination.SigDestinationTargetRegions) == 0 {
+			return nil, errors.New("no target destination region specified for the Shared Image Gallery; use target_region to specify at least the primary destination region for storing the image version.")
+		}
+
+		b.stateBag.Put(constants.ArmSharedImageGalleryDestinationTargetRegions, b.config.SharedGalleryDestination.SigDestinationTargetRegions)
+
 	}
 
 	sourceImageSpecialized := false
