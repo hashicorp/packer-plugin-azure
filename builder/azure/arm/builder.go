@@ -224,6 +224,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			b.config.SharedGalleryDestination.SigDestinationTargetRegions[i] = tr
 			b.config.SharedGalleryDestination.SigDestinationReplicationRegions = append(b.config.SharedGalleryDestination.SigDestinationReplicationRegions, tr.Name)
 		}
+		b.stateBag.Put(constants.ArmSharedImageGalleryDestinationTargetRegions, b.config.SharedGalleryDestination.SigDestinationTargetRegions)
 
 		if len(b.config.SharedGalleryDestination.SigDestinationTargetRegions) == 0 {
 			foundMandatoryReplicationRegion := false

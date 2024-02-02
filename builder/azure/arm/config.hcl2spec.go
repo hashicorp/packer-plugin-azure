@@ -367,7 +367,7 @@ type FlatSharedImageGalleryDestination struct {
 	SigDestinationImageName                 *string            `mapstructure:"image_name" cty:"image_name" hcl:"image_name"`
 	SigDestinationImageVersion              *string            `mapstructure:"image_version" cty:"image_version" hcl:"image_version"`
 	SigDestinationReplicationRegions        []string           `mapstructure:"replication_regions" cty:"replication_regions" hcl:"replication_regions"`
-	SigDestinationTargetReplicationRegions  []FlatTargetRegion `mapstructure:"target_regions" cty:"target_regions" hcl:"target_regions"`
+	SigDestinationTargetRegions             []FlatTargetRegion `mapstructure:"target_region" cty:"target_region" hcl:"target_region"`
 	SigDestinationStorageAccountType        *string            `mapstructure:"storage_account_type" cty:"storage_account_type" hcl:"storage_account_type"`
 	SigDestinationSpecialized               *bool              `mapstructure:"specialized" cty:"specialized" hcl:"specialized"`
 	SigDestinationUseShallowReplicationMode *bool              `mapstructure:"use_shallow_replication" required:"false" cty:"use_shallow_replication" hcl:"use_shallow_replication"`
@@ -391,7 +391,7 @@ func (*FlatSharedImageGalleryDestination) HCL2Spec() map[string]hcldec.Spec {
 		"image_name":              &hcldec.AttrSpec{Name: "image_name", Type: cty.String, Required: false},
 		"image_version":           &hcldec.AttrSpec{Name: "image_version", Type: cty.String, Required: false},
 		"replication_regions":     &hcldec.AttrSpec{Name: "replication_regions", Type: cty.List(cty.String), Required: false},
-		"target_regions":          &hcldec.BlockListSpec{TypeName: "target_regions", Nested: hcldec.ObjectSpec((*FlatTargetRegion)(nil).HCL2Spec())},
+		"target_region":           &hcldec.BlockListSpec{TypeName: "target_region", Nested: hcldec.ObjectSpec((*FlatTargetRegion)(nil).HCL2Spec())},
 		"storage_account_type":    &hcldec.AttrSpec{Name: "storage_account_type", Type: cty.String, Required: false},
 		"specialized":             &hcldec.AttrSpec{Name: "specialized", Type: cty.Bool, Required: false},
 		"use_shallow_replication": &hcldec.AttrSpec{Name: "use_shallow_replication", Type: cty.Bool, Required: false},

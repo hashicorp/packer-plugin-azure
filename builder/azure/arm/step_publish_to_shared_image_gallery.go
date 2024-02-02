@@ -71,11 +71,15 @@ func getSigDestination(state multistep.StateBag) SharedImageGalleryDestination {
 	galleryName := state.Get(constants.ArmManagedImageSharedGalleryName).(string)
 	imageName := state.Get(constants.ArmManagedImageSharedGalleryImageName).(string)
 	imageVersion := state.Get(constants.ArmManagedImageSharedGalleryImageVersion).(string)
-	replicationRegions := state.Get(constants.ArmManagedImageSharedGalleryReplicationRegions).([]string)
 	storageAccountType := state.Get(constants.ArmManagedImageSharedGalleryImageVersionStorageAccountType).(string)
 
-	targetReplicationRegions, ok := state.Get(constants.ArmManagedImageSharedGalleryTargetReplicationRegions).([]TargetRegion)
+	replicationRegions, ok := state.Get(constants.ArmManagedImageSharedGalleryReplicationRegions).([]string)
 	if !ok {
+		replicationRegions = []string{}
+	}
+
+	targetReplicationRegions, ok := state.Get(constants.ArmSharedImageGalleryDestinationTargetRegions).([]TargetRegion)
+	if !ok || (len(targetReplicationRegions) == 0) {
 		targetRegions := make([]TargetRegion, 0, len(replicationRegions))
 		for _, region := range replicationRegions {
 			targetRegions = append(targetRegions, TargetRegion{Name: region})

@@ -105,7 +105,7 @@ type SharedImageGalleryDestination struct {
 	// A list of regions to replicate the image version in, by default the build location will be used as a replication region (the build location is either set in the location field, or the location of the resource group used in `build_resource_group_name` will be included.
 	// Can not contain any region but the build region when using shallow replication
 	SigDestinationReplicationRegions []string       `mapstructure:"replication_regions"`
-	SigDestinationTargetRegions      []TargetRegion `mapstructure:"target_regions"`
+	SigDestinationTargetRegions      []TargetRegion `mapstructure:"target_region"`
 	// Specify a storage account type for the Shared Image Gallery Image Version.
 	// Defaults to `Standard_LRS`. Accepted values are `Standard_LRS`, `Standard_ZRS` and `Premium_LRS`
 	SigDestinationStorageAccountType string `mapstructure:"storage_account_type"`
