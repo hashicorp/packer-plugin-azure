@@ -11,7 +11,6 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 
-	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -279,25 +278,30 @@ func TestStepPublishToSharedImageGalleryShouldPublishTargetRegions(t *testing.T)
 
 func TestPublishToSharedImageGalleryBuildAzureImageTargetRegions(t *testing.T) {
 	tt := []struct {
-		name string
-		in   []TargetRegion
-		want []galleryimageversions.TargetRegion
+		name            string
+		in              []TargetRegion
+		expectedRegions int
 	}{
-		{name: "empty regions", in: nil, want: make([]galleryimageversions.TargetRegion, 0)},
-		{name: "empty regions non nil", in: make([]TargetRegion, 0), want: make([]galleryimageversions.TargetRegion, 0)},
-		{name: "one named region", in: []TargetRegion{{Name: "unit-test-location"}}, want: []galleryimageversions.TargetRegion{{Name: "unit-test-location"}}},
-		{name: "two named region", in: []TargetRegion{{Name: "unit-test-location"}, {Name: "unit-test-location-2"}}, want: []galleryimageversions.TargetRegion{{Name: "unit-test-location"}, {Name: "unit-test-location-2"}}},
+		{name: "empty regions", in: nil, expectedRegions: 0},
+		{name: "empty regions non nil", in: make([]TargetRegion, 0), expectedRegions: 0},
+		{name: "one named region", in: []TargetRegion{{Name: "unit-test-location"}}, expectedRegions: 1},
+		{name: "two named region", in: []TargetRegion{{Name: "unit-test-location"}, {Name: "unit-test-location-2"}}, expectedRegions: 2},
 		{
-			name: "named region with encryption",
-			in:   []TargetRegion{{Name: "unit-test-location", DiskEncryptionSetId: "boguskey"}},
-			want: []galleryimageversions.TargetRegion{{Name: "unit-test-location", Encryption: &galleryimageversions.EncryptionImages{OsDiskImage: &galleryimageversions.OSDiskImageEncryption{}}}},
+			name:            "named region with encryption",
+			in:              []TargetRegion{{Name: "unit-test-location", DiskEncryptionSetId: "boguskey"}},
+			expectedRegions: 1,
+		},
+		{
+			name:            "two named region with encryption",
+			in:              []TargetRegion{{Name: "unit-test-location", DiskEncryptionSetId: "boguskey"}, {Name: "unit-test-location-west", DiskEncryptionSetId: "boguskeywest"}},
+			expectedRegions: 2,
 		},
 	}
 
 	for _, tc := range tt {
 		got := buildAzureImageTargetRegions(tc.in)
-		if len(got) != len(tc.want) {
-			t.Errorf("expected configureTargetRegion() to have same region count: got %d expected %d", len(tc.in), len(tc.want))
+		if len(got) != tc.expectedRegions {
+			t.Errorf("expected configureTargetRegion() to have same region count: got %d expected %d", len(tc.in), tc.expectedRegions)
 		}
 
 		for i, tr := range got {
@@ -307,7 +311,7 @@ func TestPublishToSharedImageGalleryBuildAzureImageTargetRegions(t *testing.T) {
 			}
 
 			if (inputRegion.DiskEncryptionSetId != "") && (*tr.Encryption.OsDiskImage.DiskEncryptionSetId != inputRegion.DiskEncryptionSetId) {
-				t.Errorf("expected configured region to contain set DES Id %q but got %q", inputRegion.DiskEncryptionSetId, *tr.Encryption.OsDiskImage.DiskEncryptionSetId)
+				t.Errorf("[%q]: expected configured region to contain set DES Id %q but got %q", tc.name, inputRegion.DiskEncryptionSetId, *tr.Encryption.OsDiskImage.DiskEncryptionSetId)
 			}
 		}
 	}

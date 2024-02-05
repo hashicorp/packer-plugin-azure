@@ -429,7 +429,6 @@ func (*FlatSpot) HCL2Spec() map[string]hcldec.Spec {
 type FlatTargetRegion struct {
 	Name                *string `mapstructure:"name" required:"true" cty:"name" hcl:"name"`
 	DiskEncryptionSetId *string `mapstructure:"disk_encryption_set_id" cty:"disk_encryption_set_id" hcl:"disk_encryption_set_id"`
-	StorageAccountType  *string `mapstructure:"storage_account_type" cty:"storage_account_type" hcl:"storage_account_type"`
 }
 
 // FlatMapstructure returns a new FlatTargetRegion.
@@ -446,7 +445,6 @@ func (*FlatTargetRegion) HCL2Spec() map[string]hcldec.Spec {
 	s := map[string]hcldec.Spec{
 		"name":                   &hcldec.AttrSpec{Name: "name", Type: cty.String, Required: false},
 		"disk_encryption_set_id": &hcldec.AttrSpec{Name: "disk_encryption_set_id", Type: cty.String, Required: false},
-		"storage_account_type":   &hcldec.AttrSpec{Name: "storage_account_type", Type: cty.String, Required: false},
 	}
 	return s
 }

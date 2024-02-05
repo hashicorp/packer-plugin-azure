@@ -269,7 +269,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		}
 
 		b.stateBag.Put(constants.ArmSharedImageGalleryDestinationTargetRegions, b.config.SharedGalleryDestination.SigDestinationTargetRegions)
-
 	}
 
 	sourceImageSpecialized := false

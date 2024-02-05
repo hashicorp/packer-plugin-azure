@@ -645,7 +645,7 @@ The shared_image_gallery_destination block is available for publishing a new ima
 
 - `target_region` ([]TargetRegion) - A target region to store the image version in. The attribute supersedes `replication_regions` which is now considered deprecated.
   One or more target_region blocks can be specified for storing an imager version to various regions. In addition to specifying a region,
-  a DiskEncryptionSetId can be specified for each target region to support multi-region disk encryption, as well as a StorageAccountType to customize storage per region.
+  a DiskEncryptionSetId can be specified for each target region to support multi-region disk encryption.
   At a minimum their must be one target region entry for the primary build region where the image version will be stored.
   Target region must only contain one entry matching the build region when using shallow replication.
 
