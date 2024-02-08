@@ -68,8 +68,16 @@
       gallery_name = "GalleryName"
       image_name = "ImageName"
       image_version = "1.0.0"
-      replication_regions = ["regionA", "regionB", "regionC"]
       storage_account_type = "Standard_LRS"
+      target_region {
+        name = "regionA"
+      }
+      target_region {
+        name = "regionB"
+      }
+      target_region {
+        name = "regionC"
+      }
   }
   managed_image_name = "TargetImageName"
   managed_image_resource_group_name = "TargetResourceGroup"
