@@ -10,6 +10,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
@@ -286,6 +287,7 @@ func TestPublishToSharedImageGalleryBuildAzureImageTargetRegions(t *testing.T) {
 		{name: "empty regions non nil", in: make([]TargetRegion, 0), expectedRegions: 0},
 		{name: "one named region", in: []TargetRegion{{Name: "unit-test-location"}}, expectedRegions: 1},
 		{name: "two named region", in: []TargetRegion{{Name: "unit-test-location"}, {Name: "unit-test-location-2"}}, expectedRegions: 2},
+		{name: "named region with storage account", in: []TargetRegion{{Name: "unit-test-location", StorageAccountType: "Premium_LRS"}}, expectedRegions: 1},
 		{
 			name:            "named region with encryption",
 			in:              []TargetRegion{{Name: "unit-test-location", DiskEncryptionSetId: "boguskey"}},
@@ -313,6 +315,15 @@ func TestPublishToSharedImageGalleryBuildAzureImageTargetRegions(t *testing.T) {
 			if (inputRegion.DiskEncryptionSetId != "") && (*tr.Encryption.OsDiskImage.DiskEncryptionSetId != inputRegion.DiskEncryptionSetId) {
 				t.Errorf("[%q]: expected configured region to contain set DES Id %q but got %q", tc.name, inputRegion.DiskEncryptionSetId, *tr.Encryption.OsDiskImage.DiskEncryptionSetId)
 			}
+
+			if (inputRegion.StorageAccountType == "") && (*tr.StorageAccountType != galleryimageversions.StorageAccountTypeStandardLRS) {
+				t.Errorf("[%q]: expected default storage account type to be Standard_LRS", tc.name)
+			}
+
+			if (inputRegion.StorageAccountType != "") && (*tr.StorageAccountType != galleryimageversions.StorageAccountType(inputRegion.StorageAccountType)) {
+				t.Errorf("[%q]: expected storage account type to match configured value but got %q", tc.name, *tr.StorageAccountType)
+			}
+
 		}
 	}
 

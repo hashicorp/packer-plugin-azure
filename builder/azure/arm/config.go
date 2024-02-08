@@ -131,6 +131,11 @@ type TargetRegion struct {
 	// the replication of encrypted disks across regions. CMKs must
 	// already exist within the target regions.
 	DiskEncryptionSetId string `mapstructure:"disk_encryption_set_id"`
+	// Number of replicas in this region. Default: 1
+	ReplicaCount int64 `mapstructure:"replicas"`
+	// Specify a storage account type for the Shared Image Gallery Image Version in the region
+	// Defaults to `Standard_LRS`. Accepted values are `Standard_LRS`, `Standard_ZRS` and `Premium_LRS`
+	StorageAccountType string `mapstructure:"storage_account_type"`
 }
 
 type Spot struct {

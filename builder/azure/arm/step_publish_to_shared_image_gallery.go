@@ -107,6 +107,18 @@ func buildAzureImageTargetRegions(regions []TargetRegion) []galleryimageversions
 				DiskEncryptionSetId: &id,
 			},
 		}
+
+		storageAcct := galleryimageversions.StorageAccountType(r.StorageAccountType)
+		if storageAcct == "" {
+			storageAcct = galleryimageversions.StorageAccountTypeStandardLRS
+		}
+		tr.StorageAccountType = &storageAcct
+
+		n := r.ReplicaCount
+		if n == 0 {
+			n = 1
+		}
+		tr.RegionalReplicaCount = &n
 		targetRegions = append(targetRegions, tr)
 	}
 	return targetRegions
