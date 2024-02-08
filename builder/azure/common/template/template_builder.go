@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	hashiSecurityRulesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/securityrules"
 	hashiSubnetsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/subnets"
@@ -316,15 +317,39 @@ func (s *TemplateBuilder) SetOSDiskSizeGB(diskSizeGB int32) error {
 	return nil
 }
 
-func (s *TemplateBuilder) SetDiskEncryptionSetID(diskEncryptionSetID string) error {
+func (s *TemplateBuilder) SetDiskEncryptionSetID(diskEncryptionSetID string, securityType *hashiVMSDK.SecurityTypes) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
 	}
 
 	profile := resource.Properties.StorageProfile
-	profile.OsDisk.ManagedDisk.DiskEncryptionSet = &DiskEncryptionSetParameters{
-		ID: &diskEncryptionSetID,
+	if securityType != nil && *securityType == hashiVMSDK.SecurityTypesConfidentialVM {
+		profile.OsDisk.ManagedDisk.SecurityProfile = &virtualmachines.VMDiskSecurityProfile{}
+		securityEncryptionType := virtualmachines.SecurityEncryptionTypesDiskWithVMGuestState
+		profile.OsDisk.ManagedDisk.SecurityProfile.SecurityEncryptionType = &securityEncryptionType
+		profile.OsDisk.ManagedDisk.SecurityProfile.DiskEncryptionSet = &virtualmachines.SubResource{
+			Id: &diskEncryptionSetID,
+		}
+	} else {
+		profile.OsDisk.ManagedDisk.DiskEncryptionSet = &DiskEncryptionSetParameters{
+			ID: &diskEncryptionSetID,
+		}
+	}
+
+	return nil
+}
+
+func (s *TemplateBuilder) SetDiskEncryptionWithPaaSKey(securityType *hashiVMSDK.SecurityTypes) error {
+	resource, err := s.getResourceByType(resourceVirtualMachine)
+	if err != nil {
+		return err
+	}
+	if securityType != nil && *securityType == hashiVMSDK.SecurityTypesConfidentialVM {
+		profile := resource.Properties.StorageProfile
+		profile.OsDisk.ManagedDisk.SecurityProfile = &virtualmachines.VMDiskSecurityProfile{}
+		securityEncryptionType := virtualmachines.SecurityEncryptionTypesVMGuestStateOnly // Allows for PaaS key encryption for OS disk
+		profile.OsDisk.ManagedDisk.SecurityProfile.SecurityEncryptionType = &securityEncryptionType
 	}
 
 	return nil
@@ -512,22 +537,24 @@ func (s *TemplateBuilder) SetLicenseType(licenseType string) error {
 	return nil
 }
 
-func (s *TemplateBuilder) SetSecurityProfile(secureBootEnabled bool, vtpmEnabled bool, encryptionAtHost *bool) error {
+func (s *TemplateBuilder) SetSecurityProfile(secureBootEnabled bool, vtpmEnabled bool, encryptionAtHost *bool, securityType *hashiVMSDK.SecurityTypes) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
 	}
 
 	resource.Properties.SecurityProfile = &hashiVMSDK.SecurityProfile{}
-	securityTrustedLaunch := hashiVMSDK.SecurityTypesTrustedLaunch
+
 	if secureBootEnabled || vtpmEnabled {
 		resource.Properties.SecurityProfile.UefiSettings = &hashiVMSDK.UefiSettings{}
-		resource.Properties.SecurityProfile.SecurityType = &securityTrustedLaunch
 		resource.Properties.SecurityProfile.UefiSettings.SecureBootEnabled = common.BoolPtr(secureBootEnabled)
 		resource.Properties.SecurityProfile.UefiSettings.VTpmEnabled = common.BoolPtr(vtpmEnabled)
 	}
 	if encryptionAtHost != nil && *encryptionAtHost {
 		resource.Properties.SecurityProfile.EncryptionAtHost = encryptionAtHost
+	}
+	if securityType != nil {
+		resource.Properties.SecurityProfile.SecurityType = securityType
 	}
 
 	return nil

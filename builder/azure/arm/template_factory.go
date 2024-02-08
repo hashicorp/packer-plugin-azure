@@ -200,6 +200,38 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 		}
 	}
 
+	securityProfile := struct {
+		SecureBootEnabled bool
+		VTpmEnabled       bool
+		EncryptionAtHost  *bool
+		securityType      *hashiVMSDK.SecurityTypes
+	}{
+		SecureBootEnabled: config.SecureBootEnabled,
+		VTpmEnabled:       config.VTpmEnabled,
+		EncryptionAtHost:  nil,
+		securityType:      nil,
+	}
+
+	if config.EncryptionAtHost != nil {
+		securityProfile.EncryptionAtHost = config.EncryptionAtHost
+	}
+
+	if config.SecurityType != "" {
+		switch config.SecurityType {
+		case constants.TrustedLaunch:
+			tl := hashiVMSDK.SecurityTypesTrustedLaunch
+			securityProfile.securityType = &tl
+		case constants.ConfidentialVM:
+			cvm := hashiVMSDK.SecurityTypesConfidentialVM
+			securityProfile.securityType = &cvm
+		}
+	}
+
+	err = builder.SetSecurityProfile(securityProfile.SecureBootEnabled, securityProfile.VTpmEnabled, securityProfile.EncryptionAtHost, securityProfile.securityType)
+	if err != nil {
+		return nil, err
+	}
+
 	if config.OSDiskSizeGB > 0 {
 		err = builder.SetOSDiskSizeGB(config.OSDiskSizeGB)
 		if err != nil {
@@ -208,7 +240,14 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 	}
 
 	if config.DiskEncryptionSetId != "" {
-		err = builder.SetDiskEncryptionSetID(config.DiskEncryptionSetId)
+		err = builder.SetDiskEncryptionSetID(config.DiskEncryptionSetId, securityProfile.securityType)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if config.DiskEncryptionSetId == "" {
+		err = builder.SetDiskEncryptionWithPaaSKey(securityProfile.securityType)
 		if err != nil {
 			return nil, err
 		}
@@ -284,13 +323,6 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 
 	if config.LicenseType != "" {
 		err = builder.SetLicenseType(config.LicenseType)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if config.SecureBootEnabled || config.VTpmEnabled || config.EncryptionAtHost != nil {
-		err = builder.SetSecurityProfile(config.SecureBootEnabled, config.VTpmEnabled, config.EncryptionAtHost)
 		if err != nil {
 			return nil, err
 		}

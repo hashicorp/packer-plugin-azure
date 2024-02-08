@@ -534,12 +534,14 @@ Providing `temp_resource_group_name` or `location` in combination with
   or
   [Linux](https://learn.microsoft.com/en-us/azure/virtual-machines/linux/azure-hybrid-benefit-linux)
 
-- `secure_boot_enabled` (bool) - Specifies if Secure Boot and Trusted Launch is enabled for the Virtual Machine.
+- `secure_boot_enabled` (bool) - Specifies if Secure Boot is enabled for the Virtual Machine. For Trusted Launch or Confidential VMs, Secure Boot must be enabled.
 
 - `encryption_at_host` (\*bool) - Specifies if Encryption at host is enabled for the Virtual Machine.
   Requires enabling encryption at host in the Subscription read more [here](https://learn.microsoft.com/en-us/azure/virtual-machines/disks-enable-host-based-encryption-portal?tabs=azure-powershell)
 
-- `vtpm_enabled` (bool) - Specifies if vTPM (virtual Trusted Platform Module) and Trusted Launch is enabled for the Virtual Machine.
+- `vtpm_enabled` (bool) - Specifies if vTPM (virtual Trusted Platform Module) is enabled for the Virtual Machine. For Trusted Launch or Confidential VMs, Secure Boot must be enabled.
+
+- `security_type` (string) - Specifies the type of security to use for the VM. "TrustedLaunch" or "ConfidentialVM"
 
 - `async_resourcegroup_delete` (bool) - If you want packer to delete the
   temporary resource group asynchronously set this value. It's a boolean

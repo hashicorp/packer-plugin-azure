@@ -610,14 +610,17 @@ type Config struct {
 	// or
 	// [Linux](https://learn.microsoft.com/en-us/azure/virtual-machines/linux/azure-hybrid-benefit-linux)
 	LicenseType string `mapstructure:"license_type" required:"false"`
-	// Specifies if Secure Boot and Trusted Launch is enabled for the Virtual Machine.
+	// Specifies if Secure Boot is enabled for the Virtual Machine. For Trusted Launch or Confidential VMs, Secure Boot must be enabled.
 	SecureBootEnabled bool `mapstructure:"secure_boot_enabled" required:"false"`
 	// Specifies if Encryption at host is enabled for the Virtual Machine.
 	// Requires enabling encryption at host in the Subscription read more [here](https://learn.microsoft.com/en-us/azure/virtual-machines/disks-enable-host-based-encryption-portal?tabs=azure-powershell)
 	EncryptionAtHost *bool `mapstructure:"encryption_at_host" required:"false"`
 
-	// Specifies if vTPM (virtual Trusted Platform Module) and Trusted Launch is enabled for the Virtual Machine.
+	// Specifies if vTPM (virtual Trusted Platform Module) is enabled for the Virtual Machine. For Trusted Launch or Confidential VMs, vTPM must be enabled.
 	VTpmEnabled bool `mapstructure:"vtpm_enabled" required:"false"`
+
+	// Specifies the type of security to use for the VM. "TrustedLaunch" or "ConfidentialVM"
+	SecurityType string `mapstructure:"security_type" required:"false"`
 
 	// Runtime Values
 	UserName               string `mapstructure-to-hcl2:",skip"`
