@@ -1362,6 +1362,116 @@ func TestConfigShouldAcceptShallowReplicationWithWithUnsetReplicaCount(t *testin
 		t.Fatalf("expected config to accept shallow replication with unset replica count build: %v", err)
 	}
 }
+
+func TestConfigValidateShallowReplicationRegion(t *testing.T) {
+	tt := []struct {
+		name          string
+		config        map[string]interface{}
+		errorExpected bool
+	}{
+		{
+			name: "with replication region",
+			config: map[string]interface{}{
+				"image_offer":     "ignore",
+				"image_publisher": "ignore",
+				"image_sku":       "ignore",
+				"location":        "ignore",
+				"subscription_id": "ignore",
+				"communicator":    "none",
+				"os_type":         constants.Target_Linux,
+				"shared_image_gallery_destination": map[string]interface{}{
+					"resource_group":          "ignore",
+					"gallery_name":            "ignore",
+					"image_name":              "ignore",
+					"image_version":           "1.0.1",
+					"replication_regions":     "ignore",
+					"use_shallow_replication": "true",
+				},
+			},
+		},
+		{
+			name: "with target region",
+			config: map[string]interface{}{
+				"image_offer":     "ignore",
+				"image_publisher": "ignore",
+				"image_sku":       "ignore",
+				"location":        "ignore",
+				"subscription_id": "ignore",
+				"communicator":    "none",
+				"os_type":         constants.Target_Linux,
+				"shared_image_gallery_destination": map[string]interface{}{
+					"resource_group": "ignore",
+					"gallery_name":   "ignore",
+					"image_name":     "ignore",
+					"image_version":  "1.0.1",
+					"target_region": map[string]interface{}{
+						"name": "ignore",
+					},
+					"use_shallow_replication": "true",
+				},
+			},
+		},
+		{
+			name:          "with multiple replication regions",
+			errorExpected: true,
+			config: map[string]interface{}{
+				"image_offer":     "ignore",
+				"image_publisher": "ignore",
+				"image_sku":       "ignore",
+				"location":        "ignore",
+				"subscription_id": "ignore",
+				"communicator":    "none",
+				"os_type":         constants.Target_Linux,
+				"shared_image_gallery_destination": map[string]interface{}{
+					"resource_group":          "ignore",
+					"gallery_name":            "ignore",
+					"image_name":              "ignore",
+					"image_version":           "1.0.1",
+					"replication_regions":     []string{"one", "two"},
+					"use_shallow_replication": "true",
+				},
+			},
+		},
+		{
+			name:          "with multiple target region",
+			errorExpected: true,
+			config: map[string]interface{}{
+				"image_offer":     "ignore",
+				"image_publisher": "ignore",
+				"image_sku":       "ignore",
+				"location":        "ignore",
+				"subscription_id": "ignore",
+				"communicator":    "none",
+				"os_type":         constants.Target_Linux,
+				"shared_image_gallery_destination": map[string]interface{}{
+					"resource_group": "ignore",
+					"gallery_name":   "ignore",
+					"image_name":     "ignore",
+					"image_version":  "1.0.1",
+					"target_region": map[string]interface{}{
+						"name":  "ignore",
+						"name2": "ignore",
+					},
+					"use_shallow_replication": "true",
+				},
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			var c Config
+			_, err := c.Prepare(tc.config, getPackerConfiguration())
+			if !tc.errorExpected && err != nil {
+				t.Errorf("unexpected error returned when validating shallow replication regions: %s", err)
+			}
+			if tc.errorExpected && err == nil {
+				t.Errorf("expected an error but got none for %s", tc.name)
+			}
+		})
+	}
+}
+
 func TestConfigShouldRejectManagedImageOSDiskSnapshotNameAndManagedImageDataDiskSnapshotPrefixWithCaptureContainerName(t *testing.T) {
 	config := map[string]interface{}{
 		"image_offer":                         "ignore",

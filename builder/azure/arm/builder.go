@@ -215,20 +215,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			return nil, fmt.Errorf("a gallery image version for image name:version %s:%s already exists in gallery %s", b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationGalleryName)
 		}
 
-		// TODO It would be better if validation could be handled in a central location
-		// Currently we rely on the build Resource Group being queried if used to get the build location
-		// So we have to do this validation afterwards
-		// We should remove this logic builder and handle this logic via the `Step` pattern
-		if b.config.SharedGalleryDestination.SigDestinationUseShallowReplicationMode {
-			err := errors.New("when `use_shallow_replication` there can only be one destination region defined and it must match `location` or match the region of `build_resource_group_name`.")
-			switch {
-			case len(b.config.SharedGalleryDestination.SigDestinationTargetRegions) > 1:
-				return nil, err
-			case len(b.config.SharedGalleryDestination.SigDestinationReplicationRegions) > 1:
-				return nil, err
-			}
-		}
-
 		if len(b.config.SharedGalleryDestination.SigDestinationTargetRegions) > 0 {
 			normalizedRegions := make([]TargetRegion, 0, len(b.config.SharedGalleryDestination.SigDestinationTargetRegions))
 			for _, tr := range b.config.SharedGalleryDestination.SigDestinationTargetRegions {

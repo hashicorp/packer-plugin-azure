@@ -125,6 +125,18 @@ type SharedImageGalleryDestination struct {
 	SigDestinationUseShallowReplicationMode bool `mapstructure:"use_shallow_replication" required:"false"`
 }
 
+func (d SharedImageGalleryDestination) ValidateShallowReplicationRegion() error {
+
+	n := len(d.SigDestinationTargetRegions) | len(d.SigDestinationReplicationRegions)
+	if n == 0 {
+		return errors.New("when `use_shallow_replication` is set there must be one destination region must match the build location of the Shared Image Gallery.")
+	}
+	if n > 1 {
+		return errors.New("when `use_shallow_replication` there can only be one destination region must match the build location of the Shared Image Gallery.")
+	}
+	return nil
+}
+
 // TargetRegion describes a destination region for storing the image version of a Shard Image Gallery.
 type TargetRegion struct {
 	// Name of the Azure region
@@ -1293,7 +1305,16 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		if c.SharedGalleryDestination.SigDestinationSubscription == "" {
 			c.SharedGalleryDestination.SigDestinationSubscription = c.ClientConfig.SubscriptionID
 		}
+		// Validate target region settings; it can be the deprecated replicated_regions attribute or multiple target_region blocks
+		if (len(c.SharedGalleryDestination.SigDestinationReplicationRegions) > 0) && (len(c.SharedGalleryDestination.SigDestinationTargetRegions) > 0) {
+			errs = packersdk.MultiErrorAppend(errs, errors.New("`replicated_regions` can not be defined alongside `target_region`; you can defined a target_region for each destination region you wish to replicate to."))
+		}
+
 		if c.SharedGalleryDestination.SigDestinationUseShallowReplicationMode {
+			if err := c.SharedGalleryDestination.ValidateShallowReplicationRegion(); err != nil {
+				errs = packersdk.MultiErrorAppend(errs, err)
+			}
+
 			if c.SharedGalleryImageVersionReplicaCount == 0 {
 				c.SharedGalleryImageVersionReplicaCount = 1
 			}
@@ -1301,10 +1322,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 			if c.SharedGalleryImageVersionReplicaCount != 1 {
 				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("When using shallow replication the replica count can only be 1, leaving this value unset will default to 1"))
 			}
-		}
-		// Validate target region settings; it can be the deprecated replicated_regions attribute or multiple target_region blocks
-		if (len(c.SharedGalleryDestination.SigDestinationReplicationRegions) > 0) && (len(c.SharedGalleryDestination.SigDestinationTargetRegions) > 0) {
-			errs = packersdk.MultiErrorAppend(errs, errors.New("`replicated_regions` can not be defined alongside `target_region`; you can defined a target_region for each destination region you wish to replicate to."))
+
 		}
 	}
 	if c.SharedGalleryTimeout == 0 {
