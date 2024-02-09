@@ -2883,3 +2883,34 @@ func TestConfigSpotEmptyEvictionPolicyMaxPriceSet(t *testing.T) {
 		t.Fatal("expected config to not accept spot settings", err)
 	}
 }
+
+func TestConfigShouldRejectSharedImageGalleryDestinationReplicationRegions(t *testing.T) {
+	config := map[string]interface{}{
+		"location":        "ignore",
+		"subscription_id": "ignore",
+		"os_type":         "linux",
+		"image_sku":       "ignore",
+		"image_offer":     "ignore",
+		"image_publisher": "ignore",
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group":      "ignore",
+			"gallery_name":        "ignore",
+			"image_name":          "ignore",
+			"image_version":       "1.0.1",
+			"replication_regions": "ignore",
+			"target_region": map[string]string{
+				"name": "useast",
+			},
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("expected config to reject invalid shared image gallery destination the defines both replication_regions and target_region block", err)
+	}
+	errorMessage := "`replicated_regions` can not be defined alongside `target_region`; you can defined a target_region for each destination region you wish to replicate to."
+	if !strings.Contains(err.Error(), errorMessage) {
+		t.Errorf("expected config to reject with error containing %s but got %s", errorMessage, err)
+	}
+}

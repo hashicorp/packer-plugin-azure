@@ -13,6 +13,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -1300,6 +1301,10 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 			if c.SharedGalleryImageVersionReplicaCount != 1 {
 				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("When using shallow replication the replica count can only be 1, leaving this value unset will default to 1"))
 			}
+		}
+		// Validate target region settings; it can be the deprecated replicated_regions attribute or multiple target_region blocks
+		if (len(c.SharedGalleryDestination.SigDestinationReplicationRegions) > 0) && (len(c.SharedGalleryDestination.SigDestinationTargetRegions) > 0) {
+			errs = packersdk.MultiErrorAppend(errs, errors.New("`replicated_regions` can not be defined alongside `target_region`; you can defined a target_region for each destination region you wish to replicate to."))
 		}
 	}
 	if c.SharedGalleryTimeout == 0 {

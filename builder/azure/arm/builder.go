@@ -215,11 +215,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			return nil, fmt.Errorf("a gallery image version for image name:version %s:%s already exists in gallery %s", b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationGalleryName)
 		}
 
-		// Validate target region settings; it can be the deprecated replicated_regsions attribute or multiple target_region blocks
-		if (len(b.config.SharedGalleryDestination.SigDestinationReplicationRegions) > 0) && (len(b.config.SharedGalleryDestination.SigDestinationTargetRegions) > 0) {
-			return nil, fmt.Errorf("`replicated_regions` can not be defined alongside `target_regions`; you can defined a target_region for each destination region you wish to replicate to.")
-		}
-
 		// TODO It would be better if validation could be handled in a central location
 		// Currently we rely on the build Resource Group being queried if used to get the build location
 		// So we have to do this validation afterwards
