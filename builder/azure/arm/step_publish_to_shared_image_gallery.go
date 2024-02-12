@@ -82,15 +82,20 @@ func getSigDestination(state multistep.StateBag) SharedImageGalleryDestination {
 	for _, v := range targetRegions {
 		replicationRegions = append(replicationRegions, v.Name)
 	}
+	var confidentialVMEncryptionType string = ""
+	if _, ok := state.GetOk(constants.ArmSharedImageGalleryDestinationConfidentialVMImageEncryptionType); ok {
+		confidentialVMEncryptionType = state.Get(constants.ArmSharedImageGalleryDestinationConfidentialVMImageEncryptionType).(string)
+	}
 
 	return SharedImageGalleryDestination{
-		SigDestinationSubscription:       subscription,
-		SigDestinationResourceGroup:      resourceGroup,
-		SigDestinationGalleryName:        galleryName,
-		SigDestinationImageName:          imageName,
-		SigDestinationImageVersion:       imageVersion,
-		SigDestinationReplicationRegions: replicationRegions,
-		SigDestinationStorageAccountType: storageAccountType,
+		SigDestinationSubscription:                      subscription,
+		SigDestinationResourceGroup:                     resourceGroup,
+		SigDestinationGalleryName:                       galleryName,
+		SigDestinationImageName:                         imageName,
+		SigDestinationImageVersion:                      imageVersion,
+		SigDestinationReplicationRegions:                replicationRegions,
+		SigDestinationStorageAccountType:                storageAccountType,
+		SigDestinationConfidentialVMImageEncryptionType: confidentialVMEncryptionType,
 		SigDestinationTargetRegions:      targetRegions,
 	}
 }
@@ -121,6 +126,52 @@ func (s *StepPublishToSharedImageGallery) publishToSig(ctx context.Context, args
 		s.error(err)
 		return "", err
 	}
+
+	if args.DiskEncryptionSetId != "" && args.SharedImageGallery.SigDestinationConfidentialVMImageEncryptionType == "" {
+		for index, targetRegion := range replicationRegions {
+			targetRegion.Encryption = &galleryimageversions.EncryptionImages{
+				OsDiskImage: &galleryimageversions.OSDiskImageEncryption{
+					DiskEncryptionSetId: &args.DiskEncryptionSetId,
+				},
+			}
+			replicationRegions[index] = targetRegion
+		}
+	} else if args.DiskEncryptionSetId != "" && args.SharedImageGallery.SigDestinationConfidentialVMImageEncryptionType == string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithCmk) {
+			confidentialVMEncryptionTypeEncryptedWithCmk := galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithCmk
+			for index, targetRegion := range replicationRegions {
+				targetRegion.Encryption = &galleryimageversions.EncryptionImages{
+					OsDiskImage: &galleryimageversions.OSDiskImageEncryption{
+						DiskEncryptionSetId: &args.DiskEncryptionSetId,
+						SecurityProfile: &galleryimageversions.OSDiskImageSecurityProfile{
+							ConfidentialVMEncryptionType: &confidentialVMEncryptionTypeEncryptedWithCmk,
+						},
+					},
+				}
+			replicationRegions[index] = targetRegion
+		}
+	} else if args.DiskEncryptionSetId == "" && (args.SharedImageGallery.SigDestinationConfidentialVMImageEncryptionType == string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedVMGuestStateOnlyWithPmk) || args.SharedImageGallery.SigDestinationConfidentialVMImageEncryptionType == string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithPmk)) {
+		var confidentialVMEncryptionType *galleryimageversions.ConfidentialVMEncryptionType
+		switch args.SharedImageGallery.SigDestinationConfidentialVMImageEncryptionType {
+		case string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedVMGuestStateOnlyWithPmk): 
+			withPmkOnly := galleryimageversions.ConfidentialVMEncryptionTypeEncryptedVMGuestStateOnlyWithPmk
+			confidentialVMEncryptionType = &withPmkOnly
+		case string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithPmk):
+			withPmk := galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithPmk
+			confidentialVMEncryptionType = &withPmk
+		default: 
+			return "", fmt.Errorf("fatal error: invalid confidential vm encryption type")
+		}
+		for index, targetRegion := range replicationRegions {
+			targetRegion.Encryption = &galleryimageversions.EncryptionImages{
+				OsDiskImage: &galleryimageversions.OSDiskImageEncryption{
+					SecurityProfile: &galleryimageversions.OSDiskImageSecurityProfile{
+						ConfidentialVMEncryptionType: confidentialVMEncryptionType,
+					},
+				},
+			}
+			replicationRegions[index] = targetRegion
+	}
+}
 
 	galleryImageVersion := galleryimageversions.GalleryImageVersion{
 		Location: args.Location,
@@ -208,7 +259,10 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 	s.say(fmt.Sprintf(" -> SIG image name                        : '%s'", sharedImageGallery.SigDestinationImageName))
 	s.say(fmt.Sprintf(" -> SIG image version                     : '%s'", sharedImageGallery.SigDestinationImageVersion))
 	if diskEncryptionSetId != "" {
-		s.say(fmt.Sprintf(" -> SIG Encryption Set : %s", diskEncryptionSetId))
+		s.say(fmt.Sprintf(" -> SIG Encryption Set                    : %s", diskEncryptionSetId))
+	}
+	if sharedImageGallery.SigDestinationConfidentialVMImageEncryptionType != "" {
+		s.say(fmt.Sprintf(" -> SIG Confidential VM Encryption Type   : %s", sharedImageGallery.SigDestinationConfidentialVMImageEncryptionType))
 	}
 	s.say(fmt.Sprintf(" -> SIG replication regions               : '%v'", sharedImageGallery.SigDestinationReplicationRegions))
 	s.say(fmt.Sprintf(" -> SIG storage account type              : '%s'", sharedImageGallery.SigDestinationStorageAccountType))

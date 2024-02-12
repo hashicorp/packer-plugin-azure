@@ -322,6 +322,57 @@ func TestPublishToSharedImageGalleryBuildAzureImageTargetRegions(t *testing.T) {
 
 }
 
+func TestStepPublishToSharedImageGalleryShouldPublishForConfidentialVMImageWithSig(t *testing.T) {
+	var actualPublishArgs PublishArgs
+	expectedPublishArgs := PublishArgs{
+		SubscriptionID:  "Unit Test: ManagedImageSubscription",
+		ReplicaCount:    1,
+		ReplicationMode: "Full",
+		Location:        "Unit Test: Location",
+		SourceID:        "Unit Test: VM ID",
+		SharedImageGallery: SharedImageGalleryDestination{
+			SigDestinationGalleryName:   "Unit Test: ManagedImageSharedGalleryName",
+			SigDestinationImageName:     "Unit Test: ManagedImageSharedGalleryImageName",
+			SigDestinationSubscription:  "Unit Test: ManagedImageSubscription",
+			SigDestinationImageVersion:  "Unit Test: ManagedImageSharedGalleryImageVersion",
+			SigDestinationResourceGroup: "Unit Test: ManagedImageSigPublishResourceGroup",
+			SigDestinationReplicationRegions: []string{
+				"ManagedImageSharedGalleryReplicationRegionA",
+				"ManagedImageSharedGalleryReplicationRegionB",
+			},
+			SigDestinationStorageAccountType: "Standard_LRS",
+			SigDestinationConfidentialVMImageEncryptionType: "EncryptedVMGuestStateOnlyWithPmk",
+		},
+		Tags: map[string]string{"tag01": "Unit Test: Tags"},
+	}
+	var testSubject = &StepPublishToSharedImageGallery{
+		publish: func(ctx context.Context, args PublishArgs) (string, error) {
+			actualPublishArgs = args
+			return "", nil
+		},
+		say:   func(message string) {},
+		error: func(e error) {},
+		toSIG: func() bool { return true },
+	}
+
+	stateBag := createTestStateBagStepPublishToSharedImageGallery(false)
+	stateBag.Put(constants.ArmSharedImageGalleryDestinationConfidentialVMImageEncryptionType, "EncryptedVMGuestStateOnlyWithPmk")
+	var result = testSubject.Run(context.Background(), stateBag)
+	if result != multistep.ActionContinue {
+		t.Fatalf("Expected the step to return 'ActionContinue', but got '%d'.", result)
+	}
+
+	if _, ok := stateBag.GetOk(constants.Error); ok == true {
+		t.Fatalf("Expected the step to not set stateBag['%s'], but it was.", constants.Error)
+	}
+
+	if diff := cmp.Diff(actualPublishArgs, expectedPublishArgs, []cmp.Option{
+		cmpopts.IgnoreUnexported(PublishArgs{}),
+	}...); diff != "" {
+		t.Fatalf("Unexpected diff %s", diff)
+	}
+}
+
 func createTestStateBagStepPublishToSharedImageGallery(managed bool) multistep.StateBag {
 	stateBag := new(multistep.BasicStateBag)
 

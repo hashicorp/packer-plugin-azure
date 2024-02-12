@@ -363,16 +363,17 @@ func (*FlatSharedImageGallery) HCL2Spec() map[string]hcldec.Spec {
 // FlatSharedImageGalleryDestination is an auto-generated flat version of SharedImageGalleryDestination.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatSharedImageGalleryDestination struct {
-	SigDestinationSubscription              *string            `mapstructure:"subscription" cty:"subscription" hcl:"subscription"`
-	SigDestinationResourceGroup             *string            `mapstructure:"resource_group" cty:"resource_group" hcl:"resource_group"`
-	SigDestinationGalleryName               *string            `mapstructure:"gallery_name" cty:"gallery_name" hcl:"gallery_name"`
-	SigDestinationImageName                 *string            `mapstructure:"image_name" cty:"image_name" hcl:"image_name"`
-	SigDestinationImageVersion              *string            `mapstructure:"image_version" cty:"image_version" hcl:"image_version"`
-	SigDestinationReplicationRegions        []string           `mapstructure:"replication_regions" cty:"replication_regions" hcl:"replication_regions"`
+	SigDestinationSubscription                      *string            `mapstructure:"subscription" cty:"subscription" hcl:"subscription"`
+	SigDestinationResourceGroup                     *string            `mapstructure:"resource_group" cty:"resource_group" hcl:"resource_group"`
+	SigDestinationGalleryName                       *string            `mapstructure:"gallery_name" cty:"gallery_name" hcl:"gallery_name"`
+	SigDestinationImageName                         *string            `mapstructure:"image_name" cty:"image_name" hcl:"image_name"`
+	SigDestinationImageVersion                      *string            `mapstructure:"image_version" cty:"image_version" hcl:"image_version"`
+	SigDestinationReplicationRegions                []string           `mapstructure:"replication_regions" cty:"replication_regions" hcl:"replication_regions"`
 	SigDestinationTargetRegions             []FlatTargetRegion `mapstructure:"target_region" cty:"target_region" hcl:"target_region"`
-	SigDestinationStorageAccountType        *string            `mapstructure:"storage_account_type" cty:"storage_account_type" hcl:"storage_account_type"`
-	SigDestinationSpecialized               *bool              `mapstructure:"specialized" cty:"specialized" hcl:"specialized"`
-	SigDestinationUseShallowReplicationMode *bool              `mapstructure:"use_shallow_replication" required:"false" cty:"use_shallow_replication" hcl:"use_shallow_replication"`
+	SigDestinationStorageAccountType                *string            `mapstructure:"storage_account_type" cty:"storage_account_type" hcl:"storage_account_type"`
+	SigDestinationSpecialized                       *bool              `mapstructure:"specialized" cty:"specialized" hcl:"specialized"`
+	SigDestinationUseShallowReplicationMode         *bool              `mapstructure:"use_shallow_replication" required:"false" cty:"use_shallow_replication" hcl:"use_shallow_replication"`
+	SigDestinationConfidentialVMImageEncryptionType *string  `mapstructure:"confidential_vm_image_encryption_type" required:"false" cty:"confidential_vm_image_encryption_type" hcl:"confidential_vm_image_encryption_type"`
 }
 
 // FlatMapstructure returns a new FlatSharedImageGalleryDestination.
@@ -387,16 +388,17 @@ func (*SharedImageGalleryDestination) FlatMapstructure() interface{ HCL2Spec() m
 // The decoded values from this spec will then be applied to a FlatSharedImageGalleryDestination.
 func (*FlatSharedImageGalleryDestination) HCL2Spec() map[string]hcldec.Spec {
 	s := map[string]hcldec.Spec{
-		"subscription":            &hcldec.AttrSpec{Name: "subscription", Type: cty.String, Required: false},
-		"resource_group":          &hcldec.AttrSpec{Name: "resource_group", Type: cty.String, Required: false},
-		"gallery_name":            &hcldec.AttrSpec{Name: "gallery_name", Type: cty.String, Required: false},
-		"image_name":              &hcldec.AttrSpec{Name: "image_name", Type: cty.String, Required: false},
-		"image_version":           &hcldec.AttrSpec{Name: "image_version", Type: cty.String, Required: false},
-		"replication_regions":     &hcldec.AttrSpec{Name: "replication_regions", Type: cty.List(cty.String), Required: false},
+		"subscription":                          &hcldec.AttrSpec{Name: "subscription", Type: cty.String, Required: false},
+		"resource_group":                        &hcldec.AttrSpec{Name: "resource_group", Type: cty.String, Required: false},
+		"gallery_name":                          &hcldec.AttrSpec{Name: "gallery_name", Type: cty.String, Required: false},
+		"image_name":                            &hcldec.AttrSpec{Name: "image_name", Type: cty.String, Required: false},
+		"image_version":                         &hcldec.AttrSpec{Name: "image_version", Type: cty.String, Required: false},
+		"replication_regions":                   &hcldec.AttrSpec{Name: "replication_regions", Type: cty.List(cty.String), Required: false},
 		"target_region":           &hcldec.BlockListSpec{TypeName: "target_region", Nested: hcldec.ObjectSpec((*FlatTargetRegion)(nil).HCL2Spec())},
-		"storage_account_type":    &hcldec.AttrSpec{Name: "storage_account_type", Type: cty.String, Required: false},
-		"specialized":             &hcldec.AttrSpec{Name: "specialized", Type: cty.Bool, Required: false},
-		"use_shallow_replication": &hcldec.AttrSpec{Name: "use_shallow_replication", Type: cty.Bool, Required: false},
+		"storage_account_type":                  &hcldec.AttrSpec{Name: "storage_account_type", Type: cty.String, Required: false},
+		"specialized":                           &hcldec.AttrSpec{Name: "specialized", Type: cty.Bool, Required: false},
+		"use_shallow_replication":               &hcldec.AttrSpec{Name: "use_shallow_replication", Type: cty.Bool, Required: false},
+		"confidential_vm_image_encryption_type": &hcldec.AttrSpec{Name: "confidential_vm_image_encryption_type", Type: cty.String, Required: false},
 	}
 	return s
 }

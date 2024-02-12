@@ -27,4 +27,6 @@
 - `use_shallow_replication` (bool) - Setting a `shared_image_gallery_replica_count` or any `replication_regions` is unnecessary for shallow builds, as they can only replicate to the build region and must have a replica count of 1
   Refer to [Shallow Replication](https://learn.microsoft.com/en-us/azure/virtual-machines/shared-image-galleries?tabs=azure-cli#shallow-replication) for details on when to use shallow replication mode.
 
+- `confidential_vm_image_encryption_type` (string) - The ConfidentialVM Image Encryption Type for the Shared Image Gallery Destination. This can be either "EncryptedVMGuestStateOnlyWithPmk" (enabled), "EncryptedWithPmk" (supported), or "EncryptedWithCmk" (DES enabled). This option is used to publish a VM image to a Shared Image Gallery as a confidential VM image.
+
 <!-- End of code generated from the comments of the SharedImageGalleryDestination struct in builder/azure/arm/config.go; -->
