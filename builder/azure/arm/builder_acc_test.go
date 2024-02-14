@@ -28,7 +28,6 @@ package arm
 // This is to avoid hitting the default go test timeout, especially in the shared image gallery test
 
 import (
-	"bytes"
 	_ "embed"
 	"fmt"
 	"os"
@@ -37,7 +36,6 @@ import (
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
-	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
 // TODO Add support for variable files with the acceptance testing module in packer-plugin-sdk
@@ -324,14 +322,6 @@ func deleteGalleryVersions(t *testing.T, subscriptionID string, resourceGroupNam
 			t.Logf("failed to delete Gallery Image Version %s:%s %s", galleryImageName, imageVersion, err)
 			t.Logf("Failed command output \n%s", string(deleteStdout))
 		}
-	}
-}
-
-func testUi() *packersdk.BasicUi {
-	return &packersdk.BasicUi{
-		Reader:      new(bytes.Buffer),
-		Writer:      new(bytes.Buffer),
-		ErrorWriter: new(bytes.Buffer),
 	}
 }
 
