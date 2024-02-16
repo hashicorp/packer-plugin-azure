@@ -57,6 +57,7 @@ const (
 	ArmSharedImageGalleryDestinationSubscription               string = "arm.ArmSharedImageGalleryDestinationSubscription"
 	ArmSharedImageGalleryDestinationSpecialized                string = "arm.ArmSharedImageGalleryDestinationSpecialized"
 	ArmSharedImageGalleryDestinationShallowReplication         string = "arm.ArmSharedImageGalleryDestinationShallowReplication"
+	ArmSharedImageGalleryDestinationTargetRegions              string = "arm.SharedImageGalleryTargetRegions"
 	ArmManagedImageSubscription                                string = "arm.ArmManagedImageSubscription"
 	ArmAsyncResourceGroupDelete                                string = "arm.AsyncResourceGroupDelete"
 	ArmManagedImageOSDiskSnapshotName                          string = "arm.ManagedImageOSDiskSnapshotName"

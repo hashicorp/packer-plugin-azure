@@ -215,33 +215,45 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			return nil, fmt.Errorf("a gallery image version for image name:version %s:%s already exists in gallery %s", b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationGalleryName)
 		}
 
-		// SIG requires that replication regions include the region in which the created image version resides
-		buildLocation := normalizeAzureRegion(b.stateBag.Get(constants.ArmLocation).(string))
-		foundMandatoryReplicationRegion := false
-		var normalizedReplicationRegions []string
-		for _, region := range b.config.SharedGalleryDestination.SigDestinationReplicationRegions {
-			// change region to lower-case and strip spaces
-			normalizedRegion := normalizeAzureRegion(region)
-			normalizedReplicationRegions = append(normalizedReplicationRegions, normalizedRegion)
-			if strings.EqualFold(normalizedRegion, buildLocation) {
-				foundMandatoryReplicationRegion = true
-				continue
+		if len(b.config.SharedGalleryDestination.SigDestinationTargetRegions) > 0 {
+			normalizedRegions := make([]TargetRegion, 0, len(b.config.SharedGalleryDestination.SigDestinationTargetRegions))
+			for _, tr := range b.config.SharedGalleryDestination.SigDestinationTargetRegions {
+				tr.Name = normalizeAzureRegion(tr.Name)
+				normalizedRegions = append(normalizedRegions, tr)
 			}
+			b.config.SharedGalleryDestination.SigDestinationTargetRegions = normalizedRegions
 		}
-		if foundMandatoryReplicationRegion == false {
-			b.config.SharedGalleryDestination.SigDestinationReplicationRegions = append(normalizedReplicationRegions, buildLocation)
-		}
-		// TODO It would be better if validation could be handled in a central location
-		// Currently we rely on the build Resource Group being queried if used to get the build location
-		// So we have to do this validation afterwards
-		// We should remove this logic builder and handle this logic via the `Step` pattern
-		if b.config.SharedGalleryDestination.SigDestinationUseShallowReplicationMode {
-			if len(b.config.SharedGalleryDestination.SigDestinationReplicationRegions) != 1 {
-				return nil, fmt.Errorf("when `use_shallow_replication` is enabled the value of `replicated_regions` must match the build region specified by `location` or match the region of `build_resource_group_name`.")
+
+		// Convert deprecated replication_regions to []TargetRegion
+		if len(b.config.SharedGalleryDestination.SigDestinationReplicationRegions) > 0 {
+			var foundMandatoryReplicationRegion bool
+			buildLocation := normalizeAzureRegion(b.stateBag.Get(constants.ArmLocation).(string))
+			normalizedRegions := make([]TargetRegion, 0, len(b.config.SharedGalleryDestination.SigDestinationReplicationRegions))
+			for _, region := range b.config.SharedGalleryDestination.SigDestinationReplicationRegions {
+				region := normalizeAzureRegion(region)
+				if strings.EqualFold(region, buildLocation) {
+					// backwards compatibility DiskEncryptionSetId was set on the global config not on the target region.
+					// Users using target_region blocks are responsible for setting the DES within the block
+					normalizedRegions = append(normalizedRegions, TargetRegion{Name: region, DiskEncryptionSetId: b.config.DiskEncryptionSetId})
+					foundMandatoryReplicationRegion = true
+					continue
+				}
+				normalizedRegions = append(normalizedRegions, TargetRegion{Name: region})
 			}
+			// SIG requires that replication regions include the region in which the created image version resides
+			if foundMandatoryReplicationRegion == false {
+				normalizedRegions = append(normalizedRegions, TargetRegion{Name: buildLocation, DiskEncryptionSetId: b.config.DiskEncryptionSetId})
+			}
+			b.config.SharedGalleryDestination.SigDestinationTargetRegions = normalizedRegions
 		}
-		b.stateBag.Put(constants.ArmManagedImageSharedGalleryReplicationRegions, b.config.SharedGalleryDestination.SigDestinationReplicationRegions)
+
+		if len(b.config.SharedGalleryDestination.SigDestinationTargetRegions) == 0 {
+			return nil, errors.New("no target destination region specified for the Shared Image Gallery; use target_region to specify at least the primary destination region for storing the image version.")
+		}
+
+		b.stateBag.Put(constants.ArmSharedImageGalleryDestinationTargetRegions, b.config.SharedGalleryDestination.SigDestinationTargetRegions)
 	}
+
 	sourceImageSpecialized := false
 	if b.config.SharedGallery.GalleryName != "" {
 		client := azureClient.GalleryImagesClient
