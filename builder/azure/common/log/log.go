@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 // log allows users to replicate Packer's behaviour with logging, i.e. mask
 // potential secrets by replacing them if they occur with `<sensitive>`.
 //
