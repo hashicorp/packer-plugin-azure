@@ -310,6 +310,10 @@ func TestPublishToSharedImageGalleryBuildAzureImageTargetRegions(t *testing.T) {
 				t.Errorf("expected configured region to contain same name as input %q but got %q", inputRegion.Name, tr.Name)
 			}
 
+			if (inputRegion.DiskEncryptionSetId == "") && (tr.Encryption != nil) {
+				t.Errorf("[%q]: expected configured region with no DES id to not contain encryption %q but got %v", tc.name, inputRegion.DiskEncryptionSetId, *tr.Encryption)
+			}
+
 			if (inputRegion.DiskEncryptionSetId != "") && (*tr.Encryption.OsDiskImage.DiskEncryptionSetId != inputRegion.DiskEncryptionSetId) {
 				t.Errorf("[%q]: expected configured region to contain set DES Id %q but got %q", tc.name, inputRegion.DiskEncryptionSetId, *tr.Encryption.OsDiskImage.DiskEncryptionSetId)
 			}

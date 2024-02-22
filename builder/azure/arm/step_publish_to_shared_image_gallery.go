@@ -101,11 +101,13 @@ func buildAzureImageTargetRegions(regions []TargetRegion) []galleryimageversions
 		name := r.Name
 		tr := galleryimageversions.TargetRegion{Name: name}
 
-		id := r.DiskEncryptionSetId
-		tr.Encryption = &galleryimageversions.EncryptionImages{
-			OsDiskImage: &galleryimageversions.OSDiskImageEncryption{
-				DiskEncryptionSetId: &id,
-			},
+		if r.DiskEncryptionSetId != "" {
+			id := r.DiskEncryptionSetId
+			tr.Encryption = &galleryimageversions.EncryptionImages{
+				OsDiskImage: &galleryimageversions.OSDiskImageEncryption{
+					DiskEncryptionSetId: &id,
+				},
+			}
 		}
 		targetRegions = append(targetRegions, tr)
 	}
