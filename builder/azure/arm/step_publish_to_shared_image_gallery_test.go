@@ -277,23 +277,70 @@ func TestStepPublishToSharedImageGalleryShouldPublishTargetRegions(t *testing.T)
 }
 
 func TestPublishToSharedImageGalleryBuildAzureImageTargetRegions(t *testing.T) {
+	type SIG = SharedImageGalleryDestination
 	tt := []struct {
 		name            string
-		in              []TargetRegion
+		in              SIG
 		expectedRegions int
 	}{
-		{name: "empty regions", in: nil, expectedRegions: 0},
-		{name: "empty regions non nil", in: make([]TargetRegion, 0), expectedRegions: 0},
-		{name: "one named region", in: []TargetRegion{{Name: "unit-test-location"}}, expectedRegions: 1},
-		{name: "two named region", in: []TargetRegion{{Name: "unit-test-location"}, {Name: "unit-test-location-2"}}, expectedRegions: 2},
+		{name: "empty regions", in: SIG{SigDestinationTargetRegions: nil}, expectedRegions: 0},
+		{name: "empty regions non nil", in: SIG{SigDestinationTargetRegions: make([]TargetRegion, 0)}, expectedRegions: 0},
+		{name: "one named region", in: SIG{SigDestinationTargetRegions: []TargetRegion{{Name: "unit-test-location"}}}, expectedRegions: 1},
+		{name: "two named region", in: SIG{SigDestinationTargetRegions: []TargetRegion{{Name: "unit-test-location"}, {Name: "unit-test-location-2"}}}, expectedRegions: 2},
 		{
 			name:            "named region with encryption",
-			in:              []TargetRegion{{Name: "unit-test-location", DiskEncryptionSetId: "boguskey"}},
+			in:              SIG{SigDestinationTargetRegions: []TargetRegion{{Name: "unit-test-location", DiskEncryptionSetId: "boguskey"}}},
 			expectedRegions: 1,
 		},
 		{
 			name:            "two named region with encryption",
-			in:              []TargetRegion{{Name: "unit-test-location", DiskEncryptionSetId: "boguskey"}, {Name: "unit-test-location-west", DiskEncryptionSetId: "boguskeywest"}},
+			in:              SIG{SigDestinationTargetRegions: []TargetRegion{{Name: "unit-test-location", DiskEncryptionSetId: "boguskey"}, {Name: "unit-test-location-west", DiskEncryptionSetId: "boguskeywest"}}},
+			expectedRegions: 2,
+		},
+		{
+			name: "one named region with cvm paas key encryption",
+			in: SIG{
+				SigDestinationTargetRegions:                     []TargetRegion{{Name: "unit-test-location"}},
+				SigDestinationConfidentialVMImageEncryptionType: "EncryptedVMGuestStateOnlyWithPmk",
+			},
+			expectedRegions: 1,
+		},
+		{
+			name: "two named region with cvm paas key encryption",
+			in: SIG{
+				SigDestinationTargetRegions:                     []TargetRegion{{Name: "unit-test-location"}, {Name: "unit-test-location-2"}},
+				SigDestinationConfidentialVMImageEncryptionType: "EncryptedVMGuestStateOnlyWithPmk",
+			},
+			expectedRegions: 2,
+		},
+		{
+			name: "one named region with cvm des key encryption",
+			in: SIG{
+				SigDestinationTargetRegions: []TargetRegion{
+					{
+						Name:                "unit-test-location",
+						DiskEncryptionSetId: "boguskey",
+					},
+				},
+				SigDestinationConfidentialVMImageEncryptionType: "EncryptedWithCmk",
+			},
+			expectedRegions: 1,
+		},
+		{
+			name: "two named region with cvm des key encryption",
+			in: SIG{
+				SigDestinationTargetRegions: []TargetRegion{
+					{
+						Name:                "unit-test-location",
+						DiskEncryptionSetId: "boguskey",
+					},
+					{
+						Name:                "unit-test-location-west",
+						DiskEncryptionSetId: "boguskeywest",
+					},
+				},
+				SigDestinationConfidentialVMImageEncryptionType: "EncryptedWithCmk",
+			},
 			expectedRegions: 2,
 		},
 	}
@@ -301,21 +348,27 @@ func TestPublishToSharedImageGalleryBuildAzureImageTargetRegions(t *testing.T) {
 	for _, tc := range tt {
 		got := buildAzureImageTargetRegions(tc.in)
 		if len(got) != tc.expectedRegions {
-			t.Errorf("expected configureTargetRegion() to have same region count: got %d expected %d", len(tc.in), tc.expectedRegions)
+			t.Errorf("expected configureTargetRegion() to have same region count: got %d expected %d", len(tc.in.SigDestinationTargetRegions), tc.expectedRegions)
 		}
 
 		for i, tr := range got {
-			inputRegion := tc.in[i]
+			inputRegion := tc.in.SigDestinationTargetRegions[i]
 			if tr.Name != inputRegion.Name {
 				t.Errorf("expected configured region to contain same name as input %q but got %q", inputRegion.Name, tr.Name)
 			}
 
-			if (inputRegion.DiskEncryptionSetId == "") && (tr.Encryption != nil) {
+			if (inputRegion.DiskEncryptionSetId == "") && (tr.Encryption != nil) && (tc.in.SigDestinationConfidentialVMImageEncryptionType == "") {
 				t.Errorf("[%q]: expected configured region with no DES id to not contain encryption %q but got %v", tc.name, inputRegion.DiskEncryptionSetId, *tr.Encryption)
 			}
 
-			if (inputRegion.DiskEncryptionSetId != "") && (*tr.Encryption.OsDiskImage.DiskEncryptionSetId != inputRegion.DiskEncryptionSetId) {
-				t.Errorf("[%q]: expected configured region to contain set DES Id %q but got %q", tc.name, inputRegion.DiskEncryptionSetId, *tr.Encryption.OsDiskImage.DiskEncryptionSetId)
+			if tc.in.SigDestinationConfidentialVMImageEncryptionType != "" {
+				if (inputRegion.DiskEncryptionSetId != "") && (*tr.Encryption.OsDiskImage.SecurityProfile.SecureVMDiskEncryptionSetId != inputRegion.DiskEncryptionSetId) {
+					t.Errorf("[%q]: expected configured region to contain set DES Id %q but got %q", tc.name, inputRegion.DiskEncryptionSetId, *tr.Encryption.OsDiskImage.SecurityProfile.SecureVMDiskEncryptionSetId)
+				}
+			} else {
+				if (inputRegion.DiskEncryptionSetId != "") && (*tr.Encryption.OsDiskImage.DiskEncryptionSetId != inputRegion.DiskEncryptionSetId) {
+					t.Errorf("[%q]: expected configured region to contain set DES Id %q but got %q", tc.name, inputRegion.DiskEncryptionSetId, *tr.Encryption.OsDiskImage.DiskEncryptionSetId)
+				}
 			}
 		}
 	}
@@ -340,7 +393,11 @@ func TestStepPublishToSharedImageGalleryShouldPublishForConfidentialVMImageWithS
 				"ManagedImageSharedGalleryReplicationRegionA",
 				"ManagedImageSharedGalleryReplicationRegionB",
 			},
-			SigDestinationStorageAccountType: "Standard_LRS",
+			SigDestinationTargetRegions: []TargetRegion{
+				{Name: "ManagedImageSharedGalleryReplicationRegionA"},
+				{Name: "ManagedImageSharedGalleryReplicationRegionB"},
+			},
+			SigDestinationStorageAccountType:                "Standard_LRS",
 			SigDestinationConfidentialVMImageEncryptionType: "EncryptedVMGuestStateOnlyWithPmk",
 		},
 		Tags: map[string]string{"tag01": "Unit Test: Tags"},
