@@ -103,7 +103,7 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 		}
 
 	} else {
-		ui.Say("\nDeleting Virtual Machine deployment and its attatched resources...")
+		ui.Say("\nDeleting Virtual Machine deployment and its attached resources...")
 		// Get image disk details before deleting the image; otherwise we won't be able to
 		// delete the disk as the image request will return a 404
 		computeName := state.Get(constants.ArmComputeName).(string)
