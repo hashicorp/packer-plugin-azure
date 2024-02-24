@@ -250,7 +250,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		if len(b.config.SharedGalleryDestination.SigDestinationTargetRegions) == 0 {
 			buildLocation := normalizeAzureRegion(b.stateBag.Get(constants.ArmLocation).(string))
 			b.config.SharedGalleryDestination.SigDestinationTargetRegions = []TargetRegion{{Name: buildLocation, DiskEncryptionSetId: b.config.DiskEncryptionSetId}}
-			ui.Say(fmt.Sprintf("WARNING! No target region was set for the Shared Image Gallery. Adding %q as the primary target region for now but this may change in the future.", buildLocation))
 		}
 
 		b.stateBag.Put(constants.ArmSharedImageGalleryDestinationTargetRegions, b.config.SharedGalleryDestination.SigDestinationTargetRegions)
