@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
+	"github.com/hashicorp/packer-plugin-sdk/communicator"
 )
 
 func TestStateBagShouldBePopulatedExpectedValues(t *testing.T) {
@@ -145,4 +146,37 @@ SharedImageGalleryReplicatedRegions: fake-region-1, fake-region-2
 	if v, ok := artifact.State(constants.ArmManagedImageSharedGalleryReplicationRegions).([]string); !ok {
 		t.Errorf("expected artifact.State(%s) to return a value for the expected type but it returned %#v", constants.ArmManagedImageSharedGalleryReplicationRegions, v)
 	}
+}
+
+func TestBuilderConfig_SSHHost(t *testing.T) {
+	var testSubject Builder
+	builderValues := getArmBuilderConfiguration()
+	builderValues["communicator"] = "ssh"
+	builderValues["ssh_username"] = "override_username"
+	builderValues["ssh_host"] = "172.10.10.3"
+	_, _, err := testSubject.Prepare(builderValues)
+	if err != nil {
+		t.Fatalf("failed to prepare: %s", err)
+
+	}
+
+	//inject Fake IP into state for SSHHost
+	testSubject.stateBag.Put(constants.SSHHost, "127.0.0.1")
+
+	if _, ok := testSubject.stateBag.GetOk(constants.SSHHost); ok == false {
+		t.Fatal("Expected the state bag to contain '127.0.0.1' for SSHHost but it did not.")
+
+	}
+
+	sshHostFn := communicator.CommHost(testSubject.config.Comm.SSHHost, constants.SSHHost)
+	host, err := sshHostFn(testSubject.stateBag)
+	if err != nil {
+		t.Errorf("Unexpected error occurred obtaining ssh_host: %s", err)
+
+	}
+	if host != "172.10.10.3" {
+		t.Errorf("Expected custom ssh_host to take precedences over state value but it got %q", host)
+
+	}
+
 }
