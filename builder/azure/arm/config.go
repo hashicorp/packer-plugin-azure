@@ -128,11 +128,8 @@ type SharedImageGalleryDestination struct {
 func (d SharedImageGalleryDestination) ValidateShallowReplicationRegion() error {
 
 	n := len(d.SigDestinationTargetRegions) | len(d.SigDestinationReplicationRegions)
-	if n == 0 {
-		return errors.New("when `use_shallow_replication` is set there must be one destination region must match the build location of the Shared Image Gallery.")
-	}
 	if n > 1 {
-		return errors.New("when `use_shallow_replication` there can only be one destination region must match the build location of the Shared Image Gallery.")
+		return errors.New("when `use_shallow_replication` there can only be one destination region set matching the build location of the Shared Image Gallery.")
 	}
 	return nil
 }
