@@ -219,7 +219,7 @@ func TestBuildEncryptedWindows(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = testSubject.SetDiskEncryptionSetID("encrypted", nil)
+	err = testSubject.SetDiskEncryptionSetID("encrypted", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

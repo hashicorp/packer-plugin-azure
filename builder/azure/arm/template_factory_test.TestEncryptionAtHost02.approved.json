@@ -143,7 +143,6 @@
             }
           }
         },
-        "securityProfile": {},
         "storageProfile": {
           "imageReference": {
             "offer": "ignored00",

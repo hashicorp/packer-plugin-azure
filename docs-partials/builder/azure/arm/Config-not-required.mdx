@@ -402,6 +402,8 @@
 
 - `security_type` (string) - Specifies the type of security to use for the VM. "TrustedLaunch" or "ConfidentialVM"
 
+- `security_encryption_type` (string) - Specifies the encryption type to use for the Confidential VM. "DiskWithVMGuestState" or "VMGuestStateOnly"
+
 - `async_resourcegroup_delete` (bool) - If you want packer to delete the
   temporary resource group asynchronously set this value. It's a boolean
   value and defaults to false. Important Setting this true means that

@@ -753,6 +753,7 @@ func TestConfidentialVM01(t *testing.T) {
 		"secure_boot_enabled":       "true",
 		"vtpm_enabled":              "true",
 		"security_type":             "ConfidentialVM",
+		"security_encryption_type":  "DiskWithVMGuestState",
 		"disk_encryption_set_id":    "encrypted",
 		"build_resource_group_name": "rg_name",
 		"shared_image_gallery_destination": map[string]interface{}{

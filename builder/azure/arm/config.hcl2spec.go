@@ -95,6 +95,7 @@ type FlatConfig struct {
 	EncryptionAtHost                           *bool                              `mapstructure:"encryption_at_host" required:"false" cty:"encryption_at_host" hcl:"encryption_at_host"`
 	VTpmEnabled                                *bool                              `mapstructure:"vtpm_enabled" required:"false" cty:"vtpm_enabled" hcl:"vtpm_enabled"`
 	SecurityType                               *string                            `mapstructure:"security_type" required:"false" cty:"security_type" hcl:"security_type"`
+	SecurityEncryptionType                     *string                            `mapstructure:"security_encryption_type" required:"false" cty:"security_encryption_type" hcl:"security_encryption_type"`
 	Type                                       *string                            `mapstructure:"communicator" cty:"communicator" hcl:"communicator"`
 	PauseBeforeConnect                         *string                            `mapstructure:"pause_before_connecting" cty:"pause_before_connecting" hcl:"pause_before_connecting"`
 	SSHHost                                    *string                            `mapstructure:"ssh_host" cty:"ssh_host" hcl:"ssh_host"`
@@ -242,6 +243,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"encryption_at_host":                      &hcldec.AttrSpec{Name: "encryption_at_host", Type: cty.Bool, Required: false},
 		"vtpm_enabled":                            &hcldec.AttrSpec{Name: "vtpm_enabled", Type: cty.Bool, Required: false},
 		"security_type":                           &hcldec.AttrSpec{Name: "security_type", Type: cty.String, Required: false},
+		"security_encryption_type":                &hcldec.AttrSpec{Name: "security_encryption_type", Type: cty.String, Required: false},
 		"communicator":                            &hcldec.AttrSpec{Name: "communicator", Type: cty.String, Required: false},
 		"pause_before_connecting":                 &hcldec.AttrSpec{Name: "pause_before_connecting", Type: cty.String, Required: false},
 		"ssh_host":                                &hcldec.AttrSpec{Name: "ssh_host", Type: cty.String, Required: false},

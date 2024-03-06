@@ -625,6 +625,9 @@ type Config struct {
 	// Specifies the type of security to use for the VM. "TrustedLaunch" or "ConfidentialVM"
 	SecurityType string `mapstructure:"security_type" required:"false"`
 
+	// Specifies the encryption type to use for the Confidential VM. "DiskWithVMGuestState" or "VMGuestStateOnly"
+	SecurityEncryptionType string `mapstructure:"security_encryption_type" required:"false"`
+
 	// Runtime Values
 	UserName               string `mapstructure-to-hcl2:",skip"`
 	Password               string `mapstructure-to-hcl2:",skip"`
@@ -1061,6 +1064,10 @@ func provideDefaultValues(c *Config) {
 
 	if c.BuildKeyVaultSecretName == "" {
 		c.BuildKeyVaultSecretName = DefaultSecretName
+	}
+
+	if c.SecurityType != "" && c.SecurityEncryptionType == "" {
+		c.SecurityEncryptionType = string(virtualmachines.SecurityEncryptionTypesVMGuestStateOnly)
 	}
 
 	_ = c.ClientConfig.SetDefaultValues()
