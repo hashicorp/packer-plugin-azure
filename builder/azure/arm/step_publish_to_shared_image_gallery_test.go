@@ -285,7 +285,8 @@ func TestPublishToSharedImageGalleryBuildAzureImageTargetRegions(t *testing.T) {
 		{name: "empty regions", in: nil, expectedRegions: 0},
 		{name: "empty regions non nil", in: make([]TargetRegion, 0), expectedRegions: 0},
 		{name: "one named region", in: []TargetRegion{{Name: "unit-test-location"}}, expectedRegions: 1},
-		{name: "two named region", in: []TargetRegion{{Name: "unit-test-location"}, {Name: "unit-test-location-2"}}, expectedRegions: 2},
+		{name: "two named regions", in: []TargetRegion{{Name: "unit-test-location"}, {Name: "unit-test-location-2"}}, expectedRegions: 2},
+		{name: "two named regions with replica counts", in: []TargetRegion{{Name: "unit-test-location", ReplicaCount: 1}, {Name: "unit-test-location-2", ReplicaCount: 2}}, expectedRegions: 2},
 		{
 			name:            "named region with encryption",
 			in:              []TargetRegion{{Name: "unit-test-location", DiskEncryptionSetId: "boguskey"}},
@@ -317,6 +318,15 @@ func TestPublishToSharedImageGalleryBuildAzureImageTargetRegions(t *testing.T) {
 			if (inputRegion.DiskEncryptionSetId != "") && (*tr.Encryption.OsDiskImage.DiskEncryptionSetId != inputRegion.DiskEncryptionSetId) {
 				t.Errorf("[%q]: expected configured region to contain set DES Id %q but got %q", tc.name, inputRegion.DiskEncryptionSetId, *tr.Encryption.OsDiskImage.DiskEncryptionSetId)
 			}
+
+			if (inputRegion.ReplicaCount != 0) && (*tr.RegionalReplicaCount != inputRegion.ReplicaCount) {
+				t.Errorf("[%q]: expected configured region to contain replica count of %d but got %d", tc.name, inputRegion.ReplicaCount, *tr.RegionalReplicaCount)
+			}
+			// default replica count
+			if (inputRegion.ReplicaCount == 0) && (*tr.RegionalReplicaCount != 1) {
+				t.Errorf("[%q]: expected configured region to with no replica count to default to 1 but got %d", tc.name, *tr.RegionalReplicaCount)
+			}
+
 		}
 	}
 
