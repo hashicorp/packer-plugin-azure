@@ -146,6 +146,8 @@ type TargetRegion struct {
 	// the replication of encrypted disks across regions. CMKs must
 	// already exist within the target regions.
 	DiskEncryptionSetId string `mapstructure:"disk_encryption_set_id"`
+	// Number of replicas in this region. Default: 1
+	ReplicaCount int64 `mapstructure:"replicas"`
 }
 
 type Spot struct {

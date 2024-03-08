@@ -109,6 +109,11 @@ func buildAzureImageTargetRegions(sig SharedImageGalleryDestination) []galleryim
 
 		encryption := buildAzureImageTargetRegionsWithEncryption(r.DiskEncryptionSetId, sig.SigDestinationConfidentialVMImageEncryptionType)
 		tr.Encryption = encryption
+		replicas := r.ReplicaCount
+		if replicas <= 0 {
+			replicas = 1
+		}
+		tr.RegionalReplicaCount = &replicas
 		targetRegions = append(targetRegions, tr)
 	}
 	return targetRegions
