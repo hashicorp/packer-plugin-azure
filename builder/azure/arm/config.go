@@ -27,6 +27,7 @@ import (
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 	"github.com/masterzen/winrm"
 
 	azcommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common"
@@ -124,7 +125,7 @@ type SharedImageGalleryDestination struct {
 	// Refer to [Shallow Replication](https://learn.microsoft.com/en-us/azure/virtual-machines/shared-image-galleries?tabs=azure-cli#shallow-replication) for details on when to use shallow replication mode.
 	SigDestinationUseShallowReplicationMode bool `mapstructure:"use_shallow_replication" required:"false"`
 
-	// The ConfidentialVM Image Encryption Type for the Shared Image Gallery Destination. This can be either "EncryptedVMGuestStateOnlyWithPmk" (enabled), "EncryptedWithPmk" (supported), or "EncryptedWithCmk" (DES enabled). This option is used to publish a VM image to a Shared Image Gallery as a confidential VM image.
+	// The ConfidentialVM Image Encryption Type for the Shared Image Gallery Destination. This can be either "EncryptedVMGuestStateOnlyWithPmk", "EncryptedWithPmk", or "EncryptedWithCmk" (encrypted with DES). This option is used to publish a VM image to a Shared Image Gallery as a confidential VM image.
 	SigDestinationConfidentialVMImageEncryptionType string `mapstructure:"confidential_vm_image_encryption_type" required:"false"`
 }
 
@@ -1066,7 +1067,7 @@ func provideDefaultValues(c *Config) {
 		c.BuildKeyVaultSecretName = DefaultSecretName
 	}
 
-	if c.SecurityType != "" && c.SecurityEncryptionType == "" {
+	if c.SecurityType == constants.ConfidentialVM && c.SecurityEncryptionType == "" {
 		c.SecurityEncryptionType = string(virtualmachines.SecurityEncryptionTypesVMGuestStateOnly)
 	}
 
@@ -1181,6 +1182,10 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	if isImageUrl && c.ManagedImageResourceGroupName != "" {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A managed image must be created from a managed image, it cannot be created from a VHD."))
+	}
+
+	if (c.CaptureContainerName != "" || c.CaptureNamePrefix != "" || c.ManagedImageName != "") && c.SecurityType == constants.ConfidentialVM {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Setting a security type of 'ConfidentialVM' is not allowed when building a VHD or creating a Managed Image, only when publishing directly to Shared Image Gallery"))
 	}
 
 	if c.ManagedImageName != "" || c.ManagedImageResourceGroupName != "" {
@@ -1301,6 +1306,18 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 	}
 
+	if c.SecurityType != "" {
+		if ok, err := assertAllowedSecurityType(c.SecurityType); !ok {
+			errs = packersdk.MultiErrorAppend(errs, err)
+		}
+	}
+
+	if c.SecurityEncryptionType != "" {
+		if ok, err := assertAllowedSecurityEncryptionType(c.SecurityEncryptionType); !ok {
+			errs = packersdk.MultiErrorAppend(errs, err)
+		}
+	}
+
 	validImageVersion := regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`)
 	if c.SharedGalleryDestination.SigDestinationGalleryName != "" {
 		if c.SharedGalleryDestination.SigDestinationResourceGroup == "" {
@@ -1331,6 +1348,34 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 			if c.SharedGalleryImageVersionReplicaCount != 1 {
 				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("When using shallow replication the replica count can only be 1, leaving this value unset will default to 1"))
+			}
+
+		}
+
+		if c.SharedGalleryDestination.SigDestinationConfidentialVMImageEncryptionType != "" {
+			if ok, err := assertAllowedSigDestinationConfidentialVMImageEncryptionType(c.SharedGalleryDestination.SigDestinationConfidentialVMImageEncryptionType); !ok {
+				errs = packersdk.MultiErrorAppend(errs, err)
+			}
+
+			// Ensure no disk encryption set is set when not using CMK encryption
+			for _, r := range c.SharedGalleryDestination.SigDestinationTargetRegions {
+				if r.DiskEncryptionSetId != "" && c.SharedGalleryDestination.SigDestinationConfidentialVMImageEncryptionType != string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithCmk) {
+					errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("confidential_vm_image_encryption_type must be set to \"EncryptedWithCmk\" when passing a disk_encryption_set_id in the target_region block"))
+				}
+			}
+
+			// Ensure if the encryption type is set to EncryptedWithCmk, and the encryption type is set to ConfidentialVM, that the a disk encryption id is set
+			if c.SecurityType == constants.ConfidentialVM && c.SharedGalleryDestination.SigDestinationConfidentialVMImageEncryptionType == string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithCmk) {
+				if c.DiskEncryptionSetId == "" {
+					errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("when using a confidential vm as source to an cvm image version and a confidential_vm_image_encryption_type of \"EncryptedWithCmk\", the source cvm must have a disk_encryption_set_id set"))
+				} else {
+					// Ensure if the encryption type is set to EncryptedWithCmk, the encryption type is set to ConfidentialVM, and the source vm disk encryption id is set, that the disk encryption id in each of the target regions is set
+					for _, r := range c.SharedGalleryDestination.SigDestinationTargetRegions {
+						if r.DiskEncryptionSetId == "" {
+							errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("when using a confidential vm as source to an cvm image version and a confidential_vm_image_encryption_type of \"EncryptedWithCmk\", the target region %q must have a disk_encryption_set_id set", r.Name))
+						}
+					}
+				}
 			}
 
 		}
@@ -1381,6 +1426,18 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	if c.CustomData != "" && c.CustomDataFile != "" {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Only one of custom_data or custom_data_file can be specified."))
+	}
+
+	// Validate that the security encryption type is not set if the security type is not set to ConfidentialVM
+	if c.SecurityEncryptionType != "" && c.SecurityType != constants.ConfidentialVM {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("security_encryption_type must be unset if the security_type is not set to \"ConfidentialVM\"."))
+	}
+
+	// Validate the matching of the security encryption type and the sig confidential VM encryption type
+	if c.SecurityEncryptionType != "" && c.SharedGalleryDestination.SigDestinationConfidentialVMImageEncryptionType != "" {
+		if ok, err := assertMatchingCVMEncryptionTypes(c.SecurityEncryptionType, c.SharedGalleryDestination.SigDestinationConfidentialVMImageEncryptionType); !ok {
+			errs = packersdk.MultiErrorAppend(errs, err)
+		}
 	}
 
 	/////////////////////////////////////////////
@@ -1534,6 +1591,67 @@ func assertResourceGroupName(rgn, setting string) (bool, error) {
 		return false, fmt.Errorf("The setting %s must match the regular expression %q, and not end with a '-' or '.'.", setting, validResourceGroupNameRe)
 	}
 	return true, nil
+}
+
+func assertAllowedSecurityType(securityType string) (bool, error) {
+	switch securityType {
+	case constants.TrustedLaunch:
+		return true, nil
+	case constants.ConfidentialVM:
+		return true, nil
+	default:
+		return false, fmt.Errorf("The %s %q must match either %q or %q.", "security_type", securityType, constants.TrustedLaunch, constants.ConfidentialVM)
+	}
+}
+
+func assertAllowedSecurityEncryptionType(securityEncryptionType string) (bool, error) {
+	switch securityEncryptionType {
+	case string(virtualmachines.SecurityEncryptionTypesVMGuestStateOnly):
+		return true, nil
+	case string(virtualmachines.SecurityEncryptionTypesDiskWithVMGuestState):
+		return true, nil
+	default:
+		return false, fmt.Errorf("The %s %q must match either %q or %q.", "security_encryption_type", securityEncryptionType, string(virtualmachines.SecurityEncryptionTypesVMGuestStateOnly), string(virtualmachines.SecurityEncryptionTypesDiskWithVMGuestState))
+	}
+}
+
+func assertAllowedSigDestinationConfidentialVMImageEncryptionType(sigDestinationConfidentialVMImageEncryptionType string) (bool, error) {
+	switch sigDestinationConfidentialVMImageEncryptionType {
+	case string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithCmk):
+		return true, nil
+	case string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedVMGuestStateOnlyWithPmk):
+		return true, nil
+	case string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithPmk):
+		return true, nil
+	default:
+		return false, fmt.Errorf("The shared_image_gallery_destination setting %s must match either %q, %q or %q.", "confidential_vm_image_encryption_type", string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithCmk), string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedVMGuestStateOnlyWithPmk), string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithPmk))
+	}
+}
+
+func assertMatchingCVMEncryptionTypes(securityEncryptionType, sigDestinationConfidentialVMImageEncryptionType string) (bool, error) {
+	switch securityEncryptionType {
+	// DiskWithVMGuestState needs to match EncryptedWithPMK or EncryptedWithCMK
+	case string(virtualmachines.SecurityEncryptionTypesDiskWithVMGuestState):
+		switch sigDestinationConfidentialVMImageEncryptionType {
+		case string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithPmk):
+			return true, nil
+		case string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithCmk):
+			return true, nil
+		default:
+			return false, fmt.Errorf("The security_encryption_type setting %q does not match the shared_image_gallery_destination confidential_vm_image_encryption_type setting %q. security_encryption type \"DiskWithVMGuestState\" needs to match \"EncryptedWithPMK\" or \"EncryptedWithCMK\".", securityEncryptionType, sigDestinationConfidentialVMImageEncryptionType)
+		}
+	// VMGuestStateOnly needs to match EncryptedVMGuestStateOnlyWithPmk
+	case string(virtualmachines.SecurityEncryptionTypesVMGuestStateOnly):
+		switch sigDestinationConfidentialVMImageEncryptionType {
+		case string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedVMGuestStateOnlyWithPmk):
+			return true, nil
+		default:
+			return false, fmt.Errorf("The security_encryption_type setting %q does not match the shared_image_gallery_destination confidential_vm_image_encryption_type setting %q. security_encryption type \"VMGuestStateOnly\" needs to match \"EncryptedVMGuestStateOnlyWithPmk\".", securityEncryptionType, sigDestinationConfidentialVMImageEncryptionType)
+		}
+	// Default case, errors
+	default:
+		return false, fmt.Errorf("Fatal error, security_encryption_type %q does not match any of the expected values", securityEncryptionType)
+	}
 }
 
 func isValidAzureName(re *regexp.Regexp, rgn string) bool {
