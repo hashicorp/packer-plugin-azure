@@ -303,7 +303,10 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			NewStepGetSourceImageName(azureClient, ui, &b.config, generatedData),
 			NewStepCreateResourceGroup(azureClient, ui),
 		}
-		if b.config.BuildKeyVaultName == "" {
+
+		if b.config.SkipCreateBuildKeyVault {
+			ui.Message("Skipping build keyvault creation...")
+		} else if b.config.BuildKeyVaultName == "" {
 			keyVaultDeploymentName := b.stateBag.Get(constants.ArmKeyVaultDeploymentName).(string)
 			steps = append(steps,
 				NewStepValidateTemplate(azureClient, ui, &b.config, keyVaultDeploymentName, GetCommunicatorSpecificKeyVaultDeployment),
@@ -330,9 +333,14 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 			steps = append(steps, NewStepCertificateInKeyVault(azureClient, ui, &b.config, secret, b.config.WinrmExpirationTime))
 		}
+
+		if !b.config.SkipCreateBuildKeyVault {
+			steps = append(steps,
+				NewStepGetCertificate(azureClient, ui),
+				NewStepSetCertificate(&b.config, ui),
+			)
+		}
 		steps = append(steps,
-			NewStepGetCertificate(azureClient, ui),
-			NewStepSetCertificate(&b.config, ui),
 			NewStepValidateTemplate(azureClient, ui, &b.config, deploymentName, getVirtualMachineDeploymentFunction),
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, getVirtualMachineDeploymentFunction, VirtualMachineTemplate),
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),

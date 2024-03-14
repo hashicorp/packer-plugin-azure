@@ -69,6 +69,7 @@ type FlatConfig struct {
 	BuildKeyVaultName                          *string                            `mapstructure:"build_key_vault_name" cty:"build_key_vault_name" hcl:"build_key_vault_name"`
 	BuildKeyVaultSecretName                    *string                            `mapstructure:"build_key_vault_secret_name" cty:"build_key_vault_secret_name" hcl:"build_key_vault_secret_name"`
 	BuildKeyVaultSKU                           *string                            `mapstructure:"build_key_vault_sku" cty:"build_key_vault_sku" hcl:"build_key_vault_sku"`
+	SkipCreateBuildKeyVault 				   *bool 							  `mapstructure:"skip_create_build_key_vault" cty:"skip_create_build_key_vault" hcl:"skip_create_build_key_vault"`
 	DiskEncryptionSetId                        *string                            `mapstructure:"disk_encryption_set_id" cty:"disk_encryption_set_id" hcl:"disk_encryption_set_id"`
 	PrivateVirtualNetworkWithPublicIp          *bool                              `mapstructure:"private_virtual_network_with_public_ip" required:"false" cty:"private_virtual_network_with_public_ip" hcl:"private_virtual_network_with_public_ip"`
 	VirtualNetworkName                         *string                            `mapstructure:"virtual_network_name" required:"false" cty:"virtual_network_name" hcl:"virtual_network_name"`
@@ -215,6 +216,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"build_key_vault_name":                    &hcldec.AttrSpec{Name: "build_key_vault_name", Type: cty.String, Required: false},
 		"build_key_vault_secret_name":             &hcldec.AttrSpec{Name: "build_key_vault_secret_name", Type: cty.String, Required: false},
 		"build_key_vault_sku":                     &hcldec.AttrSpec{Name: "build_key_vault_sku", Type: cty.String, Required: false},
+		"skip_create_build_key_vault":             &hcldec.AttrSpec{Name: "skip_create_build_key_vault", Type: cty.String, Required: false},
 		"disk_encryption_set_id":                  &hcldec.AttrSpec{Name: "disk_encryption_set_id", Type: cty.String, Required: false},
 		"private_virtual_network_with_public_ip":  &hcldec.AttrSpec{Name: "private_virtual_network_with_public_ip", Type: cty.Bool, Required: false},
 		"virtual_network_name":                    &hcldec.AttrSpec{Name: "virtual_network_name", Type: cty.String, Required: false},
