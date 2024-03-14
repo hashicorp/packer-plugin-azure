@@ -83,7 +83,7 @@ func TestStepCreateImage_Run(t *testing.T) {
 			}
 
 			if len(*actualImage.Properties.StorageProfile.DataDisks) != 3 {
-				t.Fatalf("Expected 3 data disks attatched to created image got %d", len(*actualImage.Properties.StorageProfile.DataDisks))
+				t.Fatalf("Expected 3 data disks attached to created image got %d", len(*actualImage.Properties.StorageProfile.DataDisks))
 			}
 			if actualImage.Properties.StorageProfile.OsDisk.OsType != "Linux" {
 				t.Fatalf("Expected actual image to be Linux, got %s", actualImage.Properties.StorageProfile.OsDisk.OsType)

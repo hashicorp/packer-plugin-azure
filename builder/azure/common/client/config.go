@@ -33,7 +33,7 @@ var NullModelSDKErr = fmt.Errorf("Unexpected SDK response, please open an issue 
 // one of the following: `client_secret`, `client_jwt`, `client_cert_path` --
 // Packer will use the specified Azure Active Directory (AAD) Service Principal
 // (SP).
-// If none ofthese options are specified, Packer will attempt to use the Managed Identity
+// If none of these options are specified, Packer will attempt to use the Managed Identity
 // and subscription of the VM that Packer is running on.  This will only work if
 // Packer is running on an Azure VM with either a System Assigned Managed
 // Identity or User Assigned Managed Identity.

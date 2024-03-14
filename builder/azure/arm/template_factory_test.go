@@ -624,7 +624,7 @@ func TestVirtualMachineDeploymentLicenseType01(t *testing.T) {
 	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
-// Ensure licenseType is set if specifed in config
+// Ensure licenseType is set if specified in config
 func TestVirtualMachineDeploymentLicenseType02(t *testing.T) {
 	var c Config
 	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())

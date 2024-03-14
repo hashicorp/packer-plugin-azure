@@ -93,7 +93,7 @@ func TestChrootStepGetSourceImageName_SharedImage(t *testing.T) {
 		GeneratedData         packerbuilderdata.GeneratedData
 	}{
 		{
-			name:                  "SharedImageWithMangedImageSource",
+			name:                  "SharedImageWithManagedImageSource",
 			SourceImageResourceID: "/subscriptions/1234/resourceGroups/bar/providers/Microsoft.Compute/galleries/test/images/foo/versions/1.0.6",
 			GeneratedData:         genData,
 			mockedGalleryReturn: &galleryimageversions.GalleryImageVersion{
