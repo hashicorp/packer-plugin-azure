@@ -384,7 +384,7 @@ type Config struct {
 	// Same as [`azure_tags`](#azure_tags) but defined as a singular repeatable block
 	// containing a `name` and a `value` field. In HCL2 mode the
 	// [`dynamic_block`](/packer/docs/templates/hcl_templates/expressions#dynamic-blocks)
-	// will allow you to create those programatically.
+	// will allow you to create those programmatically.
 	AzureTag config.NameValues `mapstructure:"azure_tag" required:"false"`
 	// Resource group under which the final artifact will be stored.
 	ResourceGroupName string `mapstructure:"resource_group_name"`
@@ -584,13 +584,13 @@ type Config struct {
 	AllowedInboundIpAddresses []string `mapstructure:"allowed_inbound_ip_addresses"`
 
 	// Specify storage to store Boot Diagnostics -- Enabling this option
-	// will create 2 Files in the specified storage account. (serial console log & screehshot file)
+	// will create 2 Files in the specified storage account. (serial console log & screenshot file)
 	// once the build is completed, it has to be removed manually.
 	// see [here](https://docs.microsoft.com/en-us/azure/virtual-machines/troubleshooting/boot-diagnostics) for more info
 	BootDiagSTGAccount string `mapstructure:"boot_diag_storage_account" required:"false"`
 
 	// specify custom azure resource names during build limited to max 10 characters
-	// this will set the prefix for the resources. The actuall resource names will be
+	// this will set the prefix for the resources. The actual resource names will be
 	// `custom_resource_build_prefix` + resourcetype + 5 character random alphanumeric string
 	CustomResourcePrefix string `mapstructure:"custom_resource_build_prefix" required:"false"`
 

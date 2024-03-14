@@ -64,9 +64,9 @@ func TestStepGetSourceImageName(t *testing.T) {
 				CustomManagedImageName: "/subscription/1/resource/name",
 				// During build time the custom managed id source is resolved
 				// and stored as customManagedImageID
-				customManagedImageID: "/subscription/0/resource/mangedimage/12",
+				customManagedImageID: "/subscription/0/resource/managedimage/12",
 			},
-			expected: "/subscription/0/resource/mangedimage/12",
+			expected: "/subscription/0/resource/managedimage/12",
 		},
 		{
 			name: "MarketPlaceImage",

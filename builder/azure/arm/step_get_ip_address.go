@@ -85,8 +85,8 @@ func (s *StepGetIPAddress) getPublicIP(ctx context.Context, subscriptionId strin
 }
 
 // TODO The interface name passed into getPublicIP has never done anything
-// This code has been around for over 6 years so I'm hesistant to change it without more investigation so we should
-// open a seperate GitHub issue for this when looking to merge the SDK branch
+// This code has been around for over 6 years so I'm hesitant to change it without more investigation so we should
+// open a separate GitHub issue for this when looking to merge the SDK branch
 func (s *StepGetIPAddress) getPublicIPInPrivateNetwork(ctx context.Context, subscriptionId string, resourceGroupName string, ipAddressName string, interfaceName string) (string, error) {
 	return s.getPublicIP(ctx, subscriptionId, resourceGroupName, ipAddressName, interfaceName)
 }

@@ -193,6 +193,6 @@ func (p *Provisioner) Provision(ctx context.Context, ui packersdk.Ui, comm packe
 		ui.Say(fmt.Sprintf("Error Applying artifact: %s", err))
 	}
 
-	ui.Say("Aftifact installed")
+	ui.Say("Artifact installed")
 	return err
 }

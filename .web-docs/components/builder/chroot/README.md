@@ -102,7 +102,7 @@ information.
 - `source` (string) - One of the following can be used as a source for an image:
   - a shared image version resource ID
   - a managed disk resource ID
-  - a publisher:offer:sku:version specifier for plaform image sources.
+  - a publisher:offer:sku:version specifier for platform image sources.
 
 <!-- End of code generated from the comments of the Config struct in builder/azure/chroot/builder.go; -->
 
@@ -142,7 +142,7 @@ information.
   provisioning. Defaults to `/etc/resolv.conf` so that DNS lookups work. Pass an empty list to skip copying
   `/etc/resolv.conf`. You may need to do this if you're building an image that uses systemd.
 
-- `os_disk_size_gb` (int64) - Try to resize the OS disk to this size on the first copy. Disks can only be englarged. If not specified,
+- `os_disk_size_gb` (int64) - Try to resize the OS disk to this size on the first copy. Disks can only be enlarged. If not specified,
   the disk will keep its original size. Required when using `from_scratch`
 
 - `os_disk_storage_account_type` (string) - The [storage SKU](https://docs.microsoft.com/en-us/rest/api/compute/disks/createorupdate#diskstorageaccounttypes)

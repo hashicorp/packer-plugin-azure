@@ -53,7 +53,7 @@ type Config struct {
 	// One of the following can be used as a source for an image:
 	// - a shared image version resource ID
 	// - a managed disk resource ID
-	// - a publisher:offer:sku:version specifier for plaform image sources.
+	// - a publisher:offer:sku:version specifier for platform image sources.
 	Source     string `mapstructure:"source" required:"true"`
 	sourceType sourceType
 
@@ -87,7 +87,7 @@ type Config struct {
 	// `/etc/resolv.conf`. You may need to do this if you're building an image that uses systemd.
 	CopyFiles []string `mapstructure:"copy_files"`
 
-	// Try to resize the OS disk to this size on the first copy. Disks can only be englarged. If not specified,
+	// Try to resize the OS disk to this size on the first copy. Disks can only be enlarged. If not specified,
 	// the disk will keep its original size. Required when using `from_scratch`
 	OSDiskSizeGB int64 `mapstructure:"os_disk_size_gb"`
 	// The [storage SKU](https://docs.microsoft.com/en-us/rest/api/compute/disks/createorupdate#diskstorageaccounttypes)
