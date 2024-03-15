@@ -249,11 +249,15 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 					foundMandatoryReplicationRegion = true
 					continue
 				}
-				normalizedRegions = append(normalizedRegions, TargetRegion{Name: region})
+				normalizedRegions = append(normalizedRegions, TargetRegion{Name: region, ReplicaCount: b.config.SharedGalleryImageVersionReplicaCount})
 			}
 			// SIG requires that replication regions include the region in which the created image version resides
 			if foundMandatoryReplicationRegion == false {
-				normalizedRegions = append(normalizedRegions, TargetRegion{Name: buildLocation, DiskEncryptionSetId: b.config.DiskEncryptionSetId})
+				normalizedRegions = append(normalizedRegions, TargetRegion{
+					Name:                buildLocation,
+					DiskEncryptionSetId: b.config.DiskEncryptionSetId,
+					ReplicaCount:        b.config.SharedGalleryImageVersionReplicaCount,
+				})
 			}
 			b.config.SharedGalleryDestination.SigDestinationTargetRegions = normalizedRegions
 		}

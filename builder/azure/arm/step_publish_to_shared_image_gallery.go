@@ -111,8 +111,11 @@ func buildAzureImageTargetRegions(sig SharedImageGalleryDestination) []galleryim
 		tr.Encryption = encryption
 		replicas := r.ReplicaCount
 		if replicas <= 0 {
-			replicas = 1
+			replicas = constants.SharedImageGalleryImageVersionDefaultMinReplicaCount
+		} else if replicas > constants.SharedImageGalleryImageVersionDefaultMaxReplicaCount {
+			replicas = constants.SharedImageGalleryImageVersionDefaultMaxReplicaCount
 		}
+
 		tr.RegionalReplicaCount = &replicas
 		targetRegions = append(targetRegions, tr)
 	}
@@ -244,13 +247,6 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 
 	miSGImageVersionEndOfLifeDate, _ := stateBag.Get(constants.ArmManagedImageSharedGalleryImageVersionEndOfLifeDate).(string)
 	miSGImageVersionExcludeFromLatest, _ := stateBag.Get(constants.ArmManagedImageSharedGalleryImageVersionExcludeFromLatest).(bool)
-	miSigReplicaCount, _ := stateBag.Get(constants.ArmManagedImageSharedGalleryImageVersionReplicaCount).(int64)
-	// Replica count must be between 1 and 100 inclusive
-	if miSigReplicaCount <= 0 {
-		miSigReplicaCount = constants.SharedImageGalleryImageVersionDefaultMinReplicaCount
-	} else if miSigReplicaCount > constants.SharedImageGalleryImageVersionDefaultMaxReplicaCount {
-		miSigReplicaCount = constants.SharedImageGalleryImageVersionDefaultMaxReplicaCount
-	}
 
 	regionNames := make([]string, 0, len(sharedImageGallery.SigDestinationTargetRegions))
 	desIds := make([]string, 0, len(sharedImageGallery.SigDestinationTargetRegions))
@@ -278,7 +274,6 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 	s.say(fmt.Sprintf(" -> SIG storage account type              : '%s'", sharedImageGallery.SigDestinationStorageAccountType))
 	s.say(fmt.Sprintf(" -> SIG image version endoflife date      : '%s'", miSGImageVersionEndOfLifeDate))
 	s.say(fmt.Sprintf(" -> SIG image version exclude from latest : '%t'", miSGImageVersionExcludeFromLatest))
-	s.say(fmt.Sprintf(" -> SIG replica count [1, 100]            : '%d'", miSigReplicaCount))
 	replicationMode := galleryimageversions.ReplicationModeFull
 	shallowReplicationMode := stateBag.Get(constants.ArmSharedImageGalleryDestinationShallowReplication).(bool)
 	if shallowReplicationMode {
@@ -294,7 +289,6 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 			SharedImageGallery: sharedImageGallery,
 			EndOfLifeDate:      miSGImageVersionEndOfLifeDate,
 			ExcludeFromLatest:  miSGImageVersionExcludeFromLatest,
-			ReplicaCount:       miSigReplicaCount,
 			Location:           location,
 			ReplicationMode:    replicationMode,
 			Tags:               tags,
