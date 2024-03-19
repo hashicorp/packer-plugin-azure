@@ -414,6 +414,8 @@ type Config struct {
 	// standard or premium. The default value is standard.
 	BuildKeyVaultSKU string `mapstructure:"build_key_vault_sku"`
 
+	SkipCreateBuildKeyVault bool `mapstructure:"skip_create_build_key_vault" required:"false"`
+
 	// Specify the Disk Encryption Set ID to use to encrypt the OS and data disks created with the VM during the build
 	// Only supported when publishing to Shared Image Galleries, without a managed image
 	// The disk encryption set ID can be found in the properties tab of a disk encryption set on the Azure Portal, and is labeled as its resource ID
@@ -1239,6 +1241,10 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		if c.ImagePublisher != "" || c.ImageOffer != "" || c.ImageSku != "" || c.ImageVersion != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("An image_url must not be specified if image_publisher, image_offer, image_sku, or image_version is specified"))
 		}
+	}
+
+	if c.SkipCreateBuildKeyVault && !strings.EqualFold(c.Comm.Type, "winrm") {
+		errs = packer.MultiErrorAppend(errs, fmt.Errorf("Communicator type must be winrm when skip_create_build_key_vault is set"))
 	}
 
 	/////////////////////////////////////////////
