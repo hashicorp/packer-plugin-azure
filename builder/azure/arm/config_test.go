@@ -3025,30 +3025,289 @@ func TestConfigShouldRejectSharedImageGalleryDestinationReplicationRegions(t *te
 	}
 }
 
-func TestConfigShouldAcceptSharedImageGalleryDestinationConfidentialVMEncryptionOptions(t *testing.T) {
+func TestConfigShouldRejectCVMSourceToBuildManagedImage(t *testing.T) {
 	config := map[string]interface{}{
-		"image_offer":     "ignore",
-		"image_publisher": "ignore",
-		"image_sku":       "ignore",
-		"location":        "ignore",
-		"subscription_id": "ignore",
-		"communicator":    "none",
-		// Does not matter for this test case, just pick one.
-		"os_type": constants.Target_Linux,
+		"image_offer":                       "ignore",
+		"image_publisher":                   "ignore",
+		"image_sku":                         "ignore",
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"communicator":                      "none",
+		"managed_image_name":                "ignore",
+		"managed_image_resource_group_name": "ignore",
+		"os_type":                           constants.Target_Linux, // Does not matter for this test case, just pick one.
+		"security_type":                     "ConfidentialVM",
+		"security_encryption_type":          "VMGuestStateOnly",
+	}
 
-		"shared_image_gallery_destination": map[string]string{
-			"resource_group":                        "ignore",
-			"gallery_name":                          "ignore",
-			"image_name":                            "ignore",
-			"image_version":                         "1.0.1",
-			"replication_regions":                   "ignore",
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatalf("expected config to reject with the following error: %q", "Setting a security type of \"ConfidentialVM\" is not allowed when building a VHD or creating a Managed Image, only when publishing directly to Shared Image Gallery")
+	}
+}
+
+func TestConfigShouldRejectNonMatchingSecurityType(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":                       "ignore",
+		"image_publisher":                   "ignore",
+		"image_sku":                         "ignore",
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"communicator":                      "none",
+		"managed_image_name":                "ignore",
+		"managed_image_resource_group_name": "ignore",
+		"os_type":                           constants.Target_Linux, // Does not matter for this test case, just pick one.
+		"security_type":                     "ignore",
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatalf("expected config to reject with the following error: %q", "The security_type must match either \"TrustedLaunch\" or \"ConfidentialVM\".")
+	}
+}
+
+func TestConfigShouldRejectNonMatchingSecurityEncryptionType(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":              "ignore",
+		"image_publisher":          "ignore",
+		"image_sku":                "ignore",
+		"location":                 "ignore",
+		"subscription_id":          "ignore",
+		"communicator":             "none",
+		"os_type":                  constants.Target_Linux, // Does not matter for this test case, just pick one.
+		"security_type":            "ConfidentialVM",
+		"security_encryption_type": "ignore",
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.1",
+			"target_region": map[string]string{
+				"name": "useast",
+			},
 			"confidential_vm_image_encryption_type": "EncryptedVMGuestStateOnlyWithPmk",
 		},
 	}
 
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
-	if err != nil {
-		t.Fatalf("expected config to accept platform managed image build: %v", err)
+	if err == nil {
+		t.Fatalf("expected config to reject with the following error: %q", "The security_encryption_type must match either \"VMGuestStateOnly\" or \"DiskWithVMGuestState\".")
+	}
+}
+
+func TestConfigShouldRejectNonMatchingSIGDestinationCVMEncryptionType(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":              "ignore",
+		"image_publisher":          "ignore",
+		"image_sku":                "ignore",
+		"location":                 "ignore",
+		"subscription_id":          "ignore",
+		"communicator":             "none",
+		"os_type":                  constants.Target_Linux, // Does not matter for this test case, just pick one.
+		"security_type":            "ConfidentialVM",
+		"security_encryption_type": "DiskWithVMGuestState",
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.1",
+			"target_region": map[string]string{
+				"name": "useast",
+			},
+			"confidential_vm_image_encryption_type": "ignore",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatalf("expected config to reject with the following error: %q", "The shared_image_gallery_destination setting confidential_vm_image_encryption_type must match either \"EncryptedWithCmk\", \"EncryptedVMGuestStateOnlyWithPmk\" or \"EncryptedWithPmk\".")
+	}
+}
+
+func TestConfigShouldRejectSecurityEncryptionTypeIfSecurityTypeIsNotCVM(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":              "ignore",
+		"image_publisher":          "ignore",
+		"image_sku":                "ignore",
+		"location":                 "ignore",
+		"subscription_id":          "ignore",
+		"communicator":             "none",
+		"os_type":                  constants.Target_Linux, // Does not matter for this test case, just pick one.
+		"security_type":            "TrustedLaunch",
+		"security_encryption_type": "DiskWithVMGuestState",
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.1",
+			"target_region": map[string]string{
+				"name": "useast",
+			},
+			"confidential_vm_image_encryption_type": "EncryptedWithPmk",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatalf("expected config to reject with the following error: %q", "security_encryption_type must be unset if the security_type is not set to \"ConfidentialVM\"")
+	}
+}
+
+func TestConfigShouldRejectIfSecurityEncryptionTypeDoesNotMatchSIGDestinationCVMEncryptionType01(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":              "ignore",
+		"image_publisher":          "ignore",
+		"image_sku":                "ignore",
+		"location":                 "ignore",
+		"subscription_id":          "ignore",
+		"communicator":             "none",
+		"os_type":                  constants.Target_Linux, // Does not matter for this test case, just pick one.
+		"security_type":            "ConfidentialVM",
+		"security_encryption_type": "DiskWithVMGuestState",
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.1",
+			"target_region": map[string]string{
+				"name": "useast",
+			},
+			"confidential_vm_image_encryption_type": "EncryptedVMGuestStateOnlyWithPmk",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatalf("expected config to reject with the following error: %q", "The security_encryption_type setting \"DiskWithVMGuestState\" does not match the shared_image_gallery_destination confidential_vm_image_encryption_type setting \"EncryptedVMGuestStateOnlyWithPmk\". security_encryption type \"DiskWithVMGuestState\" needs to match \"EncryptedWithPMK\" or \"EncryptedWithCMK\".")
+	}
+}
+
+func TestConfigShouldRejectIfSecurityEncryptionTypeDoesNotMatchSIGDestinationCVMEncryptionType02(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":              "ignore",
+		"image_publisher":          "ignore",
+		"image_sku":                "ignore",
+		"location":                 "ignore",
+		"subscription_id":          "ignore",
+		"communicator":             "none",
+		"os_type":                  constants.Target_Linux, // Does not matter for this test case, just pick one.
+		"security_type":            "ConfidentialVM",
+		"security_encryption_type": "VMGuestStateOnly",
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.1",
+			"target_region": map[string]string{
+				"name": "useast",
+			},
+			"confidential_vm_image_encryption_type": "EncryptedWithPmk",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatalf("expected config to reject with the following error: %q", "The security_encryption_type setting \"VMGuestStateOnly\" does not match the shared_image_gallery_destination confidential_vm_image_encryption_type setting \"EncryptedWithPmk\". security_encryption type \"VMGuestStateOnly\" needs to match \"EncryptedVMGuestStateOnlyWithPmk\".")
+	}
+}
+
+func TestConfigShouldRejectIfDiskEncryptionIDIsSetWithNonCMKEncryptionType(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":              "ignore",
+		"image_publisher":          "ignore",
+		"image_sku":                "ignore",
+		"location":                 "ignore",
+		"subscription_id":          "ignore",
+		"communicator":             "none",
+		"os_type":                  constants.Target_Linux, // Does not matter for this test case, just pick one.
+		"security_type":            "ConfidentialVM",
+		"security_encryption_type": "DiskWithVMGuestState",
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.1",
+			"target_region": map[string]string{
+				"name":                   "useast",
+				"disk_encryption_set_id": "ignore",
+			},
+			"confidential_vm_image_encryption_type": "EncryptedWithPmk",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatalf("expected config to reject with the following error: %q", "confidential_vm_image_encryption_type must be set to \"EncryptedWithCmk\" when passing a disk_encryption_set_id in the target_region block")
+	}
+}
+
+func TestConfigShouldRejectIfNoDiskEncryptionIDIsSetWithSIGCMKEncryptionType(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":              "ignore",
+		"image_publisher":          "ignore",
+		"image_sku":                "ignore",
+		"location":                 "ignore",
+		"subscription_id":          "ignore",
+		"communicator":             "none",
+		"os_type":                  constants.Target_Linux, // Does not matter for this test case, just pick one.
+		"security_type":            "ConfidentialVM",
+		"security_encryption_type": "DiskWithVMGuestState",
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.1",
+			"target_region": map[string]string{
+				"name":                   "useast",
+				"disk_encryption_set_id": "ignore",
+			},
+			"confidential_vm_image_encryption_type": "EncryptedWithCmk",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatalf("expected config to reject with the following error: %q", "when using a confidential vm as source to an cvm image version and a confidential_vm_image_encryption_type of \"EncryptedWithCmk\", the source cvm must have a disk_encryption_set_id set")
+	}
+}
+
+func TestConfigShouldRejectIfNoDiskEncryptionIDIsSetInSIGTargetRegions(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":              "ignore",
+		"image_publisher":          "ignore",
+		"image_sku":                "ignore",
+		"location":                 "ignore",
+		"subscription_id":          "ignore",
+		"communicator":             "none",
+		"os_type":                  constants.Target_Linux, // Does not matter for this test case, just pick one.
+		"security_type":            "ConfidentialVM",
+		"security_encryption_type": "DiskWithVMGuestState",
+		"disk_encryption_set_id":   "ignore",
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.1",
+			"target_region": []map[string]string{
+				{"name": "eastus"},
+				{"name": "westus"},
+			},
+			"confidential_vm_image_encryption_type": "EncryptedWithCmk",
+		},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatalf("expected config to reject with the following error: %q", "when using a confidential vm as source to an cvm image version and a confidential_vm_image_encryption_type of \"EncryptedWithCmk\", the target region * must have a disk_encryption_set_id set")
 	}
 }
