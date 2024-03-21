@@ -3042,12 +3042,19 @@ func TestConfigShouldRejectCVMSourceToBuildManagedImage(t *testing.T) {
 
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
+	errorMessage := `Setting a security type of 'ConfidentialVM' is not allowed when building a VHD or creating a Managed Image, only when publishing directly to Shared Image Gallery`
 	if err == nil {
-		t.Fatalf("expected config to reject with the following error: %q", "Setting a security type of \"ConfidentialVM\" is not allowed when building a VHD or creating a Managed Image, only when publishing directly to Shared Image Gallery")
+		t.Fatalf("expected config to reject with the following error: %q",
+			errorMessage,
+		)
+	}
+	if !strings.Contains(err.Error(), errorMessage) {
+		t.Errorf("expected config to reject with error containing %s but got %s", errorMessage, err)
 	}
 }
 
 func TestConfigShouldRejectNonMatchingSecurityType(t *testing.T) {
+	invaidSecurityType := "ignore"
 	config := map[string]interface{}{
 		"image_offer":                       "ignore",
 		"image_publisher":                   "ignore",
@@ -3056,19 +3063,26 @@ func TestConfigShouldRejectNonMatchingSecurityType(t *testing.T) {
 		"subscription_id":                   "ignore",
 		"communicator":                      "none",
 		"managed_image_name":                "ignore",
-		"managed_image_resource_group_name": "ignore",
+		"managed_image_resource_group_name": invaidSecurityType,
 		"os_type":                           constants.Target_Linux, // Does not matter for this test case, just pick one.
 		"security_type":                     "ignore",
 	}
 
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
+	errorMessage := fmt.Sprintf(`The security_type "%s" must match either "TrustedLaunch" or "ConfidentialVM".`, invaidSecurityType)
 	if err == nil {
-		t.Fatalf("expected config to reject with the following error: %q", "The security_type must match either \"TrustedLaunch\" or \"ConfidentialVM\".")
+		t.Fatalf("expected config to reject with the following error: %q",
+			errorMessage,
+		)
+	}
+	if !strings.Contains(err.Error(), errorMessage) {
+		t.Errorf("expected config to reject with error containing %s but got %s", errorMessage, err)
 	}
 }
 
 func TestConfigShouldRejectNonMatchingSecurityEncryptionType(t *testing.T) {
+	invalidSecurityType := "ignore"
 	config := map[string]interface{}{
 		"image_offer":              "ignore",
 		"image_publisher":          "ignore",
@@ -3078,7 +3092,7 @@ func TestConfigShouldRejectNonMatchingSecurityEncryptionType(t *testing.T) {
 		"communicator":             "none",
 		"os_type":                  constants.Target_Linux, // Does not matter for this test case, just pick one.
 		"security_type":            "ConfidentialVM",
-		"security_encryption_type": "ignore",
+		"security_encryption_type": invalidSecurityType,
 		"shared_image_gallery_destination": map[string]interface{}{
 			"resource_group": "ignore",
 			"gallery_name":   "ignore",
@@ -3093,8 +3107,14 @@ func TestConfigShouldRejectNonMatchingSecurityEncryptionType(t *testing.T) {
 
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
+	errorMessage := fmt.Sprintf(`The security_encryption_type "%s" must match either "VMGuestStateOnly" or "DiskWithVMGuestState"`, invalidSecurityType)
 	if err == nil {
-		t.Fatalf("expected config to reject with the following error: %q", "The security_encryption_type must match either \"VMGuestStateOnly\" or \"DiskWithVMGuestState\".")
+		t.Fatalf("expected config to reject with the following error: %q",
+			errorMessage,
+		)
+	}
+	if !strings.Contains(err.Error(), errorMessage) {
+		t.Errorf("expected config to reject with error containing %s but got %s", errorMessage, err)
 	}
 }
 
@@ -3123,8 +3143,14 @@ func TestConfigShouldRejectNonMatchingSIGDestinationCVMEncryptionType(t *testing
 
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
+	errorMessage := `The shared_image_gallery_destination setting confidential_vm_image_encryption_type must match either "EncryptedWithCmk", "EncryptedVMGuestStateOnlyWithPmk" or "EncryptedWithPmk"`
 	if err == nil {
-		t.Fatalf("expected config to reject with the following error: %q", "The shared_image_gallery_destination setting confidential_vm_image_encryption_type must match either \"EncryptedWithCmk\", \"EncryptedVMGuestStateOnlyWithPmk\" or \"EncryptedWithPmk\".")
+		t.Fatalf("expected config to reject with the following error: %q",
+			errorMessage,
+		)
+	}
+	if !strings.Contains(err.Error(), errorMessage) {
+		t.Errorf("expected config to reject with error containing %s but got %s", errorMessage, err)
 	}
 }
 
@@ -3153,8 +3179,14 @@ func TestConfigShouldRejectSecurityEncryptionTypeIfSecurityTypeIsNotCVM(t *testi
 
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
+	errorMessage := `security_encryption_type must be unset if the security_type is not set to "ConfidentialVM"`
 	if err == nil {
-		t.Fatalf("expected config to reject with the following error: %q", "security_encryption_type must be unset if the security_type is not set to \"ConfidentialVM\"")
+		t.Fatalf("expected config to reject with the following error: %q",
+			errorMessage,
+		)
+	}
+	if !strings.Contains(err.Error(), errorMessage) {
+		t.Errorf("expected config to reject with error containing %s but got %s", errorMessage, err)
 	}
 }
 
@@ -3183,8 +3215,14 @@ func TestConfigShouldRejectIfSecurityEncryptionTypeDoesNotMatchSIGDestinationCVM
 
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
+	errorMessage := "The security_encryption_type setting \"DiskWithVMGuestState\" does not match the shared_image_gallery_destination confidential_vm_image_encryption_type setting \"EncryptedVMGuestStateOnlyWithPmk\". security_encryption type \"DiskWithVMGuestState\" needs to match \"EncryptedWithPMK\" or \"EncryptedWithCMK\"."
 	if err == nil {
-		t.Fatalf("expected config to reject with the following error: %q", "The security_encryption_type setting \"DiskWithVMGuestState\" does not match the shared_image_gallery_destination confidential_vm_image_encryption_type setting \"EncryptedVMGuestStateOnlyWithPmk\". security_encryption type \"DiskWithVMGuestState\" needs to match \"EncryptedWithPMK\" or \"EncryptedWithCMK\".")
+		t.Fatalf("expected config to reject with the following error: %q",
+			errorMessage,
+		)
+	}
+	if !strings.Contains(err.Error(), errorMessage) {
+		t.Errorf("expected config to reject with error containing %s but got %s", errorMessage, err)
 	}
 }
 
@@ -3213,9 +3251,16 @@ func TestConfigShouldRejectIfSecurityEncryptionTypeDoesNotMatchSIGDestinationCVM
 
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
+	errorMessage := `The security_encryption_type setting "VMGuestStateOnly" does not match the shared_image_gallery_destination confidential_vm_image_encryption_type setting "EncryptedWithPmk". security_encryption type "VMGuestStateOnly" needs to match "EncryptedVMGuestStateOnlyWithPmk".`
 	if err == nil {
-		t.Fatalf("expected config to reject with the following error: %q", "The security_encryption_type setting \"VMGuestStateOnly\" does not match the shared_image_gallery_destination confidential_vm_image_encryption_type setting \"EncryptedWithPmk\". security_encryption type \"VMGuestStateOnly\" needs to match \"EncryptedVMGuestStateOnlyWithPmk\".")
+		t.Fatalf("expected config to reject with the following error: %q",
+			errorMessage,
+		)
 	}
+	if !strings.Contains(err.Error(), errorMessage) {
+		t.Errorf("expected config to reject with error containing %s but got %s", errorMessage, err)
+	}
+
 }
 
 func TestConfigShouldRejectIfDiskEncryptionIDIsSetWithNonCMKEncryptionType(t *testing.T) {
@@ -3244,8 +3289,14 @@ func TestConfigShouldRejectIfDiskEncryptionIDIsSetWithNonCMKEncryptionType(t *te
 
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
+	errorMessage := `confidential_vm_image_encryption_type must be set to "EncryptedWithCmk" when passing a disk_encryption_set_id in the target_region block`
 	if err == nil {
-		t.Fatalf("expected config to reject with the following error: %q", "confidential_vm_image_encryption_type must be set to \"EncryptedWithCmk\" when passing a disk_encryption_set_id in the target_region block")
+		t.Fatalf("expected config to reject with the following error: %q",
+			errorMessage,
+		)
+	}
+	if !strings.Contains(err.Error(), errorMessage) {
+		t.Errorf("expected config to reject with error containing %s but got %s", errorMessage, err)
 	}
 }
 
@@ -3275,8 +3326,14 @@ func TestConfigShouldRejectIfNoDiskEncryptionIDIsSetWithSIGCMKEncryptionType(t *
 
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
+	errorMessage := `when using a confidential vm as source to an cvm image version and a confidential_vm_image_encryption_type of "EncryptedWithCmk", the source cvm must have a disk_encryption_set_id set`
 	if err == nil {
-		t.Fatalf("expected config to reject with the following error: %q", "when using a confidential vm as source to an cvm image version and a confidential_vm_image_encryption_type of \"EncryptedWithCmk\", the source cvm must have a disk_encryption_set_id set")
+		t.Fatalf("expected config to reject with the following error: %q",
+			errorMessage,
+		)
+	}
+	if !strings.Contains(err.Error(), errorMessage) {
+		t.Errorf("expected config to reject with error containing %s but got %s", errorMessage, err)
 	}
 }
 
@@ -3304,10 +3361,20 @@ func TestConfigShouldRejectIfNoDiskEncryptionIDIsSetInSIGTargetRegions(t *testin
 			"confidential_vm_image_encryption_type": "EncryptedWithCmk",
 		},
 	}
-
+	errorMessageRegion1 := `when using a confidential vm as source to an cvm image version and a confidential_vm_image_encryption_type of "EncryptedWithCmk", the target region "eastus" must have a disk_encryption_set_id set`
+	errorMessageRegion2 := `when using a confidential vm as source to an cvm image version and a confidential_vm_image_encryption_type of "EncryptedWithCmk", the target region "westus" must have a disk_encryption_set_id set`
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
 	if err == nil {
-		t.Fatalf("expected config to reject with the following error: %q", "when using a confidential vm as source to an cvm image version and a confidential_vm_image_encryption_type of \"EncryptedWithCmk\", the target region * must have a disk_encryption_set_id set")
+		t.Fatalf("expected config to reject with the following errors: %q\n%q",
+			errorMessageRegion1,
+			errorMessageRegion2,
+		)
+	}
+	if !strings.Contains(err.Error(), errorMessageRegion1) {
+		t.Errorf("expected config to reject with error containing %s but got %s", errorMessageRegion1, err)
+	}
+	if !strings.Contains(err.Error(), errorMessageRegion2) {
+		t.Errorf("expected config to reject with error containing %s but got %s", errorMessageRegion2, err)
 	}
 }
