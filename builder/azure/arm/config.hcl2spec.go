@@ -94,6 +94,8 @@ type FlatConfig struct {
 	SecureBootEnabled                          *bool                              `mapstructure:"secure_boot_enabled" required:"false" cty:"secure_boot_enabled" hcl:"secure_boot_enabled"`
 	EncryptionAtHost                           *bool                              `mapstructure:"encryption_at_host" required:"false" cty:"encryption_at_host" hcl:"encryption_at_host"`
 	VTpmEnabled                                *bool                              `mapstructure:"vtpm_enabled" required:"false" cty:"vtpm_enabled" hcl:"vtpm_enabled"`
+	SecurityType                               *string                            `mapstructure:"security_type" required:"false" cty:"security_type" hcl:"security_type"`
+	SecurityEncryptionType                     *string                            `mapstructure:"security_encryption_type" required:"false" cty:"security_encryption_type" hcl:"security_encryption_type"`
 	Type                                       *string                            `mapstructure:"communicator" cty:"communicator" hcl:"communicator"`
 	PauseBeforeConnect                         *string                            `mapstructure:"pause_before_connecting" cty:"pause_before_connecting" hcl:"pause_before_connecting"`
 	SSHHost                                    *string                            `mapstructure:"ssh_host" cty:"ssh_host" hcl:"ssh_host"`
@@ -240,6 +242,8 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"secure_boot_enabled":                     &hcldec.AttrSpec{Name: "secure_boot_enabled", Type: cty.Bool, Required: false},
 		"encryption_at_host":                      &hcldec.AttrSpec{Name: "encryption_at_host", Type: cty.Bool, Required: false},
 		"vtpm_enabled":                            &hcldec.AttrSpec{Name: "vtpm_enabled", Type: cty.Bool, Required: false},
+		"security_type":                           &hcldec.AttrSpec{Name: "security_type", Type: cty.String, Required: false},
+		"security_encryption_type":                &hcldec.AttrSpec{Name: "security_encryption_type", Type: cty.String, Required: false},
 		"communicator":                            &hcldec.AttrSpec{Name: "communicator", Type: cty.String, Required: false},
 		"pause_before_connecting":                 &hcldec.AttrSpec{Name: "pause_before_connecting", Type: cty.String, Required: false},
 		"ssh_host":                                &hcldec.AttrSpec{Name: "ssh_host", Type: cty.String, Required: false},
@@ -361,16 +365,17 @@ func (*FlatSharedImageGallery) HCL2Spec() map[string]hcldec.Spec {
 // FlatSharedImageGalleryDestination is an auto-generated flat version of SharedImageGalleryDestination.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatSharedImageGalleryDestination struct {
-	SigDestinationSubscription              *string            `mapstructure:"subscription" cty:"subscription" hcl:"subscription"`
-	SigDestinationResourceGroup             *string            `mapstructure:"resource_group" cty:"resource_group" hcl:"resource_group"`
-	SigDestinationGalleryName               *string            `mapstructure:"gallery_name" cty:"gallery_name" hcl:"gallery_name"`
-	SigDestinationImageName                 *string            `mapstructure:"image_name" cty:"image_name" hcl:"image_name"`
-	SigDestinationImageVersion              *string            `mapstructure:"image_version" cty:"image_version" hcl:"image_version"`
-	SigDestinationReplicationRegions        []string           `mapstructure:"replication_regions" cty:"replication_regions" hcl:"replication_regions"`
-	SigDestinationTargetRegions             []FlatTargetRegion `mapstructure:"target_region" cty:"target_region" hcl:"target_region"`
-	SigDestinationStorageAccountType        *string            `mapstructure:"storage_account_type" cty:"storage_account_type" hcl:"storage_account_type"`
-	SigDestinationSpecialized               *bool              `mapstructure:"specialized" cty:"specialized" hcl:"specialized"`
-	SigDestinationUseShallowReplicationMode *bool              `mapstructure:"use_shallow_replication" required:"false" cty:"use_shallow_replication" hcl:"use_shallow_replication"`
+	SigDestinationSubscription                      *string            `mapstructure:"subscription" cty:"subscription" hcl:"subscription"`
+	SigDestinationResourceGroup                     *string            `mapstructure:"resource_group" cty:"resource_group" hcl:"resource_group"`
+	SigDestinationGalleryName                       *string            `mapstructure:"gallery_name" cty:"gallery_name" hcl:"gallery_name"`
+	SigDestinationImageName                         *string            `mapstructure:"image_name" cty:"image_name" hcl:"image_name"`
+	SigDestinationImageVersion                      *string            `mapstructure:"image_version" cty:"image_version" hcl:"image_version"`
+	SigDestinationReplicationRegions                []string           `mapstructure:"replication_regions" cty:"replication_regions" hcl:"replication_regions"`
+	SigDestinationTargetRegions                     []FlatTargetRegion `mapstructure:"target_region" cty:"target_region" hcl:"target_region"`
+	SigDestinationStorageAccountType                *string            `mapstructure:"storage_account_type" cty:"storage_account_type" hcl:"storage_account_type"`
+	SigDestinationSpecialized                       *bool              `mapstructure:"specialized" cty:"specialized" hcl:"specialized"`
+	SigDestinationUseShallowReplicationMode         *bool              `mapstructure:"use_shallow_replication" required:"false" cty:"use_shallow_replication" hcl:"use_shallow_replication"`
+	SigDestinationConfidentialVMImageEncryptionType *string            `mapstructure:"confidential_vm_image_encryption_type" required:"false" cty:"confidential_vm_image_encryption_type" hcl:"confidential_vm_image_encryption_type"`
 }
 
 // FlatMapstructure returns a new FlatSharedImageGalleryDestination.
@@ -385,16 +390,17 @@ func (*SharedImageGalleryDestination) FlatMapstructure() interface{ HCL2Spec() m
 // The decoded values from this spec will then be applied to a FlatSharedImageGalleryDestination.
 func (*FlatSharedImageGalleryDestination) HCL2Spec() map[string]hcldec.Spec {
 	s := map[string]hcldec.Spec{
-		"subscription":            &hcldec.AttrSpec{Name: "subscription", Type: cty.String, Required: false},
-		"resource_group":          &hcldec.AttrSpec{Name: "resource_group", Type: cty.String, Required: false},
-		"gallery_name":            &hcldec.AttrSpec{Name: "gallery_name", Type: cty.String, Required: false},
-		"image_name":              &hcldec.AttrSpec{Name: "image_name", Type: cty.String, Required: false},
-		"image_version":           &hcldec.AttrSpec{Name: "image_version", Type: cty.String, Required: false},
-		"replication_regions":     &hcldec.AttrSpec{Name: "replication_regions", Type: cty.List(cty.String), Required: false},
-		"target_region":           &hcldec.BlockListSpec{TypeName: "target_region", Nested: hcldec.ObjectSpec((*FlatTargetRegion)(nil).HCL2Spec())},
-		"storage_account_type":    &hcldec.AttrSpec{Name: "storage_account_type", Type: cty.String, Required: false},
-		"specialized":             &hcldec.AttrSpec{Name: "specialized", Type: cty.Bool, Required: false},
-		"use_shallow_replication": &hcldec.AttrSpec{Name: "use_shallow_replication", Type: cty.Bool, Required: false},
+		"subscription":                          &hcldec.AttrSpec{Name: "subscription", Type: cty.String, Required: false},
+		"resource_group":                        &hcldec.AttrSpec{Name: "resource_group", Type: cty.String, Required: false},
+		"gallery_name":                          &hcldec.AttrSpec{Name: "gallery_name", Type: cty.String, Required: false},
+		"image_name":                            &hcldec.AttrSpec{Name: "image_name", Type: cty.String, Required: false},
+		"image_version":                         &hcldec.AttrSpec{Name: "image_version", Type: cty.String, Required: false},
+		"replication_regions":                   &hcldec.AttrSpec{Name: "replication_regions", Type: cty.List(cty.String), Required: false},
+		"target_region":                         &hcldec.BlockListSpec{TypeName: "target_region", Nested: hcldec.ObjectSpec((*FlatTargetRegion)(nil).HCL2Spec())},
+		"storage_account_type":                  &hcldec.AttrSpec{Name: "storage_account_type", Type: cty.String, Required: false},
+		"specialized":                           &hcldec.AttrSpec{Name: "specialized", Type: cty.Bool, Required: false},
+		"use_shallow_replication":               &hcldec.AttrSpec{Name: "use_shallow_replication", Type: cty.Bool, Required: false},
+		"confidential_vm_image_encryption_type": &hcldec.AttrSpec{Name: "confidential_vm_image_encryption_type", Type: cty.String, Required: false},
 	}
 	return s
 }

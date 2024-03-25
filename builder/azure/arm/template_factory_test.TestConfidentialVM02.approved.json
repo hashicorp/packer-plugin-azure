@@ -143,20 +143,31 @@
             }
           }
         },
+        "securityProfile": {
+          "securityType": "ConfidentialVM",
+          "uefiSettings": {
+            "secureBootEnabled": true,
+            "vTpmEnabled": true
+          }
+        },
         "storageProfile": {
           "imageReference": {
-            "offer": "ignored00",
-            "publisher": "ignored00",
-            "sku": "ignored00",
+            "offer": "--image-offer--",
+            "publisher": "--image-publisher--",
+            "sku": "--image-sku--",
             "version": "latest"
           },
           "osDisk": {
             "caching": "ReadWrite",
             "createOption": "FromImage",
+            "managedDisk": {
+              "securityProfile": {
+                "securityEncryptionType": "VMGuestStateOnly"
+              },
+              "storageAccountType": "Standard_LRS"
+            },
             "name": "[parameters('osDiskName')]",
-            "vhd": {
-              "uri": "[concat(parameters('storageAccountBlobEndpoint'),variables('vmStorageAccountContainerName'),'/', parameters('osDiskName'),'.vhd')]"
-            }
+            "osType": "Linux"
           }
         }
       },

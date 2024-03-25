@@ -534,12 +534,16 @@ Providing `temp_resource_group_name` or `location` in combination with
   or
   [Linux](https://learn.microsoft.com/en-us/azure/virtual-machines/linux/azure-hybrid-benefit-linux)
 
-- `secure_boot_enabled` (bool) - Specifies if Secure Boot and Trusted Launch is enabled for the Virtual Machine.
+- `secure_boot_enabled` (bool) - Specifies if Secure Boot is enabled for the Virtual Machine. For Trusted Launch or Confidential VMs, Secure Boot must be enabled.
 
 - `encryption_at_host` (\*bool) - Specifies if Encryption at host is enabled for the Virtual Machine.
   Requires enabling encryption at host in the Subscription read more [here](https://learn.microsoft.com/en-us/azure/virtual-machines/disks-enable-host-based-encryption-portal?tabs=azure-powershell)
 
-- `vtpm_enabled` (bool) - Specifies if vTPM (virtual Trusted Platform Module) and Trusted Launch is enabled for the Virtual Machine.
+- `vtpm_enabled` (bool) - Specifies if vTPM (virtual Trusted Platform Module) is enabled for the Virtual Machine. For Trusted Launch or Confidential VMs, vTPM must be enabled.
+
+- `security_type` (string) - Specifies the type of security to use for the VM. "TrustedLaunch" or "ConfidentialVM"
+
+- `security_encryption_type` (string) - Specifies the encryption type to use for the Confidential VM. "DiskWithVMGuestState" or "VMGuestStateOnly"
 
 - `async_resourcegroup_delete` (bool) - If you want packer to delete the
   temporary resource group asynchronously set this value. It's a boolean
@@ -664,6 +668,8 @@ The shared_image_gallery_destination block is available for publishing a new ima
 
 - `use_shallow_replication` (bool) - Setting a `shared_image_gallery_replica_count` or any `replication_regions` is unnecessary for shallow builds, as they can only replicate to the build region and must have a replica count of 1
   Refer to [Shallow Replication](https://learn.microsoft.com/en-us/azure/virtual-machines/shared-image-galleries?tabs=azure-cli#shallow-replication) for details on when to use shallow replication mode.
+
+- `confidential_vm_image_encryption_type` (string) - The ConfidentialVM Image Encryption Type for the Shared Image Gallery Destination. This can be either "EncryptedVMGuestStateOnlyWithPmk", "EncryptedWithPmk", or "EncryptedWithCmk" (encrypted with DES). This option is used to publish a VM image to a Shared Image Gallery as a confidential VM image.
 
 <!-- End of code generated from the comments of the SharedImageGalleryDestination struct in builder/azure/arm/config.go; -->
 

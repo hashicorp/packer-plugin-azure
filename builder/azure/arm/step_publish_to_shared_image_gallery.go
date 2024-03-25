@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -23,16 +24,15 @@ type StepPublishToSharedImageGallery struct {
 }
 
 type PublishArgs struct {
-	SubscriptionID      string
-	SourceID            string
-	SharedImageGallery  SharedImageGalleryDestination
-	EndOfLifeDate       string
-	ExcludeFromLatest   bool
-	ReplicaCount        int64
-	Location            string
-	DiskEncryptionSetId string
-	ReplicationMode     galleryimageversions.ReplicationMode
-	Tags                map[string]string
+	SubscriptionID     string
+	SourceID           string
+	SharedImageGallery SharedImageGalleryDestination
+	EndOfLifeDate      string
+	ExcludeFromLatest  bool
+	ReplicaCount       int64
+	Location           string
+	ReplicationMode    galleryimageversions.ReplicationMode
+	Tags               map[string]string
 }
 
 func NewStepPublishToSharedImageGallery(client *AzureClient, ui packersdk.Ui, config *Config) *StepPublishToSharedImageGallery {
@@ -83,39 +83,87 @@ func getSigDestination(state multistep.StateBag) SharedImageGalleryDestination {
 		replicationRegions = append(replicationRegions, v.Name)
 	}
 
+	confidentialVMEncryptionType, ok := state.Get(constants.ArmSharedImageGalleryDestinationConfidentialVMImageEncryptionType).(string)
+	if !ok {
+		confidentialVMEncryptionType = ""
+	}
+
 	return SharedImageGalleryDestination{
-		SigDestinationSubscription:       subscription,
-		SigDestinationResourceGroup:      resourceGroup,
-		SigDestinationGalleryName:        galleryName,
-		SigDestinationImageName:          imageName,
-		SigDestinationImageVersion:       imageVersion,
-		SigDestinationReplicationRegions: replicationRegions,
-		SigDestinationStorageAccountType: storageAccountType,
-		SigDestinationTargetRegions:      targetRegions,
+		SigDestinationSubscription:                      subscription,
+		SigDestinationResourceGroup:                     resourceGroup,
+		SigDestinationGalleryName:                       galleryName,
+		SigDestinationImageName:                         imageName,
+		SigDestinationImageVersion:                      imageVersion,
+		SigDestinationReplicationRegions:                replicationRegions,
+		SigDestinationStorageAccountType:                storageAccountType,
+		SigDestinationConfidentialVMImageEncryptionType: confidentialVMEncryptionType,
+		SigDestinationTargetRegions:                     targetRegions,
 	}
 }
 
-func buildAzureImageTargetRegions(regions []TargetRegion) []galleryimageversions.TargetRegion {
-	targetRegions := make([]galleryimageversions.TargetRegion, 0, len(regions))
-	for _, r := range regions {
+func buildAzureImageTargetRegions(sig SharedImageGalleryDestination) []galleryimageversions.TargetRegion {
+	targetRegions := make([]galleryimageversions.TargetRegion, 0, len(sig.SigDestinationTargetRegions))
+	for _, r := range sig.SigDestinationTargetRegions {
 		name := r.Name
 		tr := galleryimageversions.TargetRegion{Name: name}
 
-		if r.DiskEncryptionSetId != "" {
-			id := r.DiskEncryptionSetId
-			tr.Encryption = &galleryimageversions.EncryptionImages{
-				OsDiskImage: &galleryimageversions.OSDiskImageEncryption{
-					DiskEncryptionSetId: &id,
-				},
-			}
-		}
+		encryption := buildAzureImageTargetRegionsWithEncryption(r.DiskEncryptionSetId, sig.SigDestinationConfidentialVMImageEncryptionType)
+		tr.Encryption = encryption
 		targetRegions = append(targetRegions, tr)
 	}
 	return targetRegions
 }
 
+func buildAzureImageTargetRegionsWithEncryption(diskEncryptionSetId string, confidentialVMImageEncryptionType string) *galleryimageversions.EncryptionImages {
+	var e *galleryimageversions.EncryptionImages = nil
+	var toReturnDiskEncryptionSetId *string = nil
+	var toReturnSecureVMDiskEncryptionSetId *string = nil
+	var toReturnConfidentialVMEncryptionType *galleryimageversions.ConfidentialVMEncryptionType = nil
+
+	if diskEncryptionSetId != "" && confidentialVMImageEncryptionType == "" {
+		// If the diskEncryptionSetId is set, but the confidentialVMImageEncryptionType is not set, then the image is encrypted with the diskEncryptionSetId
+		toReturnDiskEncryptionSetId = common.StringPtr(diskEncryptionSetId)
+	} else if diskEncryptionSetId != "" && confidentialVMImageEncryptionType == string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithCmk) {
+		// If the diskEncryptionSetId is set and the confidentialVMImageEncryptionType is set to EncryptedWithCmk, then the cvm image will be encrypted with the diskEncryptionSetId in this target region
+		toReturnSecureVMDiskEncryptionSetId = common.StringPtr(diskEncryptionSetId)
+		cvmCmk := galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithCmk
+		toReturnConfidentialVMEncryptionType = &cvmCmk
+	} else if diskEncryptionSetId == "" && (confidentialVMImageEncryptionType == string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedVMGuestStateOnlyWithPmk) || confidentialVMImageEncryptionType == string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithPmk)) {
+		// If the diskEncryptionSetId is not set and the confidentialVMImageEncryptionType is set to EncryptedVMGuestStateOnlyWithPmk or EncryptedWithPmk, then the cvm image will be encrypted with a PaaS key in this target region
+		switch confidentialVMImageEncryptionType {
+		case string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedVMGuestStateOnlyWithPmk):
+			withPmkOnly := galleryimageversions.ConfidentialVMEncryptionTypeEncryptedVMGuestStateOnlyWithPmk
+			toReturnConfidentialVMEncryptionType = &withPmkOnly
+		case string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithPmk):
+			withPmk := galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithPmk
+			toReturnConfidentialVMEncryptionType = &withPmk
+		}
+	}
+
+	if toReturnDiskEncryptionSetId != nil {
+		e = &galleryimageversions.EncryptionImages{
+			OsDiskImage: &galleryimageversions.OSDiskImageEncryption{
+				DiskEncryptionSetId: toReturnDiskEncryptionSetId,
+			},
+		}
+	}
+
+	if toReturnConfidentialVMEncryptionType != nil {
+		e = &galleryimageversions.EncryptionImages{
+			OsDiskImage: &galleryimageversions.OSDiskImageEncryption{
+				SecurityProfile: &galleryimageversions.OSDiskImageSecurityProfile{
+					ConfidentialVMEncryptionType: toReturnConfidentialVMEncryptionType,
+					SecureVMDiskEncryptionSetId:  toReturnSecureVMDiskEncryptionSetId,
+				},
+			},
+		}
+	}
+
+	return e
+}
+
 func (s *StepPublishToSharedImageGallery) publishToSig(ctx context.Context, args PublishArgs) (string, error) {
-	imageVersionRegions := buildAzureImageTargetRegions(args.SharedImageGallery.SigDestinationTargetRegions)
+	imageVersionRegions := buildAzureImageTargetRegions(args.SharedImageGallery)
 	storageAccountType, err := getSigDestinationStorageAccountType(args.SharedImageGallery.SigDestinationStorageAccountType)
 	if err != nil {
 		s.error(err)
@@ -197,9 +245,13 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 		miSigReplicaCount = constants.SharedImageGalleryImageVersionDefaultMaxReplicaCount
 	}
 
-	var diskEncryptionSetId string
-	if _, ok := stateBag.GetOk(constants.ArmBuildDiskEncryptionSetId); ok {
-		diskEncryptionSetId = stateBag.Get(constants.ArmBuildDiskEncryptionSetId).(string)
+	regionNames := make([]string, 0, len(sharedImageGallery.SigDestinationTargetRegions))
+	desIds := make([]string, 0, len(sharedImageGallery.SigDestinationTargetRegions))
+	for _, r := range sharedImageGallery.SigDestinationTargetRegions {
+		regionNames = append(regionNames, r.Name)
+		if r.DiskEncryptionSetId != "" {
+			desIds = append(desIds, r.DiskEncryptionSetId)
+		}
 	}
 
 	s.say(fmt.Sprintf(" -> Source ID used for SIG publish        : '%s'", sourceID))
@@ -207,10 +259,15 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 	s.say(fmt.Sprintf(" -> SIG gallery name                      : '%s'", sharedImageGallery.SigDestinationGalleryName))
 	s.say(fmt.Sprintf(" -> SIG image name                        : '%s'", sharedImageGallery.SigDestinationImageName))
 	s.say(fmt.Sprintf(" -> SIG image version                     : '%s'", sharedImageGallery.SigDestinationImageVersion))
-	if diskEncryptionSetId != "" {
-		s.say(fmt.Sprintf(" -> SIG Encryption Set : %s", diskEncryptionSetId))
+	if sharedImageGallery.SigDestinationConfidentialVMImageEncryptionType != "" {
+		s.say(fmt.Sprintf(" -> SIG Confidential VM Encryption Type   : '%s'", sharedImageGallery.SigDestinationConfidentialVMImageEncryptionType))
 	}
-	s.say(fmt.Sprintf(" -> SIG replication regions               : '%v'", sharedImageGallery.SigDestinationReplicationRegions))
+	s.say(fmt.Sprintf(" -> SIG target regions                    : '%s'", regionNames))
+	if len(desIds) > 0 {
+		for i, r := range sharedImageGallery.SigDestinationTargetRegions {
+			s.say(fmt.Sprintf("   -> Region %s DES Id                     : '%s'", fmt.Sprint(i+1), r.DiskEncryptionSetId))
+		}
+	}
 	s.say(fmt.Sprintf(" -> SIG storage account type              : '%s'", sharedImageGallery.SigDestinationStorageAccountType))
 	s.say(fmt.Sprintf(" -> SIG image version endoflife date      : '%s'", miSGImageVersionEndOfLifeDate))
 	s.say(fmt.Sprintf(" -> SIG image version exclude from latest : '%t'", miSGImageVersionExcludeFromLatest))
@@ -225,16 +282,15 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 	createdGalleryImageVersionID, err := s.publish(
 		ctx,
 		PublishArgs{
-			SubscriptionID:      subscriptionID,
-			SourceID:            sourceID,
-			SharedImageGallery:  sharedImageGallery,
-			EndOfLifeDate:       miSGImageVersionEndOfLifeDate,
-			ExcludeFromLatest:   miSGImageVersionExcludeFromLatest,
-			ReplicaCount:        miSigReplicaCount,
-			Location:            location,
-			DiskEncryptionSetId: diskEncryptionSetId,
-			ReplicationMode:     replicationMode,
-			Tags:                tags,
+			SubscriptionID:     subscriptionID,
+			SourceID:           sourceID,
+			SharedImageGallery: sharedImageGallery,
+			EndOfLifeDate:      miSGImageVersionEndOfLifeDate,
+			ExcludeFromLatest:  miSGImageVersionExcludeFromLatest,
+			ReplicaCount:       miSigReplicaCount,
+			Location:           location,
+			ReplicationMode:    replicationMode,
+			Tags:               tags,
 		},
 	)
 

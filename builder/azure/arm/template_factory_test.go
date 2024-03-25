@@ -733,6 +733,75 @@ func TestTrustedLaunch01(t *testing.T) {
 	m := getArmBuilderConfiguration()
 	m["secure_boot_enabled"] = "true"
 	m["vtpm_enabled"] = "true"
+	m["security_type"] = "TrustedLaunch"
+
+	var c Config
+	_, err := c.Prepare(m, getPackerConfiguration(), getPackerSSHPasswordCommunicatorConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+func TestConfidentialVM01(t *testing.T) {
+	m := map[string]interface{}{
+		"secure_boot_enabled":       "true",
+		"vtpm_enabled":              "true",
+		"security_type":             "ConfidentialVM",
+		"security_encryption_type":  "DiskWithVMGuestState",
+		"disk_encryption_set_id":    "encrypted",
+		"build_resource_group_name": "rg_name",
+		"shared_image_gallery_destination": map[string]interface{}{
+			"subscription":   "subscription",
+			"resource_group": "rg_name",
+			"gallery_name":   "gallery_name",
+			"image_name":     "image_name",
+			"image_version":  "2024.01.01",
+		},
+		"image_publisher": "--image-publisher--",
+		"image_offer":     "--image-offer--",
+		"image_sku":       "--image-sku--",
+		"os_type":         constants.Target_Linux,
+		"communicator":    "none",
+	}
+
+	var c Config
+	_, err := c.Prepare(m, getPackerConfiguration(), getPackerSSHPasswordCommunicatorConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+func TestConfidentialVM02(t *testing.T) {
+	m := map[string]interface{}{
+		"secure_boot_enabled":       "true",
+		"vtpm_enabled":              "true",
+		"security_type":             "ConfidentialVM",
+		"build_resource_group_name": "rg_name",
+		"shared_image_gallery_destination": map[string]interface{}{
+			"subscription":   "subscription",
+			"resource_group": "rg_name",
+			"gallery_name":   "gallery_name",
+			"image_name":     "image_name",
+			"image_version":  "2024.01.01",
+		},
+		"image_publisher": "--image-publisher--",
+		"image_offer":     "--image-offer--",
+		"image_sku":       "--image-sku--",
+		"os_type":         constants.Target_Linux,
+		"communicator":    "none",
+	}
 
 	var c Config
 	_, err := c.Prepare(m, getPackerConfiguration(), getPackerSSHPasswordCommunicatorConfiguration())
