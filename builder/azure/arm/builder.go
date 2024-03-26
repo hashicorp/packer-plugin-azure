@@ -206,12 +206,22 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		if err != nil {
 			return nil, fmt.Errorf("the Shared Gallery Image '%s' to which to publish the managed image version to does not exist in the resource group '%s' or does not contain managed image '%s'", b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationImageName)
 		}
-
 		// Check if a Image Version already exists for our target destination
 		galleryImageVersionId := galleryimageversions.NewImageVersionID(sigSubscriptionID, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion)
 		_, err := azureClient.GalleryImageVersionsClient.Get(ctx, galleryImageVersionId, galleryimageversions.DefaultGetOperationOptions())
 		if err == nil {
-			return nil, fmt.Errorf("a gallery image version for image name:version %s:%s already exists in gallery %s", b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationGalleryName)
+			if b.config.PackerForce {
+				ui.Say(fmt.Sprintf("the shared image gallery version named [%s/%s/%s] already exists, but deleting it due to -force flag", b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion))
+				deleteImageContext, cancel := context.WithTimeout(ctx, azureClient.PollingDuration)
+				defer cancel()
+				err := azureClient.GalleryImageVersionsClient.DeleteThenPoll(deleteImageContext, galleryImageVersionId)
+				if err != nil {
+					return nil, fmt.Errorf("failed to delete the shared image gallery version [%s/%s%s]: with error %s", b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, err.Error())
+				}
+
+			} else {
+				return nil, fmt.Errorf("a gallery image version for image name:version %s:%s already exists in gallery %s", b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationGalleryName)
+			}
 		}
 
 		if len(b.config.SharedGalleryDestination.SigDestinationTargetRegions) > 0 {
