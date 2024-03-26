@@ -6,16 +6,12 @@ package client
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
-
 	"github.com/hashicorp/packer-plugin-sdk/useragent"
 
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachineimages"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
@@ -24,7 +20,6 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 	"github.com/hashicorp/go-azure-sdk/sdk/auth"
-	authWrapper "github.com/hashicorp/go-azure-sdk/sdk/auth/autorest"
 	version "github.com/hashicorp/packer-plugin-azure/version"
 )
 
@@ -47,15 +42,22 @@ type AzureClientSet interface {
 	PollingDuration() time.Duration
 }
 
+// AzureClientSet is used for API requests on the chroot builder
 var _ AzureClientSet = &azureClientSet{}
 
 type azureClientSet struct {
-	sender                  autorest.Sender
-	authorizer              auth.Authorizer
-	subscriptionID          string
-	PollingDelay            time.Duration
-	pollingDuration         time.Duration
-	ResourceManagerEndpoint string
+	authorizer                 auth.Authorizer
+	subscriptionID             string
+	PollingDelay               time.Duration
+	pollingDuration            time.Duration
+	ResourceManagerEndpoint    string
+	disksClient                disks.DisksClient
+	snapshotsClient            snapshots.SnapshotsClient
+	imagesClient               images.ImagesClient
+	virtualMachinesClient      virtualmachines.VirtualMachinesClient
+	virtualMachineImagesClient virtualmachineimages.VirtualMachineImagesClient
+	galleryImagesClient        galleryimages.GalleryImagesClient
+	galleryImageVersionsClient galleryimageversions.GalleryImageVersionsClient
 }
 
 func New(c Config, say func(string)) (AzureClientSet, error) {
@@ -80,13 +82,68 @@ func new(c Config, say func(string)) (*azureClientSet, error) {
 	if err != nil {
 		return nil, err
 	}
+	imagesClient, err := images.NewImagesClientWithBaseURI(cloudEnv.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	imagesClient.Client.Authorizer = authorizer
+	imagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), imagesClient.Client.UserAgent)
+
+	galleryImageVersionsClient, err := galleryimageversions.NewGalleryImageVersionsClientWithBaseURI(cloudEnv.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	galleryImageVersionsClient.Client.Authorizer = authorizer
+	galleryImageVersionsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), galleryImageVersionsClient.Client.UserAgent)
+
+	galleryImagesClient, err := galleryimages.NewGalleryImagesClientWithBaseURI(cloudEnv.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	galleryImagesClient.Client.Authorizer = authorizer
+	galleryImagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), galleryImagesClient.Client.UserAgent)
+
+	disksClient, err := disks.NewDisksClientWithBaseURI(cloudEnv.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	disksClient.Client.Authorizer = authorizer
+	disksClient.Client.UserAgent = useragent.String(version.AzurePluginVersion.FormattedVersion())
+
+	snapshotsClient, err := snapshots.NewSnapshotsClientWithBaseURI(cloudEnv.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	snapshotsClient.Client.Authorizer = authorizer
+	snapshotsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), snapshotsClient.Client.UserAgent)
+
+	virtualMachinesClient, err := virtualmachines.NewVirtualMachinesClientWithBaseURI(cloudEnv.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	virtualMachinesClient.Client.Authorizer = authorizer
+	virtualMachinesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), virtualMachinesClient.Client.UserAgent)
+
+	virtualMachineImagesClient, err := virtualmachineimages.NewVirtualMachineImagesClientWithBaseURI(cloudEnv.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	virtualMachineImagesClient.Client.Authorizer = authorizer
+	virtualMachineImagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), virtualMachinesClient.Client.UserAgent)
+
 	return &azureClientSet{
-		authorizer:              authorizer,
-		subscriptionID:          c.SubscriptionID,
-		sender:                  http.DefaultClient,
-		PollingDelay:            time.Second,
-		pollingDuration:         time.Minute * 15,
-		ResourceManagerEndpoint: *resourceManagerEndpoint,
+		authorizer:                 authorizer,
+		subscriptionID:             c.SubscriptionID,
+		PollingDelay:               time.Second,
+		imagesClient:               *imagesClient,
+		galleryImagesClient:        *galleryImagesClient,
+		galleryImageVersionsClient: *galleryImageVersionsClient,
+		disksClient:                *disksClient,
+		virtualMachinesClient:      *virtualMachinesClient,
+		virtualMachineImagesClient: *virtualMachineImagesClient,
+		snapshotsClient:            *snapshotsClient,
+		pollingDuration:            time.Minute * 15,
+		ResourceManagerEndpoint:    *resourceManagerEndpoint,
 	}, nil
 }
 
@@ -98,69 +155,37 @@ func (s azureClientSet) PollingDuration() time.Duration {
 	return s.pollingDuration
 }
 
-func (s azureClientSet) configureTrack1Client(c *autorest.Client) {
-	err := c.AddToUserAgent(useragent.String(version.AzurePluginVersion.FormattedVersion()))
-	if err != nil {
-		log.Printf("Error appending Packer plugin version to user agent.")
-	}
-	c.Authorizer = authWrapper.AutorestAuthorizer(s.authorizer)
-	c.Sender = s.sender
-}
-
 func (s azureClientSet) MetadataClient() MetadataClientAPI {
-	return metadataClient{
-		s.sender,
-		useragent.String(version.AzurePluginVersion.FormattedVersion()),
-	}
+	return metadataClient{}
 }
 
 func (s azureClientSet) DisksClient() disks.DisksClient {
-	c := disks.NewDisksClientWithBaseURI(s.ResourceManagerEndpoint)
-	s.configureTrack1Client(&c.Client)
-	c.Client.PollingDelay = s.PollingDelay
-	return c
+	return s.disksClient
 }
 
 func (s azureClientSet) SnapshotsClient() snapshots.SnapshotsClient {
-	c := snapshots.NewSnapshotsClientWithBaseURI(s.ResourceManagerEndpoint)
-	s.configureTrack1Client(&c.Client)
-	c.Client.PollingDelay = s.PollingDelay
-	return c
+	return s.snapshotsClient
 }
 
 func (s azureClientSet) ImagesClient() images.ImagesClient {
-	c := images.NewImagesClientWithBaseURI(s.ResourceManagerEndpoint)
-	s.configureTrack1Client(&c.Client)
-	c.Client.PollingDelay = s.PollingDelay
-	return c
+	return s.imagesClient
 }
 
 func (s azureClientSet) VirtualMachinesClient() virtualmachines.VirtualMachinesClient {
-	c := virtualmachines.NewVirtualMachinesClientWithBaseURI(s.ResourceManagerEndpoint)
-	s.configureTrack1Client(&c.Client)
-	c.Client.PollingDelay = s.PollingDelay
-	return c
+	return s.virtualMachinesClient
 }
 
 func (s azureClientSet) VirtualMachineImagesClient() virtualmachineimages.VirtualMachineImagesClient {
-	c := virtualmachineimages.NewVirtualMachineImagesClientWithBaseURI(s.ResourceManagerEndpoint)
-	s.configureTrack1Client(&c.Client)
-	c.Client.PollingDelay = s.PollingDelay
-	return c
+	return s.virtualMachineImagesClient
 }
 
 func (s azureClientSet) GalleryImagesClient() galleryimages.GalleryImagesClient {
-	c := galleryimages.NewGalleryImagesClientWithBaseURI(s.ResourceManagerEndpoint)
-	s.configureTrack1Client(&c.Client)
-	c.Client.PollingDelay = s.PollingDelay
-	return c
+	return s.galleryImagesClient
 }
 
 func (s azureClientSet) GalleryImageVersionsClient() galleryimageversions.GalleryImageVersionsClient {
-	c := galleryimageversions.NewGalleryImageVersionsClientWithBaseURI(s.ResourceManagerEndpoint)
-	s.configureTrack1Client(&c.Client)
-	c.Client.PollingDelay = s.PollingDelay
-	return c
+	return s.galleryImageVersionsClient
+
 }
 
 func ParsePlatformImageURN(urn string) (image *PlatformImage, err error) {

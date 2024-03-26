@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
@@ -20,7 +21,7 @@ type StepVerifySourceDisk struct {
 	SourceDiskResourceID string
 	Location             string
 
-	get func(context.Context, client.AzureClientSet, disks.DiskId) (*disks.Disk, error)
+	get func(context.Context, client.AzureClientSet, commonids.ManagedDiskId) (*disks.Disk, error)
 }
 
 func NewStepVerifySourceDisk(step *StepVerifySourceDisk) *StepVerifySourceDisk {
@@ -60,7 +61,7 @@ func (s StepVerifySourceDisk) Run(ctx context.Context, state multistep.StateBag)
 		return multistep.ActionHalt
 	}
 
-	diskId := disks.NewDiskID(azcli.SubscriptionID(), resource.ResourceGroup, resource.ResourceName.String())
+	diskId := commonids.NewManagedDiskID(azcli.SubscriptionID(), resource.ResourceGroup, resource.ResourceName.String())
 	disk, err := s.get(ctx, azcli, diskId)
 	if err != nil {
 		err := fmt.Errorf("Unable to retrieve disk (%q): %s", s.SourceDiskResourceID, err)
@@ -86,8 +87,10 @@ func (s StepVerifySourceDisk) Run(ctx context.Context, state multistep.StateBag)
 	return multistep.ActionContinue
 }
 
-func (s StepVerifySourceDisk) getDisk(ctx context.Context, azcli client.AzureClientSet, id disks.DiskId) (*disks.Disk, error) {
-	diskResult, err := azcli.DisksClient().Get(ctx, id)
+func (s StepVerifySourceDisk) getDisk(ctx context.Context, azcli client.AzureClientSet, id commonids.ManagedDiskId) (*disks.Disk, error) {
+	pollingContext, cancel := context.WithTimeout(ctx, azcli.PollingDuration())
+	defer cancel()
+	diskResult, err := azcli.DisksClient().Get(pollingContext, id)
 	if err != nil {
 		return nil, err
 	}

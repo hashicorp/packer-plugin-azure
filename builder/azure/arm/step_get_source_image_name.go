@@ -105,9 +105,11 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 
 func (s *StepGetSourceImageName) GetGalleryImageVersion(ctx context.Context) (*galleryimageversions.GalleryImageVersion, error) {
 	client := s.client.GalleryImageVersionsClient
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
 
 	galleryVersionId := galleryimageversions.NewImageVersionID(s.config.SharedGallery.Subscription, s.config.SharedGallery.ResourceGroup, s.config.SharedGallery.GalleryName, s.config.SharedGallery.ImageName, s.config.SharedGallery.ImageVersion)
-	result, err := client.Get(ctx, galleryVersionId, galleryimageversions.DefaultGetOperationOptions())
+	result, err := client.Get(pollingContext, galleryVersionId, galleryimageversions.DefaultGetOperationOptions())
 	if err != nil {
 		return nil, err
 	}

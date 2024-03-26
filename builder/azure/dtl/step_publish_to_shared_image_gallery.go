@@ -71,7 +71,7 @@ func (s *StepPublishToSharedImageGallery) publishToSig(ctx context.Context, subs
 		s.say(s.client.LastError.Error())
 		return "", err
 	}
-	createdSIGImageVersion, err := s.client.GalleryImageVersionsClient.Get(ctx, galleryImageVersionId, galleryimageversions.DefaultGetOperationOptions())
+	createdSIGImageVersion, err := s.client.GalleryImageVersionsClient.Get(pollingContext, galleryImageVersionId, galleryimageversions.DefaultGetOperationOptions())
 
 	if err != nil {
 		s.say(s.client.LastError.Error())

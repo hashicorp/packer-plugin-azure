@@ -13,7 +13,7 @@ import (
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/labs"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15/virtualmachines"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/networkinterfaces"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/networkinterfaces"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -52,7 +52,9 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupNa
 	// TODO Talk to Tom(s) about this, we have to have two different Labs IDs in different calls, so we can probably move this into the commonids package
 	labResourceId := virtualmachines.NewLabID(subscriptionId, resourceGroupName, labName)
 	labId := labs.NewLabID(subscriptionId, s.config.tmpResourceGroupName, labName)
-	vmlistPage, err := s.client.DtlMetaClient.VirtualMachines.List(ctx, labResourceId, virtualmachines.DefaultListOperationOptions())
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+	vmlistPage, err := s.client.DtlMetaClient.VirtualMachines.List(pollingContext, labResourceId, virtualmachines.DefaultListOperationOptions())
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return err
@@ -71,8 +73,8 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupNa
 		return err
 	}
 
-	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
-	defer cancel()
+	pollingContext, labsCancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer labsCancel()
 	err = s.client.DtlMetaClient.Labs.CreateEnvironmentThenPoll(pollingContext, labId, *labMachine)
 	if err != nil {
 		s.say(s.client.LastError.Error())
@@ -81,7 +83,7 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupNa
 
 	expand := "Properties($expand=ComputeVm,Artifacts,NetworkInterface)"
 	vmResourceId := virtualmachines.NewVirtualMachineID(subscriptionId, s.config.tmpResourceGroupName, labName, s.config.tmpComputeName)
-	vm, err := s.client.DtlMetaClient.VirtualMachines.Get(ctx, vmResourceId, virtualmachines.GetOperationOptions{Expand: &expand})
+	vm, err := s.client.DtlMetaClient.VirtualMachines.Get(pollingContext, vmResourceId, virtualmachines.GetOperationOptions{Expand: &expand})
 	if err != nil {
 		s.say(s.client.LastError.Error())
 	}
@@ -90,7 +92,7 @@ func (s *StepDeployTemplate) deployTemplate(ctx context.Context, resourceGroupNa
 	// publicIP being allowed or not
 	if s.config.DisallowPublicIP {
 		interfaceID := commonids.NewNetworkInterfaceID(subscriptionId, resourceGroupName, s.config.tmpNicName)
-		resp, err := s.client.NetworkMetaClient.NetworkInterfaces.Get(ctx, interfaceID, networkinterfaces.DefaultGetOperationOptions())
+		resp, err := s.client.NetworkMetaClient.NetworkInterfaces.Get(pollingContext, interfaceID, networkinterfaces.DefaultGetOperationOptions())
 		if err != nil {
 			s.say(s.client.LastError.Error())
 			return err

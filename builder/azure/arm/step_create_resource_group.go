@@ -38,7 +38,9 @@ func NewStepCreateResourceGroup(client *AzureClient, ui packersdk.Ui) *StepCreat
 
 func (s *StepCreateResourceGroup) createResourceGroup(ctx context.Context, subscriptionId string, resourceGroupName string, location string, tags map[string]string) error {
 	id := commonids.NewResourceGroupID(subscriptionId, resourceGroupName)
-	_, err := s.client.ResourceGroupsClient.CreateOrUpdate(ctx, id, resourcegroups.ResourceGroup{
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+	_, err := s.client.ResourceGroupsClient.CreateOrUpdate(pollingContext, id, resourcegroups.ResourceGroup{
 		Location: location,
 		Tags:     &tags,
 	})
@@ -51,7 +53,10 @@ func (s *StepCreateResourceGroup) createResourceGroup(ctx context.Context, subsc
 
 func (s *StepCreateResourceGroup) doesResourceGroupExist(ctx context.Context, subscriptionId string, resourceGroupName string) (bool, error) {
 	id := commonids.NewResourceGroupID(subscriptionId, resourceGroupName)
-	exists, err := s.client.ResourceGroupsClient.Get(ctx, id)
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+
+	exists, err := s.client.ResourceGroupsClient.Get(pollingContext, id)
 	if err != nil {
 		if exists.HttpResponse.StatusCode == 404 {
 			return false, nil
@@ -142,7 +147,9 @@ func (s *StepCreateResourceGroup) Cleanup(state multistep.StateBag) {
 	ui.Say("\nCleanup requested, deleting resource group ...")
 	id := commonids.NewResourceGroupID(subscriptionId, resourceGroupName)
 	if state.Get(constants.ArmAsyncResourceGroupDelete).(bool) {
-		_, deleteErr := s.client.ResourceGroupsClient.Delete(ctx, id, resourcegroups.DefaultDeleteOperationOptions())
+		pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+		defer cancel()
+		_, deleteErr := s.client.ResourceGroupsClient.Delete(pollingContext, id, resourcegroups.DefaultDeleteOperationOptions())
 		if deleteErr != nil {
 			ui.Error(fmt.Sprintf("Error deleting resource group.  Please delete it manually.\n\n"+
 				"Name: %s\n"+

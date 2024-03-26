@@ -71,8 +71,10 @@ func (pi *StepResolvePlatformImageVersion) Run(ctx context.Context, state multis
 	return multistep.ActionContinue
 }
 func (s *StepResolvePlatformImageVersion) listVMImages(ctx context.Context, azcli client.AzureClientSet, skuID virtualmachineimages.SkuId, operations virtualmachineimages.ListOperationOptions) (*[]virtualmachineimages.VirtualMachineImageResource, error) {
+	pollingContext, cancel := context.WithTimeout(ctx, azcli.PollingDuration())
+	defer cancel()
 	result, err := azcli.VirtualMachineImagesClient().List(
-		ctx,
+		pollingContext,
 		skuID,
 		operations,
 	)

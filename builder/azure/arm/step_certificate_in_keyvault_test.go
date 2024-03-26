@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/secrets"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-07-01/secrets"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 )

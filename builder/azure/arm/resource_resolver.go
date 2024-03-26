@@ -17,7 +17,6 @@ import (
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/subnets"
 )
 
 type resourceResolver struct {
@@ -123,7 +122,7 @@ func findVirtualNetworkSubnet(client *AzureClient, subscriptionId string, resour
 
 	subnetListContext, cancel := context.WithTimeout(context.TODO(), client.PollingDuration)
 	defer cancel()
-	subnets, err := client.NetworkMetaClient.Subnets.List(subnetListContext, subnets.NewVirtualNetworkID(subscriptionId, resourceGroupName, name))
+	subnets, err := client.NetworkMetaClient.Subnets.List(subnetListContext, commonids.NewVirtualNetworkID(subscriptionId, resourceGroupName, name))
 	if err != nil {
 		return "", err
 	}

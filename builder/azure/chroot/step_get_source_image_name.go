@@ -85,8 +85,9 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 }
 
 func (s *StepGetSourceImageName) getSharedImageGalleryVersion(ctx context.Context, azclient client.AzureClientSet, id galleryimageversions.ImageVersionId) (*galleryimageversions.GalleryImageVersion, error) {
-
-	imageVersionResult, err := azclient.GalleryImageVersionsClient().Get(ctx, id, galleryimageversions.DefaultGetOperationOptions())
+	pollingContext, cancel := context.WithTimeout(ctx, azclient.PollingDuration())
+	defer cancel()
+	imageVersionResult, err := azclient.GalleryImageVersionsClient().Get(pollingContext, id, galleryimageversions.DefaultGetOperationOptions())
 	if err != nil {
 		return nil, err
 	}

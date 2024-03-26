@@ -14,9 +14,7 @@ import (
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/networksecuritygroups"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/virtualnetworks"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/networksecuritygroups"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deploymentoperations"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
@@ -189,8 +187,10 @@ func (s *StepDeployTemplate) getImageDetails(ctx context.Context, subscriptionId
 	//TODO is this still true?
 	//We can't depend on constants.ArmOSDiskVhd being set
 	var imageName, imageType string
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
 	vmID := virtualmachines.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)
-	vm, err := s.client.VirtualMachinesClient.Get(ctx, vmID, virtualmachines.DefaultGetOperationOptions())
+	vm, err := s.client.VirtualMachinesClient.Get(pollingContext, vmID, virtualmachines.DefaultGetOperationOptions())
 	if err != nil {
 		return imageName, imageType, err
 	}
@@ -237,7 +237,7 @@ func deleteResource(ctx context.Context, client *AzureClient, subscriptionId str
 		err := client.NetworkMetaClient.NetworkInterfaces.DeleteThenPoll(pollingContext, interfaceID)
 		return err
 	case "Microsoft.Network/virtualNetworks":
-		vnetID := virtualnetworks.NewVirtualNetworkID(subscriptionId, resourceGroupName, resourceName)
+		vnetID := commonids.NewVirtualNetworkID(subscriptionId, resourceGroupName, resourceName)
 		err := client.NetworkMetaClient.VirtualNetworks.DeleteThenPoll(pollingContext, vnetID)
 		return err
 	case "Microsoft.Network/networkSecurityGroups":
@@ -261,7 +261,7 @@ func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, 
 	if isManagedDisk {
 		xs := strings.Split(imageName, "/")
 		diskName := xs[len(xs)-1]
-		diskId := disks.NewDiskID(subscriptionId, resourceGroupName, diskName)
+		diskId := commonids.NewManagedDiskID(subscriptionId, resourceGroupName, diskName)
 
 		if err := s.client.DisksClient.DeleteThenPoll(pollingContext, diskId); err != nil {
 			return err
@@ -279,7 +279,7 @@ func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, 
 	if len(xs) < 3 {
 		return errors.New("Unable to parse path of image " + imageName)
 	}
-	_, err = s.client.GiovanniBlobClient.Delete(pollingContext, storageAccountName, "images", blobName, giovanniBlobStorageSDK.DeleteInput{})
+	_, err = s.client.GiovanniBlobClient.Delete(pollingContext, storageAccountName, blobName, giovanniBlobStorageSDK.DeleteInput{})
 	return err
 }
 
@@ -288,7 +288,10 @@ func (s *StepDeployTemplate) deleteDeploymentResources(ctx context.Context, subs
 	options := deploymentoperations.DefaultListOperationOptions()
 	options.Top = &maxResources
 	id := deploymentoperations.NewResourceGroupDeploymentID(subscriptionId, resourceGroupName, deploymentName)
-	deploymentOperations, err := s.client.DeploymentOperationsClient.ListComplete(ctx, id, options)
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+
+	deploymentOperations, err := s.client.DeploymentOperationsClient.ListComplete(pollingContext, id, options)
 	if err != nil {
 		s.reportIfError(err, resourceGroupName)
 		return err

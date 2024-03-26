@@ -190,16 +190,18 @@ func (s *StepPublishToSharedImageGallery) publishToSig(ctx context.Context, args
 		},
 	}
 
-	pollingContext, cancel := context.WithTimeout(ctx, s.client.SharedGalleryTimeout)
-	defer cancel()
+	publishSigContext, publishSigCancel := context.WithTimeout(ctx, s.client.SharedGalleryTimeout)
+	defer publishSigCancel()
 	galleryImageVersionId := galleryimageversions.NewImageVersionID(args.SubscriptionID, args.SharedImageGallery.SigDestinationResourceGroup, args.SharedImageGallery.SigDestinationGalleryName, args.SharedImageGallery.SigDestinationImageName, args.SharedImageGallery.SigDestinationImageVersion)
-	err = s.client.GalleryImageVersionsClient.CreateOrUpdateThenPoll(pollingContext, galleryImageVersionId, galleryImageVersion)
+	err = s.client.GalleryImageVersionsClient.CreateOrUpdateThenPoll(publishSigContext, galleryImageVersionId, galleryImageVersion)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return "", err
 	}
 
-	createdSGImageVersion, err := s.client.GalleryImageVersionsClient.Get(ctx, galleryImageVersionId, galleryimageversions.DefaultGetOperationOptions())
+	pollingContext, pollingCancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer pollingCancel()
+	createdSGImageVersion, err := s.client.GalleryImageVersionsClient.Get(pollingContext, galleryImageVersionId, galleryimageversions.DefaultGetOperationOptions())
 
 	if err != nil {
 		s.say(s.client.LastError.Error())

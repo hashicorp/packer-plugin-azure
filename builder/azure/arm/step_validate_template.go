@@ -42,8 +42,11 @@ func (s *StepValidateTemplate) validateTemplate(ctx context.Context, subscriptio
 	if err != nil {
 		return err
 	}
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+
 	id := deployments.NewResourceGroupProviderDeploymentID(subscriptionId, resourceGroupName, deploymentName)
-	_, err = s.client.DeploymentsClient.Validate(ctx, id, *deployment)
+	_, err = s.client.DeploymentsClient.Validate(pollingContext, id, *deployment)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 	}

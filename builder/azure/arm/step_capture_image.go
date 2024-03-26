@@ -44,7 +44,9 @@ func NewStepCaptureImage(client *AzureClient, ui packersdk.Ui) *StepCaptureImage
 }
 
 func (s *StepCaptureImage) generalize(ctx context.Context, vmId virtualmachines.VirtualMachineId) error {
-	_, err := s.client.Generalize(ctx, vmId)
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+	_, err := s.client.Generalize(pollingContext, vmId)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 	}
@@ -73,7 +75,9 @@ func (s *StepCaptureImage) captureImage(ctx context.Context, vmId virtualmachine
 }
 
 func (s *StepCaptureImage) getVMID(ctx context.Context, vmId virtualmachines.VirtualMachineId) (string, error) {
-	vmResponse, err := s.client.VirtualMachinesClient.Get(ctx, vmId, virtualmachines.DefaultGetOperationOptions())
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+	vmResponse, err := s.client.VirtualMachinesClient.Get(pollingContext, vmId, virtualmachines.DefaultGetOperationOptions())
 	if err != nil {
 		return "", err
 	}
