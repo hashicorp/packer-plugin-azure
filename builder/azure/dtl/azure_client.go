@@ -17,8 +17,8 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 	dtl "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/vaults"
-	networks "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-07-01/vaults"
+	networks "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01"
 	authWrapper "github.com/hashicorp/go-azure-sdk/sdk/auth/autorest"
 	"github.com/hashicorp/go-azure-sdk/sdk/client"
 	"github.com/hashicorp/go-azure-sdk/sdk/client/resourcemanager"
@@ -101,39 +101,51 @@ func NewAzureClient(ctx context.Context, subscriptionID string,
 	if cloud == nil || cloud.ResourceManager == nil {
 		return nil, fmt.Errorf("Azure Environment not configured correctly")
 	}
-	resourceManagerEndpoint, _ := cloud.ResourceManager.Endpoint()
 	resourceManagerAuthorizer, err := azcommon.BuildResourceManagerAuthorizer(ctx, authOptions, *cloud)
 	if err != nil {
 		return nil, err
 	}
-	dtlMetaClient := dtl.NewClientWithBaseURI(*resourceManagerEndpoint, func(c *autorest.Client) {
+	dtlMetaClient, err := dtl.NewClientWithBaseURI(cloud.ResourceManager, func(c *resourcemanager.Client) {
 		c.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
 		c.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), "go-azure-sdk Meta Client")
-		c.RequestInspector = withInspection(maxlen)
-		c.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
+		c.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
+		c.Client.RequestMiddlewares = &trackTwoRequestMiddleware
 	})
-	azureClient.DtlMetaClient = dtlMetaClient
+	if err != nil {
+		return nil, err
+	}
+	azureClient.DtlMetaClient = *dtlMetaClient
 
-	azureClient.GalleryImageVersionsClient = galleryimageversions.NewGalleryImageVersionsClientWithBaseURI(*resourceManagerEndpoint)
-	azureClient.GalleryImageVersionsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
-	azureClient.GalleryImageVersionsClient.Client.RequestInspector = withInspection(maxlen)
-	azureClient.GalleryImageVersionsClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.GalleryImageVersionsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.GalleryImageVersionsClient.Client.UserAgent)
-	azureClient.GalleryImageVersionsClient.Client.PollingDuration = PollingDuration
+	galleryImageVersionsClient, err := galleryimageversions.NewGalleryImageVersionsClientWithBaseURI(cloud.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	galleryImageVersionsClient.Client.Authorizer = resourceManagerAuthorizer
+	galleryImageVersionsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
+	galleryImageVersionsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	galleryImageVersionsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), galleryImageVersionsClient.Client.UserAgent)
 
-	azureClient.GalleryImagesClient = galleryimages.NewGalleryImagesClientWithBaseURI(*resourceManagerEndpoint)
-	azureClient.GalleryImagesClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
-	azureClient.GalleryImagesClient.Client.RequestInspector = withInspection(maxlen)
-	azureClient.GalleryImagesClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.GalleryImagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.GalleryImagesClient.Client.UserAgent)
-	azureClient.GalleryImagesClient.Client.PollingDuration = PollingDuration
+	azureClient.GalleryImageVersionsClient = *galleryImageVersionsClient
 
-	azureClient.ImagesClient = images.NewImagesClientWithBaseURI(*resourceManagerEndpoint)
-	azureClient.ImagesClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
-	azureClient.ImagesClient.Client.RequestInspector = withInspection(maxlen)
-	azureClient.ImagesClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.ImagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.ImagesClient.Client.UserAgent)
-	azureClient.ImagesClient.Client.PollingDuration = PollingDuration
+	galleryImagesClient, err := galleryimages.NewGalleryImagesClientWithBaseURI(cloud.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	galleryImagesClient.Client.Authorizer = resourceManagerAuthorizer
+	galleryImagesClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
+	galleryImagesClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	galleryImagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), galleryImagesClient.Client.UserAgent)
+	azureClient.GalleryImagesClient = *galleryImagesClient
+
+	imagesClient, err := images.NewImagesClientWithBaseURI(cloud.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	imagesClient.Client.Authorizer = resourceManagerAuthorizer
+	imagesClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
+	imagesClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	imagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), imagesClient.Client.UserAgent)
+	azureClient.ImagesClient = *imagesClient
 
 	networkMetaClient, err := networks.NewClientWithBaseURI(cloud.ResourceManager, func(c *resourcemanager.Client) {
 		c.Client.Authorizer = resourceManagerAuthorizer

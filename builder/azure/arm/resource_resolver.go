@@ -17,7 +17,7 @@ import (
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/subnets"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/subnets"
 )
 
 type resourceResolver struct {

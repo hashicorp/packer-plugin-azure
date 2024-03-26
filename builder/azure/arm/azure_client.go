@@ -20,13 +20,13 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/snapshots"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/secrets"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/vaults"
-	networks "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-07-01/secrets"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-07-01/vaults"
+	networks "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deploymentoperations"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/storage/2022-09-01/storageaccounts"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/storage/2023-01-01/storageaccounts"
 	authWrapper "github.com/hashicorp/go-azure-sdk/sdk/auth/autorest"
 	"github.com/hashicorp/go-azure-sdk/sdk/client"
 	"github.com/hashicorp/go-azure-sdk/sdk/client/resourcemanager"
@@ -122,48 +122,59 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	trackTwoResponseMiddleware := []client.ResponseMiddleware{byInspectingTrack2(maxlen), errorCaptureTrack2(azureClient)}
 	trackTwoRequestMiddleware := []client.RequestMiddleware{withInspectionTrack2(maxlen)}
 
-	// Clients that have been ported to hashicorp/go-azure-sdk
-	azureClient.DisksClient = disks.NewDisksClientWithBaseURI(*resourceManagerEndpoint)
-	azureClient.DisksClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
-	azureClient.DisksClient.Client.RequestInspector = withInspection(maxlen)
-	azureClient.DisksClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.DisksClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.DisksClient.Client.UserAgent)
-	azureClient.DisksClient.Client.PollingDuration = pollingDuration
+	disksClient, err := disks.NewDisksClientWithBaseURI(cloud.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	disksClient.Client.Authorizer = resourceManagerAuthorizer
+	disksClient.Client.UserAgent = useragent.String(version.AzurePluginVersion.FormattedVersion())
+	disksClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
+	disksClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	azureClient.DisksClient = *disksClient
 
-	azureClient.VirtualMachinesClient = virtualmachines.NewVirtualMachinesClientWithBaseURI(*resourceManagerEndpoint)
-	azureClient.VirtualMachinesClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
-	azureClient.VirtualMachinesClient.Client.RequestInspector = withInspection(maxlen)
-	azureClient.VirtualMachinesClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.VirtualMachinesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.VirtualMachinesClient.Client.UserAgent)
-	azureClient.VirtualMachinesClient.Client.PollingDuration = pollingDuration
+	virtualMachinesClient, err := virtualmachines.NewVirtualMachinesClientWithBaseURI(cloud.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	virtualMachinesClient.Client.Authorizer = resourceManagerAuthorizer
+	virtualMachinesClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
+	virtualMachinesClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	virtualMachinesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), virtualMachinesClient.Client.UserAgent)
+	azureClient.VirtualMachinesClient = *virtualMachinesClient
 
-	azureClient.SnapshotsClient = snapshots.NewSnapshotsClientWithBaseURI(*resourceManagerEndpoint)
-	azureClient.SnapshotsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
-	azureClient.SnapshotsClient.Client.RequestInspector = withInspection(maxlen)
-	azureClient.SnapshotsClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.SnapshotsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.SnapshotsClient.Client.UserAgent)
-	azureClient.SnapshotsClient.Client.PollingDuration = pollingDuration
+	snapshotsClient, err := snapshots.NewSnapshotsClientWithBaseURI(cloud.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	snapshotsClient.Client.Authorizer = resourceManagerAuthorizer
+	snapshotsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
+	snapshotsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	snapshotsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), snapshotsClient.Client.UserAgent)
+	azureClient.SnapshotsClient = *snapshotsClient
 
-	azureClient.SecretsClient = secrets.NewSecretsClientWithBaseURI(*resourceManagerEndpoint)
-	azureClient.SecretsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
-	azureClient.SecretsClient.Client.RequestInspector = withInspection(maxlen)
-	azureClient.SecretsClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.SecretsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.SecretsClient.Client.UserAgent)
-	azureClient.SecretsClient.Client.PollingDuration = pollingDuration
+	vaultsClient, err := vaults.NewVaultsClientWithBaseURI(cloud.ResourceManager)
+	vaultsClient.Client.Authorizer = resourceManagerAuthorizer
+	vaultsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
+	vaultsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	vaultsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), vaultsClient.Client.UserAgent)
+	azureClient.VaultsClient = *vaultsClient
 
-	azureClient.VaultsClient = vaults.NewVaultsClientWithBaseURI(*resourceManagerEndpoint)
-	azureClient.VaultsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
-	azureClient.VaultsClient.Client.RequestInspector = withInspection(maxlen)
-	azureClient.VaultsClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.VaultsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.VaultsClient.Client.UserAgent)
-	azureClient.VaultsClient.Client.PollingDuration = pollingDuration
+	secretsClient, err := secrets.NewSecretsClientWithBaseURI(cloud.ResourceManager)
+	secretsClient.Client.Authorizer = resourceManagerAuthorizer
+	secretsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
+	secretsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	secretsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), vaultsClient.Client.UserAgent)
+	azureClient.SecretsClient = *secretsClient
 
-	azureClient.DeploymentsClient = deployments.NewDeploymentsClientWithBaseURI(*resourceManagerEndpoint)
-	azureClient.DeploymentsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
-	azureClient.DeploymentsClient.Client.RequestInspector = withInspection(maxlen)
-	azureClient.DeploymentsClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.DeploymentsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.DeploymentsClient.Client.UserAgent)
-	azureClient.DeploymentsClient.Client.PollingDuration = pollingDuration
+	deploymentsClient, err := deployments.NewDeploymentsClientWithBaseURI(cloud.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	deploymentsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
+	deploymentsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	deploymentsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
+	deploymentsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.DeploymentsClient.Client.UserAgent)
+	azureClient.DeploymentsClient = *deploymentsClient
 
 	azureClient.DeploymentOperationsClient = deploymentoperations.NewDeploymentOperationsClientWithBaseURI(*resourceManagerEndpoint)
 	azureClient.DeploymentOperationsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
@@ -172,26 +183,34 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	azureClient.DeploymentOperationsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.DeploymentOperationsClient.Client.UserAgent)
 	azureClient.DeploymentOperationsClient.Client.PollingDuration = pollingDuration
 
-	azureClient.ResourceGroupsClient = resourcegroups.NewResourceGroupsClientWithBaseURI(*resourceManagerEndpoint)
-	azureClient.ResourceGroupsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
-	azureClient.ResourceGroupsClient.Client.RequestInspector = withInspection(maxlen)
-	azureClient.ResourceGroupsClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.ResourceGroupsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.ResourceGroupsClient.Client.UserAgent)
-	azureClient.ResourceGroupsClient.Client.PollingDuration = pollingDuration
+	resourceGroupsClient, err := resourcegroups.NewResourceGroupsClientWithBaseURI(cloud.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	resourceGroupsClient.Client.Authorizer = resourceManagerAuthorizer
+	resourceGroupsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
+	resourceGroupsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	resourceGroupsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), resourceGroupsClient.Client.UserAgent)
+	azureClient.ResourceGroupsClient = *resourceGroupsClient
 
-	azureClient.ImagesClient = images.NewImagesClientWithBaseURI(*resourceManagerEndpoint)
-	azureClient.ImagesClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
-	azureClient.ImagesClient.Client.RequestInspector = withInspection(maxlen)
-	azureClient.ImagesClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.ImagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.ImagesClient.Client.UserAgent)
-	azureClient.ImagesClient.Client.PollingDuration = pollingDuration
+	imagesClient, err := images.NewImagesClientWithBaseURI(cloud.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	imagesClient.Client.Authorizer = resourceManagerAuthorizer
+	imagesClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
+	imagesClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	imagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), imagesClient.Client.UserAgent)
+	azureClient.ImagesClient = *imagesClient
 
-	azureClient.StorageAccountsClient = storageaccounts.NewStorageAccountsClientWithBaseURI(*resourceManagerEndpoint)
-	azureClient.StorageAccountsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
-	azureClient.StorageAccountsClient.Client.RequestInspector = withInspection(maxlen)
-	azureClient.StorageAccountsClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.StorageAccountsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.StorageAccountsClient.Client.UserAgent)
-	azureClient.StorageAccountsClient.Client.PollingDuration = pollingDuration
+	storageAccountsClient, err := storageaccounts.NewStorageAccountsClientWithBaseURI(cloud.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	storageAccountsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
+	storageAccountsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
+	storageAccountsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	storageAccountsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), storageAccountsClient.Client.UserAgent)
 
 	networkMetaClient, err := networks.NewClientWithBaseURI(cloud.ResourceManager, func(c *resourcemanager.Client) {
 		c.Client.Authorizer = resourceManagerAuthorizer
@@ -204,19 +223,25 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	}
 	azureClient.NetworkMetaClient = *networkMetaClient
 
-	azureClient.GalleryImageVersionsClient = galleryimageversions.NewGalleryImageVersionsClientWithBaseURI(*resourceManagerEndpoint)
-	azureClient.GalleryImageVersionsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
-	azureClient.GalleryImageVersionsClient.Client.RequestInspector = withInspection(maxlen)
-	azureClient.GalleryImageVersionsClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.GalleryImageVersionsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.GalleryImageVersionsClient.Client.UserAgent)
-	azureClient.GalleryImageVersionsClient.Client.PollingDuration = sharedGalleryTimeout
+	galleryImageVersionsClient, err := galleryimageversions.NewGalleryImageVersionsClientWithBaseURI(cloud.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	galleryImageVersionsClient.Client.Authorizer = resourceManagerAuthorizer
+	galleryImageVersionsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
+	galleryImageVersionsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	galleryImageVersionsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), galleryImageVersionsClient.Client.UserAgent)
+	azureClient.GalleryImageVersionsClient = *galleryImageVersionsClient
 
-	azureClient.GalleryImagesClient = galleryimages.NewGalleryImagesClientWithBaseURI(*resourceManagerEndpoint)
-	azureClient.GalleryImagesClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
-	azureClient.GalleryImagesClient.Client.RequestInspector = withInspection(maxlen)
-	azureClient.GalleryImagesClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.GalleryImagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.GalleryImagesClient.Client.UserAgent)
-	azureClient.GalleryImagesClient.Client.PollingDuration = pollingDuration
+	galleryImagesClient, err := galleryimages.NewGalleryImagesClientWithBaseURI(cloud.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	galleryImagesClient.Client.Authorizer = resourceManagerAuthorizer
+	galleryImagesClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
+	galleryImagesClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	galleryImagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), galleryImagesClient.Client.UserAgent)
+	azureClient.GalleryImagesClient = *galleryImagesClient
 
 	// We only need the Blob Client to delete the OS VHD during VHD builds
 	if isVHDBuild {
@@ -225,12 +250,14 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 			return nil, err
 		}
 
-		blobClient := giovanniBlobStorageSDK.New()
-		azureClient.GiovanniBlobClient = blobClient
-		azureClient.GiovanniBlobClient.Authorizer = authWrapper.AutorestAuthorizer(storageAccountAuthorizer)
-		azureClient.GiovanniBlobClient.Client.RequestInspector = withInspection(maxlen)
-		azureClient.GiovanniBlobClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-		azureClient.GiovanniBlobClient.Client.PollingDelay = pollingDuration
+		blobClient, err := giovanniBlobStorageSDK.NewWithBaseUri(cloud.Storage.Name())
+		if err != nil {
+			return nil, err
+		}
+		blobClient.Client.Authorizer = storageAccountAuthorizer
+		blobClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+		blobClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
+		azureClient.GiovanniBlobClient = *blobClient
 	}
 
 	token, err := resourceManagerAuthorizer.Token(ctx, &http.Request{})
