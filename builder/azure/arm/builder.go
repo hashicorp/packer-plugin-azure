@@ -194,8 +194,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if b.config.DiskEncryptionSetId != "" {
 		b.stateBag.Put(constants.ArmBuildDiskEncryptionSetId, b.config.DiskEncryptionSetId)
 	}
-	// Validate that Shared Gallery Image exists before publishing to SIG
 	if b.config.isPublishToSIG() {
+		// Validate that Shared Gallery Image exists before publishing to SIG
 		sigSubscriptionID := b.config.SharedGalleryDestination.SigDestinationSubscription
 		if sigSubscriptionID == "" {
 			sigSubscriptionID = b.stateBag.Get(constants.ArmSubscription).(string)
@@ -211,16 +211,16 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		_, err := azureClient.GalleryImageVersionsClient.Get(ctx, galleryImageVersionId, galleryimageversions.DefaultGetOperationOptions())
 		if err == nil {
 			if b.config.PackerForce {
-				ui.Say(fmt.Sprintf("the shared image gallery version named [%s/%s/%s] already exists, but deleting it due to -force flag", b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion))
+				ui.Say(fmt.Sprintf("a gallery image version for image name:version %s:%s already exists in gallery %s, but deleting it due to -force flag", b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationImageName))
 				deleteImageContext, cancel := context.WithTimeout(ctx, azureClient.PollingDuration)
 				defer cancel()
 				err := azureClient.GalleryImageVersionsClient.DeleteThenPoll(deleteImageContext, galleryImageVersionId)
 				if err != nil {
-					return nil, fmt.Errorf("failed to delete the shared image gallery version [%s/%s%s]: with error %s", b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, err.Error())
+					return nil, fmt.Errorf("failed to delete gallery image version for image name:version %s:%s in gallery %s", b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationGalleryName)
 				}
 
 			} else {
-				return nil, fmt.Errorf("a gallery image version for image name:version %s:%s already exists in gallery %s", b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationGalleryName)
+				return nil, fmt.Errorf("a gallery image version for image name:version %s:%s already exists in gallery %s, use the -force option to automatically delete it.", b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationGalleryName)
 			}
 		}
 
