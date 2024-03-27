@@ -310,8 +310,10 @@ func getIDsFromAzureCLI() (string, string, error) {
 
 func FindTenantID(env environments.Environment, subscriptionID string) (string, error) {
 	const hdrKey = "WWW-Authenticate"
-	resourceManagerEndpoint, _ := env.ResourceManager.Endpoint()
-	c := subscriptions.NewSubscriptionsClientWithBaseURI(*resourceManagerEndpoint)
+	c, err := subscriptions.NewSubscriptionsClientWithBaseURI(env.ResourceManager)
+	if err != nil {
+		return "", fmt.Errorf("Client creation failed: %v", err)
+	}
 
 	// we expect this request to fail (err != nil), but we are only interested
 	// in headers, so surface the error if the Response is not present (i.e.

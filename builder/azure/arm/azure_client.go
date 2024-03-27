@@ -13,7 +13,6 @@ import (
 
 	"net/http"
 
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
@@ -27,10 +26,10 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/storage/2023-01-01/storageaccounts"
-	authWrapper "github.com/hashicorp/go-azure-sdk/sdk/auth/autorest"
 	"github.com/hashicorp/go-azure-sdk/sdk/client"
 	"github.com/hashicorp/go-azure-sdk/sdk/client/resourcemanager"
 	"github.com/hashicorp/go-azure-sdk/sdk/environments"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	commonclient "github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-azure/version"
 	"github.com/hashicorp/packer-plugin-sdk/useragent"
@@ -64,28 +63,9 @@ type AzureClient struct {
 	SharedGalleryTimeout time.Duration
 }
 
-// Error Capture Methods are used for parsing the returned error and setting is as the clients Last Error so we can log after failure
-func errorCapture(client *AzureClient) autorest.RespondDecorator {
-	return func(r autorest.Responder) autorest.Responder {
-		return autorest.ResponderFunc(func(resp *http.Response) error {
-			body, bodyString := handleBody(resp.Body, math.MaxInt64)
-			resp.Body = body
-
-			errorResponse := newAzureErrorResponse(bodyString)
-			if errorResponse != nil {
-				client.LastError = *errorResponse
-			}
-
-			return r.Respond(resp)
-		})
-	}
-}
-
-// Track 1 (autorest) and Track 2 clients use different method signatures for defining their response/request middleware, these functions do the same thing but just are wrapped in an autorest handler or not.
-// Go-Azure-SDK has endpoints supported on both Azure Track 1 and Azure Track 2, they will migrate them in time and we can consume those updates via upgrading our SDK
-func errorCaptureTrack2(client *AzureClient) client.ResponseMiddleware {
+func errorCapture(client *AzureClient) client.ResponseMiddleware {
 	return func(req *http.Request, resp *http.Response) (*http.Response, error) {
-		body, bodyString := handleBody(resp.Body, math.MaxInt64)
+		body, bodyString := common.HandleBody(resp.Body, math.MaxInt64)
 		resp.Body = body
 
 		errorResponse := newAzureErrorResponse(bodyString)
@@ -93,13 +73,6 @@ func errorCaptureTrack2(client *AzureClient) client.ResponseMiddleware {
 			client.LastError = *errorResponse
 		}
 		return resp, nil
-	}
-}
-
-// Track 1 Legacy method, can be removed when all clients are track 2
-func byConcatDecorators(decorators ...autorest.RespondDecorator) autorest.RespondDecorator {
-	return func(r autorest.Responder) autorest.Responder {
-		return autorest.DecorateResponder(r, decorators...)
 	}
 }
 
@@ -113,14 +86,13 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	if cloud == nil || cloud.ResourceManager == nil {
 		return nil, fmt.Errorf("azure environment not configured correctly")
 	}
-	resourceManagerEndpoint, _ := cloud.ResourceManager.Endpoint()
 	resourceManagerAuthorizer, err := commonclient.BuildResourceManagerAuthorizer(ctx, authOptions, *cloud)
 	if err != nil {
 		return nil, err
 	}
 
-	trackTwoResponseMiddleware := []client.ResponseMiddleware{byInspectingTrack2(maxlen), errorCaptureTrack2(azureClient)}
-	trackTwoRequestMiddleware := []client.RequestMiddleware{withInspectionTrack2(maxlen)}
+	trackTwoResponseMiddleware := []client.ResponseMiddleware{common.ByInspecting(maxlen), errorCapture(azureClient)}
+	trackTwoRequestMiddleware := []client.RequestMiddleware{common.WithInspection(maxlen)}
 
 	disksClient, err := disks.NewDisksClientWithBaseURI(cloud.ResourceManager)
 	if err != nil {
@@ -153,6 +125,9 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	azureClient.SnapshotsClient = *snapshotsClient
 
 	vaultsClient, err := vaults.NewVaultsClientWithBaseURI(cloud.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
 	vaultsClient.Client.Authorizer = resourceManagerAuthorizer
 	vaultsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
 	vaultsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
@@ -160,6 +135,9 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	azureClient.VaultsClient = *vaultsClient
 
 	secretsClient, err := secrets.NewSecretsClientWithBaseURI(cloud.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
 	secretsClient.Client.Authorizer = resourceManagerAuthorizer
 	secretsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
 	secretsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
@@ -172,16 +150,18 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	}
 	deploymentsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
 	deploymentsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
-	deploymentsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
-	deploymentsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.DeploymentsClient.Client.UserAgent)
+	deploymentsClient.Client.Authorizer = resourceManagerAuthorizer
+	deploymentsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), deploymentsClient.Client.UserAgent)
 	azureClient.DeploymentsClient = *deploymentsClient
 
-	azureClient.DeploymentOperationsClient = deploymentoperations.NewDeploymentOperationsClientWithBaseURI(*resourceManagerEndpoint)
-	azureClient.DeploymentOperationsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
-	azureClient.DeploymentOperationsClient.Client.RequestInspector = withInspection(maxlen)
-	azureClient.DeploymentOperationsClient.Client.ResponseInspector = byConcatDecorators(byInspecting(maxlen), errorCapture(azureClient))
-	azureClient.DeploymentOperationsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), azureClient.DeploymentOperationsClient.Client.UserAgent)
-	azureClient.DeploymentOperationsClient.Client.PollingDuration = pollingDuration
+	deploymentOperationsClient, err := deploymentoperations.NewDeploymentOperationsClientWithBaseURI(cloud.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	deploymentOperationsClient.Client.Authorizer = resourceManagerAuthorizer
+	deploymentOperationsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
+	deploymentOperationsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	deploymentOperationsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), deploymentOperationsClient.Client.UserAgent)
 
 	resourceGroupsClient, err := resourcegroups.NewResourceGroupsClientWithBaseURI(cloud.ResourceManager)
 	if err != nil {
@@ -207,7 +187,7 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	if err != nil {
 		return nil, err
 	}
-	storageAccountsClient.Client.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
+	storageAccountsClient.Client.Authorizer = resourceManagerAuthorizer
 	storageAccountsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
 	storageAccountsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
 	storageAccountsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), storageAccountsClient.Client.UserAgent)

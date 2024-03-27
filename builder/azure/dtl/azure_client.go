@@ -12,18 +12,17 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 	dtl "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-07-01/vaults"
 	networks "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01"
-	authWrapper "github.com/hashicorp/go-azure-sdk/sdk/auth/autorest"
 	"github.com/hashicorp/go-azure-sdk/sdk/client"
 	"github.com/hashicorp/go-azure-sdk/sdk/client/resourcemanager"
 	"github.com/hashicorp/go-azure-sdk/sdk/environments"
-	azcommon "github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
+	commonclient "github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-azure/version"
 	"github.com/hashicorp/packer-plugin-sdk/useragent"
 )
@@ -49,25 +48,9 @@ type AzureClient struct {
 	ObjectId                  string
 }
 
-func errorCapture(client *AzureClient) autorest.RespondDecorator {
-	return func(r autorest.Responder) autorest.Responder {
-		return autorest.ResponderFunc(func(resp *http.Response) error {
-			body, bodyString := handleBody(resp.Body, math.MaxInt64)
-			resp.Body = body
-
-			errorResponse := newAzureErrorResponse(bodyString)
-			if errorResponse != nil {
-				client.LastError = *errorResponse
-			}
-
-			return r.Respond(resp)
-		})
-	}
-}
-
-func errorCaptureTrack2(client *AzureClient) client.ResponseMiddleware {
+func errorCapture(client *AzureClient) client.ResponseMiddleware {
 	return func(req *http.Request, resp *http.Response) (*http.Response, error) {
-		body, bodyString := handleBody(resp.Body, math.MaxInt64)
+		body, bodyString := common.HandleBody(resp.Body, math.MaxInt64)
 		resp.Body = body
 
 		errorResponse := newAzureErrorResponse(bodyString)
@@ -78,21 +61,15 @@ func errorCaptureTrack2(client *AzureClient) client.ResponseMiddleware {
 	}
 }
 
-func byConcatDecorators(decorators ...autorest.RespondDecorator) autorest.RespondDecorator {
-	return func(r autorest.Responder) autorest.Responder {
-		return autorest.DecorateResponder(r, decorators...)
-	}
-}
-
 // Returns an Azure Client used for the Azure Resource Manager
 func NewAzureClient(ctx context.Context, subscriptionID string,
-	cloud *environments.Environment, SharedGalleryTimeout time.Duration, CustomImageCaptureTimeout time.Duration, PollingDuration time.Duration, authOptions azcommon.AzureAuthOptions) (*AzureClient, error) {
+	cloud *environments.Environment, SharedGalleryTimeout time.Duration, CustomImageCaptureTimeout time.Duration, PollingDuration time.Duration, authOptions commonclient.AzureAuthOptions) (*AzureClient, error) {
 
 	var azureClient = &AzureClient{}
 
 	maxlen := getInspectorMaxLength()
-	trackTwoResponseMiddleware := []client.ResponseMiddleware{byInspectingTrack2(maxlen), errorCaptureTrack2(azureClient)}
-	trackTwoRequestMiddleware := []client.RequestMiddleware{withInspectionTrack2(maxlen)}
+	trackTwoResponseMiddleware := []client.ResponseMiddleware{common.ByInspecting(maxlen), errorCapture(azureClient)}
+	trackTwoRequestMiddleware := []client.RequestMiddleware{common.WithInspection(maxlen)}
 
 	azureClient.CustomImageCaptureTimeout = CustomImageCaptureTimeout
 	azureClient.PollingDuration = PollingDuration
@@ -101,12 +78,12 @@ func NewAzureClient(ctx context.Context, subscriptionID string,
 	if cloud == nil || cloud.ResourceManager == nil {
 		return nil, fmt.Errorf("Azure Environment not configured correctly")
 	}
-	resourceManagerAuthorizer, err := azcommon.BuildResourceManagerAuthorizer(ctx, authOptions, *cloud)
+	resourceManagerAuthorizer, err := commonclient.BuildResourceManagerAuthorizer(ctx, authOptions, *cloud)
 	if err != nil {
 		return nil, err
 	}
 	dtlMetaClient, err := dtl.NewClientWithBaseURI(cloud.ResourceManager, func(c *resourcemanager.Client) {
-		c.Authorizer = authWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
+		c.Authorizer = resourceManagerAuthorizer
 		c.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), "go-azure-sdk Meta Client")
 		c.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
 		c.Client.RequestMiddlewares = &trackTwoRequestMiddleware
@@ -162,7 +139,7 @@ func NewAzureClient(ctx context.Context, subscriptionID string,
 	if err != nil {
 		return nil, err
 	}
-	objectId, err := azcommon.GetObjectIdFromToken(token.AccessToken)
+	objectId, err := commonclient.GetObjectIdFromToken(token.AccessToken)
 	if err != nil {
 		return nil, err
 	}

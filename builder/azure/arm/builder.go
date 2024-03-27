@@ -495,7 +495,7 @@ func canonicalizeLocation(location string) string {
 }
 
 func (b *Builder) getBlobAccount(ctx context.Context, client *AzureClient, subscriptionId string, resourceGroupName string, storageAccountName string) (*storageaccounts.StorageAccount, error) {
-	id := storageaccounts.NewStorageAccountID(subscriptionId, resourceGroupName, storageAccountName)
+	id := commonids.NewStorageAccountID(subscriptionId, resourceGroupName, storageAccountName)
 	account, err := client.StorageAccountsClient.GetProperties(ctx, id, storageaccounts.DefaultGetPropertiesOperationOptions())
 	if err != nil {
 		return nil, err
