@@ -6,14 +6,12 @@ package client
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/packer-plugin-sdk/useragent"
 
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachineimages"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
@@ -47,7 +45,6 @@ type AzureClientSet interface {
 var _ AzureClientSet = &azureClientSet{}
 
 type azureClientSet struct {
-	sender                     autorest.Sender
 	authorizer                 auth.Authorizer
 	subscriptionID             string
 	PollingDelay               time.Duration
@@ -136,7 +133,6 @@ func new(c Config, say func(string)) (*azureClientSet, error) {
 	return &azureClientSet{
 		authorizer:                 authorizer,
 		subscriptionID:             c.SubscriptionID,
-		sender:                     http.DefaultClient,
 		PollingDelay:               time.Second,
 		imagesClient:               *imagesClient,
 		galleryImagesClient:        *galleryImagesClient,
@@ -159,10 +155,7 @@ func (s azureClientSet) PollingDuration() time.Duration {
 }
 
 func (s azureClientSet) MetadataClient() MetadataClientAPI {
-	return metadataClient{
-		s.sender,
-		useragent.String(version.AzurePluginVersion.FormattedVersion()),
-	}
+	return metadataClient{}
 }
 
 func (s azureClientSet) DisksClient() disks.DisksClient {

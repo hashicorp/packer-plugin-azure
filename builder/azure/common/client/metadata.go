@@ -4,12 +4,10 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
-	"time"
-
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // DefaultMetadataClient is the default instance metadata client for Azure. Replace this variable for testing purposes only
@@ -42,8 +40,6 @@ type ComputeInfo struct {
 
 // metadataClient implements MetadataClient
 type metadataClient struct {
-	autorest.Sender
-	UserAgent string
 }
 
 var _ MetadataClientAPI = metadataClient{}
@@ -52,31 +48,25 @@ const imdsURL = "http://169.254.169.254/metadata/instance?api-version=2021-02-01
 
 // VMResourceID returns the resource ID of the current VM
 func (client metadataClient) GetComputeInfo() (*ComputeInfo, error) {
-	req, err := autorest.CreatePreparer(
-		autorest.AsGet(),
-		autorest.WithHeader("Metadata", "true"),
-		autorest.WithUserAgent(client.UserAgent),
-		autorest.WithBaseURL(imdsURL),
-	).Prepare((&http.Request{}))
+	httpClient := &http.Client{}
+	req, err := http.NewRequest("GET", imdsURL, nil)
 	if err != nil {
 		return nil, err
 	}
-
-	res, err := autorest.SendWithSender(client, req,
-		autorest.DoRetryForDuration(1*time.Minute, 5*time.Second))
+	req.Header.Add("Metadata", "true")
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 	var vminfo struct {
 		ComputeInfo `json:"compute"`
 	}
-
-	err = autorest.Respond(
-		res,
-		azure.WithErrorUnlessStatusCode(http.StatusOK),
-		autorest.ByUnmarshallingJSON(&vminfo),
-		autorest.ByClosing())
+	err = json.Unmarshal(body, &vminfo)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +79,5 @@ func (ci ComputeInfo) GetResourceID() string {
 
 // NewMetadataClient creates a new instance metadata client
 func NewMetadataClient() MetadataClientAPI {
-	return metadataClient{
-		Sender: autorest.CreateSender(),
-	}
+	return metadataClient{}
 }
