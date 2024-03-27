@@ -150,7 +150,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 					return nil, fmt.Errorf("failed to delete the managed image named %s : %s", b.config.ManagedImageName, azureClient.LastError.Error())
 				}
 			} else {
-				return nil, fmt.Errorf("the managed image named %s already exists in the resource group %s, use the -force option to automatically delete it.", b.config.ManagedImageName, b.config.ManagedImageResourceGroupName)
+				return nil, fmt.Errorf("the managed image named %s already exists in the resource group %s, use a different manage image name or use the -force option to automatically delete it.", b.config.ManagedImageName, b.config.ManagedImageResourceGroupName)
 			}
 		}
 	}
@@ -220,7 +220,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				}
 
 			} else {
-				return nil, fmt.Errorf("a gallery image version for image name:version %s:%s already exists in gallery %s, use the -force option to automatically delete it.", b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationGalleryName)
+				return nil, fmt.Errorf("a gallery image version for image name:version %s:%s already exists in gallery %s, use a different gallery image version or use the -force option to automatically delete it.", b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationGalleryName)
 			}
 		}
 
