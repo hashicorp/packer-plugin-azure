@@ -76,7 +76,7 @@ func (s *TemplateBuilder) BuildLinux(sshAuthorizedKey string, disablePasswordAut
 	return nil
 }
 
-func (s *TemplateBuilder) BuildWindows(communicatorType string, keyVaultName string, certificateUrl string) error {
+func (s *TemplateBuilder) BuildWindows(communicatorType string, keyVaultName string, certificateUrl string, skipCreateKV bool) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
@@ -102,24 +102,34 @@ func (s *TemplateBuilder) BuildWindows(communicatorType string, keyVaultName str
 	}
 
 	provisionVMAgent := true
+	basicWindowConfiguration := hashiVMSDK.WindowsConfiguration{
+		ProvisionVMAgent: &provisionVMAgent,
+	}
+
 	if communicatorType == "ssh" {
-		profile.WindowsConfiguration = &hashiVMSDK.WindowsConfiguration{
-			ProvisionVMAgent: &provisionVMAgent,
-		}
+		profile.WindowsConfiguration = &basicWindowConfiguration
 		return nil
 	}
 
-	protocol := hashiVMSDK.ProtocolTypesHTTPS
-	profile.WindowsConfiguration = &hashiVMSDK.WindowsConfiguration{
-		ProvisionVMAgent: common.BoolPtr(true),
-		WinRM: &hashiVMSDK.WinRMConfiguration{
-			Listeners: &[]hashiVMSDK.WinRMListener{
-				{
-					Protocol:       &protocol,
-					CertificateUrl: common.StringPtr(certificateUrl),
+	// when communicator type is winrm
+	if !skipCreateKV {
+		// when skip kv create is not set, add secrets and listener
+		protocol := hashiVMSDK.ProtocolTypesHTTPS
+		profile.WindowsConfiguration = &hashiVMSDK.WindowsConfiguration{
+			ProvisionVMAgent: common.BoolPtr(true),
+			WinRM: &hashiVMSDK.WinRMConfiguration{
+				Listeners: &[]hashiVMSDK.WinRMListener{
+					{
+						Protocol:       &protocol,
+						CertificateUrl: common.StringPtr(certificateUrl),
+					},
 				},
 			},
-		},
+		}
+	} else {
+		// when skip kv create is set, no need to add secrets and listener in template
+		profile.Secrets = nil
+		profile.WindowsConfiguration = &basicWindowConfiguration
 	}
 
 	return nil
