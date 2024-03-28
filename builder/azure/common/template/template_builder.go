@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
-	hashiSecurityRulesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/securityrules"
-	hashiSubnetsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/subnets"
+	hashiSecurityRulesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/securityrules"
+	hashiSubnetsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/subnets"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 )
 

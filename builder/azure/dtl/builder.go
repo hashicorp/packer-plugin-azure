@@ -10,6 +10,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 
@@ -59,8 +60,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	ui.Say("Running builder ...")
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	// All requests on the new (non auto rest) base layer of the azure SDK require a context with a timeout for polling purposes
+	ctx, topLevelCancel := context.WithTimeout(ctx, time.Hour*24)
+	defer topLevelCancel()
 
 	// FillParameters function captures authType and sets defaults.
 	err := b.config.ClientConfig.FillParameters()

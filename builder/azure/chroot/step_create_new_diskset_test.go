@@ -5,13 +5,11 @@ package chroot
 
 import (
 	"context"
-	"net/http"
 	"reflect"
 	"testing"
 
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/google/go-cmp/cmp"
-	"github.com/hashicorp/go-azure-helpers/polling"
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
@@ -250,16 +248,12 @@ func TestStepCreateNewDisk_Run(t *testing.T) {
 						},
 					}, nil
 				},
-				create: func(ctx context.Context, acs client.AzureClientSet, id disks.DiskId, disk disks.Disk) (polling.LongRunningPoller, error) {
+				create: func(ctx context.Context, acs client.AzureClientSet, id commonids.ManagedDiskId, disk disks.Disk) error {
 					if diff := cmp.Diff(disk, tt.disks[bodyCount]); diff != "" {
 						t.Fatalf("unexpected disk for call %d diff %s", bodyCount+1, diff)
 					}
 					bodyCount++
-					future, err := polling.NewPollerFromResponse(context.TODO(), &http.Response{Request: &http.Request{Method: http.MethodDelete}, StatusCode: 200}, autorest.Client{}, "DELETE")
-					if err != nil {
-						t.Fatalf("%s", err)
-					}
-					return future, nil
+					return nil
 				},
 			}
 

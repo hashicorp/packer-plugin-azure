@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -100,7 +101,7 @@ func Test_StepVerifySourceDisk_Run(t *testing.T) {
 			s := StepVerifySourceDisk{
 				SourceDiskResourceID: tt.fields.SourceDiskResourceID,
 				Location:             tt.fields.Location,
-				get: func(ctx context.Context, azcli client.AzureClientSet, id disks.DiskId) (*disks.Disk, error) {
+				get: func(ctx context.Context, azcli client.AzureClientSet, id commonids.ManagedDiskId) (*disks.Disk, error) {
 					if tt.fields.GetDiskError == nil && tt.fields.GetDiskResponse == nil {
 						t.Fatalf("expected getDisk to not be called but it was")
 					}

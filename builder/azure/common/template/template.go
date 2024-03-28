@@ -7,11 +7,11 @@ import (
 	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 
-	hashiSecurityRulesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/securityrules"
+	hashiSecurityRulesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/securityrules"
 
-	hashiPublicIPSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/publicipaddresses"
-	hashiSubnetsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/subnets"
-	hashiVNETSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/virtualnetworks"
+	hashiPublicIPSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/publicipaddresses"
+	hashiSubnetsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/subnets"
+	hashiVNETSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/virtualnetworks"
 )
 
 // Template

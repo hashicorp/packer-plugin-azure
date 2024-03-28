@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 
@@ -157,8 +158,13 @@ var _ packersdk.Builder = &Builder{}
 func (b *Builder) ConfigSpec() hcldec.ObjectSpec { return b.config.FlatMapstructure().HCL2Spec() }
 
 func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
+	blah := CreateVMMetadataTemplateFunc()
 	b.config.ctx.Funcs = azcommon.TemplateFuncs
-	b.config.ctx.Funcs["vm"] = CreateVMMetadataTemplateFunc()
+	log.Printf("before %p", b.config.ctx.Funcs["vm"])
+
+	b.config.ctx.Funcs["vm"] = blah
+	log.Printf("after instantiate %p", b.config.ctx.Funcs["vm"])
+	log.Printf("after decode %p", b.config.ctx.Funcs["vm"])
 	md := &mapstructure.Metadata{}
 	err := config.Decode(&b.config, &config.DecodeOpts{
 		PluginType:         BuilderID,
@@ -176,6 +182,11 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 		},
 		Metadata: md,
 	}, raws...)
+	b.config.ctx.Funcs = azcommon.TemplateFuncs
+	log.Printf("before %p", b.config.ctx.Funcs["vm"])
+	b.config.ctx.Funcs["vm"] = blah
+	log.Printf("after instantiate %p", b.config.ctx.Funcs["vm"])
+	log.Printf("after decode %p", b.config.ctx.Funcs["vm"])
 	if err != nil {
 		return nil, nil, err
 	}
@@ -408,6 +419,10 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	default:
 		return nil, errors.New("the azure-chroot builder only works on Linux and FreeBSD environments")
 	}
+
+	// All requests on the new (non auto rest) base layer of the azure SDK require a context with a timeout for polling purposes
+	ctx, topLevelCancel := context.WithTimeout(ctx, time.Hour*24)
+	defer topLevelCancel()
 
 	err := b.config.ClientConfig.FillParameters()
 	if err != nil {

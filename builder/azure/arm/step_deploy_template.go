@@ -14,9 +14,7 @@ import (
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/networksecuritygroups"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2022-09-01/virtualnetworks"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/networksecuritygroups"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deploymentoperations"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
@@ -237,7 +235,7 @@ func deleteResource(ctx context.Context, client *AzureClient, subscriptionId str
 		err := client.NetworkMetaClient.NetworkInterfaces.DeleteThenPoll(pollingContext, interfaceID)
 		return err
 	case "Microsoft.Network/virtualNetworks":
-		vnetID := virtualnetworks.NewVirtualNetworkID(subscriptionId, resourceGroupName, resourceName)
+		vnetID := commonids.NewVirtualNetworkID(subscriptionId, resourceGroupName, resourceName)
 		err := client.NetworkMetaClient.VirtualNetworks.DeleteThenPoll(pollingContext, vnetID)
 		return err
 	case "Microsoft.Network/networkSecurityGroups":
@@ -261,7 +259,7 @@ func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, 
 	if isManagedDisk {
 		xs := strings.Split(imageName, "/")
 		diskName := xs[len(xs)-1]
-		diskId := disks.NewDiskID(subscriptionId, resourceGroupName, diskName)
+		diskId := commonids.NewManagedDiskID(subscriptionId, resourceGroupName, diskName)
 
 		if err := s.client.DisksClient.DeleteThenPoll(pollingContext, diskId); err != nil {
 			return err
@@ -279,7 +277,7 @@ func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, 
 	if len(xs) < 3 {
 		return errors.New("Unable to parse path of image " + imageName)
 	}
-	_, err = s.client.GiovanniBlobClient.Delete(pollingContext, storageAccountName, "images", blobName, giovanniBlobStorageSDK.DeleteInput{})
+	_, err = s.client.GiovanniBlobClient.Delete(pollingContext, storageAccountName, blobName, giovanniBlobStorageSDK.DeleteInput{})
 	return err
 }
 
