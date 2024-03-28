@@ -162,6 +162,7 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	deploymentOperationsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
 	deploymentOperationsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
 	deploymentOperationsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), deploymentOperationsClient.Client.UserAgent)
+	azureClient.DeploymentOperationsClient = *deploymentOperationsClient
 
 	resourceGroupsClient, err := resourcegroups.NewResourceGroupsClientWithBaseURI(cloud.ResourceManager)
 	if err != nil {
@@ -191,6 +192,7 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	storageAccountsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
 	storageAccountsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
 	storageAccountsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), storageAccountsClient.Client.UserAgent)
+	azureClient.StorageAccountsClient = *storageAccountsClient
 
 	networkMetaClient, err := networks.NewClientWithBaseURI(cloud.ResourceManager, func(c *resourcemanager.Client) {
 		c.Client.Authorizer = resourceManagerAuthorizer
