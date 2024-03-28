@@ -158,6 +158,13 @@ var _ packersdk.Builder = &Builder{}
 func (b *Builder) ConfigSpec() hcldec.ObjectSpec { return b.config.FlatMapstructure().HCL2Spec() }
 
 func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
+	blah := CreateVMMetadataTemplateFunc()
+	b.config.ctx.Funcs = azcommon.TemplateFuncs
+	log.Printf("before %p", b.config.ctx.Funcs["vm"])
+
+	b.config.ctx.Funcs["vm"] = blah
+	log.Printf("after instantiate %p", b.config.ctx.Funcs["vm"])
+	log.Printf("after decode %p", b.config.ctx.Funcs["vm"])
 	md := &mapstructure.Metadata{}
 	err := config.Decode(&b.config, &config.DecodeOpts{
 		PluginType:         BuilderID,
@@ -177,7 +184,7 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	}, raws...)
 	b.config.ctx.Funcs = azcommon.TemplateFuncs
 	log.Printf("before %p", b.config.ctx.Funcs["vm"])
-	b.config.ctx.Funcs["vm"] = CreateVMMetadataTemplateFunc()
+	b.config.ctx.Funcs["vm"] = blah
 	log.Printf("after instantiate %p", b.config.ctx.Funcs["vm"])
 	log.Printf("after decode %p", b.config.ctx.Funcs["vm"])
 	if err != nil {
