@@ -18,6 +18,11 @@ variable "resource_group_name" {
   type    = string
 }
 
+variable "resource_prefix" {
+  default = "${env("ARM_RESOURCE_PREFIX")}"
+  type    = string
+}
+
 source "azure-arm" "linux-sig" {
   use_azure_cli_auth   = true
   location             = "South Central US"
@@ -27,15 +32,15 @@ source "azure-arm" "linux-sig" {
   communicator         = "ssh"
   shared_image_gallery {
     subscription   = var.subscription
-    image_name     = "arm-linux-specialized-sig"
-    gallery_name   = "acctestgallery"
+    image_name     = "${var.resource_prefix}-arm-linux-specialized-sig"
+    gallery_name   = "${var.resource_prefix}_acctestgallery"
     image_version  = "1.0.0"
     resource_group = var.resource_group_name
   }
   shared_image_gallery_destination {
-    image_name              = "arm-linux-specialized-sig"
-    gallery_name            = "acctestgallery"
     image_version           = "1.0.1"
+    image_name              = "${var.resource_prefix}-arm-linux-specialized-sig"
+    gallery_name            = "${var.resource_prefix}_acctestgallery"
     resource_group          = var.resource_group_name
     specialized             = true
     use_shallow_replication = true

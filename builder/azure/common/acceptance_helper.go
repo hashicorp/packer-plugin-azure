@@ -21,6 +21,9 @@ func CheckAcceptanceTestEnvVars(t *testing.T, params CheckAcceptanceTestEnvVarsP
 	if os.Getenv("ARM_RESOURCE_GROUP_NAME") == "" {
 		t.Fatalf("Test %s requires environment variable ARM_RESOURCE_GROUP_NAME is set", t.Name())
 	}
+	if os.Getenv("ARM_RESOURCE_PREFIX") == "" {
+		t.Fatalf("Test %s requires environment variable ARM_RESOURCE_PREFIX is set", t.Name())
+	}
 	if os.Getenv("ARM_CLIENT_ID") == "" {
 		t.Fatalf("Test %s requires environment variable ARM_CLIENT_ID is set", t.Name())
 	}

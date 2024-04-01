@@ -16,13 +16,13 @@ resource "azurerm_storage_account" "storage-account" {
 }
 
 resource "azurerm_shared_image_gallery" "gallery" {
-  name                = "acctestgallery"
+  name                = "${var.resource_prefix}_acctestgallery"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
 }
 
 resource "azurerm_shared_image" "windows-sig" {
-  name                = "windows-sig"
+  name                = "${var.resource_prefix}-windows-sig"
   gallery_name        = azurerm_shared_image_gallery.gallery.name
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
@@ -37,7 +37,7 @@ resource "azurerm_shared_image" "windows-sig" {
 }
 
 resource "azurerm_shared_image" "linux-sig" {
-  name                = "arm-linux-specialized-sig"
+  name                = "${var.resource_prefix}-arm-linux-specialized-sig"
   gallery_name        = azurerm_shared_image_gallery.gallery.name
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
@@ -55,7 +55,7 @@ resource "azurerm_shared_image" "linux-sig" {
 ## DTL Builder Resources
 
 resource "azurerm_dev_test_lab" "dtl" {
-  name                = var.dtl_name
+  name                = "${var.resource_prefix}-packer-acceptance-test"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 }

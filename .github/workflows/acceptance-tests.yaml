@@ -1,9 +1,11 @@
 # This workflow creates the required Azure resources using Terraform for running the Packer Azure plugin acceptance tests for the ARM and DTL Builders
+# TODO: Next steps for improvement -> We should use GHA concurrency groups to ensure that only one acceptance test job is run at a time this way if two commits are commited to main within a short period of time, tests won't fail.
+# If we still run into unique name conflicts, we could also randomly generate the storage account name, group name, and prefix.
 name: Acceptance Tests
 on:
   push:
     branches:
-    - main
+    - refactor_acceptance_tests_to_use_prefix
 
 permissions:
   contents: read
@@ -57,26 +59,28 @@ jobs:
         
       - name: Create SSH Certificate and set envrionment variable for it # Used for Linux specialized ancestry test, so parent and child have to share the same login method
         run: ssh-keygen -m PEM -t rsa -b 4096 -f example.pem -N '' && echo "ARM_SSH_PRIVATE_KEY_FILE=$(pwd)/example.pem" >> $GITHUB_ENV
-      
+
+      - name: Set auth and resource name environemnt variables
+        run: |
+          echo "AZURE_CLI_AUTH=1" >> $GITHUB_ENV
+          echo "ARM_SUBSCRIPTION_ID=${{ secrets.ARM_SUBSCRIPTION_ID}}" >> $GITHUB_ENV
+          echo "ARM_CLIENT_ID=${{ secrets.ARM_CLIENT_ID}}" >> $GITHUB_ENV
+          echo "ARM_CLIENT_SECRET=${{ secrets.ARM_CLIENT_SECRET}}" >> $GITHUB_ENV
+          echo "ARM_RESOURCE_GROUP_NAME=packercigroup" >> $GITHUB_ENV
+          echo "ARM_STORAGE_ACCOUNT=packerciaccount" >> $GITHUB_ENV
+          echo "ARM_RESOURCE_PREFIX=packerci" >> $GITHUB_ENV
 
       - name: Run `terraform apply` to create resources for acceptance tests
         working-directory: ./terraform
-        run: terraform apply -auto-approve
+        run: ./run_terraform_apply_with_expected_env_vars.sh
 
       - name: Run Acceptance Tests
         run:  make testacc
-        env:
-          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID}}
-          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET}}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID}}
-          ARM_RESOURCE_GROUP_NAME: "packer-acceptance-test"
-          ARM_STORAGE_ACCOUNT: "packeracctest"
-          AZURE_CLI_AUTH: "1"
 
       - name: Run `terraform destroy` after test
         working-directory: ./terraform
         if: ${{ always() }} # Regardless of failure or cancelation, run terraform destroy
-        run: terraform destroy -auto-approve
+        run: ./run_terraform_destroy_with_expected_env_vars.sh
      
       # Try and upload logs
       - run: zip arm_failure_logs.zip builder/azure/arm/packer_*txt

@@ -8,15 +8,14 @@ variable "resource_group_location" {
 
 variable "resource_group_name" {
   type    = string
-  default = "packer-acceptance-test"
 }
 
 variable "storage_account_name" {
   type    = string
-  default = "packeracctest"
 }
 
-variable "dtl_name" {
+// Variable applied to resources that have uniqueness constraints at a subscription level
+// For example you can't have to shared image galleries named `linux` in the same Subscription in different resource group
+variable "resource_prefix" {
   type = string
-  default = "packer-acceptance-test"
 }
