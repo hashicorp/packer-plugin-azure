@@ -95,8 +95,8 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 		return nil, err
 	}
 
-	trackTwoResponseMiddleware := []client.ResponseMiddleware{common.ByInspecting(maxlen), errorCapture(azureClient)}
-	trackTwoRequestMiddleware := []client.RequestMiddleware{common.WithInspection(maxlen)}
+	responseMiddleware := []client.ResponseMiddleware{common.ByInspecting(maxlen), errorCapture(azureClient)}
+	requestMiddleware := []client.RequestMiddleware{common.WithInspection(maxlen)}
 
 	disksClient, err := disks.NewDisksClientWithBaseURI(cloud.ResourceManager)
 	if err != nil {
@@ -104,8 +104,8 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	}
 	disksClient.Client.Authorizer = resourceManagerAuthorizer
 	disksClient.Client.UserAgent = useragent.String(version.AzurePluginVersion.FormattedVersion())
-	disksClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
-	disksClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	disksClient.Client.ResponseMiddlewares = &responseMiddleware
+	disksClient.Client.RequestMiddlewares = &requestMiddleware
 	azureClient.DisksClient = *disksClient
 
 	virtualMachinesClient, err := virtualmachines.NewVirtualMachinesClientWithBaseURI(cloud.ResourceManager)
@@ -113,8 +113,8 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 		return nil, err
 	}
 	virtualMachinesClient.Client.Authorizer = resourceManagerAuthorizer
-	virtualMachinesClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
-	virtualMachinesClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	virtualMachinesClient.Client.ResponseMiddlewares = &responseMiddleware
+	virtualMachinesClient.Client.RequestMiddlewares = &requestMiddleware
 	virtualMachinesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), virtualMachinesClient.Client.UserAgent)
 	azureClient.VirtualMachinesClient = *virtualMachinesClient
 
@@ -123,8 +123,8 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 		return nil, err
 	}
 	snapshotsClient.Client.Authorizer = resourceManagerAuthorizer
-	snapshotsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
-	snapshotsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	snapshotsClient.Client.ResponseMiddlewares = &responseMiddleware
+	snapshotsClient.Client.RequestMiddlewares = &requestMiddleware
 	snapshotsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), snapshotsClient.Client.UserAgent)
 	azureClient.SnapshotsClient = *snapshotsClient
 
@@ -133,8 +133,8 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 		return nil, err
 	}
 	vaultsClient.Client.Authorizer = resourceManagerAuthorizer
-	vaultsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
-	vaultsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	vaultsClient.Client.ResponseMiddlewares = &responseMiddleware
+	vaultsClient.Client.RequestMiddlewares = &requestMiddleware
 	vaultsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), vaultsClient.Client.UserAgent)
 	azureClient.VaultsClient = *vaultsClient
 
@@ -143,8 +143,8 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 		return nil, err
 	}
 	secretsClient.Client.Authorizer = resourceManagerAuthorizer
-	secretsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
-	secretsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	secretsClient.Client.ResponseMiddlewares = &responseMiddleware
+	secretsClient.Client.RequestMiddlewares = &requestMiddleware
 	secretsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), vaultsClient.Client.UserAgent)
 	azureClient.SecretsClient = *secretsClient
 
@@ -152,8 +152,8 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	if err != nil {
 		return nil, err
 	}
-	deploymentsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
-	deploymentsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	deploymentsClient.Client.ResponseMiddlewares = &responseMiddleware
+	deploymentsClient.Client.RequestMiddlewares = &requestMiddleware
 	deploymentsClient.Client.Authorizer = resourceManagerAuthorizer
 	deploymentsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), deploymentsClient.Client.UserAgent)
 	azureClient.DeploymentsClient = *deploymentsClient
@@ -163,8 +163,8 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 		return nil, err
 	}
 	deploymentOperationsClient.Client.Authorizer = resourceManagerAuthorizer
-	deploymentOperationsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
-	deploymentOperationsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	deploymentOperationsClient.Client.ResponseMiddlewares = &responseMiddleware
+	deploymentOperationsClient.Client.RequestMiddlewares = &requestMiddleware
 	deploymentOperationsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), deploymentOperationsClient.Client.UserAgent)
 	azureClient.DeploymentOperationsClient = *deploymentOperationsClient
 
@@ -173,8 +173,8 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 		return nil, err
 	}
 	resourceGroupsClient.Client.Authorizer = resourceManagerAuthorizer
-	resourceGroupsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
-	resourceGroupsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	resourceGroupsClient.Client.ResponseMiddlewares = &responseMiddleware
+	resourceGroupsClient.Client.RequestMiddlewares = &requestMiddleware
 	resourceGroupsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), resourceGroupsClient.Client.UserAgent)
 	azureClient.ResourceGroupsClient = *resourceGroupsClient
 
@@ -183,8 +183,8 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 		return nil, err
 	}
 	imagesClient.Client.Authorizer = resourceManagerAuthorizer
-	imagesClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
-	imagesClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	imagesClient.Client.ResponseMiddlewares = &responseMiddleware
+	imagesClient.Client.RequestMiddlewares = &requestMiddleware
 	imagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), imagesClient.Client.UserAgent)
 	azureClient.ImagesClient = *imagesClient
 
@@ -193,16 +193,16 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 		return nil, err
 	}
 	storageAccountsClient.Client.Authorizer = resourceManagerAuthorizer
-	storageAccountsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
-	storageAccountsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	storageAccountsClient.Client.ResponseMiddlewares = &responseMiddleware
+	storageAccountsClient.Client.RequestMiddlewares = &requestMiddleware
 	storageAccountsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), storageAccountsClient.Client.UserAgent)
 	azureClient.StorageAccountsClient = *storageAccountsClient
 
 	networkMetaClient, err := networks.NewClientWithBaseURI(cloud.ResourceManager, func(c *resourcemanager.Client) {
 		c.Client.Authorizer = resourceManagerAuthorizer
 		c.Client.UserAgent = useragent.String(version.AzurePluginVersion.FormattedVersion())
-		c.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
-		c.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+		c.Client.ResponseMiddlewares = &responseMiddleware
+		c.Client.RequestMiddlewares = &requestMiddleware
 	})
 	if err != nil {
 		return nil, err
@@ -214,8 +214,8 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 		return nil, err
 	}
 	galleryImageVersionsClient.Client.Authorizer = resourceManagerAuthorizer
-	galleryImageVersionsClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
-	galleryImageVersionsClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	galleryImageVersionsClient.Client.ResponseMiddlewares = &responseMiddleware
+	galleryImageVersionsClient.Client.RequestMiddlewares = &requestMiddleware
 	galleryImageVersionsClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), galleryImageVersionsClient.Client.UserAgent)
 	azureClient.GalleryImageVersionsClient = *galleryImageVersionsClient
 
@@ -224,8 +224,8 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 		return nil, err
 	}
 	galleryImagesClient.Client.Authorizer = resourceManagerAuthorizer
-	galleryImagesClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
-	galleryImagesClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
+	galleryImagesClient.Client.ResponseMiddlewares = &responseMiddleware
+	galleryImagesClient.Client.RequestMiddlewares = &requestMiddleware
 	galleryImagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), galleryImagesClient.Client.UserAgent)
 	azureClient.GalleryImagesClient = *galleryImagesClient
 
@@ -241,8 +241,8 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 			return nil, err
 		}
 		blobClient.Client.Authorizer = storageAccountAuthorizer
-		blobClient.Client.RequestMiddlewares = &trackTwoRequestMiddleware
-		blobClient.Client.ResponseMiddlewares = &trackTwoResponseMiddleware
+		blobClient.Client.RequestMiddlewares = &requestMiddleware
+		blobClient.Client.ResponseMiddlewares = &responseMiddleware
 		azureClient.GiovanniBlobClient = *blobClient
 	}
 

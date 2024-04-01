@@ -319,12 +319,12 @@ func FindTenantID(env environments.Environment, subscriptionID string) (string, 
 	httpClient := &http.Client{}
 	req, err := http.NewRequest("GET", getSubscriptionsEndpoint, nil)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Could not create request to find tenant ID: %s", err.Error())
 	}
 	req.Header.Add("Metadata", "true")
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Could not send request to find tenant ID: %s", err.Error())
 	}
 	hdr := resp.Header.Get(hdrKey)
 	// Example value for hdr:
