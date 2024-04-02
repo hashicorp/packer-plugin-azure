@@ -5,7 +5,7 @@ name: Acceptance Tests
 on:
   push:
     branches:
-    - refactor_acceptance_tests_to_use_prefix
+    - main
 
 permissions:
   contents: read
