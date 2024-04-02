@@ -59,9 +59,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	ui.Say("Running builder ...")
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	// FillParameters function captures authType and sets defaults.
 	err := b.config.ClientConfig.FillParameters()
 	if err != nil {
@@ -121,8 +118,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 		if err == nil {
 			if b.config.PackerForce {
-				pollingContext, cancel := context.WithTimeout(ctx, azureClient.CustomImageCaptureTimeout)
-				defer cancel()
+				pollingContext, managedImageGetCancel := context.WithTimeout(ctx, azureClient.CustomImageCaptureTimeout)
+				defer managedImageGetCancel()
 				ui.Say(fmt.Sprintf("the managed image named %s already exists, but deleting it due to -force flag", b.config.ManagedImageName))
 				err := azureClient.DtlMetaClient.CustomImages.DeleteThenPoll(pollingContext, customImageResourceId)
 				if err != nil {
@@ -147,7 +144,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if b.config.isManagedImage() && b.config.SharedGalleryDestination.SigDestinationGalleryName != "" {
 		sigSubscriptionID := b.stateBag.Get(constants.ArmSubscription).(string)
 		galleryId := galleryimages.NewGalleryImageID(sigSubscriptionID, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
-		_, err = azureClient.GalleryImagesClient.Get(ctx, galleryId)
+		pollingContext, sigCancel := context.WithTimeout(ctx, azureClient.CustomImageCaptureTimeout)
+		defer sigCancel()
+		_, err = azureClient.GalleryImagesClient.Get(pollingContext, galleryId)
 		if err != nil {
 			return nil, fmt.Errorf("the Shared Gallery Image '%s' to which to publish the managed image version to does not exist in the resource group '%s' or does not contain managed image '%s'", b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationImageName)
 		}
@@ -171,9 +170,11 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		b.stateBag.Put(constants.ArmManagedImageSharedGalleryReplicationRegions, b.config.SharedGalleryDestination.SigDestinationReplicationRegions)
 	}
 
+	pollingContext, labsCancel := context.WithTimeout(ctx, azureClient.CustomImageCaptureTimeout)
+	defer labsCancel()
 	// Find the lab location
 	labResourceId := labs.NewLabID(b.config.ClientConfig.SubscriptionID, b.config.LabResourceGroupName, b.config.LabName)
-	lab, err := azureClient.DtlMetaClient.Labs.Get(ctx, labResourceId, labs.DefaultGetOperationOptions())
+	lab, err := azureClient.DtlMetaClient.Labs.Get(pollingContext, labResourceId, labs.DefaultGetOperationOptions())
 	if err != nil {
 		return nil, fmt.Errorf("Unable to fetch the Lab %s information in %s resource group", b.config.LabName, b.config.LabResourceGroupName)
 	}
@@ -337,8 +338,10 @@ func (b *Builder) setTemplateParameters(stateBag multistep.StateBag) {
 
 func (b *Builder) getSubnetInformation(ctx context.Context, ui packersdk.Ui, azClient AzureClient) (*string, *string, error) {
 	num := int64(10)
+	pollingContext, vnetCancel := context.WithTimeout(ctx, azClient.PollingDuration)
+	defer vnetCancel()
 	labResourceId := virtualnetworks.NewLabID(b.config.ClientConfig.SubscriptionID, b.config.LabResourceGroupName, b.config.LabName)
-	virtualNetworkPage, err := azClient.DtlMetaClient.VirtualNetworks.List(ctx, labResourceId, virtualnetworks.ListOperationOptions{Top: &num})
+	virtualNetworkPage, err := azClient.DtlMetaClient.VirtualNetworks.List(pollingContext, labResourceId, virtualnetworks.ListOperationOptions{Top: &num})
 
 	if err != nil {
 		return nil, nil, fmt.Errorf("Error retrieving Virtual networks in Resourcegroup %s", b.config.LabResourceGroupName)

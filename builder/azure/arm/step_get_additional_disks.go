@@ -35,7 +35,9 @@ func NewStepGetAdditionalDisks(client *AzureClient, ui packersdk.Ui) *StepGetDat
 
 func (s *StepGetDataDisk) queryCompute(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (*virtualmachines.VirtualMachine, error) {
 	vmID := virtualmachines.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)
-	vm, err := s.client.VirtualMachinesClient.Get(ctx, vmID, virtualmachines.DefaultGetOperationOptions())
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+	vm, err := s.client.VirtualMachinesClient.Get(pollingContext, vmID, virtualmachines.DefaultGetOperationOptions())
 	if err != nil {
 		s.say(s.client.LastError.Error())
 	}

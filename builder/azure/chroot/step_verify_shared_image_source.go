@@ -140,7 +140,10 @@ func (s *StepVerifySharedImageSource) Run(ctx context.Context, state multistep.S
 }
 
 func (s *StepVerifySharedImageSource) getGalleryVersion(ctx context.Context, azcli client.AzureClientSet, id galleryimageversions.ImageVersionId) (*galleryimageversions.GalleryImageVersion, error) {
-	res, err := azcli.GalleryImageVersionsClient().Get(ctx, id, galleryimageversions.DefaultGetOperationOptions())
+	pollingContext, cancel := context.WithTimeout(ctx, azcli.PollingDuration())
+	defer cancel()
+
+	res, err := azcli.GalleryImageVersionsClient().Get(pollingContext, id, galleryimageversions.DefaultGetOperationOptions())
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +154,10 @@ func (s *StepVerifySharedImageSource) getGalleryVersion(ctx context.Context, azc
 }
 
 func (s *StepVerifySharedImageSource) getGalleryImage(ctx context.Context, azcli client.AzureClientSet, id galleryimages.GalleryImageId) (*galleryimages.GalleryImage, error) {
-	res, err := azcli.GalleryImagesClient().Get(ctx, id)
+	pollingContext, cancel := context.WithTimeout(ctx, azcli.PollingDuration())
+	defer cancel()
+
+	res, err := azcli.GalleryImagesClient().Get(pollingContext, id)
 	if err != nil {
 		return nil, err
 	}

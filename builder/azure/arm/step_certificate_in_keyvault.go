@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/secrets"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-07-01/secrets"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -52,7 +52,10 @@ func (s *StepCertificateInKeyVault) setCertificate(ctx context.Context, id secre
 			Exp: &expirationTimeUnix,
 		}
 	}
-	_, err := s.client.SecretsClient.CreateOrUpdate(ctx, id, secret)
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+
+	_, err := s.client.SecretsClient.CreateOrUpdate(pollingContext, id, secret)
 
 	return err
 }

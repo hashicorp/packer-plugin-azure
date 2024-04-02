@@ -156,10 +156,11 @@ func (da *diskAttacher) getThisVM(ctx context.Context) (hashiVMSDK.VirtualMachin
 		}
 		da.vm = vm
 	}
-
-	vmID := hashiVMSDK.NewVirtualMachineID(da.azcli.SubscriptionID(), da.vm.ResourceGroupName, da.vm.Name)
 	// retrieve actual VM
-	vmResource, err := da.azcli.VirtualMachinesClient().Get(ctx, vmID, hashiVMSDK.DefaultGetOperationOptions())
+	vmID := hashiVMSDK.NewVirtualMachineID(da.azcli.SubscriptionID(), da.vm.ResourceGroupName, da.vm.Name)
+	pollingContext, cancel := context.WithTimeout(ctx, da.azcli.PollingDuration())
+	defer cancel()
+	vmResource, err := da.azcli.VirtualMachinesClient().Get(pollingContext, vmID, hashiVMSDK.DefaultGetOperationOptions())
 	if err != nil {
 		return hashiVMSDK.VirtualMachine{}, err
 	}
@@ -188,9 +189,12 @@ func (da diskAttacher) setDisks(ctx context.Context, disks []hashiVMSDK.DataDisk
 	vmResource.Properties.StorageProfile.DataDisks = &disks
 	vmResource.Resources = nil
 
+	// TODO pass in polling context here
+	pollingContext, cancel := context.WithTimeout(ctx, time.Minute*5)
+	defer cancel()
 	vmID := hashiVMSDK.NewVirtualMachineID(da.azcli.SubscriptionID(), da.vm.ResourceGroupName, da.vm.Name)
 	// update the VM resource, attach disk
-	_, err = da.azcli.VirtualMachinesClient().CreateOrUpdate(ctx, vmID, vmResource)
+	_, err = da.azcli.VirtualMachinesClient().CreateOrUpdate(pollingContext, vmID, vmResource)
 
 	return err
 }

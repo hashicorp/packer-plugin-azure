@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimages"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/storage/2022-09-01/storageaccounts"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/storage/2023-01-01/storageaccounts"
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/hcl/v2/hcldec"
@@ -64,7 +64,7 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 }
 
 func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook) (packersdk.Artifact, error) {
-
+	// All requests on the new (non auto rest) base layer of the azure SDK require a context with a timeout for polling purposes
 	ui.Say("Running builder ...")
 
 	// FillParameters function captures authType and sets defaults.
@@ -111,6 +111,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		authOptions,
 	)
 
+	ui.Message("ARM Client successfully created")
 	if err != nil {
 		return nil, err
 	}
@@ -119,6 +120,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if err := resolver.Resolve(&b.config); err != nil {
 		return nil, err
 	}
+	// All requests against go-azure-sdk require a polling duration
+	builderPollingContext, builderCancel := context.WithTimeout(ctx, azureClient.PollingDuration)
+	defer builderCancel()
 	objectID := azureClient.ObjectID
 	if b.config.ClientConfig.ObjectID == "" {
 		b.config.ClientConfig.ObjectID = objectID
@@ -132,20 +136,18 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	if b.config.isManagedImage() {
 		groupId := commonids.NewResourceGroupID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName)
-		_, err := azureClient.ResourceGroupsClient.Get(ctx, groupId)
+		_, err := azureClient.ResourceGroupsClient.Get(builderPollingContext, groupId)
 		if err != nil {
 			return nil, fmt.Errorf("Cannot locate the managed image resource group %s.", b.config.ManagedImageResourceGroupName)
 		}
 
 		// If a managed image already exists it cannot be overwritten.
 		imageId := images.NewImageID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName, b.config.ManagedImageName)
-		_, err = azureClient.ImagesClient.Get(ctx, imageId, images.DefaultGetOperationOptions())
+		_, err = azureClient.ImagesClient.Get(builderPollingContext, imageId, images.DefaultGetOperationOptions())
 		if err == nil {
 			if b.config.PackerForce {
 				ui.Say(fmt.Sprintf("the managed image named %s already exists, but deleting it due to -force flag", b.config.ManagedImageName))
-				deleteImageContext, cancel := context.WithTimeout(ctx, azureClient.PollingDuration)
-				defer cancel()
-				err := azureClient.ImagesClient.DeleteThenPoll(deleteImageContext, imageId)
+				err := azureClient.ImagesClient.DeleteThenPoll(builderPollingContext, imageId)
 				if err != nil {
 					return nil, fmt.Errorf("failed to delete the managed image named %s : %s", b.config.ManagedImageName, azureClient.LastError.Error())
 				}
@@ -157,7 +159,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	if b.config.BuildResourceGroupName != "" {
 		buildGroupId := commonids.NewResourceGroupID(b.config.ClientConfig.SubscriptionID, b.config.BuildResourceGroupName)
-		group, err := azureClient.ResourceGroupsClient.Get(ctx, buildGroupId)
+		group, err := azureClient.ResourceGroupsClient.Get(builderPollingContext, buildGroupId)
 		if err != nil {
 			return nil, fmt.Errorf("Cannot locate the existing build resource resource group %s.", b.config.BuildResourceGroupName)
 		}
@@ -168,7 +170,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	b.config.validateLocationZoneResiliency(ui.Say)
 
 	if b.config.StorageAccount != "" {
-		account, err := b.getBlobAccount(ctx, azureClient, b.config.ClientConfig.SubscriptionID, b.config.ResourceGroupName, b.config.StorageAccount)
+		account, err := b.getBlobAccount(builderPollingContext, azureClient, b.config.ClientConfig.SubscriptionID, b.config.ResourceGroupName, b.config.StorageAccount)
 		if err != nil {
 			return nil, err
 		}
@@ -202,13 +204,13 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		}
 		b.stateBag.Put(constants.ArmSharedImageGalleryDestinationSubscription, sigSubscriptionID)
 		galleryId := galleryimages.NewGalleryImageID(sigSubscriptionID, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
-		_, err = azureClient.GalleryImagesClient.Get(ctx, galleryId)
+		_, err = azureClient.GalleryImagesClient.Get(builderPollingContext, galleryId)
 		if err != nil {
 			return nil, fmt.Errorf("the Shared Gallery Image '%s' to which to publish the managed image version to does not exist in the resource group '%s' or does not contain managed image '%s'", b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationImageName)
 		}
 		// Check if a Image Version already exists for our target destination
 		galleryImageVersionId := galleryimageversions.NewImageVersionID(sigSubscriptionID, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion)
-		_, err := azureClient.GalleryImageVersionsClient.Get(ctx, galleryImageVersionId, galleryimageversions.DefaultGetOperationOptions())
+		_, err := azureClient.GalleryImageVersionsClient.Get(builderPollingContext, galleryImageVersionId, galleryimageversions.DefaultGetOperationOptions())
 		if err == nil {
 			if b.config.PackerForce {
 				ui.Say(fmt.Sprintf("a gallery image version for image name:version %s:%s already exists in gallery %s, but deleting it due to -force flag", b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationImageName))
@@ -268,7 +270,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if b.config.SharedGallery.GalleryName != "" {
 		client := azureClient.GalleryImagesClient
 		id := galleryimages.NewGalleryImageID(b.config.SharedGallery.Subscription, b.config.SharedGallery.ResourceGroup, b.config.SharedGallery.GalleryName, b.config.SharedGallery.ImageName)
-		galleryImage, err := client.Get(ctx, id)
+		galleryImage, err := client.Get(builderPollingContext, id)
 		if err != nil {
 			return nil, fmt.Errorf("the parent Shared Gallery Image '%s' from which to source the managed image version to does not exist in the resource group '%s' or does not contain managed image '%s'", b.config.SharedGallery.GalleryName, b.config.SharedGallery.ResourceGroup, b.config.SharedGallery.ImageName)
 		}
@@ -505,7 +507,7 @@ func canonicalizeLocation(location string) string {
 }
 
 func (b *Builder) getBlobAccount(ctx context.Context, client *AzureClient, subscriptionId string, resourceGroupName string, storageAccountName string) (*storageaccounts.StorageAccount, error) {
-	id := storageaccounts.NewStorageAccountID(subscriptionId, resourceGroupName, storageAccountName)
+	id := commonids.NewStorageAccountID(subscriptionId, resourceGroupName, storageAccountName)
 	account, err := client.StorageAccountsClient.GetProperties(ctx, id, storageaccounts.DefaultGetPropertiesOperationOptions())
 	if err != nil {
 		return nil, err

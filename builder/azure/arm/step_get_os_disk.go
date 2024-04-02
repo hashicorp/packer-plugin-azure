@@ -35,7 +35,10 @@ func NewStepGetOSDisk(client *AzureClient, ui packersdk.Ui) *StepGetOSDisk {
 
 func (s *StepGetOSDisk) queryCompute(ctx context.Context, resourceGroupName string, computeName string, subscriptionId string) (*virtualmachines.VirtualMachine, error) {
 	vmID := virtualmachines.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)
-	vm, err := s.client.VirtualMachinesClient.Get(ctx, vmID, virtualmachines.DefaultGetOperationOptions())
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+	vm, err := s.client.VirtualMachinesClient.Get(pollingContext, vmID, virtualmachines.DefaultGetOperationOptions())
+
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return nil, err

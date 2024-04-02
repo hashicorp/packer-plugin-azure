@@ -10,7 +10,7 @@ import (
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 
-	"github.com/hashicorp/go-azure-helpers/polling"
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -46,7 +46,7 @@ type StepCreateNewDiskset struct {
 	SkipCleanup bool
 
 	getVersion func(context.Context, client.AzureClientSet, galleryimageversions.ImageVersionId) (*galleryimageversions.GalleryImageVersion, error)
-	create     func(context.Context, client.AzureClientSet, disks.DiskId, disks.Disk) (polling.LongRunningPoller, error)
+	create     func(context.Context, client.AzureClientSet, commonids.ManagedDiskId, disks.Disk) error
 }
 
 func NewStepCreateNewDiskset(step *StepCreateNewDiskset) *StepCreateNewDiskset {
@@ -81,20 +81,15 @@ func (s *StepCreateNewDiskset) Run(ctx context.Context, state multistep.StateBag
 	disk := s.getOSDiskDefinition(azcli.SubscriptionID())
 
 	// Initiate disk creation
-	diskId := disks.NewDiskID(azcli.SubscriptionID(), osDisk.ResourceGroup, osDisk.ResourceName.String())
-	response, err := s.create(ctx, azcli, diskId, disk)
+	diskId := commonids.NewManagedDiskID(azcli.SubscriptionID(), osDisk.ResourceGroup, osDisk.ResourceName.String())
+	ui.Say(fmt.Sprintf("Creating disk %q", s.OSDiskID))
+	err = s.create(ctx, azcli, diskId, disk)
 	if err != nil {
-		return errorMessage("Failed to initiate resource creation: %q", osDisk)
+		return errorMessage("Failed to create disk: %q", osDisk)
 	}
+	ui.Say(fmt.Sprintf("Disk created: %q", s.OSDiskID))
 	s.disks[-1] = osDisk                    // save the resoure we just create in our disk set
 	state.Put(stateBagKey_Diskset, s.disks) // update the statebag
-	ui.Say(fmt.Sprintf("Creating disk %q", s.OSDiskID))
-
-	type Future struct {
-		client.Resource
-		polling.LongRunningPoller
-	}
-	futures := []Future{{osDisk, response}}
 
 	if s.SourceImageResourceID != "" {
 		// retrieve image to see if there are any datadisks
@@ -123,31 +118,19 @@ func (s *StepCreateNewDiskset) Run(ctx context.Context, state multistep.StateBag
 
 				disk := s.getDatadiskDefinitionFromImage(ddi.Lun)
 				// Initiate disk creation
-				diskId := disks.NewDiskID(azcli.SubscriptionID(), datadiskID.ResourceGroup, datadiskID.ResourceName.String())
-				f, err := s.create(ctx, azcli, diskId, disk)
+				diskId := commonids.NewManagedDiskID(azcli.SubscriptionID(), datadiskID.ResourceGroup, datadiskID.ResourceName.String())
+				ui.Say(fmt.Sprintf("Creating disk %q", datadiskID))
+				err = s.create(ctx, azcli, diskId, disk)
 				if err != nil {
-					return errorMessage("Failed to initiate resource creation: %q", datadiskID)
+					return errorMessage("Failed to create disk: %q", datadiskID)
 				}
+				ui.Say(fmt.Sprintf("Disk created %q", datadiskID))
 				s.disks[ddi.Lun] = datadiskID           // save the resoure we just create in our disk set
 				state.Put(stateBagKey_Diskset, s.disks) // update the statebag
-				ui.Say(fmt.Sprintf("Creating disk %q", datadiskID))
 
-				futures = append(futures, Future{datadiskID, f})
 			}
 		}
 	}
-
-	ui.Say("Waiting for disks to be created.")
-
-	// Wait for completion
-	for _, f := range futures {
-		error := f.LongRunningPoller.PollUntilDone()
-		if error != nil {
-			return errorMessage("Failed to create resource %q error %s", f.Resource, error)
-		}
-		ui.Say(fmt.Sprintf("Disk %q created", f.Resource))
-	}
-
 	return multistep.ActionContinue
 }
 
@@ -223,17 +206,22 @@ func (s StepCreateNewDiskset) getDatadiskDefinitionFromImage(lun int64) disks.Di
 	return disk
 }
 
-func (s *StepCreateNewDiskset) createDiskset(ctx context.Context, azcli client.AzureClientSet, id disks.DiskId, disk disks.Disk) (polling.LongRunningPoller, error) {
-	f, err := azcli.DisksClient().CreateOrUpdate(ctx, id, disk)
+func (s *StepCreateNewDiskset) createDiskset(ctx context.Context, azcli client.AzureClientSet, id commonids.ManagedDiskId, disk disks.Disk) error {
+	pollingContext, cancel := context.WithTimeout(ctx, azcli.PollingDuration())
+	defer cancel()
+
+	err := azcli.DisksClient().CreateOrUpdateThenPoll(pollingContext, id, disk)
 	if err != nil {
-		return polling.LongRunningPoller{}, err
+		return err
 	}
-	return f.Poller, nil
+	return nil
 }
 
 func (s *StepCreateNewDiskset) getSharedImageGalleryVersion(ctx context.Context, azclient client.AzureClientSet, id galleryimageversions.ImageVersionId) (*galleryimageversions.GalleryImageVersion, error) {
+	pollingContext, cancel := context.WithTimeout(ctx, azclient.PollingDuration())
+	defer cancel()
 
-	imageVersionResult, err := azclient.GalleryImageVersionsClient().Get(ctx, id, galleryimageversions.DefaultGetOperationOptions())
+	imageVersionResult, err := azclient.GalleryImageVersionsClient().Get(pollingContext, id, galleryimageversions.DefaultGetOperationOptions())
 	if err != nil {
 		return nil, err
 	}
@@ -251,14 +239,14 @@ func (s *StepCreateNewDiskset) Cleanup(state multistep.StateBag) {
 		for _, d := range s.disks {
 
 			ui.Say(fmt.Sprintf("Waiting for disk %q detach to complete", d))
-			err := NewDiskAttacher(azcli, ui).WaitForDetach(context.Background(), d.String())
+			err := NewDiskAttacher(azcli, ui).WaitForDetach(context.TODO(), d.String())
 			if err != nil {
 				ui.Error(fmt.Sprintf("error detaching disk %q: %s", d, err))
 			}
 
 			ui.Say(fmt.Sprintf("Deleting disk %q", d))
 
-			diskID := disks.NewDiskID(azcli.SubscriptionID(), d.ResourceGroup, d.ResourceName.String())
+			diskID := commonids.NewManagedDiskID(azcli.SubscriptionID(), d.ResourceGroup, d.ResourceName.String())
 			pollingContext, cancel := context.WithTimeout(context.TODO(), azcli.PollingDuration())
 			defer cancel()
 			err = azcli.DisksClient().DeleteThenPoll(pollingContext, diskID)

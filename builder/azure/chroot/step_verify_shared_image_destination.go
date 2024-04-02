@@ -61,7 +61,9 @@ func (s *StepVerifySharedImageDestination) Run(ctx context.Context, state multis
 		s.Image.GalleryName,
 		s.Image.ImageName,
 	)
-	image, err := s.getImage(ctx, azcli, galleryImageID)
+	getImagePollingContext, getImageCancel := context.WithTimeout(ctx, azcli.PollingDuration())
+	defer getImageCancel()
+	image, err := s.getImage(getImagePollingContext, azcli, galleryImageID)
 
 	if err != nil {
 		return errorMessage("Error retrieving shared image %q: %+v ", imageURI, err)
@@ -108,7 +110,9 @@ func (s *StepVerifySharedImageDestination) Run(ctx context.Context, state multis
 		s.Image.GalleryName,
 		s.Image.ImageName,
 	)
-	versions, err := s.listVersions(ctx, azcli,
+	listVersionsCtx, listVersionsCancel := context.WithTimeout(ctx, azcli.PollingDuration())
+	defer listVersionsCancel()
+	versions, err := s.listVersions(listVersionsCtx, azcli,
 		galleryImageIDForList)
 
 	if err != nil {
@@ -129,7 +133,9 @@ func (s *StepVerifySharedImageDestination) Run(ctx context.Context, state multis
 }
 
 func (s *StepVerifySharedImageDestination) getGalleryImage(ctx context.Context, azcli client.AzureClientSet, id galleryimages.GalleryImageId) (*galleryimages.GalleryImage, error) {
-	res, err := azcli.GalleryImagesClient().Get(ctx, id)
+	pollingContext, cancel := context.WithTimeout(ctx, azcli.PollingDuration())
+	defer cancel()
+	res, err := azcli.GalleryImagesClient().Get(pollingContext, id)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +146,9 @@ func (s *StepVerifySharedImageDestination) getGalleryImage(ctx context.Context, 
 }
 
 func (s *StepVerifySharedImageDestination) listGalleryVersions(ctx context.Context, azcli client.AzureClientSet, id galleryimageversions.GalleryImageId) ([]galleryimageversions.GalleryImageVersion, error) {
-	res, err := azcli.GalleryImageVersionsClient().ListByGalleryImageComplete(ctx, id)
+	pollingContext, cancel := context.WithTimeout(ctx, azcli.PollingDuration())
+	defer cancel()
+	res, err := azcli.GalleryImageVersionsClient().ListByGalleryImageComplete(pollingContext, id)
 	if err != nil {
 		return nil, err
 	}

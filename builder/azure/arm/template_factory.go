@@ -360,7 +360,7 @@ func createDeploymentParameters(doc string, parameters *template.TemplateParamet
 		return nil, err
 	}
 
-	var templateParameters interface{}
+	var templateParameters map[string]deployments.DeploymentParameter
 	err = json.Unmarshal(bs, &templateParameters)
 	if err != nil {
 		return nil, err
