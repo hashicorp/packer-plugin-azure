@@ -15,7 +15,7 @@ variable "storage_account_name" {
 }
 
 // Variable applied to resources that have uniqueness constraints at a subscription level
-// For example you can't have to shared image galleries named `linux` in the same Subscription in different resource group
+// For example you can't have two shared image galleries named `linux` in the same Subscription in different resource group
 variable "resource_prefix" {
   type = string
 }
