@@ -7,6 +7,10 @@ variable "resource_group_name" {
   default = "${env("ARM_RESOURCE_GROUP_NAME")}"
   type    = string
 }
+variable "resource_prefix" {
+  default = "${env("ARM_RESOURCE_PREFIX")}"
+  type    = string
+}
 source "azure-arm" "windows-sig" {
   communicator       = "winrm"
   winrm_timeout      = "5m"
@@ -15,8 +19,8 @@ source "azure-arm" "windows-sig" {
   winrm_username     = "packer"
   use_azure_cli_auth = true
   shared_image_gallery_destination {
-    image_name     = "windows-sig"
-    gallery_name   = "acctestgallery"
+    image_name     = "${var.resource_prefix}-windows-sig"
+    gallery_name   = "${var.resource_prefix}_acctestgallery"
     image_version  = "1.0.0"
     resource_group = var.resource_group_name
   }

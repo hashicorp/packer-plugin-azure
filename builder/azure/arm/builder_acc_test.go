@@ -5,8 +5,9 @@ package arm
 
 // Below are the requirements for running the acceptance tests for the Packer Azure plugin ARM Builder
 //
-// * An Azure subscription, with a resource group, app registration based credentails, a few image galleries, and a dev test lab
-// (You can use the Terraform config in the terraform folder at the base of the repository)
+// * An Azure subscription, with a resource group, app registration based credentails and a few image galleries
+// You can use the Terraform config in the terraform folder at the base of the repository
+// It is reccomended to set the required environment variables and then run the acceptance_test_setup.sh script in the terraform directory
 //
 // * The Azure CLI installed and logged in for testing CLI based authentication
 // * Env Variables for Auth
@@ -17,7 +18,8 @@ package arm
 // * Env Variables Defining Azure Resources for Packer templates
 // ** ARM_RESOURCE_GROUP_NAME - Resource group
 // ** ARM_STORAGE_ACCOUNT - a storage account located in above resource group
-//
+// ** ARM_RESOURCE_PREFIX - String prefix for resources unique name constraints
+// ** For example SIG gallery names must be unique not just within the resource group, but within a subscription, and a user may not have access to all SIGs in a subscription.
 // * As well as the following misc env variables
 // ** ARM_SSH_PRIVATE_KEY_FILE - the file location of a PEM encoded RSA SSH Private Key (ed25519 is not supported by Azure),
 // ** PACKER_ACC - set to any non 0 value
@@ -38,11 +40,6 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 )
 
-// TODO Add support for variable files with the acceptance testing module in packer-plugin-sdk
-// This will allow easier setting of default values for resource group name, storage account, DTL, and gallery name
-// To allow running in parallel tests in the same subscription
-// Currently this will fail since image gallery's have to be uniquely named within their subscription and not just their resource group
-
 // This test builds two images,
 // First a parent Specialized ARM 64 Linux VM to a Shared Image Gallery/Compute Gallery
 // Then a second Specialized ARM64 Linux VM that uses the first as its source/parent image
@@ -55,15 +52,18 @@ func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG_WithChildImage(t
 		},
 	)
 	subscriptionID := os.Getenv("ARM_SUBSCRIPTION_ID")
+	resourcePrefix := os.Getenv("ARM_RESOURCE_PREFIX")
 	resourceGroupName := os.Getenv("ARM_RESOURCE_GROUP_NAME")
 
 	// After test finishes try and delete the created versions
-	defer deleteGalleryVersions(t, subscriptionID, resourceGroupName, "acctestgallery", "arm-linux-specialized-sig", []string{"1.0.0", "1.0.1"})
+	defer deleteGalleryVersions(t, subscriptionID, resourceGroupName, fmt.Sprintf("%s_acctestgallery", resourcePrefix), fmt.Sprintf("%s-arm-linux-specialized-sig", resourcePrefix), []string{"1.0.0", "1.0.1"})
 	// Create parent specialized shared gallery image
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
-		Name:     "test-specialized-linux-sig",
-		Type:     "azure-arm",
-		Template: string(armLinuxSpecialziedSIGTemplate),
+		Name: "test-specialized-linux-sig",
+		Type: "azure-arm",
+		// Run build with force to ignore previous test runs failed artifact deletions
+		BuildExtraArgs: []string{"-force"},
+		Template:       string(armLinuxSpecialziedSIGTemplate),
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
 			if buildCommand.ProcessState != nil {
 				if buildCommand.ProcessState.ExitCode() != 0 {
@@ -76,9 +76,10 @@ func TestBuilderAcc_SharedImageGallery_ARM64SpecializedLinuxSIG_WithChildImage(t
 
 	// Create child image from a specialized parent
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
-		Name:     "test-specialized-linux-sig-child",
-		Type:     "azure-arm",
-		Template: string(armLinuxChildFromSpecializedParent),
+		Name:           "test-specialized-linux-sig-child",
+		Type:           "azure-arm",
+		BuildExtraArgs: []string{"-force"},
+		Template:       string(armLinuxChildFromSpecializedParent),
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
 			if buildCommand.ProcessState != nil {
 				if buildCommand.ProcessState.ExitCode() != 0 {
@@ -101,12 +102,14 @@ func TestBuilderAcc_SharedImageGallery_WindowsSIG(t *testing.T) {
 
 	subscriptionID := os.Getenv("ARM_SUBSCRIPTION_ID")
 	resourceGroupName := os.Getenv("ARM_RESOURCE_GROUP_NAME")
-	defer deleteGalleryVersions(t, subscriptionID, resourceGroupName, "acctestgallery", "windows-sig", []string{"1.0.0"})
+	resourcePrefix := os.Getenv("ARM_RESOURCE_PREFIX")
+	defer deleteGalleryVersions(t, subscriptionID, resourceGroupName, fmt.Sprintf("%s_acctestgallery", resourcePrefix), fmt.Sprintf("%s-windows-sig", resourcePrefix), []string{"1.0.0"})
 
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
-		Name:     "test-windows-sig",
-		Type:     "azure-arm",
-		Template: string(windowsSIGTemplate),
+		Name:           "test-windows-sig",
+		Type:           "azure-arm",
+		BuildExtraArgs: []string{"-force"},
+		Template:       string(windowsSIGTemplate),
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
 			if buildCommand.ProcessState != nil {
 				if buildCommand.ProcessState.ExitCode() != 0 {
@@ -325,6 +328,7 @@ func deleteGalleryVersions(t *testing.T, subscriptionID string, resourceGroupNam
 	}
 }
 
+// TODO Move these templates to seperate files inside the testdata directory rather than defined strings here
 func testBuilderUserDataLinux(userdata string) string {
 	return fmt.Sprintf(`
 {
