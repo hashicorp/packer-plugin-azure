@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 if [ -z "${AZURE_CLI_AUTH}" ]; then
     echo "AZURE_CLI_AUTH is unset or set to the empty string"
     exit 1
