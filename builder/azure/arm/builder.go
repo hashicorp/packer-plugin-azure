@@ -226,11 +226,18 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			}
 		}
 
+		buildLocation := normalizeAzureRegion(b.stateBag.Get(constants.ArmLocation).(string))
 		if len(b.config.SharedGalleryDestination.SigDestinationTargetRegions) > 0 {
 			normalizedRegions := make([]TargetRegion, 0, len(b.config.SharedGalleryDestination.SigDestinationTargetRegions))
 			for _, tr := range b.config.SharedGalleryDestination.SigDestinationTargetRegions {
 				tr.Name = normalizeAzureRegion(tr.Name)
 				normalizedRegions = append(normalizedRegions, tr)
+				if strings.EqualFold(tr.Name, buildLocation) && tr.ReplicaCount != 0 {
+					// By default the global replica count takes precedence so lets update it to use
+					// the define replica count from the target_region config for the build target_region.
+					b.config.SharedGalleryImageVersionReplicaCount = tr.ReplicaCount
+					b.stateBag.Put(constants.ArmManagedImageSharedGalleryImageVersionReplicaCount, tr.ReplicaCount)
+				}
 			}
 			b.config.SharedGalleryDestination.SigDestinationTargetRegions = normalizedRegions
 		}
@@ -238,7 +245,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		// Convert deprecated replication_regions to []TargetRegion
 		if len(b.config.SharedGalleryDestination.SigDestinationReplicationRegions) > 0 {
 			var foundMandatoryReplicationRegion bool
-			buildLocation := normalizeAzureRegion(b.stateBag.Get(constants.ArmLocation).(string))
 			normalizedRegions := make([]TargetRegion, 0, len(b.config.SharedGalleryDestination.SigDestinationReplicationRegions))
 			for _, region := range b.config.SharedGalleryDestination.SigDestinationReplicationRegions {
 				region := normalizeAzureRegion(region)
@@ -264,9 +270,17 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 		if len(b.config.SharedGalleryDestination.SigDestinationTargetRegions) == 0 {
 			buildLocation := normalizeAzureRegion(b.stateBag.Get(constants.ArmLocation).(string))
-			b.config.SharedGalleryDestination.SigDestinationTargetRegions = []TargetRegion{{Name: buildLocation, DiskEncryptionSetId: b.config.DiskEncryptionSetId}}
+			b.config.SharedGalleryDestination.SigDestinationTargetRegions = []TargetRegion{
+				{
+					Name:                buildLocation,
+					DiskEncryptionSetId: b.config.DiskEncryptionSetId,
+					//Default region replica count is set at the Gallery Level
+					ReplicaCount: b.config.SharedGalleryImageVersionReplicaCount,
+				},
+			}
 		}
 
+		b.stateBag.Put(constants.ArmManagedImageSharedGalleryImageVersionReplicaCount, b.config.SharedGalleryImageVersionReplicaCount)
 		b.stateBag.Put(constants.ArmSharedImageGalleryDestinationTargetRegions, b.config.SharedGalleryDestination.SigDestinationTargetRegions)
 	}
 

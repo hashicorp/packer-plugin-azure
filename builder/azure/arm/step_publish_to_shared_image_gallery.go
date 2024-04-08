@@ -247,7 +247,13 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 
 	miSGImageVersionEndOfLifeDate, _ := stateBag.Get(constants.ArmManagedImageSharedGalleryImageVersionEndOfLifeDate).(string)
 	miSGImageVersionExcludeFromLatest, _ := stateBag.Get(constants.ArmManagedImageSharedGalleryImageVersionExcludeFromLatest).(bool)
-
+	miSigReplicaCount, _ := stateBag.Get(constants.ArmManagedImageSharedGalleryImageVersionReplicaCount).(int64)
+	// Replica count must be between 1 and 100 inclusive
+	if miSigReplicaCount <= 0 {
+		miSigReplicaCount = constants.SharedImageGalleryImageVersionDefaultMinReplicaCount
+	} else if miSigReplicaCount > constants.SharedImageGalleryImageVersionDefaultMaxReplicaCount {
+		miSigReplicaCount = constants.SharedImageGalleryImageVersionDefaultMaxReplicaCount
+	}
 	regionNames := make([]string, 0, len(sharedImageGallery.SigDestinationTargetRegions))
 	desIds := make([]string, 0, len(sharedImageGallery.SigDestinationTargetRegions))
 	for _, r := range sharedImageGallery.SigDestinationTargetRegions {
@@ -256,7 +262,6 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 			desIds = append(desIds, r.DiskEncryptionSetId)
 		}
 	}
-
 	s.say(fmt.Sprintf(" -> Source ID used for SIG publish        : '%s'", sourceID))
 	s.say(fmt.Sprintf(" -> SIG publish resource group            : '%s'", sharedImageGallery.SigDestinationResourceGroup))
 	s.say(fmt.Sprintf(" -> SIG gallery name                      : '%s'", sharedImageGallery.SigDestinationGalleryName))
