@@ -235,9 +235,8 @@ Providing `temp_resource_group_name` or `location` in combination with
 - `shared_gallery_image_version_end_of_life_date` (string) - The end of life date (2006-01-02T15:04:05.99Z) of the gallery Image Version. This property
   can be used for decommissioning purposes.
 
-- `shared_image_gallery_replica_count` (int64) - The number of replicas of the Image Version to be created per region.
-  Replica count must be between 1 and 100, but 50 replicas should be sufficient for most use cases.
-  When using shallow replication `use_shallow_replication=true` the value can only be 1.
+- `shared_image_gallery_replica_count` (int64) - The number of replicas of the Image Version to be created per region defined in `replication_regions`.
+  Users using `target_region` blocks can specify individual replica counts per region.
 
 - `shared_gallery_image_version_exclude_from_latest` (bool) - If set to true, Virtual Machines deployed from the latest version of the
   Image Definition won't use this Image Version.

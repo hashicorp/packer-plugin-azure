@@ -146,6 +146,10 @@ type TargetRegion struct {
 	// the replication of encrypted disks across regions. CMKs must
 	// already exist within the target regions.
 	DiskEncryptionSetId string `mapstructure:"disk_encryption_set_id"`
+	// The number of replicas of the Image Version to be created within the region. Defaults to 1.
+	// Replica count must be between 1 and 100, but 50 replicas should be sufficient for most use cases.
+	// When using shallow replication `use_shallow_replication=true` the value can only be 1 for the primary build region.
+	ReplicaCount int64 `mapstructure:"replicas"`
 }
 
 type Spot struct {
@@ -258,9 +262,8 @@ type Config struct {
 	// The end of life date (2006-01-02T15:04:05.99Z) of the gallery Image Version. This property
 	// can be used for decommissioning purposes.
 	SharedGalleryImageVersionEndOfLifeDate string `mapstructure:"shared_gallery_image_version_end_of_life_date" required:"false"`
-	// The number of replicas of the Image Version to be created per region.
-	// Replica count must be between 1 and 100, but 50 replicas should be sufficient for most use cases.
-	// When using shallow replication `use_shallow_replication=true` the value can only be 1.
+	// The number of replicas of the Image Version to be created per region defined in `replication_regions`.
+	// Users using `target_region` blocks can specify individual replica counts per region.
 	SharedGalleryImageVersionReplicaCount int64 `mapstructure:"shared_image_gallery_replica_count" required:"false"`
 	// If set to true, Virtual Machines deployed from the latest version of the
 	// Image Definition won't use this Image Version.
@@ -1334,7 +1337,11 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 		// Validate target region settings; it can be the deprecated replicated_regions attribute or multiple target_region blocks
 		if (len(c.SharedGalleryDestination.SigDestinationReplicationRegions) > 0) && (len(c.SharedGalleryDestination.SigDestinationTargetRegions) > 0) {
-			errs = packersdk.MultiErrorAppend(errs, errors.New("`replicated_regions` can not be defined alongside `target_region`; you can defined a target_region for each destination region you wish to replicate to."))
+			errs = packersdk.MultiErrorAppend(errs, errors.New("`replicated_regions` can not be defined alongside `target_region`; you can define a target_region for each destination region you wish to replicate to."))
+		}
+
+		if (len(c.SharedGalleryDestination.SigDestinationTargetRegions) > 0) && c.SharedGalleryImageVersionReplicaCount != 0 {
+			errs = packersdk.MultiErrorAppend(errs, errors.New("`shared_image_gallery_replica_count` can not be defined alongside `target_region`; you can specify the number of replicas per region within target_region blocks."))
 		}
 
 		if c.SharedGalleryDestination.SigDestinationUseShallowReplicationMode {
@@ -1342,14 +1349,9 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 				errs = packersdk.MultiErrorAppend(errs, err)
 			}
 
-			if c.SharedGalleryImageVersionReplicaCount == 0 {
-				c.SharedGalleryImageVersionReplicaCount = 1
-			}
-
-			if c.SharedGalleryImageVersionReplicaCount != 1 {
+			if c.SharedGalleryImageVersionReplicaCount > 1 {
 				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("When using shallow replication the replica count can only be 1, leaving this value unset will default to 1"))
 			}
-
 		}
 
 		if c.SharedGalleryDestination.SigDestinationConfidentialVMImageEncryptionType != "" {

@@ -1363,6 +1363,36 @@ func TestConfigShouldAcceptShallowReplicationWithWithUnsetReplicaCount(t *testin
 	}
 }
 
+func TestConfigShouldRejectSigVersionReplicaWithTargetRegion(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":                        "ignore",
+		"image_publisher":                    "ignore",
+		"image_sku":                          "ignore",
+		"location":                           "ignore",
+		"subscription_id":                    "ignore",
+		"communicator":                       "none",
+		"shared_image_gallery_replica_count": "2",
+		"os_type":                            constants.Target_Linux,
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.1",
+			"target_region": map[string]interface{}{
+				"name": "ignore",
+			},
+		},
+	}
+	var c Config
+	expectedErrorMessage := "`shared_image_gallery_replica_count` can not be defined alongside `target_region`; you can specify the number of replicas per region within target_region blocks"
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("expected config to reject target_region block with shared_image_gallery_replica_count set")
+	} else if !strings.Contains(err.Error(), expectedErrorMessage) {
+		t.Fatalf("unexpected rejection reason, expected %s to contain %s", err.Error(), expectedErrorMessage)
+	}
+}
+
 func TestConfigValidateShallowReplicationRegion(t *testing.T) {
 	tt := []struct {
 		name          string
@@ -3019,7 +3049,7 @@ func TestConfigShouldRejectSharedImageGalleryDestinationReplicationRegions(t *te
 	if err == nil {
 		t.Fatal("expected config to reject invalid shared image gallery destination the defines both replication_regions and target_region block", err)
 	}
-	errorMessage := "`replicated_regions` can not be defined alongside `target_region`; you can defined a target_region for each destination region you wish to replicate to."
+	errorMessage := "`replicated_regions` can not be defined alongside `target_region`; you can define a target_region for each destination region you wish to replicate to."
 	if !strings.Contains(err.Error(), errorMessage) {
 		t.Errorf("expected config to reject with error containing %s but got %s", errorMessage, err)
 	}
