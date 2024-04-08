@@ -19,8 +19,8 @@ require (
 
 require (
 	github.com/dimchansky/utfbom v1.1.1
-	github.com/hashicorp/go-azure-sdk/resource-manager v0.20240327.1161949
-	github.com/hashicorp/go-azure-sdk/sdk v0.20240327.1161949
+	github.com/hashicorp/go-azure-sdk/resource-manager v0.20240403.1161138
+	github.com/hashicorp/go-azure-sdk/sdk v0.20240403.1161138
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/tombuildsstuff/giovanni v0.25.3
 )

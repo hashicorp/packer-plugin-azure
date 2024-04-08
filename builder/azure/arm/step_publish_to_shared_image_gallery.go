@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-07-03/galleryimageversions"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -24,15 +24,16 @@ type StepPublishToSharedImageGallery struct {
 }
 
 type PublishArgs struct {
-	SubscriptionID     string
-	SourceID           string
-	SharedImageGallery SharedImageGalleryDestination
-	EndOfLifeDate      string
-	ExcludeFromLatest  bool
-	ReplicaCount       int64
-	Location           string
-	ReplicationMode    galleryimageversions.ReplicationMode
-	Tags               map[string]string
+	SubscriptionID       string
+	GallerySource        galleryimageversions.GalleryArtifactVersionFullSource
+	SharedImageGallery   SharedImageGalleryDestination
+	EndOfLifeDate        string
+	ExcludeFromLatest    bool
+	ReplicaCount         int64
+	Location             string
+	ReplicationMode      galleryimageversions.ReplicationMode
+	Tags                 map[string]string
+	IsSourceManagedImage bool
 }
 
 func NewStepPublishToSharedImageGallery(client *AzureClient, ui packersdk.Ui, config *Config) *StepPublishToSharedImageGallery {
@@ -107,14 +108,14 @@ func buildAzureImageTargetRegions(sig SharedImageGalleryDestination) []galleryim
 		name := r.Name
 		tr := galleryimageversions.TargetRegion{Name: name}
 
-		encryption := buildAzureImageTargetRegionsWithEncryption(r.DiskEncryptionSetId, sig.SigDestinationConfidentialVMImageEncryptionType)
+		encryption := buildAzureImageTargetRegionWithEncryption(r.DiskEncryptionSetId, sig.SigDestinationConfidentialVMImageEncryptionType)
 		tr.Encryption = encryption
 		targetRegions = append(targetRegions, tr)
 	}
 	return targetRegions
 }
 
-func buildAzureImageTargetRegionsWithEncryption(diskEncryptionSetId string, confidentialVMImageEncryptionType string) *galleryimageversions.EncryptionImages {
+func buildAzureImageTargetRegionWithEncryption(diskEncryptionSetId string, confidentialVMImageEncryptionType string) *galleryimageversions.EncryptionImages {
 	var e *galleryimageversions.EncryptionImages = nil
 	var toReturnDiskEncryptionSetId *string = nil
 	var toReturnSecureVMDiskEncryptionSetId *string = nil
@@ -137,6 +138,12 @@ func buildAzureImageTargetRegionsWithEncryption(diskEncryptionSetId string, conf
 		case string(galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithPmk):
 			withPmk := galleryimageversions.ConfidentialVMEncryptionTypeEncryptedWithPmk
 			toReturnConfidentialVMEncryptionType = &withPmk
+		}
+	} else if confidentialVMImageEncryptionType == string(galleryimageversions.ConfidentialVMEncryptionTypeNonPersistedTPM) {
+		nonPersistedTPM := galleryimageversions.ConfidentialVMEncryptionTypeNonPersistedTPM
+		toReturnConfidentialVMEncryptionType = &nonPersistedTPM
+		if diskEncryptionSetId != "" {
+			toReturnSecureVMDiskEncryptionSetId = common.StringPtr(diskEncryptionSetId)
 		}
 	}
 
@@ -175,9 +182,7 @@ func (s *StepPublishToSharedImageGallery) publishToSig(ctx context.Context, args
 		Tags:     &args.Tags,
 		Properties: &galleryimageversions.GalleryImageVersionProperties{
 			StorageProfile: galleryimageversions.GalleryImageVersionStorageProfile{
-				Source: &galleryimageversions.GalleryArtifactVersionFullSource{
-					Id: &args.SourceID,
-				},
+				Source: &args.GallerySource,
 			},
 			PublishingProfile: &galleryimageversions.GalleryArtifactPublishingProfileBase{
 				TargetRegions:      &imageVersionRegions,
@@ -222,19 +227,22 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 	location := stateBag.Get(constants.ArmLocation).(string)
 	tags := stateBag.Get(constants.ArmTags).(map[string]string)
 
-	sharedImageGallery := getSigDestination(stateBag)
-	var sourceID string
-
 	var isManagedImage = stateBag.Get(constants.ArmIsManagedImage).(bool)
+	sharedImageGallery := getSigDestination(stateBag)
+	gallerySource := galleryimageversions.GalleryArtifactVersionFullSource{}
 	if isManagedImage {
 		targetManagedImageResourceGroupName := stateBag.Get(constants.ArmManagedImageResourceGroupName).(string)
 		targetManagedImageName := stateBag.Get(constants.ArmManagedImageName).(string)
 
 		managedImageSubscription := stateBag.Get(constants.ArmManagedImageSubscription).(string)
-		sourceID = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/images/%s", managedImageSubscription, targetManagedImageResourceGroupName, targetManagedImageName)
+		managedImageSourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/images/%s", managedImageSubscription, targetManagedImageResourceGroupName, targetManagedImageName)
+		gallerySource.Id = &managedImageSourceId
+		s.say(fmt.Sprintf(" -> Source Managed Image ID used for SIG publish        : '%s'", managedImageSourceId))
 	} else {
 		var imageParameters = stateBag.Get(constants.ArmImageParameters).(*images.Image)
-		sourceID = *imageParameters.Properties.SourceVirtualMachine.Id
+		vmSourceId := *imageParameters.Properties.SourceVirtualMachine.Id
+		gallerySource.VirtualMachineId = &vmSourceId
+		s.say(fmt.Sprintf(" -> Source Virtual Machine ID used for SIG publish        : '%s'", vmSourceId))
 	}
 
 	miSGImageVersionEndOfLifeDate, _ := stateBag.Get(constants.ArmManagedImageSharedGalleryImageVersionEndOfLifeDate).(string)
@@ -256,7 +264,6 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 		}
 	}
 
-	s.say(fmt.Sprintf(" -> Source ID used for SIG publish        : '%s'", sourceID))
 	s.say(fmt.Sprintf(" -> SIG publish resource group            : '%s'", sharedImageGallery.SigDestinationResourceGroup))
 	s.say(fmt.Sprintf(" -> SIG gallery name                      : '%s'", sharedImageGallery.SigDestinationGalleryName))
 	s.say(fmt.Sprintf(" -> SIG image name                        : '%s'", sharedImageGallery.SigDestinationImageName))
@@ -285,7 +292,7 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 		ctx,
 		PublishArgs{
 			SubscriptionID:     subscriptionID,
-			SourceID:           sourceID,
+			GallerySource:      gallerySource,
 			SharedImageGallery: sharedImageGallery,
 			EndOfLifeDate:      miSGImageVersionEndOfLifeDate,
 			ExcludeFromLatest:  miSGImageVersionExcludeFromLatest,

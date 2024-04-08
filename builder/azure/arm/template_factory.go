@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"time"
 
-	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2024-03-01/virtualmachines"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/template"
@@ -134,7 +134,7 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 	if err != nil {
 		return nil, err
 	}
-	osType := hashiVMSDK.OperatingSystemTypesLinux
+	osType := virtualmachines.OperatingSystemTypesLinux
 
 	switch config.OSType {
 	case constants.Target_Linux:
@@ -146,7 +146,7 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 			return nil, err
 		}
 	case constants.Target_Windows:
-		osType = hashiVMSDK.OperatingSystemTypesWindows
+		osType = virtualmachines.OperatingSystemTypesWindows
 		err = builder.BuildWindows(config.Comm.Type, config.tmpKeyVaultName, config.tmpWinRMCertificateUrl)
 		if err != nil {
 			return nil, err
@@ -204,8 +204,8 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 		SecureBootEnabled      bool
 		VTpmEnabled            bool
 		EncryptionAtHost       *bool
-		securityType           *hashiVMSDK.SecurityTypes
-		securityEncryptionType *hashiVMSDK.SecurityEncryptionTypes
+		securityType           *virtualmachines.SecurityTypes
+		securityEncryptionType *virtualmachines.SecurityEncryptionTypes
 	}{
 		SecureBootEnabled:      config.SecureBootEnabled,
 		VTpmEnabled:            config.VTpmEnabled,
@@ -221,22 +221,25 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 	if config.SecurityType != "" {
 		switch config.SecurityType {
 		case constants.TrustedLaunch:
-			tl := hashiVMSDK.SecurityTypesTrustedLaunch
+			tl := virtualmachines.SecurityTypesTrustedLaunch
 			securityProfile.securityType = &tl
 		case constants.ConfidentialVM:
-			cvm := hashiVMSDK.SecurityTypesConfidentialVM
+			cvm := virtualmachines.SecurityTypesConfidentialVM
 			securityProfile.securityType = &cvm
 		}
 	}
 
 	if config.SecurityEncryptionType != "" {
 		switch config.SecurityEncryptionType {
-		case string(hashiVMSDK.SecurityEncryptionTypesVMGuestStateOnly):
-			vmgso := hashiVMSDK.SecurityEncryptionTypesVMGuestStateOnly
+		case string(virtualmachines.SecurityEncryptionTypesVMGuestStateOnly):
+			vmgso := virtualmachines.SecurityEncryptionTypesVMGuestStateOnly
 			securityProfile.securityEncryptionType = &vmgso
-		case string(hashiVMSDK.SecurityEncryptionTypesDiskWithVMGuestState):
-			dwvmgs := hashiVMSDK.SecurityEncryptionTypesDiskWithVMGuestState
+		case string(virtualmachines.SecurityEncryptionTypesDiskWithVMGuestState):
+			dwvmgs := virtualmachines.SecurityEncryptionTypesDiskWithVMGuestState
 			securityProfile.securityEncryptionType = &dwvmgs
+		case string(virtualmachines.SecurityEncryptionTypesNonPersistedTPM):
+			nonPersistedTPM := virtualmachines.SecurityEncryptionTypesNonPersistedTPM
+			securityProfile.securityEncryptionType = &nonPersistedTPM
 		}
 	}
 

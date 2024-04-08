@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
-	hashiSecurityRulesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/securityrules"
-	hashiSubnetsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/subnets"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2024-03-01/virtualmachines"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/securityrules"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/subnets"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 )
 
@@ -32,7 +32,7 @@ const (
 
 type TemplateBuilder struct {
 	template *Template
-	osType   hashiVMSDK.OperatingSystemTypes
+	osType   virtualmachines.OperatingSystemTypes
 }
 
 func NewTemplateBuilder(template string) (*TemplateBuilder, error) {
@@ -56,9 +56,9 @@ func (s *TemplateBuilder) BuildLinux(sshAuthorizedKey string, disablePasswordAut
 
 	variableSshKeyPath := s.toVariable(variableSshKeyPath)
 	profile := resource.Properties.OsProfile
-	profile.LinuxConfiguration = &hashiVMSDK.LinuxConfiguration{
-		Ssh: &hashiVMSDK.SshConfiguration{
-			PublicKeys: &[]hashiVMSDK.SshPublicKey{
+	profile.LinuxConfiguration = &virtualmachines.LinuxConfiguration{
+		Ssh: &virtualmachines.SshConfiguration{
+			PublicKeys: &[]virtualmachines.SshPublicKey{
 				{
 					Path:    &variableSshKeyPath,
 					KeyData: &sshAuthorizedKey,
@@ -72,7 +72,7 @@ func (s *TemplateBuilder) BuildLinux(sshAuthorizedKey string, disablePasswordAut
 		profile.AdminPassword = nil
 	}
 
-	s.osType = hashiVMSDK.OperatingSystemTypesLinux
+	s.osType = virtualmachines.OperatingSystemTypesLinux
 	return nil
 }
 
@@ -83,16 +83,16 @@ func (s *TemplateBuilder) BuildWindows(communicatorType string, keyVaultName str
 	}
 
 	profile := resource.Properties.OsProfile
-	s.osType = hashiVMSDK.OperatingSystemTypesWindows
+	s.osType = virtualmachines.OperatingSystemTypesWindows
 
 	certifacteStore := "My"
 	resourceID := s.toResourceID(resourceKeyVaults, keyVaultName)
-	profile.Secrets = &[]hashiVMSDK.VaultSecretGroup{
+	profile.Secrets = &[]virtualmachines.VaultSecretGroup{
 		{
-			SourceVault: &hashiVMSDK.SubResource{
+			SourceVault: &virtualmachines.SubResource{
 				Id: &resourceID,
 			},
-			VaultCertificates: &[]hashiVMSDK.VaultCertificate{
+			VaultCertificates: &[]virtualmachines.VaultCertificate{
 				{
 					CertificateStore: &certifacteStore,
 					CertificateUrl:   &certificateUrl,
@@ -103,17 +103,17 @@ func (s *TemplateBuilder) BuildWindows(communicatorType string, keyVaultName str
 
 	provisionVMAgent := true
 	if communicatorType == "ssh" {
-		profile.WindowsConfiguration = &hashiVMSDK.WindowsConfiguration{
+		profile.WindowsConfiguration = &virtualmachines.WindowsConfiguration{
 			ProvisionVMAgent: &provisionVMAgent,
 		}
 		return nil
 	}
 
-	protocol := hashiVMSDK.ProtocolTypesHTTPS
-	profile.WindowsConfiguration = &hashiVMSDK.WindowsConfiguration{
+	protocol := virtualmachines.ProtocolTypesHTTPS
+	profile.WindowsConfiguration = &virtualmachines.WindowsConfiguration{
 		ProvisionVMAgent: common.BoolPtr(true),
-		WinRM: &hashiVMSDK.WinRMConfiguration{
-			Listeners: &[]hashiVMSDK.WinRMListener{
+		WinRM: &virtualmachines.WinRMConfiguration{
+			Listeners: &[]virtualmachines.WinRMListener{
 				{
 					Protocol:       &protocol,
 					CertificateUrl: common.StringPtr(certificateUrl),
@@ -159,18 +159,18 @@ func (s *TemplateBuilder) SetIdentity(userAssignedManagedIdentities []string) er
 	return nil
 }
 
-func (s *TemplateBuilder) SetManagedDiskUrl(managedImageId string, storageAccountType hashiVMSDK.StorageAccountTypes, cachingType hashiVMSDK.CachingTypes) error {
+func (s *TemplateBuilder) SetManagedDiskUrl(managedImageId string, storageAccountType virtualmachines.StorageAccountTypes, cachingType virtualmachines.CachingTypes) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
 	}
 
 	profile := resource.Properties.StorageProfile
-	profile.ImageReference = &hashiVMSDK.ImageReference{
+	profile.ImageReference = &virtualmachines.ImageReference{
 		Id: &managedImageId,
 	}
 	profile.OsDisk.OsType = s.osType
-	profile.OsDisk.CreateOption = hashiVMSDK.DiskCreateOptionTypesFromImage
+	profile.OsDisk.CreateOption = virtualmachines.DiskCreateOptionTypesFromImage
 	profile.OsDisk.Vhd = nil
 	profile.OsDisk.Caching = cachingType
 	profile.OsDisk.ManagedDisk = &ManagedDisk{
@@ -180,21 +180,21 @@ func (s *TemplateBuilder) SetManagedDiskUrl(managedImageId string, storageAccoun
 	return nil
 }
 
-func (s *TemplateBuilder) SetManagedMarketplaceImage(publisher, offer, sku, version string, storageAccountType hashiVMSDK.StorageAccountTypes, cachingType hashiVMSDK.CachingTypes) error {
+func (s *TemplateBuilder) SetManagedMarketplaceImage(publisher, offer, sku, version string, storageAccountType virtualmachines.StorageAccountTypes, cachingType virtualmachines.CachingTypes) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
 	}
 
 	profile := resource.Properties.StorageProfile
-	profile.ImageReference = &hashiVMSDK.ImageReference{
+	profile.ImageReference = &virtualmachines.ImageReference{
 		Publisher: &publisher,
 		Offer:     &offer,
 		Sku:       &sku,
 		Version:   &version,
 	}
 	profile.OsDisk.OsType = s.osType
-	profile.OsDisk.CreateOption = hashiVMSDK.DiskCreateOptionTypesFromImage
+	profile.OsDisk.CreateOption = virtualmachines.DiskCreateOptionTypesFromImage
 	profile.OsDisk.Vhd = nil
 	profile.OsDisk.Caching = cachingType
 	profile.OsDisk.ManagedDisk = &ManagedDisk{
@@ -204,14 +204,14 @@ func (s *TemplateBuilder) SetManagedMarketplaceImage(publisher, offer, sku, vers
 	return nil
 }
 
-func (s *TemplateBuilder) SetSharedGalleryImage(location, imageID string, cachingType hashiVMSDK.CachingTypes) error {
+func (s *TemplateBuilder) SetSharedGalleryImage(location, imageID string, cachingType virtualmachines.CachingTypes) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
 	}
 
 	profile := resource.Properties.StorageProfile
-	profile.ImageReference = &hashiVMSDK.ImageReference{Id: &imageID}
+	profile.ImageReference = &virtualmachines.ImageReference{Id: &imageID}
 	profile.OsDisk.OsType = s.osType
 	profile.OsDisk.Vhd = nil
 	profile.OsDisk.Caching = cachingType
@@ -219,14 +219,14 @@ func (s *TemplateBuilder) SetSharedGalleryImage(location, imageID string, cachin
 	return nil
 }
 
-func (s *TemplateBuilder) SetCommunityGalleryImage(location, imageID string, cachingType hashiVMSDK.CachingTypes) error {
+func (s *TemplateBuilder) SetCommunityGalleryImage(location, imageID string, cachingType virtualmachines.CachingTypes) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
 	}
 
 	profile := resource.Properties.StorageProfile
-	profile.ImageReference = &hashiVMSDK.ImageReference{CommunityGalleryImageId: &imageID}
+	profile.ImageReference = &virtualmachines.ImageReference{CommunityGalleryImageId: &imageID}
 	profile.OsDisk.OsType = s.osType
 	profile.OsDisk.Vhd = nil
 	profile.OsDisk.Caching = cachingType
@@ -234,14 +234,14 @@ func (s *TemplateBuilder) SetCommunityGalleryImage(location, imageID string, cac
 	return nil
 }
 
-func (s *TemplateBuilder) SetDirectSharedGalleryImage(location, imageID string, cachingType hashiVMSDK.CachingTypes) error {
+func (s *TemplateBuilder) SetDirectSharedGalleryImage(location, imageID string, cachingType virtualmachines.CachingTypes) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
 	}
 
 	profile := resource.Properties.StorageProfile
-	profile.ImageReference = &hashiVMSDK.ImageReference{SharedGalleryImageId: &imageID}
+	profile.ImageReference = &virtualmachines.ImageReference{SharedGalleryImageId: &imageID}
 	profile.OsDisk.OsType = s.osType
 	profile.OsDisk.Vhd = nil
 	profile.OsDisk.Caching = cachingType
@@ -249,7 +249,7 @@ func (s *TemplateBuilder) SetDirectSharedGalleryImage(location, imageID string, 
 	return nil
 }
 
-func (s *TemplateBuilder) SetMarketPlaceImage(publisher, offer, sku, version string, cachingType hashiVMSDK.CachingTypes) error {
+func (s *TemplateBuilder) SetMarketPlaceImage(publisher, offer, sku, version string, cachingType virtualmachines.CachingTypes) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
@@ -257,7 +257,7 @@ func (s *TemplateBuilder) SetMarketPlaceImage(publisher, offer, sku, version str
 
 	profile := resource.Properties.StorageProfile
 	profile.OsDisk.Caching = cachingType
-	profile.ImageReference = &hashiVMSDK.ImageReference{
+	profile.ImageReference = &virtualmachines.ImageReference{
 		Publisher: common.StringPtr(publisher),
 		Offer:     common.StringPtr(offer),
 		Sku:       common.StringPtr(sku),
@@ -267,7 +267,7 @@ func (s *TemplateBuilder) SetMarketPlaceImage(publisher, offer, sku, version str
 	return nil
 }
 
-func (s *TemplateBuilder) SetImageUrl(imageUrl string, osType hashiVMSDK.OperatingSystemTypes, cachingType hashiVMSDK.CachingTypes) error {
+func (s *TemplateBuilder) SetImageUrl(imageUrl string, osType virtualmachines.OperatingSystemTypes, cachingType virtualmachines.CachingTypes) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
@@ -277,7 +277,7 @@ func (s *TemplateBuilder) SetImageUrl(imageUrl string, osType hashiVMSDK.Operati
 	profile.OsDisk.OsType = osType
 	profile.OsDisk.Caching = cachingType
 
-	profile.OsDisk.Image = &hashiVMSDK.VirtualHardDisk{
+	profile.OsDisk.Image = &virtualmachines.VirtualHardDisk{
 		Uri: &imageUrl,
 	}
 
@@ -316,17 +316,17 @@ func (s *TemplateBuilder) SetOSDiskSizeGB(diskSizeGB int32) error {
 	return nil
 }
 
-func (s *TemplateBuilder) SetDiskEncryptionSetID(diskEncryptionSetID string, securityType *hashiVMSDK.SecurityTypes, securityEncryptionType *hashiVMSDK.SecurityEncryptionTypes) error {
+func (s *TemplateBuilder) SetDiskEncryptionSetID(diskEncryptionSetID string, securityType *virtualmachines.SecurityTypes, securityEncryptionType *virtualmachines.SecurityEncryptionTypes) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
 	}
 
 	profile := resource.Properties.StorageProfile
-	if securityType != nil && *securityType == hashiVMSDK.SecurityTypesConfidentialVM {
-		profile.OsDisk.ManagedDisk.SecurityProfile = &hashiVMSDK.VMDiskSecurityProfile{}
+	if securityType != nil && *securityType == virtualmachines.SecurityTypesConfidentialVM {
+		profile.OsDisk.ManagedDisk.SecurityProfile = &virtualmachines.VMDiskSecurityProfile{}
 		profile.OsDisk.ManagedDisk.SecurityProfile.SecurityEncryptionType = securityEncryptionType
-		profile.OsDisk.ManagedDisk.SecurityProfile.DiskEncryptionSet = &hashiVMSDK.SubResource{
+		profile.OsDisk.ManagedDisk.SecurityProfile.DiskEncryptionSet = &virtualmachines.SubResource{
 			Id: &diskEncryptionSetID,
 		}
 	} else {
@@ -338,21 +338,21 @@ func (s *TemplateBuilder) SetDiskEncryptionSetID(diskEncryptionSetID string, sec
 	return nil
 }
 
-func (s *TemplateBuilder) SetDiskEncryptionWithPaaSKey(securityType *hashiVMSDK.SecurityTypes, securityEncryptionType *hashiVMSDK.SecurityEncryptionTypes) error {
+func (s *TemplateBuilder) SetDiskEncryptionWithPaaSKey(securityType *virtualmachines.SecurityTypes, securityEncryptionType *virtualmachines.SecurityEncryptionTypes) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
 	}
-	if securityType != nil && *securityType == hashiVMSDK.SecurityTypesConfidentialVM {
+	if securityType != nil && *securityType == virtualmachines.SecurityTypesConfidentialVM {
 		profile := resource.Properties.StorageProfile
-		profile.OsDisk.ManagedDisk.SecurityProfile = &hashiVMSDK.VMDiskSecurityProfile{}
+		profile.OsDisk.ManagedDisk.SecurityProfile = &virtualmachines.VMDiskSecurityProfile{}
 		profile.OsDisk.ManagedDisk.SecurityProfile.SecurityEncryptionType = securityEncryptionType
 	}
 
 	return nil
 }
 
-func (s *TemplateBuilder) SetAdditionalDisks(diskSizeGB []int32, dataDiskname string, isLegacyVHD bool, cachingType hashiVMSDK.CachingTypes) error {
+func (s *TemplateBuilder) SetAdditionalDisks(diskSizeGB []int32, dataDiskname string, isLegacyVHD bool, cachingType virtualmachines.CachingTypes) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
@@ -372,7 +372,7 @@ func (s *TemplateBuilder) SetAdditionalDisks(diskSizeGB []int32, dataDiskname st
 			dataDisks[i].Vhd = nil
 			dataDisks[i].ManagedDisk = profile.OsDisk.ManagedDisk
 		} else {
-			dataDisks[i].Vhd = &hashiVMSDK.VirtualHardDisk{
+			dataDisks[i].Vhd = &virtualmachines.VirtualHardDisk{
 				Uri: common.StringPtr(fmt.Sprintf("[concat(parameters('storageAccountBlobEndpoint'),variables('vmStorageAccountContainerName'),'/',parameters('dataDiskName'),'-%d','.vhd')]", i+1)),
 			}
 			dataDisks[i].ManagedDisk = nil
@@ -382,7 +382,7 @@ func (s *TemplateBuilder) SetAdditionalDisks(diskSizeGB []int32, dataDiskname st
 	return nil
 }
 
-func (s *TemplateBuilder) SetSpot(policy hashiVMSDK.VirtualMachineEvictionPolicyTypes, price float32) error {
+func (s *TemplateBuilder) SetSpot(policy virtualmachines.VirtualMachineEvictionPolicyTypes, price float32) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
@@ -479,12 +479,12 @@ func (s *TemplateBuilder) SetNetworkSecurityGroup(ipAddresses []string, port int
 	}
 	subnet := ((*vnetResource.Properties.Subnets)[0])
 	if subnet.Properties == nil {
-		subnet.Properties = &hashiSubnetsSDK.SubnetPropertiesFormat{}
+		subnet.Properties = &subnets.SubnetPropertiesFormat{}
 	}
 	if subnet.Properties.NetworkSecurityGroup != nil {
 		return fmt.Errorf("template: subnet already has an associated network security group")
 	}
-	subnet.Properties.NetworkSecurityGroup = &hashiSubnetsSDK.NetworkSecurityGroup{
+	subnet.Properties.NetworkSecurityGroup = &subnets.NetworkSecurityGroup{
 		Id: common.StringPtr(resourceId),
 	}
 
@@ -534,16 +534,16 @@ func (s *TemplateBuilder) SetLicenseType(licenseType string) error {
 	return nil
 }
 
-func (s *TemplateBuilder) SetSecurityProfile(secureBootEnabled bool, vtpmEnabled bool, encryptionAtHost *bool, securityType *hashiVMSDK.SecurityTypes) error {
+func (s *TemplateBuilder) SetSecurityProfile(secureBootEnabled bool, vtpmEnabled bool, encryptionAtHost *bool, securityType *virtualmachines.SecurityTypes) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
 	}
 
-	securityProfile := &hashiVMSDK.SecurityProfile{}
+	securityProfile := &virtualmachines.SecurityProfile{}
 
 	if secureBootEnabled || vtpmEnabled {
-		securityProfile.UefiSettings = &hashiVMSDK.UefiSettings{}
+		securityProfile.UefiSettings = &virtualmachines.UefiSettings{}
 		securityProfile.UefiSettings.SecureBootEnabled = common.BoolPtr(secureBootEnabled)
 		securityProfile.UefiSettings.VTpmEnabled = common.BoolPtr(vtpmEnabled)
 	}
@@ -654,15 +654,15 @@ func (s *TemplateBuilder) createNsgResource(srcIpAddresses []string, port int) (
 		Type:       common.StringPtr(resourceNetworkSecurityGroups),
 		Location:   common.StringPtr("[variables('location')]"),
 		Properties: &Properties{
-			SecurityRules: &[]hashiSecurityRulesSDK.SecurityRule{
+			SecurityRules: &[]securityrules.SecurityRule{
 				{
 					Name: common.StringPtr("AllowIPsToSshWinRMInbound"),
-					Properties: &hashiSecurityRulesSDK.SecurityRulePropertiesFormat{
+					Properties: &securityrules.SecurityRulePropertiesFormat{
 						Description:              common.StringPtr("Allow inbound traffic from specified IP addresses"),
-						Protocol:                 hashiSecurityRulesSDK.SecurityRuleProtocolTcp,
+						Protocol:                 securityrules.SecurityRuleProtocolTcp,
 						Priority:                 100,
-						Access:                   hashiSecurityRulesSDK.SecurityRuleAccessAllow,
-						Direction:                hashiSecurityRulesSDK.SecurityRuleDirectionInbound,
+						Access:                   securityrules.SecurityRuleAccessAllow,
+						Direction:                securityrules.SecurityRuleDirectionInbound,
 						SourceAddressPrefixes:    &srcIpAddresses,
 						SourcePortRange:          common.StringPtr("*"),
 						DestinationAddressPrefix: common.StringPtr("VirtualNetwork"),
@@ -805,7 +805,7 @@ const BasicTemplate = `{
   },
   "variables": {
     "addressPrefix": "10.0.0.0/16",
-    "computeApiVersion": "2023-03-01",
+    "computeApiVersion": "2023-09-01",
     "location": "[resourceGroup().location]",
     "networkApiVersion": "2023-04-01",
     "publicIPAddressType": "Dynamic",
