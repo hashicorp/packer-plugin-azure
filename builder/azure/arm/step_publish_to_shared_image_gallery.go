@@ -297,6 +297,7 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 			Location:           location,
 			ReplicationMode:    replicationMode,
 			Tags:               tags,
+			ReplicaCount:       miSigReplicaCount,
 		},
 	)
 

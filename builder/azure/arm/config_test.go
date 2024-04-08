@@ -3019,7 +3019,7 @@ func TestConfigShouldRejectSharedImageGalleryDestinationReplicationRegions(t *te
 	if err == nil {
 		t.Fatal("expected config to reject invalid shared image gallery destination the defines both replication_regions and target_region block", err)
 	}
-	errorMessage := "`replicated_regions` can not be defined alongside `target_region`; you can defined a target_region for each destination region you wish to replicate to."
+	errorMessage := "`replicated_regions` can not be defined alongside `target_region`; you can define a target_region for each destination region you wish to replicate to."
 	if !strings.Contains(err.Error(), errorMessage) {
 		t.Errorf("expected config to reject with error containing %s but got %s", errorMessage, err)
 	}
