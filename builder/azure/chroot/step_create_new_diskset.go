@@ -239,7 +239,9 @@ func (s *StepCreateNewDiskset) Cleanup(state multistep.StateBag) {
 		for _, d := range s.disks {
 
 			ui.Say(fmt.Sprintf("Waiting for disk %q detach to complete", d))
-			err := NewDiskAttacher(azcli, ui).WaitForDetach(context.TODO(), d.String())
+			detatchDisk, detatchDiskCancel := context.WithTimeout(context.Background(), azcli.PollingDuration())
+			defer detatchDiskCancel()
+			err := NewDiskAttacher(azcli, ui).WaitForDetach(detatchDisk, d.String())
 			if err != nil {
 				ui.Error(fmt.Sprintf("error detaching disk %q: %s", d, err))
 			}
@@ -247,7 +249,7 @@ func (s *StepCreateNewDiskset) Cleanup(state multistep.StateBag) {
 			ui.Say(fmt.Sprintf("Deleting disk %q", d))
 
 			diskID := commonids.NewManagedDiskID(azcli.SubscriptionID(), d.ResourceGroup, d.ResourceName.String())
-			pollingContext, cancel := context.WithTimeout(context.TODO(), azcli.PollingDuration())
+			pollingContext, cancel := context.WithTimeout(context.Background(), azcli.PollingDuration())
 			defer cancel()
 			err = azcli.DisksClient().DeleteThenPoll(pollingContext, diskID)
 			if err != nil {

@@ -80,13 +80,12 @@ func (a *Artifact) Destroy() error {
 			return fmt.Errorf("Unable to parse resource id (%s): %v", resource, err)
 		}
 
-		ctx := context.TODO()
 		restype := strings.ToLower(fmt.Sprintf("%s/%s", id.Provider, id.ResourceType))
 
 		switch restype {
 		case "microsoft.compute/images":
 			imageID := images.NewImageID(a.AzureClientSet.SubscriptionID(), id.ResourceGroup, id.ResourceName.String())
-			pollingContext, cancel := context.WithTimeout(ctx, a.AzureClientSet.PollingDuration())
+			pollingContext, cancel := context.WithTimeout(context.Background(), a.AzureClientSet.PollingDuration())
 			defer cancel()
 			err := a.AzureClientSet.ImagesClient().DeleteThenPoll(pollingContext, imageID)
 			if err != nil {

@@ -78,7 +78,9 @@ func new(c Config, say func(string)) (*azureClientSet, error) {
 	}
 	cloudEnv := c.cloudEnvironment
 	resourceManagerEndpoint, _ := cloudEnv.ResourceManager.Endpoint()
-	authorizer, err := BuildResourceManagerAuthorizer(context.TODO(), authOptions, *cloudEnv)
+	authorizerContext, cancel := context.WithTimeout(context.Background(), time.Minute*15)
+	defer cancel()
+	authorizer, err := BuildResourceManagerAuthorizer(authorizerContext, authOptions, *cloudEnv)
 	if err != nil {
 		return nil, err
 	}
