@@ -76,8 +76,10 @@ func getResourceGroupNameFromId(id string) string {
 }
 
 func findManagedImageByName(client *AzureClient, name, subscriptionId, resourceGroupName string) (*images.Image, error) {
+	managedImageContext, cancel := context.WithTimeout(context.TODO(), client.PollingDuration)
+	defer cancel()
 	id := commonids.NewResourceGroupID(subscriptionId, resourceGroupName)
-	images, err := client.ImagesClient.ListByResourceGroupComplete(context.TODO(), id)
+	images, err := client.ImagesClient.ListByResourceGroupComplete(managedImageContext, id)
 	if err != nil {
 		return nil, err
 	}
