@@ -351,6 +351,26 @@ Providing `temp_resource_group_name` or `location` in combination with
 - `build_key_vault_sku` (string) - Specify the KeyVault SKU to create during the build. Valid values are
   standard or premium. The default value is standard.
 
+- `skip_create_build_key_vault` (boolean) - Skip creating the build key vault during Windows build. 
+  This is for the cases when subscription has policy restrictions on key vault resource. If this flag is set to true, customer has to provide alternate method to setup WinRM during Windows build, else build fails. 
+  
+  Below is one of alternate way of setting up WinRM using `custom_script` and `user_data_file`. The commands to setup WinRM with certificate is specified in user_data_file file which then directly gets executed on Packer VM using custom_script.
+  Here is example of file `user_data_file` with WinRM commands. These commands add 1-day validity self-signed certificate in certificate store on Packer VM and then set winrm listener using this cert.
+  ```hcl2
+  Enable-PSRemoting -Force 
+  New-NetFirewallRule -Name "Allow WinRM HTTPS" -DisplayName "WinRM HTTPS" -Enabled True -Profile Any -Action Allow -Direction Inbound -LocalPort 5986 -Protocol TCP 
+  $thumbprint = (New-SelfSignedCertificate -DnsName $env:COMPUTERNAME -CertStoreLocation Cert:\LocalMachine\My -NotAfter $(Get-Date).AddDays(1)).Thumbprint 
+  $command = "winrm set winrm/config/Listener?Address=*+Transport=HTTPS @{Hostname=""$env:computername""; CertificateThumbprint=""$thumbprint""}" 
+  cmd.exe /C $command 
+  ```
+  `custom_script` is used to execute user_data_file commands on Packer VM during provisioning.
+   ```hcl2
+   custom_script   = "powershell -ExecutionPolicy Unrestricted -NoProfile -NonInteractive -Command \"$userData = (Invoke-RestMethod -Headers @{Metadata=$true} -Method GET -Uri http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01$([char]38)format=text); $contents = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($userData)); set-content -path c:\\Windows\\Temp\\userdata.ps1 -value $contents; . c:\\Windows\\Temp\\userdata.ps1;\""
+   user_data_file  = "./scripts/userdata.ps1"
+   ```
+  These commands are minimal setup needed to get a working solution with `skip_create_build_key_vault` flag. Please update these commands as per your needs. See [documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/extensions/custom-script-windows) to learn more about custom_script. See [documentation](https://learn.microsoft.com/en-us/azure/virtual-machines/user-data) to learn more about user data.
+
+
 - `disk_encryption_set_id` (string) - Specify the Disk Encryption Set ID to use to encrypt the OS and data disks created with the VM during the build
   Only supported when publishing to Shared Image Galleries, without a managed image
   The disk encryption set ID can be found in the properties tab of a disk encryption set on the Azure Portal, and is labeled as its resource ID

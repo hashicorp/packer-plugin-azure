@@ -413,7 +413,8 @@ type Config struct {
 	// Specify the KeyVault SKU to create during the build. Valid values are
 	// standard or premium. The default value is standard.
 	BuildKeyVaultSKU string `mapstructure:"build_key_vault_sku"`
-
+	// Set to true to skip build key vault create during Windows build
+	// This is avoid subscription level policy issue for keyvault resource.
 	SkipCreateBuildKeyVault bool `mapstructure:"skip_create_build_key_vault" required:"false"`
 
 	// Specify the Disk Encryption Set ID to use to encrypt the OS and data disks created with the VM during the build
