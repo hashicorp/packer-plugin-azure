@@ -13,6 +13,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/cli"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
@@ -122,7 +123,10 @@ func (c *Config) setCloudEnvironment() error {
 			c.MetadataHost = v
 		}
 	}
-	env, err := environments.FromEndpoint(context.TODO(), c.MetadataHost, c.CloudEnvironmentName)
+
+	environmentContext, cancel := context.WithTimeout(context.Background(), time.Minute*3)
+	defer cancel()
+	env, err := environments.FromEndpoint(environmentContext, c.MetadataHost, c.CloudEnvironmentName)
 	c.cloudEnvironment = env
 	if err != nil {
 		// fall back to old method of normalizing and looking up cloud names.

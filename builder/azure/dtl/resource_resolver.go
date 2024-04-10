@@ -17,7 +17,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
-	hashiImagesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 )
 
 type resourceResolver struct {
@@ -47,9 +47,11 @@ func (s *resourceResolver) shouldResolveManagedImageName(c *Config) bool {
 	return c.CustomManagedImageName != ""
 }
 
-func findManagedImageByName(client *AzureClient, name, subscriptionId, resourceGroupName string) (*hashiImagesSDK.Image, error) {
+func findManagedImageByName(client *AzureClient, name, subscriptionId, resourceGroupName string) (*images.Image, error) {
+	managedImageContext, cancel := context.WithTimeout(context.TODO(), client.PollingDuration)
+	defer cancel()
 	id := commonids.NewResourceGroupID(subscriptionId, resourceGroupName)
-	images, err := client.ImagesClient.ListByResourceGroupComplete(context.TODO(), id)
+	images, err := client.ImagesClient.ListByResourceGroupComplete(managedImageContext, id)
 	if err != nil {
 		return nil, err
 	}
