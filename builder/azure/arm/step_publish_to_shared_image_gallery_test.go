@@ -10,6 +10,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-07-03/galleryimageversions"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
@@ -38,10 +39,40 @@ func TestStepPublishToSharedImageGalleryShouldNotPublishForVhd(t *testing.T) {
 }
 
 func TestStepPublishToSharedImageGalleryShouldPublishForManagedImageWithSig(t *testing.T) {
+	var actualPublishArgs PublishArgs
+	expectedSource := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-group/providers/Microsoft.Compute/images/packer-test"
+	expectedPublishArgs := PublishArgs{
+		SubscriptionID:  "Unit Test: ManagedImageSubscription",
+		ReplicaCount:    1,
+		ReplicationMode: "Full",
+		Location:        "Unit Test: Location",
+		GallerySource: galleryimageversions.GalleryArtifactVersionFullSource{
+			Id: &expectedSource,
+		},
+		SharedImageGallery: SharedImageGalleryDestination{
+			SigDestinationGalleryName:   "Unit Test: ManagedImageSharedGalleryName",
+			SigDestinationImageName:     "Unit Test: ManagedImageSharedGalleryImageName",
+			SigDestinationSubscription:  "00000000-0000-0000-0000-000000000000",
+			SigDestinationImageVersion:  "Unit Test: ManagedImageSharedGalleryImageVersion",
+			SigDestinationResourceGroup: "Unit Test: ManagedImageSigPublishResourceGroup",
+			SigDestinationReplicationRegions: []string{
+				"ManagedImageSharedGalleryReplicationRegionA",
+				"ManagedImageSharedGalleryReplicationRegionB",
+			},
+			SigDestinationTargetRegions: []TargetRegion{
+				{Name: "ManagedImageSharedGalleryReplicationRegionA"},
+				{Name: "ManagedImageSharedGalleryReplicationRegionB"},
+			},
+			SigDestinationStorageAccountType: "Standard_LRS",
+		},
+		Tags: map[string]string{"tag01": "Unit Test: Tags"},
+	}
 	var testSubject = &StepPublishToSharedImageGallery{
-		publish: func(context.Context, PublishArgs) (string, error) {
+		publish: func(ctx context.Context, args PublishArgs) (string, error) {
+			actualPublishArgs = args
 			return "", nil
 		},
+
 		say:   func(message string) {},
 		error: func(e error) {},
 		toSIG: func() bool { return true },
@@ -56,20 +87,28 @@ func TestStepPublishToSharedImageGalleryShouldPublishForManagedImageWithSig(t *t
 	if _, ok := stateBag.GetOk(constants.Error); ok == true {
 		t.Fatalf("Expected the step to not set stateBag['%s'], but it was.", constants.Error)
 	}
+	if diff := cmp.Diff(actualPublishArgs, expectedPublishArgs, []cmp.Option{
+		cmpopts.IgnoreUnexported(PublishArgs{}),
+	}...); diff != "" {
+		t.Fatalf("Unexpected diff %s", diff)
+	}
 }
 
 func TestStepPublishToSharedImageGalleryShouldPublishForNonManagedImageWithSig(t *testing.T) {
 	var actualPublishArgs PublishArgs
+	expectedSource := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-group/providers/Microsoft.Compute/virtualMachines/packer-test"
 	expectedPublishArgs := PublishArgs{
 		SubscriptionID:  "Unit Test: ManagedImageSubscription",
 		ReplicaCount:    1,
 		ReplicationMode: "Full",
 		Location:        "Unit Test: Location",
-		SourceID:        "Unit Test: VM ID",
+		GallerySource: galleryimageversions.GalleryArtifactVersionFullSource{
+			VirtualMachineId: &expectedSource,
+		},
 		SharedImageGallery: SharedImageGalleryDestination{
 			SigDestinationGalleryName:   "Unit Test: ManagedImageSharedGalleryName",
 			SigDestinationImageName:     "Unit Test: ManagedImageSharedGalleryImageName",
-			SigDestinationSubscription:  "Unit Test: ManagedImageSubscription",
+			SigDestinationSubscription:  "00000000-0000-0000-0000-000000000000",
 			SigDestinationImageVersion:  "Unit Test: ManagedImageSharedGalleryImageVersion",
 			SigDestinationResourceGroup: "Unit Test: ManagedImageSigPublishResourceGroup",
 			SigDestinationReplicationRegions: []string{
@@ -112,17 +151,20 @@ func TestStepPublishToSharedImageGalleryShouldPublishForNonManagedImageWithSig(t
 }
 
 func TestStepPublishToSharedImageGalleryShouldPublishWithShallowReplication(t *testing.T) {
+	expectedSource := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-group/providers/Microsoft.Compute/virtualMachines/packer-test"
 	var actualPublishArgs PublishArgs
 	expectedPublishArgs := PublishArgs{
 		SubscriptionID:  "Unit Test: ManagedImageSubscription",
 		ReplicaCount:    1,
 		ReplicationMode: "Shallow",
 		Location:        "Unit Test: Location",
-		SourceID:        "Unit Test: VM ID",
+		GallerySource: galleryimageversions.GalleryArtifactVersionFullSource{
+			VirtualMachineId: &expectedSource,
+		},
 		SharedImageGallery: SharedImageGalleryDestination{
 			SigDestinationGalleryName:   "Unit Test: ManagedImageSharedGalleryName",
 			SigDestinationImageName:     "Unit Test: ManagedImageSharedGalleryImageName",
-			SigDestinationSubscription:  "Unit Test: ManagedImageSubscription",
+			SigDestinationSubscription:  "00000000-0000-0000-0000-000000000000",
 			SigDestinationImageVersion:  "Unit Test: ManagedImageSharedGalleryImageVersion",
 			SigDestinationResourceGroup: "Unit Test: ManagedImageSigPublishResourceGroup",
 			SigDestinationReplicationRegions: []string{
@@ -166,17 +208,20 @@ func TestStepPublishToSharedImageGalleryShouldPublishWithShallowReplication(t *t
 }
 
 func TestStepPublishToSharedImageGalleryShouldPublishWithReplicationCount(t *testing.T) {
+	expectedSource := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-group/providers/Microsoft.Compute/virtualMachines/packer-test"
 	var actualPublishArgs PublishArgs
 	expectedPublishArgs := PublishArgs{
 		SubscriptionID:  "Unit Test: ManagedImageSubscription",
 		ReplicaCount:    5,
 		ReplicationMode: "Full",
 		Location:        "Unit Test: Location",
-		SourceID:        "Unit Test: VM ID",
+		GallerySource: galleryimageversions.GalleryArtifactVersionFullSource{
+			VirtualMachineId: &expectedSource,
+		},
 		SharedImageGallery: SharedImageGalleryDestination{
 			SigDestinationGalleryName:   "Unit Test: ManagedImageSharedGalleryName",
 			SigDestinationImageName:     "Unit Test: ManagedImageSharedGalleryImageName",
-			SigDestinationSubscription:  "Unit Test: ManagedImageSubscription",
+			SigDestinationSubscription:  "00000000-0000-0000-0000-000000000000",
 			SigDestinationImageVersion:  "Unit Test: ManagedImageSharedGalleryImageVersion",
 			SigDestinationResourceGroup: "Unit Test: ManagedImageSigPublishResourceGroup",
 			SigDestinationReplicationRegions: []string{
@@ -220,17 +265,20 @@ func TestStepPublishToSharedImageGalleryShouldPublishWithReplicationCount(t *tes
 }
 
 func TestStepPublishToSharedImageGalleryShouldPublishTargetRegions(t *testing.T) {
+	expectedSource := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-group/providers/Microsoft.Compute/virtualMachines/packer-test"
 	var actualPublishArgs PublishArgs
 	expectedPublishArgs := PublishArgs{
 		SubscriptionID:  "Unit Test: ManagedImageSubscription",
 		ReplicaCount:    1,
 		ReplicationMode: "Full",
 		Location:        "Unit Test: Location",
-		SourceID:        "Unit Test: VM ID",
+		GallerySource: galleryimageversions.GalleryArtifactVersionFullSource{
+			VirtualMachineId: &expectedSource,
+		},
 		SharedImageGallery: SharedImageGalleryDestination{
 			SigDestinationGalleryName:   "Unit Test: ManagedImageSharedGalleryName",
 			SigDestinationImageName:     "Unit Test: ManagedImageSharedGalleryImageName",
-			SigDestinationSubscription:  "Unit Test: ManagedImageSubscription",
+			SigDestinationSubscription:  "00000000-0000-0000-0000-000000000000",
 			SigDestinationImageVersion:  "Unit Test: ManagedImageSharedGalleryImageVersion",
 			SigDestinationResourceGroup: "Unit Test: ManagedImageSigPublishResourceGroup",
 			SigDestinationReplicationRegions: []string{
@@ -387,16 +435,19 @@ func TestPublishToSharedImageGalleryBuildAzureImageTargetRegions(t *testing.T) {
 
 func TestStepPublishToSharedImageGalleryShouldPublishForConfidentialVMImageWithSig(t *testing.T) {
 	var actualPublishArgs PublishArgs
+	expectedSource := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-group/providers/Microsoft.Compute/virtualMachines/packer-test"
 	expectedPublishArgs := PublishArgs{
 		SubscriptionID:  "Unit Test: ManagedImageSubscription",
 		ReplicaCount:    1,
 		ReplicationMode: "Full",
 		Location:        "Unit Test: Location",
-		SourceID:        "Unit Test: VM ID",
+		GallerySource: galleryimageversions.GalleryArtifactVersionFullSource{
+			VirtualMachineId: &expectedSource,
+		},
 		SharedImageGallery: SharedImageGalleryDestination{
 			SigDestinationGalleryName:   "Unit Test: ManagedImageSharedGalleryName",
 			SigDestinationImageName:     "Unit Test: ManagedImageSharedGalleryImageName",
-			SigDestinationSubscription:  "Unit Test: ManagedImageSubscription",
+			SigDestinationSubscription:  "00000000-0000-0000-0000-000000000000",
 			SigDestinationImageVersion:  "Unit Test: ManagedImageSharedGalleryImageVersion",
 			SigDestinationResourceGroup: "Unit Test: ManagedImageSigPublishResourceGroup",
 			SigDestinationReplicationRegions: []string{
@@ -459,14 +510,14 @@ func createTestStateBagStepPublishToSharedImageGallery(managed bool) multistep.S
 	})
 	stateBag.Put(constants.ArmManagedImageSharedGalleryImageVersionStorageAccountType, "Standard_LRS")
 	if managed {
-		stateBag.Put(constants.ArmManagedImageResourceGroupName, "Unit Test: ManagedImageResourceGroupName")
-		stateBag.Put(constants.ArmManagedImageName, "Unit Test: ManagedImageName")
+		stateBag.Put(constants.ArmManagedImageResourceGroupName, "my-group")
+		stateBag.Put(constants.ArmManagedImageName, "packer-test")
 	} else {
 		stateBag.Put(constants.ArmImageParameters, &images.Image{Properties: &images.ImageProperties{
-			SourceVirtualMachine: &images.SubResource{Id: common.StringPtr("Unit Test: VM ID")},
+			SourceVirtualMachine: &images.SubResource{Id: common.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-group/providers/Microsoft.Compute/virtualMachines/packer-test")},
 		}})
 	}
-	stateBag.Put(constants.ArmManagedImageSubscription, "Unit Test: ManagedImageSubscription")
+	stateBag.Put(constants.ArmManagedImageSubscription, "00000000-0000-0000-0000-000000000000")
 	stateBag.Put(constants.ArmSharedImageGalleryDestinationSubscription, "Unit Test: ManagedImageSubscription")
 	stateBag.Put(constants.ArmIsManagedImage, managed)
 	stateBag.Put(constants.ArmIsSIGImage, true)

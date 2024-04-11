@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-03/galleryimageversions"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-07-03/galleryimageversions"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -25,7 +25,6 @@ type StepPublishToSharedImageGallery struct {
 
 type PublishArgs struct {
 	SubscriptionID     string
-	SourceID           string
 	SharedImageGallery SharedImageGalleryDestination
 	EndOfLifeDate      string
 	ExcludeFromLatest  bool
@@ -33,6 +32,7 @@ type PublishArgs struct {
 	Location           string
 	ReplicationMode    galleryimageversions.ReplicationMode
 	Tags               map[string]string
+	GallerySource      galleryimageversions.GalleryArtifactVersionFullSource
 }
 
 func NewStepPublishToSharedImageGallery(client *AzureClient, ui packersdk.Ui, config *Config) *StepPublishToSharedImageGallery {
@@ -183,9 +183,7 @@ func (s *StepPublishToSharedImageGallery) publishToSig(ctx context.Context, args
 		Tags:     &args.Tags,
 		Properties: &galleryimageversions.GalleryImageVersionProperties{
 			StorageProfile: galleryimageversions.GalleryImageVersionStorageProfile{
-				Source: &galleryimageversions.GalleryArtifactVersionFullSource{
-					Id: &args.SourceID,
-				},
+				Source: &args.GallerySource,
 			},
 			PublishingProfile: &galleryimageversions.GalleryArtifactPublishingProfileBase{
 				TargetRegions:      &imageVersionRegions,
@@ -233,6 +231,7 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 	sharedImageGallery := getSigDestination(stateBag)
 	var sourceID string
 
+	gallerySource := galleryimageversions.GalleryArtifactVersionFullSource{}
 	var isManagedImage = stateBag.Get(constants.ArmIsManagedImage).(bool)
 	if isManagedImage {
 		targetManagedImageResourceGroupName := stateBag.Get(constants.ArmManagedImageResourceGroupName).(string)
@@ -240,9 +239,11 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 
 		managedImageSubscription := stateBag.Get(constants.ArmManagedImageSubscription).(string)
 		sourceID = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/images/%s", managedImageSubscription, targetManagedImageResourceGroupName, targetManagedImageName)
+		gallerySource.Id = &sourceID
 	} else {
 		var imageParameters = stateBag.Get(constants.ArmImageParameters).(*images.Image)
 		sourceID = *imageParameters.Properties.SourceVirtualMachine.Id
+		gallerySource.VirtualMachineId = &sourceID
 	}
 
 	miSGImageVersionEndOfLifeDate, _ := stateBag.Get(constants.ArmManagedImageSharedGalleryImageVersionEndOfLifeDate).(string)
@@ -290,7 +291,6 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 		ctx,
 		PublishArgs{
 			SubscriptionID:     subscriptionID,
-			SourceID:           sourceID,
 			SharedImageGallery: sharedImageGallery,
 			EndOfLifeDate:      miSGImageVersionEndOfLifeDate,
 			ExcludeFromLatest:  miSGImageVersionExcludeFromLatest,
@@ -298,6 +298,7 @@ func (s *StepPublishToSharedImageGallery) Run(ctx context.Context, stateBag mult
 			ReplicationMode:    replicationMode,
 			Tags:               tags,
 			ReplicaCount:       miSigReplicaCount,
+			GallerySource:      gallerySource,
 		},
 	)
 

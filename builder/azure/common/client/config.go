@@ -126,7 +126,7 @@ func (c *Config) setCloudEnvironment() error {
 
 	environmentContext, cancel := context.WithTimeout(context.Background(), time.Minute*3)
 	defer cancel()
-	env, err := environments.FromEndpoint(environmentContext, c.MetadataHost, c.CloudEnvironmentName)
+	env, err := environments.FromEndpoint(environmentContext, c.MetadataHost)
 	c.cloudEnvironment = env
 	if err != nil {
 		// fall back to old method of normalizing and looking up cloud names.
