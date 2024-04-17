@@ -215,7 +215,6 @@ func (s *TemplateBuilder) SetSharedGalleryImage(location, imageID string, cachin
 	profile.OsDisk.OsType = s.osType
 	profile.OsDisk.Vhd = nil
 	profile.OsDisk.Caching = cachingType
-
 	return nil
 }
 
@@ -324,12 +323,18 @@ func (s *TemplateBuilder) SetDiskEncryptionSetID(diskEncryptionSetID string, sec
 
 	profile := resource.Properties.StorageProfile
 	if securityType != nil && *securityType == hashiVMSDK.SecurityTypesConfidentialVM {
+		if profile.OsDisk.ManagedDisk == nil {
+			profile.OsDisk.ManagedDisk = &ManagedDisk{}
+		}
 		profile.OsDisk.ManagedDisk.SecurityProfile = &hashiVMSDK.VMDiskSecurityProfile{}
 		profile.OsDisk.ManagedDisk.SecurityProfile.SecurityEncryptionType = securityEncryptionType
 		profile.OsDisk.ManagedDisk.SecurityProfile.DiskEncryptionSet = &hashiVMSDK.SubResource{
 			Id: &diskEncryptionSetID,
 		}
 	} else {
+		if profile.OsDisk.ManagedDisk == nil {
+			profile.OsDisk.ManagedDisk = &ManagedDisk{}
+		}
 		profile.OsDisk.ManagedDisk.DiskEncryptionSet = &DiskEncryptionSetParameters{
 			ID: &diskEncryptionSetID,
 		}
@@ -345,6 +350,9 @@ func (s *TemplateBuilder) SetDiskEncryptionWithPaaSKey(securityType *hashiVMSDK.
 	}
 	if securityType != nil && *securityType == hashiVMSDK.SecurityTypesConfidentialVM {
 		profile := resource.Properties.StorageProfile
+		if profile.OsDisk.ManagedDisk == nil {
+			profile.OsDisk.ManagedDisk = &ManagedDisk{}
+		}
 		profile.OsDisk.ManagedDisk.SecurityProfile = &hashiVMSDK.VMDiskSecurityProfile{}
 		profile.OsDisk.ManagedDisk.SecurityProfile.SecurityEncryptionType = securityEncryptionType
 	}

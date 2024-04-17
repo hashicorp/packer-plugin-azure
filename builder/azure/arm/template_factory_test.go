@@ -748,6 +748,41 @@ func TestTrustedLaunch01(t *testing.T) {
 	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
+func TestSigSourcedWithDiskEncryptionSet(t *testing.T) {
+	m := map[string]interface{}{
+		"build_resource_group_name": "rg_name",
+		"disk_encryption_set_id":    "my_id",
+		"shared_image_gallery_destination": map[string]interface{}{
+			"subscription":   "subscription",
+			"resource_group": "rg_name",
+			"gallery_name":   "gallery_name",
+			"image_name":     "image_name",
+			"image_version":  "2024.01.02",
+		},
+		"shared_image_gallery": map[string]interface{}{
+			"subscription":   "subscription",
+			"resource_group": "rg_name",
+			"gallery_name":   "gallery_name",
+			"image_name":     "image_name",
+			"image_version":  "2024.01.01",
+		},
+		"os_type":      constants.Target_Linux,
+		"communicator": "none",
+	}
+
+	var c Config
+	_, err := c.Prepare(m, getPackerConfiguration(), getPackerSSHPasswordCommunicatorConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
 func TestConfidentialVM01(t *testing.T) {
 	m := map[string]interface{}{
 		"secure_boot_enabled":       "true",
@@ -801,6 +836,43 @@ func TestConfidentialVM02(t *testing.T) {
 		"image_sku":       "--image-sku--",
 		"os_type":         constants.Target_Linux,
 		"communicator":    "none",
+	}
+
+	var c Config
+	_, err := c.Prepare(m, getPackerConfiguration(), getPackerSSHPasswordCommunicatorConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+func TestConfidentialVM03(t *testing.T) {
+	m := map[string]interface{}{
+		"secure_boot_enabled":       "true",
+		"vtpm_enabled":              "true",
+		"security_type":             "ConfidentialVM",
+		"build_resource_group_name": "rg_name",
+		"shared_image_gallery_destination": map[string]interface{}{
+			"subscription":   "subscription",
+			"resource_group": "rg_name",
+			"gallery_name":   "gallery_name",
+			"image_name":     "image_name",
+			"image_version":  "2024.01.02",
+		},
+		"shared_image_gallery": map[string]interface{}{
+			"subscription":   "subscription",
+			"resource_group": "rg_name",
+			"gallery_name":   "gallery_name",
+			"image_name":     "image_name",
+			"image_version":  "2024.01.01",
+		},
+		"os_type":      constants.Target_Linux,
+		"communicator": "none",
 	}
 
 	var c Config
