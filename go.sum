@@ -163,12 +163,8 @@ github.com/hashicorp/errwrap v1.1.0 h1:OxrOeh75EUXMY8TBjag2fzXGZ40LB6IKw45YeGUDY
 github.com/hashicorp/errwrap v1.1.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
 github.com/hashicorp/go-azure-helpers v0.66.2 h1:+Pzuo7pdKl0hBXXr5ymmhs4Q40tHAo2nAvHq4WgSjx8=
 github.com/hashicorp/go-azure-helpers v0.66.2/go.mod h1:kJxXrFtJKJdOEqvad8pllAe7dhP4DbN8J6sqFZe47+4=
-github.com/hashicorp/go-azure-sdk/resource-manager v0.20240327.1161949 h1:6kiYPtSO7l08UshpjOkeBvqDOIOdRXhYFMAYRdosLoo=
-github.com/hashicorp/go-azure-sdk/resource-manager v0.20240327.1161949/go.mod h1:6emA77HGPRTEV9n0VLpVfzsvinp6iDBqsf/W1C+eRhY=
 github.com/hashicorp/go-azure-sdk/resource-manager v0.20240411.1145857 h1:pgbiUHdg4QGd2Seg48fsWVNS2ydMoS5ZzjYyVGbDndk=
 github.com/hashicorp/go-azure-sdk/resource-manager v0.20240411.1145857/go.mod h1:MpsjFWjpJGEFSenIPkWORZrvO7ZAA46bNZKu1HQrTaY=
-github.com/hashicorp/go-azure-sdk/sdk v0.20240327.1161949 h1:Iu3U8RUGKQNza6MSFyTNjgasDaEcpehqr0Rn4ruBHBk=
-github.com/hashicorp/go-azure-sdk/sdk v0.20240327.1161949/go.mod h1:POOjeoqNp+mvlLBuibJTziUAkBZ7FxXGeGestwemL/w=
 github.com/hashicorp/go-azure-sdk/sdk v0.20240411.1145857 h1:zc6BJzd1u6fvQ1zjwwWMMnhAKE/EYsL2DKBM5Yl1Iko=
 github.com/hashicorp/go-azure-sdk/sdk v0.20240411.1145857/go.mod h1:POOjeoqNp+mvlLBuibJTziUAkBZ7FxXGeGestwemL/w=
 github.com/hashicorp/go-cleanhttp v0.5.0/go.mod h1:JpRdi6/HCYpAwUzNwuwqhbovhLtngrth3wmdIIUrZ80=
@@ -229,8 +225,8 @@ github.com/hashicorp/logutils v1.0.0/go.mod h1:QIAnNjmIWmVIIkWDTG1z5v++HQmx9WQRO
 github.com/hashicorp/mdns v1.0.4/go.mod h1:mtBihi+LeNXGtG8L9dX59gAEa12BDtBQSp4v/YAJqrc=
 github.com/hashicorp/memberlist v0.5.0 h1:EtYPN8DpAURiapus508I4n9CzHs2W+8NZGbmmR/prTM=
 github.com/hashicorp/memberlist v0.5.0/go.mod h1:yvyXLpo0QaGE59Y7hDTsTzDD25JYBZ4mHgHUZ8lrOI0=
-github.com/hashicorp/packer-plugin-sdk v0.5.2 h1:N+9qzkZLkjR0bgY+l5wFvrTN0G/Mf9f7g2yLsrDjmFI=
-github.com/hashicorp/packer-plugin-sdk v0.5.2/go.mod h1:0LRUBS6CPClHvq6zPoGRi7C+cZDAIEaW4CeH4LhWWuc=
+github.com/hashicorp/packer-plugin-sdk v0.5.3 h1:rWQuRgUUnkf1O3UYymQZz/nJErLh4NFkuarOVEQK+Rs=
+github.com/hashicorp/packer-plugin-sdk v0.5.3/go.mod h1:ntdZSJnc1LGGdMEXsYOxopZL1311QOTIbzVZH2EbN0U=
 github.com/hashicorp/serf v0.10.1 h1:Z1H2J60yRKvfDYAOZLd2MU0ND4AH/WDz7xYHDWQsIPY=
 github.com/hashicorp/serf v0.10.1/go.mod h1:yL2t6BqATOLGc5HF7qbFkTfXoPIY0WZdWHfEvMqbG+4=
 github.com/hashicorp/terraform-plugin-go v0.14.3 h1:nlnJ1GXKdMwsC8g1Nh05tK2wsC3+3BL/DBBxFEki+j0=
