@@ -22,7 +22,7 @@ require (
 	github.com/hashicorp/go-azure-sdk/resource-manager v0.20240411.1145857
 	github.com/hashicorp/go-azure-sdk/sdk v0.20240411.1145857
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/tombuildsstuff/giovanni v0.25.3
+	github.com/tombuildsstuff/giovanni v0.26.1
 )
 
 require (

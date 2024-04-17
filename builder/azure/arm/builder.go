@@ -100,11 +100,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	}
 
 	ui.Message("Creating Azure Resource Manager (ARM) client ...")
-	// For VHD Builds we need to enable the Blob Azure Storage client
-	configureBlobClient := (b.config.ResourceGroupName != "" || b.config.StorageAccount != "")
 	azureClient, err := NewAzureClient(
 		ctx,
-		configureBlobClient,
+		b.config.StorageAccount,
 		b.config.ClientConfig.CloudEnvironment(),
 		b.config.SharedGalleryTimeout,
 		b.config.PollingDurationTimeout,
@@ -474,8 +472,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if b.config.isPublishToSIG() {
 		return b.sharedImageArtifact(stateData)
 	}
-	ui.Say(b.config.storageAccountBlobEndpoint)
-	ui.Say(fmt.Sprintf("%d", len(b.config.AdditionalDiskSize)))
 	return NewArtifact(
 		b.stateBag.Get(constants.ArmBuildVMInternalId).(string),
 		b.config.CaptureNamePrefix,
