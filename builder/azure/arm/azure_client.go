@@ -77,7 +77,7 @@ func errorCapture(client *AzureClient) client.ResponseMiddleware {
 }
 
 // Returns an Azure Client used for the Azure Resource Manager
-func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.Environment, sharedGalleryTimeout time.Duration, pollingDuration time.Duration, authOptions commonclient.AzureAuthOptions) (*AzureClient, error) {
+func NewAzureClient(ctx context.Context, storageAccountName string, cloud *environments.Environment, sharedGalleryTimeout time.Duration, pollingDuration time.Duration, authOptions commonclient.AzureAuthOptions) (*AzureClient, error) {
 
 	var azureClient = &AzureClient{}
 
@@ -230,13 +230,12 @@ func NewAzureClient(ctx context.Context, isVHDBuild bool, cloud *environments.En
 	azureClient.GalleryImagesClient = *galleryImagesClient
 
 	// We only need the Blob Client to delete the OS VHD during VHD builds
-	if isVHDBuild {
+	if storageAccountName != "" {
 		storageAccountAuthorizer, err := commonclient.BuildStorageAuthorizer(ctx, authOptions, *cloud)
 		if err != nil {
 			return nil, err
 		}
-
-		blobClient, err := giovanniBlobStorageSDK.NewWithBaseUri(cloud.Storage.Name())
+		blobClient, err := giovanniBlobStorageSDK.NewWithBaseUri(fmt.Sprintf("https://%s.blob.core.windows.net", storageAccountName))
 		if err != nil {
 			return nil, err
 		}

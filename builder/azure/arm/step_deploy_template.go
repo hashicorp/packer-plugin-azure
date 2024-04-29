@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/url"
 	"strings"
 	"sync"
@@ -30,21 +31,28 @@ type DeploymentTemplateType int
 const (
 	VirtualMachineTemplate DeploymentTemplateType = iota
 	KeyVaultTemplate
+	VMResourceType               = "Microsoft.Compute/virtualMachines"
+	NetworkInterfaceResourceType = "Microsoft.Network/networkInterfaces"
+	KeyVaultResourceType         = "Microsoft.KeyVault/vaults"
 )
 
 type StepDeployTemplate struct {
-	client           *AzureClient
-	deploy           func(ctx context.Context, subscriptionId string, resourceGroupName string, deploymentName string) error
-	delete           func(ctx context.Context, subscriptionId, deploymentName, resourceGroupName string) error
-	disk             func(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (string, string, error)
-	deleteDisk       func(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool, subscriptionId string, storageAccountName string) error
-	deleteDeployment func(ctx context.Context, state multistep.StateBag) error
-	say              func(message string)
-	error            func(e error)
-	config           *Config
-	factory          templateFactoryFunc
-	name             string
-	templateType     DeploymentTemplateType
+	client                   *AzureClient
+	deploy                   func(ctx context.Context, subscriptionId string, resourceGroupName string, deploymentName string) error
+	deleteDetatchedResources func(ctx context.Context, subscriptionId string, resourceGroupName string, resources map[string]string)
+	getDisk                  func(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (string, string, error)
+	deleteDisk               func(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool, subscriptionId string, storageAccountName string) error
+	deleteVM                 func(ctx context.Context, virtualMachineId virtualmachines.VirtualMachineId) error
+	deleteNic                func(ctx context.Context, networkInterfacesId commonids.NetworkInterfaceId) error
+	deleteDeployment         func(ctx context.Context, state multistep.StateBag) error
+	deleteKV                 func(ctx context.Context, id commonids.KeyVaultId) error
+	listDeploymentOps        func(ctx context.Context, id deploymentoperations.ResourceGroupDeploymentId) ([]deploymentoperations.DeploymentOperation, error)
+	say                      func(message string)
+	error                    func(e error)
+	config                   *Config
+	factory                  templateFactoryFunc
+	name                     string
+	templateType             DeploymentTemplateType
 }
 
 func NewStepDeployTemplate(client *AzureClient, ui packersdk.Ui, config *Config, deploymentName string, factory templateFactoryFunc, templateType DeploymentTemplateType) *StepDeployTemplate {
@@ -59,10 +67,14 @@ func NewStepDeployTemplate(client *AzureClient, ui packersdk.Ui, config *Config,
 	}
 
 	step.deploy = step.deployTemplate
-	step.delete = step.deleteDeploymentResources
-	step.disk = step.getImageDetails
+	step.getDisk = step.getImageDetails
 	step.deleteDisk = step.deleteImage
+	step.deleteDetatchedResources = step.deleteDetatchedResourcesWithQueue
 	step.deleteDeployment = step.deleteDeploymentObject
+	step.deleteNic = step.deleteNetworkInterface
+	step.deleteVM = step.deleteVirtualMachine
+	step.deleteKV = step.deleteKeyVault
+	step.listDeploymentOps = step.listDeploymentOperations
 	return step
 }
 
@@ -93,61 +105,131 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 	deploymentName := s.name
 	resourceGroupName := state.Get(constants.ArmResourceGroupName).(string)
 	subscriptionId := state.Get(constants.ArmSubscription).(string)
+	deploymentOpsId := deploymentoperations.ResourceGroupDeploymentId{
+		DeploymentName:    deploymentName,
+		ResourceGroupName: resourceGroupName,
+		SubscriptionId:    subscriptionId,
+	}
+	// If this is the KeyVault Deployment, delete the KeyVault
 	if s.templateType == KeyVaultTemplate {
 		ui.Say("\nDeleting KeyVault created during build")
-		err := s.delete(ctx, subscriptionId, deploymentName, resourceGroupName)
+		deploymentOperations, err := s.listDeploymentOps(ctx, deploymentOpsId)
 		if err != nil {
-			s.reportIfError(err, resourceGroupName)
-		}
-
-	} else {
-		ui.Say("\nDeleting Virtual Machine deployment and its attached resources...")
-		// Get image disk details before deleting the image; otherwise we won't be able to
-		// delete the disk as the image request will return a 404
-		computeName := state.Get(constants.ArmComputeName).(string)
-		isManagedDisk := state.Get(constants.ArmIsManagedImage).(bool)
-		isSIGImage := state.Get(constants.ArmIsSIGImage).(bool)
-		armStorageAccountName := state.Get(constants.ArmStorageAccountName).(string)
-		imageType, imageName, err := s.disk(ctx, subscriptionId, resourceGroupName, computeName)
-		if err != nil {
-			ui.Error(fmt.Sprintf("Could not retrieve OS Image details: %s", err))
-		}
-		err = s.delete(ctx, subscriptionId, deploymentName, resourceGroupName)
-		if err != nil {
-			s.reportIfError(err, resourceGroupName)
-		}
-		// The disk was not found on the VM, this is an error.
-		if imageType == "" && imageName == "" {
-			ui.Error(fmt.Sprintf("Failed to find temporary OS disk on VM.  Please delete manually.\n\n"+
-				"VM Name: %s\n"+
-				"Error: %s", computeName, err))
+			ui.Error(fmt.Sprintf("Could not retrieve deployment operations: %s\n to get the KeyVault, please manually delete it ", err))
 			return
 		}
-		if !state.Get(constants.ArmKeepOSDisk).(bool) {
-			ui.Say(fmt.Sprintf(" Deleting -> %s : '%s'", imageType, imageName))
-			err = s.deleteDisk(ctx, imageName, resourceGroupName, (isManagedDisk || isSIGImage), subscriptionId, armStorageAccountName)
-			if err != nil {
-				ui.Error(fmt.Sprintf("Error deleting resource.  Please delete manually.\n\n"+
-					"Name: %s\n"+
-					"Error: %s", imageName, err))
+		for _, deploymentOperation := range deploymentOperations {
+			// Sometimes an empty operation is added to the list by Azure
+			if deploymentOperation.Properties.TargetResource == nil {
+				continue
 			}
-		} else {
-			ui.Say(fmt.Sprintf("Skipping deletion -> %s : '%s' since 'keep_os_disk' is set to true", imageType, imageName))
-		}
-		var dataDisks []string
-		if disks := state.Get(constants.ArmAdditionalDiskVhds); disks != nil {
-			dataDisks = disks.([]string)
-		}
-		for i, additionaldisk := range dataDisks {
-			s.say(fmt.Sprintf(" Deleting Additional Disk -> %d: '%s'", i+1, additionaldisk))
+			resourceName := *deploymentOperation.Properties.TargetResource.ResourceName
+			resourceType := *deploymentOperation.Properties.TargetResource.ResourceType
 
-			err := s.deleteImage(ctx, additionaldisk, resourceGroupName, (isManagedDisk || isSIGImage), subscriptionId, armStorageAccountName)
-			if err != nil {
-				s.say("Failed to delete the managed Additional Disk!")
+			if resourceType == KeyVaultResourceType {
+				kvID := commonids.KeyVaultId{
+					VaultName:         resourceName,
+					ResourceGroupName: resourceGroupName,
+					SubscriptionId:    subscriptionId,
+				}
+				err := s.deleteKV(ctx, kvID)
+				if err != nil {
+					s.reportResourceDeletionFailure(err, resourceGroupName)
+				}
+				return
 			}
 		}
-
+		return
 	}
+	// Otherwise delete the Virtual Machine
+	ui.Say("\nDeleting Virtual Machine deployment and its attached resources...")
+	// Get image disk details before deleting the image; otherwise we won't be able to
+	// delete the disk as the image request will return a 404
+	computeName := state.Get(constants.ArmComputeName).(string)
+	isManagedDisk := state.Get(constants.ArmIsManagedImage).(bool)
+	isSIGImage := state.Get(constants.ArmIsSIGImage).(bool)
+	armStorageAccountName := state.Get(constants.ArmStorageAccountName).(string)
+	imageType, imageName, err := s.getDisk(ctx, subscriptionId, resourceGroupName, computeName)
+	if err != nil {
+		ui.Error(fmt.Sprintf("Could not retrieve OS Image details: %s", err))
+	}
+
+	deploymentOperations, err := s.listDeploymentOps(ctx, deploymentOpsId)
+	if err != nil {
+		ui.Error(fmt.Sprintf("Could not retrieve deployment operations: %s\n Virtual Machine %s, and its please manually delete it and its ascoiated resources", err, computeName))
+		return
+	}
+	resources := map[string]string{}
+	var vmID *virtualmachines.VirtualMachineId
+	var networkInterfaceID *commonids.NetworkInterfaceId
+	for _, deploymentOperation := range deploymentOperations {
+		// Sometimes an empty operation is added to the list by Azure
+		if deploymentOperation.Properties.TargetResource == nil {
+			continue
+		}
+		resourceName := *deploymentOperation.Properties.TargetResource.ResourceName
+		resourceType := *deploymentOperation.Properties.TargetResource.ResourceType
+
+		// Grab the Virtual Machine and Network ID resource names, and save them into Azure Resource IDs to be used later
+		// We always want to delete the VM first, then the NIC, even if the ListDeployment endpoint doesn't return resources sorted in the order we want to delete them
+		switch resourceType {
+		case "Microsoft.Compute/virtualMachines":
+			vmIDDeref := virtualmachines.NewVirtualMachineID(subscriptionId, resourceGroupName, resourceName)
+			vmID = &vmIDDeref
+		case "Microsoft.Network/networkInterfaces":
+			networkInterfaceIDDeref := commonids.NewNetworkInterfaceID(subscriptionId, resourceGroupName, resourceName)
+			networkInterfaceID = &networkInterfaceIDDeref
+		default:
+			resources[resourceType] = resourceName
+		}
+	}
+
+	if vmID != nil {
+
+		err := s.deleteVM(ctx, *vmID)
+		if err != nil {
+			return
+		}
+	}
+	if networkInterfaceID != nil {
+		err := s.deleteNic(ctx, *networkInterfaceID)
+		if err != nil {
+			return
+		}
+	}
+	s.deleteDetatchedResources(ctx, subscriptionId, resourceGroupName, resources)
+	// The disk was not found on the VM, this is an error.
+	if imageType == "" && imageName == "" {
+		ui.Error(fmt.Sprintf("Failed to find temporary OS disk on VM.  Please delete manually.\n\n"+
+			"VM Name: %s\n"+
+			"Error: %s", computeName, err))
+		return
+	}
+	if !state.Get(constants.ArmKeepOSDisk).(bool) {
+		err = s.deleteDisk(ctx, imageName, resourceGroupName, (isManagedDisk || isSIGImage), subscriptionId, armStorageAccountName)
+		if err != nil {
+			s.reportResourceDeletionFailure(err, imageName)
+
+		} else {
+			ui.Say(fmt.Sprintf("Deleted -> %s : '%s'", imageType, imageName))
+		}
+	} else {
+		ui.Say(fmt.Sprintf("Skipping deletion -> %s : '%s' since 'keep_os_disk' is set to true", imageType, imageName))
+	}
+	var dataDisks []string
+	if disks := state.Get(constants.ArmAdditionalDiskVhds); disks != nil {
+		dataDisks = disks.([]string)
+	}
+	for i, additionaldisk := range dataDisks {
+		err := s.deleteImage(ctx, additionaldisk, resourceGroupName, (isManagedDisk || isSIGImage), subscriptionId, armStorageAccountName)
+		if err == nil {
+			s.say(fmt.Sprintf("Deleted Additional Disk -> %d: '%s'", i+1, additionaldisk))
+
+		} else {
+			s.reportResourceDeletionFailure(err, additionaldisk)
+		}
+	}
+
 }
 
 func (s *StepDeployTemplate) deployTemplate(ctx context.Context, subscriptionId string, resourceGroupName string, deploymentName string) error {
@@ -184,16 +266,11 @@ func (s *StepDeployTemplate) deleteDeploymentObject(ctx context.Context, state m
 }
 
 func (s *StepDeployTemplate) getImageDetails(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (string, string, error) {
-	//TODO is this still true?
-	//We can't depend on constants.ArmOSDiskVhd being set
 	var imageName, imageType string
 	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
 	defer cancel()
 	vmID := virtualmachines.NewVirtualMachineID(subscriptionId, resourceGroupName, computeName)
 	vm, err := s.client.VirtualMachinesClient.Get(pollingContext, vmID, virtualmachines.DefaultGetOperationOptions())
-	if err != nil {
-		return imageName, imageType, err
-	}
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return "", "", err
@@ -215,41 +292,6 @@ func (s *StepDeployTemplate) getImageDetails(ctx context.Context, subscriptionId
 	imageName = *vm.Model.Properties.StorageProfile.OsDisk.ManagedDisk.Id
 
 	return imageType, imageName, nil
-}
-
-func deleteResource(ctx context.Context, client *AzureClient, subscriptionId string, resourceType string, resourceName string, resourceGroupName string) error {
-
-	pollingContext, cancel := context.WithTimeout(ctx, client.PollingDuration)
-	defer cancel()
-
-	switch resourceType {
-	case "Microsoft.Compute/virtualMachines":
-		vmID := virtualmachines.NewVirtualMachineID(subscriptionId, resourceGroupName, resourceName)
-		if err := client.VirtualMachinesClient.DeleteThenPoll(pollingContext, vmID, virtualmachines.DefaultDeleteOperationOptions()); err != nil {
-			return err
-		}
-	case "Microsoft.KeyVault/vaults":
-		id := commonids.NewKeyVaultID(subscriptionId, resourceGroupName, resourceName)
-		_, err := client.VaultsClient.Delete(pollingContext, id)
-		return err
-	case "Microsoft.Network/networkInterfaces":
-		interfaceID := commonids.NewNetworkInterfaceID(subscriptionId, resourceGroupName, resourceName)
-		err := client.NetworkMetaClient.NetworkInterfaces.DeleteThenPoll(pollingContext, interfaceID)
-		return err
-	case "Microsoft.Network/virtualNetworks":
-		vnetID := commonids.NewVirtualNetworkID(subscriptionId, resourceGroupName, resourceName)
-		err := client.NetworkMetaClient.VirtualNetworks.DeleteThenPoll(pollingContext, vnetID)
-		return err
-	case "Microsoft.Network/networkSecurityGroups":
-		secGroupId := networksecuritygroups.NewNetworkSecurityGroupID(subscriptionId, resourceGroupName, resourceName)
-		err := client.NetworkMetaClient.NetworkSecurityGroups.DeleteThenPoll(pollingContext, secGroupId)
-		return err
-	case "Microsoft.Network/publicIPAddresses":
-		ipID := commonids.NewPublicIPAddressID(subscriptionId, resourceGroupName, resourceName)
-		err := client.NetworkMetaClient.PublicIPAddresses.DeleteThenPoll(pollingContext, ipID)
-		return err
-	}
-	return nil
 }
 
 // TODO Let's split this into two separate methods
@@ -279,82 +321,123 @@ func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, 
 	if len(xs) < 3 {
 		return errors.New("Unable to parse path of image " + imageName)
 	}
-	_, err = s.client.GiovanniBlobClient.Delete(pollingContext, storageAccountName, blobName, giovanniBlobStorageSDK.DeleteInput{})
+	_, err = s.client.GiovanniBlobClient.Delete(pollingContext, "images", blobName, giovanniBlobStorageSDK.DeleteInput{})
 	return err
 }
 
-func (s *StepDeployTemplate) deleteDeploymentResources(ctx context.Context, subscriptionId, deploymentName, resourceGroupName string) error {
+func (s *StepDeployTemplate) retryDeletion(ctx context.Context, resourceType string, resourceName string, deleteResourceFunction func() error) error {
+	log.Printf("[INFO] Attempting deletion -> %s : %s", resourceType, resourceName)
+	retryConfig := retry.Config{
+		Tries: 5,
+		RetryDelay: (&retry.Backoff{
+			InitialBackoff: 3 * time.Second,
+			MaxBackoff:     15 * time.Second,
+			Multiplier:     1.5,
+		}).Linear,
+	}
+	err := retryConfig.Run(ctx, func(ctx context.Context) error {
+		err := deleteResourceFunction()
+		if err != nil {
+			log.Printf("[INFO] Couldn't delete resource %s.%s, will retry", resourceType, resourceName)
+		}
+		return err
+	})
+	if err != nil {
+		s.reportResourceDeletionFailure(err, resourceName)
+	} else {
+		s.say(fmt.Sprintf("Deleted -> %s : '%s'", resourceType, resourceName))
+	}
+	return err
+}
+
+func (s *StepDeployTemplate) deleteVirtualMachine(ctx context.Context, vmID virtualmachines.VirtualMachineId) error {
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+	err := s.retryDeletion(pollingContext, vmID.VirtualMachineName, VMResourceType, func() error {
+		return s.client.VirtualMachinesClient.DeleteThenPoll(ctx, vmID, virtualmachines.DefaultDeleteOperationOptions())
+	})
+	return err
+}
+
+func (s *StepDeployTemplate) deleteKeyVault(ctx context.Context, id commonids.KeyVaultId) error {
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+	err := s.retryDeletion(pollingContext, id.VaultName, KeyVaultResourceType, func() error {
+		_, err := s.client.VaultsClient.Delete(pollingContext, id)
+		return err
+	})
+	return err
+}
+
+func (s *StepDeployTemplate) deleteNetworkInterface(ctx context.Context, id commonids.NetworkInterfaceId) error {
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+	err := s.retryDeletion(pollingContext, id.NetworkInterfaceName, NetworkInterfaceResourceType, func() error {
+		return s.client.NetworkMetaClient.NetworkInterfaces.DeleteThenPoll(pollingContext, id)
+	})
+	return err
+}
+
+func (s *StepDeployTemplate) listDeploymentOperations(ctx context.Context, id deploymentoperations.ResourceGroupDeploymentId) ([]deploymentoperations.DeploymentOperation, error) {
 	var maxResources int64 = 50
 	options := deploymentoperations.DefaultListOperationOptions()
 	options.Top = &maxResources
-	id := deploymentoperations.NewResourceGroupDeploymentID(subscriptionId, resourceGroupName, deploymentName)
 	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
 	defer cancel()
 
 	deploymentOperations, err := s.client.DeploymentOperationsClient.ListComplete(pollingContext, id, options)
 	if err != nil {
-		s.reportIfError(err, resourceGroupName)
-		return err
+		return nil, err
 	}
+	return deploymentOperations.Items, nil
+}
 
-	resources := map[string]string{}
-
-	for _, deploymentOperation := range deploymentOperations.Items {
-		// Sometimes an empty operation is added to the list by Azure
-		if deploymentOperation.Properties.TargetResource == nil {
-			continue
-		}
-
-		resourceName := *deploymentOperation.Properties.TargetResource.ResourceName
-		resourceType := *deploymentOperation.Properties.TargetResource.ResourceType
-
-		s.say(fmt.Sprintf("Adding to deletion queue -> %s : '%s'", resourceType, resourceName))
-		resources[resourceType] = resourceName
-
-	}
-
+// This function is called to delete the resources remaining in the deployment after we delete the Virtual Machine and the deleteNic
+// These resources before the VM and the NIC results in errors
+func (s *StepDeployTemplate) deleteDetatchedResourcesWithQueue(ctx context.Context, subscriptionId string, resourceGroupName string, resources map[string]string) {
 	var wg sync.WaitGroup
 	wg.Add(len(resources))
 
 	for resourceType, resourceName := range resources {
 		go func(resourceType, resourceName string) {
 			defer wg.Done()
-			retryConfig := retry.Config{
-				Tries:      10,
-				RetryDelay: (&retry.Backoff{InitialBackoff: 5 * time.Second, MaxBackoff: 60 * time.Second, Multiplier: 1.5}).Linear,
-			}
-
-			err = retryConfig.Run(ctx, func(ctx context.Context) error {
-				s.say(fmt.Sprintf("Attempting deletion -> %s : '%s'", resourceType, resourceName))
-				err := deleteResource(ctx, s.client,
+			// Failures here are logged, and will not stop further cleanup at this point
+			_ = s.retryDeletion(ctx, resourceName, resourceType, func() error {
+				return deleteResource(ctx, s.client,
 					subscriptionId,
 					resourceType,
 					resourceName,
 					resourceGroupName)
-				if err != nil {
-					s.say(fmt.Sprintf("Couldn't delete %s resource. Will retry.\n"+
-						"Name: %s",
-						resourceType, resourceName))
-				}
-				return err
 			})
-			if err != nil {
-				s.reportIfError(err, resourceName)
-			}
+
 		}(resourceType, resourceName)
 	}
 
-	s.say("Waiting for deletion of all resources...")
 	wg.Wait()
-
-	return nil
 }
 
-func (s *StepDeployTemplate) reportIfError(err error, resourceName string) {
-	if err != nil {
-		s.say(fmt.Sprintf("Error deleting resource. Please delete manually.\n\n"+
-			"Name: %s\n"+
-			"Error: %s", resourceName, err.Error()))
-		s.error(err)
+func deleteResource(ctx context.Context, client *AzureClient, subscriptionId string, resourceType string, resourceName string, resourceGroupName string) error {
+	pollingContext, cancel := context.WithTimeout(ctx, client.PollingDuration)
+	defer cancel()
+
+	var err error
+	switch resourceType {
+	case "Microsoft.Network/virtualNetworks":
+		vnetID := commonids.NewVirtualNetworkID(subscriptionId, resourceGroupName, resourceName)
+		err = client.NetworkMetaClient.VirtualNetworks.DeleteThenPoll(pollingContext, vnetID)
+	case "Microsoft.Network/networkSecurityGroups":
+		secGroupId := networksecuritygroups.NewNetworkSecurityGroupID(subscriptionId, resourceGroupName, resourceName)
+		err = client.NetworkMetaClient.NetworkSecurityGroups.DeleteThenPoll(pollingContext, secGroupId)
+	case "Microsoft.Network/publicIPAddresses":
+		ipID := commonids.NewPublicIPAddressID(subscriptionId, resourceGroupName, resourceName)
+		err = client.NetworkMetaClient.PublicIPAddresses.DeleteThenPoll(pollingContext, ipID)
 	}
+	return err
+}
+
+func (s *StepDeployTemplate) reportResourceDeletionFailure(err error, resourceName string) {
+	s.say(fmt.Sprintf("Error deleting resource. Please delete manually.\n\n"+
+		"Name: %s\n"+
+		"Error: %s", resourceName, err.Error()))
+	s.error(err)
 }

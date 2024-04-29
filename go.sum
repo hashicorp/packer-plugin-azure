@@ -163,12 +163,8 @@ github.com/hashicorp/errwrap v1.1.0 h1:OxrOeh75EUXMY8TBjag2fzXGZ40LB6IKw45YeGUDY
 github.com/hashicorp/errwrap v1.1.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
 github.com/hashicorp/go-azure-helpers v0.66.2 h1:+Pzuo7pdKl0hBXXr5ymmhs4Q40tHAo2nAvHq4WgSjx8=
 github.com/hashicorp/go-azure-helpers v0.66.2/go.mod h1:kJxXrFtJKJdOEqvad8pllAe7dhP4DbN8J6sqFZe47+4=
-github.com/hashicorp/go-azure-sdk/resource-manager v0.20240327.1161949 h1:6kiYPtSO7l08UshpjOkeBvqDOIOdRXhYFMAYRdosLoo=
-github.com/hashicorp/go-azure-sdk/resource-manager v0.20240327.1161949/go.mod h1:6emA77HGPRTEV9n0VLpVfzsvinp6iDBqsf/W1C+eRhY=
 github.com/hashicorp/go-azure-sdk/resource-manager v0.20240411.1145857 h1:pgbiUHdg4QGd2Seg48fsWVNS2ydMoS5ZzjYyVGbDndk=
 github.com/hashicorp/go-azure-sdk/resource-manager v0.20240411.1145857/go.mod h1:MpsjFWjpJGEFSenIPkWORZrvO7ZAA46bNZKu1HQrTaY=
-github.com/hashicorp/go-azure-sdk/sdk v0.20240327.1161949 h1:Iu3U8RUGKQNza6MSFyTNjgasDaEcpehqr0Rn4ruBHBk=
-github.com/hashicorp/go-azure-sdk/sdk v0.20240327.1161949/go.mod h1:POOjeoqNp+mvlLBuibJTziUAkBZ7FxXGeGestwemL/w=
 github.com/hashicorp/go-azure-sdk/sdk v0.20240411.1145857 h1:zc6BJzd1u6fvQ1zjwwWMMnhAKE/EYsL2DKBM5Yl1Iko=
 github.com/hashicorp/go-azure-sdk/sdk v0.20240411.1145857/go.mod h1:POOjeoqNp+mvlLBuibJTziUAkBZ7FxXGeGestwemL/w=
 github.com/hashicorp/go-cleanhttp v0.5.0/go.mod h1:JpRdi6/HCYpAwUzNwuwqhbovhLtngrth3wmdIIUrZ80=
@@ -375,8 +371,8 @@ github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
-github.com/tombuildsstuff/giovanni v0.25.3 h1:sqUXiKvU4tmmGA3+YXZe87j4ngu7DkwijFO/ex8a4Hk=
-github.com/tombuildsstuff/giovanni v0.25.3/go.mod h1:s7xbU2lN5Iz9MBglmDDv9p2QPbn6x3UkJBtpCfUerLs=
+github.com/tombuildsstuff/giovanni v0.26.1 h1:RZgnpyIHtgw0GXYpw3xttNk35obJNoI1hztCZsh/Djo=
+github.com/tombuildsstuff/giovanni v0.26.1/go.mod h1:s7xbU2lN5Iz9MBglmDDv9p2QPbn6x3UkJBtpCfUerLs=
 github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926/go.mod h1:9ESjWnEqriFuLhtthL60Sar/7RFoluCcXsuvEwTV5KM=
 github.com/ugorji/go v1.2.6/go.mod h1:anCg0y61KIhDlPZmnH+so+RQbysYVyDko0IMgJv0Nn0=
 github.com/ugorji/go/codec v1.2.6 h1:7kbGefxLoDBuYXOms4yD7223OpNMMPNPZxXk5TvFcyQ=
