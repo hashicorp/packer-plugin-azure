@@ -727,6 +727,24 @@ func TestPlanInfo02(t *testing.T) {
 	}
 
 	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+
+}
+
+func TestStandardSkuPublicIPVMDeployment(t *testing.T) {
+	m := getArmBuilderConfiguration()
+	m["public_ip_sku"] = "Standard"
+
+	var c Config
+	_, err := c.Prepare(m, getPackerConfiguration(), getPackerSSHPasswordCommunicatorConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
 func TestTrustedLaunch01(t *testing.T) {

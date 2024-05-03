@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-07-03/galleryimages"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-07-03/galleryimageversions"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/publicipaddresses"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/storage/2023-01-01/storageaccounts"
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
@@ -130,6 +131,10 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	if b.config.ClientConfig.ObjectID == "" && b.config.OSType != constants.Target_Linux {
 		return nil, fmt.Errorf("could not determine the ObjectID for the user, which is required for Windows builds")
+	}
+	publicIPWarning := "On 31 March 2025 Azure is disabling the ability to create public IP Addresses with the Basic SKU, this builder has always created a basic SKU public IP Address to connect to the build VM.  We reccomend setting the `public_ip_sku` field to `Standard`, this will make sure that your build is created with a standard public IPs, and help ensure any issues with this change are caught before the removal of Basic SKU public IPs. At that point this plugin will be updated to default to Standard IP skus. You can read more about this in the official Azure announcement https://azure.microsoft.com/en-us/updates/upgrade-to-standard-sku-public-ip-addresses-in-azure-by-30-september-2025-basic-sku-will-be-retired/"
+	if b.config.PublicIpSKU == "" || b.config.PublicIpSKU == string(publicipaddresses.PublicIPAddressSkuNameBasic) {
+		ui.Message(publicIPWarning)
 	}
 
 	if b.config.isManagedImage() {

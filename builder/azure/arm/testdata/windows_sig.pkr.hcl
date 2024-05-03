@@ -18,6 +18,7 @@ source "azure-arm" "windows-sig" {
   winrm_insecure     = true
   winrm_username     = "packer"
   use_azure_cli_auth = true
+  public_ip_sku      = "Standard"
   shared_image_gallery_destination {
     image_name     = "${var.resource_prefix}-windows-sig"
     gallery_name   = "${var.resource_prefix}_acctestgallery"

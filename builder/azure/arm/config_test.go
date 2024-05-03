@@ -3408,3 +3408,87 @@ func TestConfigShouldRejectIfNoDiskEncryptionIDIsSetInSIGTargetRegions(t *testin
 		t.Errorf("expected config to reject with error containing %s but got %s", errorMessageRegion2, err)
 	}
 }
+
+func TestConfigShouldRejectInvalidIPSku(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":              "ignore",
+		"image_publisher":          "ignore",
+		"image_sku":                "ignore",
+		"location":                 "ignore",
+		"subscription_id":          "ignore",
+		"communicator":             "none",
+		"public_ip_sku":            "invalid",
+		"os_type":                  constants.Target_Linux,
+		"security_type":            "ConfidentialVM",
+		"security_encryption_type": "DiskWithVMGuestState",
+		"disk_encryption_set_id":   "ignore",
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.1",
+		},
+	}
+	errorMessageInvalidPublicIPSku := `The public_ip_sku "invalid" must match either "Basic" or "Standard`
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatalf("expected config to reject with the following error: %q",
+			errorMessageInvalidPublicIPSku,
+		)
+	}
+	if !strings.Contains(err.Error(), errorMessageInvalidPublicIPSku) {
+		t.Errorf("expected config to reject with error containing %s but got %s", errorMessageInvalidPublicIPSku, err)
+	}
+}
+
+func TestConfigShouldAcceptValidIPSkus(t *testing.T) {
+	basicConfig := map[string]interface{}{
+		"image_offer":              "ignore",
+		"image_publisher":          "ignore",
+		"image_sku":                "ignore",
+		"location":                 "ignore",
+		"subscription_id":          "ignore",
+		"communicator":             "none",
+		"public_ip_sku":            "Basic",
+		"os_type":                  constants.Target_Linux,
+		"security_type":            "ConfidentialVM",
+		"security_encryption_type": "DiskWithVMGuestState",
+		"disk_encryption_set_id":   "ignore",
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.1",
+		},
+	}
+	standardConfig := map[string]interface{}{
+		"image_offer":              "ignore",
+		"image_publisher":          "ignore",
+		"image_sku":                "ignore",
+		"location":                 "ignore",
+		"subscription_id":          "ignore",
+		"communicator":             "none",
+		"public_ip_sku":            "Standard",
+		"os_type":                  constants.Target_Linux,
+		"security_type":            "ConfidentialVM",
+		"security_encryption_type": "DiskWithVMGuestState",
+		"disk_encryption_set_id":   "ignore",
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.1",
+		},
+	}
+	var c Config
+	_, err := c.Prepare(basicConfig, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("expected config to not reject basic IP sku but rejected with error %s", err)
+	}
+	_, err = c.Prepare(standardConfig, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("expected config to not reject standard IP sku but rejected with error %s", err)
+	}
+
+}

@@ -40,6 +40,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/publicipaddresses"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -622,6 +623,12 @@ type Config struct {
 	// Specifies if Encryption at host is enabled for the Virtual Machine.
 	// Requires enabling encryption at host in the Subscription read more [here](https://learn.microsoft.com/en-us/azure/virtual-machines/disks-enable-host-based-encryption-portal?tabs=azure-powershell)
 	EncryptionAtHost *bool `mapstructure:"encryption_at_host" required:"false"`
+
+	// Specifies the SKU to use in the Public IP Address created to connect to the build Virtual machine.
+	// Can only be `Basic`, or `Standard`. Currently basic is the default if none is set.
+	// On 31 March 2025 Azure will remove the ability to create `Basic` SKU public IPs, before then the plugin will be updated to create a Standard public IP by default
+	// You can read more about public IP skus [here](https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/public-ip-addresses#sku)
+	PublicIpSKU string `mapstructure:"public_ip_sku" required:"false"`
 
 	// Specifies if vTPM (virtual Trusted Platform Module) is enabled for the Virtual Machine. For Trusted Launch or Confidential VMs, vTPM must be enabled.
 	VTpmEnabled bool `mapstructure:"vtpm_enabled" required:"false"`
@@ -1412,6 +1419,11 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If virtual_network_subnet_name is specified, so must virtual_network_name"))
 	}
 
+	if c.PublicIpSKU != "" {
+		if ok, err := assertAllowedPublicIPSkuType(c.PublicIpSKU); !ok {
+			errs = packersdk.MultiErrorAppend(errs, err)
+		}
+	}
 	if c.AllowedInboundIpAddresses != nil && len(c.AllowedInboundIpAddresses) >= 1 {
 		if c.VirtualNetworkName != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If virtual_network_name is specified, allowed_inbound_ip_addresses cannot be specified"))
@@ -1593,6 +1605,17 @@ func assertResourceGroupName(rgn, setting string) (bool, error) {
 		return false, fmt.Errorf("The setting %s must match the regular expression %q, and not end with a '-' or '.'.", setting, validResourceGroupNameRe)
 	}
 	return true, nil
+}
+
+func assertAllowedPublicIPSkuType(publicIpSku string) (bool, error) {
+	switch publicIpSku {
+	case string(publicipaddresses.PublicIPAddressSkuNameBasic):
+		return true, nil
+	case string(publicipaddresses.PublicIPAddressSkuNameStandard):
+		return true, nil
+	default:
+		return false, fmt.Errorf("The %s %q must match either %q or %q", "public_ip_sku", publicIpSku, string(publicipaddresses.PublicIPAddressSkuNameBasic), string(publicipaddresses.PublicIPAddressSkuNameStandard))
+	}
 }
 
 func assertAllowedSecurityType(securityType string) (bool, error) {
