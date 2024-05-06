@@ -67,12 +67,6 @@ You can use a different subscription if you set `subscription_id`.  If your VM
 has multiple user assigned managed identities you will need to set `client_id`
 too.
 
-### Interactive User Authentication
-
-To use interactive user authentication, you should specify
-`use_interactive_auth` only.  Packer will use cached credentials or redirect you
-to a website to log in.
-
 ### Service Principal
 
 To use a [service principal](https://packer.io/docs/builders/azure#azure-active-directory-service-principal)
