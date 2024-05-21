@@ -624,10 +624,10 @@ type Config struct {
 	// Requires enabling encryption at host in the Subscription read more [here](https://learn.microsoft.com/en-us/azure/virtual-machines/disks-enable-host-based-encryption-portal?tabs=azure-powershell)
 	EncryptionAtHost *bool `mapstructure:"encryption_at_host" required:"false"`
 
-	// Specifies the SKU to use in the Public IP Address created to connect to the build Virtual machine.
-	// Can only be `Basic`, or `Standard`. Currently basic is the default if none is set.
+	// Specify the Public IP Address SKU for the public IP used to connect to the build Virtual machine.
+	// Valid values are `Basic` and `Standard`. The default value is `Basic`.
 	// On 31 March 2025 Azure will remove the ability to create `Basic` SKU public IPs, before then the plugin will be updated to create a Standard public IP by default
-	// You can read more about public IP skus [here](https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/public-ip-addresses#sku)
+	// You can learn more about public IP SKUs [here](https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/public-ip-addresses#sku)
 	PublicIpSKU string `mapstructure:"public_ip_sku" required:"false"`
 
 	// Specifies if vTPM (virtual Trusted Platform Module) is enabled for the Virtual Machine. For Trusted Launch or Confidential VMs, vTPM must be enabled.
