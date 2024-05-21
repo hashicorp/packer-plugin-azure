@@ -1,3 +1,7 @@
+# Set connection category to private to allow power shell remoting
+Set-NetConnectionProfile -NetworkCategory Private
+
+# Startup the WinRM Service
 Enable-PSRemoting -Force 
 
 # Create a Firewall rule to allow build computer to connect to the Azure VM
@@ -8,5 +12,4 @@ $thumbprint = (New-SelfSignedCertificate -DnsName $env:COMPUTERNAME -CertStoreLo
 
 # Create a new WinRM listener using this certificate
 $command = "winrm create winrm/config/Listener?Address=*+Transport=HTTPS @{Hostname=""$env:computername""; CertificateThumbprint=""$thumbprint""}" 
-
 cmd.exe /C $command
