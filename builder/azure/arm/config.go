@@ -1421,6 +1421,9 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	// Validate the IP Sku and normalize the case, user input shouldn't be case sensitive
 	if c.PublicIpSKU != "" {
+		if c.VirtualNetworkName != "" {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If virtual_network_name is specified, public_ip_sku cannot be specified, since a new network will not be created"))
+		}
 		if strings.EqualFold(c.PublicIpSKU, string(publicipaddresses.PublicIPAddressSkuNameBasic)) {
 			c.PublicIpSKU = string(publicipaddresses.PublicIPAddressSkuNameBasic)
 		} else if strings.EqualFold(c.PublicIpSKU, string(publicipaddresses.PublicIPAddressSkuNameStandard)) {

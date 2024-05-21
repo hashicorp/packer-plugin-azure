@@ -3443,6 +3443,39 @@ func TestConfigShouldRejectInvalidIPSku(t *testing.T) {
 	}
 }
 
+func TestConfigShouldRejectIPSkuWithUserProvidedNetwork(t *testing.T) {
+	config := map[string]interface{}{
+		"image_offer":              "ignore",
+		"image_publisher":          "ignore",
+		"image_sku":                "ignore",
+		"location":                 "ignore",
+		"subscription_id":          "ignore",
+		"communicator":             "none",
+		"public_ip_sku":            "Standard",
+		"virtual_network_name":     "somenet",
+		"os_type":                  constants.Target_Linux,
+		"security_type":            "ConfidentialVM",
+		"security_encryption_type": "DiskWithVMGuestState",
+		"disk_encryption_set_id":   "ignore",
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.1",
+		},
+	}
+	errorMessagePreExistingNetwork := `If virtual_network_name is specified, public_ip_sku cannot be specified, since a new network will not be created`
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatalf("expected config to reject with the following error: %q",
+			errorMessagePreExistingNetwork,
+		)
+	}
+	if !strings.Contains(err.Error(), errorMessagePreExistingNetwork) {
+		t.Errorf("expected config to reject with error containing %s but got %s", errorMessagePreExistingNetwork, err)
+	}
+}
 func TestConfigShouldAcceptValidIPSkus(t *testing.T) {
 	basicConfig := map[string]interface{}{
 		"image_offer":              "ignore",

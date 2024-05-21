@@ -132,9 +132,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if b.config.ClientConfig.ObjectID == "" && b.config.OSType != constants.Target_Linux {
 		return nil, fmt.Errorf("could not determine the ObjectID for the user, which is required for Windows builds")
 	}
-	publicIPWarning := "On March 31, 2025, Azure will no longer allow the creation of public IP addresses with a Basic SKU, which is the default SKU type for this builder. We recommend testing your build using the standard public IP SKU by setting the `public_ip_sku` field to `Standard`. This builder will update its default value from `Basic` to `Standard` in a future release closer to Azure’s removal date. You can learn more about this change in the official Azure announcement https://azure.microsoft.com/en-us/updates/upgrade-to-standard-sku-public-ip-addresses-in-azure-by-30-september-2025-basic-sku-will-be-retired/."
-	if b.config.PublicIpSKU == "" || b.config.PublicIpSKU == string(publicipaddresses.PublicIPAddressSkuNameBasic) {
-		ui.Message(publicIPWarning)
+	publicIPWarning := "On March 31, 2025, Azure will no longer allow the creation of public IP addresses with a Basic SKU, which is the default SKU type for this builder. You are seeing this warning because this build will create a new temporary public IP address using the `Basic` sku.  You can remove this warning by using the standard public IP SKU (`public_ip_sku`) field to `Standard`. This builder will update its default value from `Basic` to `Standard` in a future release closer to Azure’s removal date. You can learn more about this change in the official Azure announcement https://azure.microsoft.com/en-us/updates/upgrade-to-standard-sku-public-ip-addresses-in-azure-by-30-september-2025-basic-sku-will-be-retired/."
+	// If the user is bringing their own vnet, don't warn, if its an invalid SKU it will get disabled at a different date and Microsoft will send out warings
+	if b.config.VirtualNetworkName == "" {
+		if b.config.PublicIpSKU == "" || b.config.PublicIpSKU == string(publicipaddresses.PublicIPAddressSkuNameBasic) {
+			ui.Message(publicIPWarning)
+		}
 	}
 
 	if b.config.isManagedImage() {
