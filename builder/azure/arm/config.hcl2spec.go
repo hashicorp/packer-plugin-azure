@@ -93,6 +93,7 @@ type FlatConfig struct {
 	LicenseType                                *string                            `mapstructure:"license_type" required:"false" cty:"license_type" hcl:"license_type"`
 	SecureBootEnabled                          *bool                              `mapstructure:"secure_boot_enabled" required:"false" cty:"secure_boot_enabled" hcl:"secure_boot_enabled"`
 	EncryptionAtHost                           *bool                              `mapstructure:"encryption_at_host" required:"false" cty:"encryption_at_host" hcl:"encryption_at_host"`
+	PublicIpSKU                                *string                            `mapstructure:"public_ip_sku" required:"false" cty:"public_ip_sku" hcl:"public_ip_sku"`
 	VTpmEnabled                                *bool                              `mapstructure:"vtpm_enabled" required:"false" cty:"vtpm_enabled" hcl:"vtpm_enabled"`
 	SecurityType                               *string                            `mapstructure:"security_type" required:"false" cty:"security_type" hcl:"security_type"`
 	SecurityEncryptionType                     *string                            `mapstructure:"security_encryption_type" required:"false" cty:"security_encryption_type" hcl:"security_encryption_type"`
@@ -241,6 +242,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"license_type":                            &hcldec.AttrSpec{Name: "license_type", Type: cty.String, Required: false},
 		"secure_boot_enabled":                     &hcldec.AttrSpec{Name: "secure_boot_enabled", Type: cty.Bool, Required: false},
 		"encryption_at_host":                      &hcldec.AttrSpec{Name: "encryption_at_host", Type: cty.Bool, Required: false},
+		"public_ip_sku":                           &hcldec.AttrSpec{Name: "public_ip_sku", Type: cty.String, Required: false},
 		"vtpm_enabled":                            &hcldec.AttrSpec{Name: "vtpm_enabled", Type: cty.Bool, Required: false},
 		"security_type":                           &hcldec.AttrSpec{Name: "security_type", Type: cty.String, Required: false},
 		"security_encryption_type":                &hcldec.AttrSpec{Name: "security_encryption_type", Type: cty.String, Required: false},

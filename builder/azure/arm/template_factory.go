@@ -320,11 +320,25 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 		}
 	}
 
-	if config.AllowedInboundIpAddresses != nil && len(config.AllowedInboundIpAddresses) >= 1 && config.Comm.Port() != 0 {
+	// In Azure Network Security Groups define the access controls for the network
+	// They are required when specifiying which inbound IPs are allowed to connect to the network
+	// They are also required when creating a standard sku public IP Address regardless of inbound IPs allowed.
+	// If a standard IP is set with no inbound addresses, we default to allowing all IP addresses
+	if (config.PublicIpSKU == "Standard") || (config.AllowedInboundIpAddresses != nil && len(config.AllowedInboundIpAddresses) >= 1) {
 		err = builder.SetNetworkSecurityGroup(config.AllowedInboundIpAddresses, config.Comm.Port())
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if config.PublicIpSKU == "Standard" {
+		err = builder.SetPublicIPSKU("Standard", "Regional")
+		if err != nil {
+			return nil, err
+		}
+		// Standard SKU Public IPs only support static assignment
+		// Before this the plugin always set this as dynamic
+		builder.SetPublicIpAllocationMethod("Static")
 	}
 
 	if config.BootDiagSTGAccount != "" {

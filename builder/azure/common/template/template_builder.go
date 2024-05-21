@@ -569,6 +569,22 @@ func (s *TemplateBuilder) SetSecurityProfile(secureBootEnabled bool, vtpmEnabled
 	return nil
 }
 
+func (s *TemplateBuilder) SetPublicIPSKU(sku, tier string) error {
+	resource, err := s.getResourceByType(resourcePublicIPAddresses)
+	if err != nil {
+		return err
+	}
+	resource.Sku = &Sku{
+		Name: common.StringPtr(sku),
+		Tier: common.StringPtr(tier),
+	}
+	return nil
+}
+
+func (s *TemplateBuilder) SetPublicIpAllocationMethod(allocationMethod string) {
+	s.setVariable("publicIPAddressType", allocationMethod)
+}
+
 func (s *TemplateBuilder) ClearOsProfile() error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
@@ -671,7 +687,6 @@ func (s *TemplateBuilder) createNsgResource(srcIpAddresses []string, port int) (
 						Priority:                 100,
 						Access:                   hashiSecurityRulesSDK.SecurityRuleAccessAllow,
 						Direction:                hashiSecurityRulesSDK.SecurityRuleDirectionInbound,
-						SourceAddressPrefixes:    &srcIpAddresses,
 						SourcePortRange:          common.StringPtr("*"),
 						DestinationAddressPrefix: common.StringPtr("VirtualNetwork"),
 						DestinationPortRange:     common.StringPtr(strconv.Itoa(port)),
@@ -680,7 +695,11 @@ func (s *TemplateBuilder) createNsgResource(srcIpAddresses []string, port int) (
 			},
 		},
 	}
-
+	if len(srcIpAddresses) > 0 {
+		(*resource.Properties.SecurityRules)[0].Properties.SourceAddressPrefixes = &srcIpAddresses
+	} else {
+		(*resource.Properties.SecurityRules)[0].Properties.SourceAddressPrefix = common.StringPtr("*")
+	}
 	dependency := fmt.Sprintf("[concat('%s/', parameters('nsgName'))]", resourceNetworkSecurityGroups)
 	resourceId := fmt.Sprintf("[resourceId('%s', parameters('nsgName'))]", resourceNetworkSecurityGroups)
 

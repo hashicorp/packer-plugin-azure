@@ -40,6 +40,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/publicipaddresses"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -622,6 +623,12 @@ type Config struct {
 	// Specifies if Encryption at host is enabled for the Virtual Machine.
 	// Requires enabling encryption at host in the Subscription read more [here](https://learn.microsoft.com/en-us/azure/virtual-machines/disks-enable-host-based-encryption-portal?tabs=azure-powershell)
 	EncryptionAtHost *bool `mapstructure:"encryption_at_host" required:"false"`
+
+	// Specify the Public IP Address SKU for the public IP used to connect to the build Virtual machine.
+	// Valid values are `Basic` and `Standard`. The default value is `Basic`.
+	// On 31 March 2025 Azure will remove the ability to create `Basic` SKU public IPs, before then the plugin will be updated to create a Standard public IP by default
+	// You can learn more about public IP SKUs [here](https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/public-ip-addresses#sku)
+	PublicIpSKU string `mapstructure:"public_ip_sku" required:"false"`
 
 	// Specifies if vTPM (virtual Trusted Platform Module) is enabled for the Virtual Machine. For Trusted Launch or Confidential VMs, vTPM must be enabled.
 	VTpmEnabled bool `mapstructure:"vtpm_enabled" required:"false"`
@@ -1412,6 +1419,20 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If virtual_network_subnet_name is specified, so must virtual_network_name"))
 	}
 
+	// Validate the IP Sku and normalize the case, user input shouldn't be case sensitive
+	if c.PublicIpSKU != "" {
+		if c.VirtualNetworkName != "" {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If virtual_network_name is specified, public_ip_sku cannot be specified, since a new network will not be created"))
+		}
+		if strings.EqualFold(c.PublicIpSKU, string(publicipaddresses.PublicIPAddressSkuNameBasic)) {
+			c.PublicIpSKU = string(publicipaddresses.PublicIPAddressSkuNameBasic)
+		} else if strings.EqualFold(c.PublicIpSKU, string(publicipaddresses.PublicIPAddressSkuNameStandard)) {
+			c.PublicIpSKU = string(publicipaddresses.PublicIPAddressSkuNameStandard)
+		} else {
+			invalidSkuError := fmt.Errorf("The provided value of %q for public_ip_sku does not match the allowed values of %q or %q", c.PublicIpSKU, string(publicipaddresses.PublicIPAddressSkuNameBasic), string(publicipaddresses.PublicIPAddressSkuNameStandard))
+			errs = packersdk.MultiErrorAppend(errs, invalidSkuError)
+		}
+	}
 	if c.AllowedInboundIpAddresses != nil && len(c.AllowedInboundIpAddresses) >= 1 {
 		if c.VirtualNetworkName != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If virtual_network_name is specified, allowed_inbound_ip_addresses cannot be specified"))

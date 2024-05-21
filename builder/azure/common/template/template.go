@@ -35,6 +35,7 @@ type Resource struct {
 	Name       *string            `json:"name"`
 	Type       *string            `json:"type"`
 	Location   *string            `json:"location,omitempty"`
+	Sku        *Sku               `json:"sku,omitempty"`
 	DependsOn  *[]string          `json:"dependsOn,omitempty"`
 	Plan       *Plan              `json:"plan,omitempty"`
 	Properties *Properties        `json:"properties,omitempty"`
@@ -164,4 +165,5 @@ type Permissions struct {
 type Sku struct {
 	Family *string `json:"family,omitempty"`
 	Name   *string `json:"name,omitempty"`
+	Tier   *string `json:"tier,omitempty"`
 }
