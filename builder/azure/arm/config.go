@@ -1419,9 +1419,15 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If virtual_network_subnet_name is specified, so must virtual_network_name"))
 	}
 
+	// Validate the IP Sku and normalize the case, user input shouldn't be case sensitive
 	if c.PublicIpSKU != "" {
-		if ok, err := assertAllowedPublicIPSkuType(c.PublicIpSKU); !ok {
-			errs = packersdk.MultiErrorAppend(errs, err)
+		if strings.EqualFold(c.PublicIpSKU, string(publicipaddresses.PublicIPAddressSkuNameBasic)) {
+			c.PublicIpSKU = string(publicipaddresses.PublicIPAddressSkuNameBasic)
+		} else if strings.EqualFold(c.PublicIpSKU, string(publicipaddresses.PublicIPAddressSkuNameStandard)) {
+			c.PublicIpSKU = string(publicipaddresses.PublicIPAddressSkuNameStandard)
+		} else {
+			invalidSkuError := fmt.Errorf("The %s %q must match either %q or %q", "public_ip_sku", c.PublicIpSKU, string(publicipaddresses.PublicIPAddressSkuNameBasic), string(publicipaddresses.PublicIPAddressSkuNameStandard))
+			errs = packersdk.MultiErrorAppend(errs, invalidSkuError)
 		}
 	}
 	if c.AllowedInboundIpAddresses != nil && len(c.AllowedInboundIpAddresses) >= 1 {
@@ -1605,17 +1611,6 @@ func assertResourceGroupName(rgn, setting string) (bool, error) {
 		return false, fmt.Errorf("The setting %s must match the regular expression %q, and not end with a '-' or '.'.", setting, validResourceGroupNameRe)
 	}
 	return true, nil
-}
-
-func assertAllowedPublicIPSkuType(publicIpSku string) (bool, error) {
-	switch publicIpSku {
-	case string(publicipaddresses.PublicIPAddressSkuNameBasic):
-		return true, nil
-	case string(publicipaddresses.PublicIPAddressSkuNameStandard):
-		return true, nil
-	default:
-		return false, fmt.Errorf("The %s %q must match either %q or %q", "public_ip_sku", publicIpSku, string(publicipaddresses.PublicIPAddressSkuNameBasic), string(publicipaddresses.PublicIPAddressSkuNameStandard))
-	}
 }
 
 func assertAllowedSecurityType(securityType string) (bool, error) {

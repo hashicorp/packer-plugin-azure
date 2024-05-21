@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/publicipaddresses"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	sdkconfig "github.com/hashicorp/packer-plugin-sdk/template/config"
 )
@@ -3481,14 +3482,35 @@ func TestConfigShouldAcceptValidIPSkus(t *testing.T) {
 			"image_version":  "1.0.1",
 		},
 	}
-	var c Config
-	_, err := c.Prepare(basicConfig, getPackerConfiguration())
+	var basic Config
+	var standard Config
+	_, err := basic.Prepare(basicConfig, getPackerConfiguration())
 	if err != nil {
 		t.Fatalf("expected config to not reject basic IP sku but rejected with error %s", err)
 	}
-	_, err = c.Prepare(standardConfig, getPackerConfiguration())
+	_, err = standard.Prepare(standardConfig, getPackerConfiguration())
 	if err != nil {
 		t.Fatalf("expected config to not reject standard IP sku but rejected with error %s", err)
 	}
 
+	// Check case insensitivity
+	basicConfig["public_ip_sku"] = "BaSiC"
+	standardConfig["public_ip_sku"] = "StAnDaRd"
+
+	_, err = basic.Prepare(basicConfig, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("expected config to not reject basic IP sku but rejected with error %s", err)
+	}
+	_, err = standard.Prepare(standardConfig, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("expected config to not reject standard IP sku but rejected with error %s", err)
+	}
+
+	if basic.PublicIpSKU != string(publicipaddresses.PublicIPAddressSkuNameBasic) {
+		t.Fatalf("Expected basic ip sku to be normalized to %s, but was %s", publicipaddresses.PublicIPAddressSkuNameBasic, basicConfig["public_ip_sku"])
+	}
+
+	if standard.PublicIpSKU != string(publicipaddresses.PublicIPAddressSkuNameStandard) {
+		t.Fatalf("Expected standard ip sku to be normalized to %s, but was %s", publicipaddresses.PublicIPAddressSkuNameBasic, basicConfig["public_ip_sku"])
+	}
 }
