@@ -3430,7 +3430,7 @@ func TestConfigShouldRejectInvalidIPSku(t *testing.T) {
 			"image_version":  "1.0.1",
 		},
 	}
-	errorMessageInvalidPublicIPSku := `The public_ip_sku "invalid" must match either "Basic" or "Standard`
+	errorMessageInvalidPublicIPSku := `The provided value of "invalid" for public_ip_sku does not match the allowed values of "Basic" or "Standard"`
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
 	if err == nil {

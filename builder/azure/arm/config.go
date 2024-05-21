@@ -1429,7 +1429,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		} else if strings.EqualFold(c.PublicIpSKU, string(publicipaddresses.PublicIPAddressSkuNameStandard)) {
 			c.PublicIpSKU = string(publicipaddresses.PublicIPAddressSkuNameStandard)
 		} else {
-			invalidSkuError := fmt.Errorf("The %s %q must match either %q or %q", "public_ip_sku", c.PublicIpSKU, string(publicipaddresses.PublicIPAddressSkuNameBasic), string(publicipaddresses.PublicIPAddressSkuNameStandard))
+			invalidSkuError := fmt.Errorf("The provided value of %q for public_ip_sku does not match the allowed values of %q or %q", c.PublicIpSKU, string(publicipaddresses.PublicIPAddressSkuNameBasic), string(publicipaddresses.PublicIPAddressSkuNameStandard))
 			errs = packersdk.MultiErrorAppend(errs, invalidSkuError)
 		}
 	}
