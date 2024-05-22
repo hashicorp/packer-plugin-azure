@@ -1,8 +1,5 @@
-# Set connection category to private to allow power shell remoting
-Set-NetConnectionProfile -NetworkCategory Private
-
 # Startup the WinRM Service
-Enable-PSRemoting -Force 
+Enable-PSRemoting -Force -SkipNetworkProfileCheck
 
 # Create a Firewall rule to allow build computer to connect to the Azure VM
 New-NetFirewallRule -Name "Allow WinRM HTTPS" -DisplayName "WinRM HTTPS" -Enabled True -Profile Any -Action Allow -Direction Inbound -LocalPort 5986 -Protocol TCP
