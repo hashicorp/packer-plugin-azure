@@ -414,7 +414,7 @@ type Config struct {
 	// standard or premium. The default value is standard.
 	BuildKeyVaultSKU string `mapstructure:"build_key_vault_sku"`
 
-	// Set to true to skip creating the build key vault during Windows build.
+	// Skip creating the build key vault during Windows build.
 	// This is useful for cases when a subscription has policy restrictions on key vault resources.
 	// If true, you have to provide an alternate method to setup WinRM.
 	// You can find examples of this in the `example/windows_skip_key_vault` directory.
