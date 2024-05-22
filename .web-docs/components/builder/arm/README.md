@@ -350,6 +350,17 @@ Providing `temp_resource_group_name` or `location` in combination with
 - `build_key_vault_sku` (string) - Specify the KeyVault SKU to create during the build. Valid values are
   standard or premium. The default value is standard.
 
+- `skip_create_build_key_vault` (bool) - Skip creating the build key vault during Windows build.
+  This is useful for cases when a subscription has policy restrictions on key vault resources.
+  If true, you have to provide an alternate method to setup WinRM.
+  You can find examples of this in the `example/windows_skip_key_vault` directory.
+  These examples provide a minimal setup needed to get a working solution with the `skip_create_build_key_vault` flag.
+  This script may require changes depending on the version of Windows used,
+  or if any changes are made to the existing versions of Windows that impact creation of a WinRM listener.
+  For more information about custom scripts or user data, please refer to the docs:
+  * [Custom Script documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/extensions/custom-script-windows)
+  * [User Data for Azure VM documentation](https://learn.microsoft.com/en-us/azure/virtual-machines/user-data)
+
 - `disk_encryption_set_id` (string) - Specify the Disk Encryption Set ID to use to encrypt the OS and data disks created with the VM during the build
   Only supported when publishing to Shared Image Galleries, without a managed image
   The disk encryption set ID can be found in the properties tab of a disk encryption set on the Azure Portal, and is labeled as its resource ID

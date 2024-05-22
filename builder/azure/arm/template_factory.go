@@ -147,7 +147,7 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 		}
 	case constants.Target_Windows:
 		osType = hashiVMSDK.OperatingSystemTypesWindows
-		err = builder.BuildWindows(config.Comm.Type, config.tmpKeyVaultName, config.tmpWinRMCertificateUrl)
+		err = builder.BuildWindows(config.Comm.Type, config.tmpKeyVaultName, config.tmpWinRMCertificateUrl, config.SkipCreateBuildKeyVault)
 		if err != nil {
 			return nil, err
 		}
