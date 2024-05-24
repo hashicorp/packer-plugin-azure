@@ -56,7 +56,7 @@ func (s *StepSnapshotDataDisks) createDataDiskSnapshot(ctx context.Context, subs
 		return err
 	}
 
-	snapshot, err := s.client.SnapshotsClient.Get(ctx, id)
+	snapshot, err := s.client.SnapshotsClient.Get(pollingContext, id)
 	if err != nil {
 		s.say(s.client.LastError.Error())
 		return err
