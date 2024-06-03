@@ -56,6 +56,8 @@ type FlatConfig struct {
 	ObjectID                            *string                            `mapstructure:"object_id" cty:"object_id" hcl:"object_id"`
 	TenantID                            *string                            `mapstructure:"tenant_id" required:"false" cty:"tenant_id" hcl:"tenant_id"`
 	SubscriptionID                      *string                            `mapstructure:"subscription_id" cty:"subscription_id" hcl:"subscription_id"`
+	OidcRequestToken                    *string                            `mapstructure:"oidc_request_token" cty:"oidc_request_token" hcl:"oidc_request_token"`
+	OidcRequestURL                      *string                            `mapstructure:"oidc_request_url" cty:"oidc_request_url" hcl:"oidc_request_url"`
 	UseAzureCLIAuth                     *bool                              `mapstructure:"use_azure_cli_auth" required:"false" cty:"use_azure_cli_auth" hcl:"use_azure_cli_auth"`
 	CaptureNamePrefix                   *string                            `mapstructure:"capture_name_prefix" cty:"capture_name_prefix" hcl:"capture_name_prefix"`
 	CaptureContainerName                *string                            `mapstructure:"capture_container_name" cty:"capture_container_name" hcl:"capture_container_name"`
@@ -174,6 +176,8 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"object_id":                                &hcldec.AttrSpec{Name: "object_id", Type: cty.String, Required: false},
 		"tenant_id":                                &hcldec.AttrSpec{Name: "tenant_id", Type: cty.String, Required: false},
 		"subscription_id":                          &hcldec.AttrSpec{Name: "subscription_id", Type: cty.String, Required: false},
+		"oidc_request_token":                       &hcldec.AttrSpec{Name: "oidc_request_token", Type: cty.String, Required: false},
+		"oidc_request_url":                         &hcldec.AttrSpec{Name: "oidc_request_url", Type: cty.String, Required: false},
 		"use_azure_cli_auth":                       &hcldec.AttrSpec{Name: "use_azure_cli_auth", Type: cty.Bool, Required: false},
 		"capture_name_prefix":                      &hcldec.AttrSpec{Name: "capture_name_prefix", Type: cty.String, Required: false},
 		"capture_container_name":                   &hcldec.AttrSpec{Name: "capture_container_name", Type: cty.String, Required: false},

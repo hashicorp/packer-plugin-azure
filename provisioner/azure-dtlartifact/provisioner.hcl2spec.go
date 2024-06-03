@@ -55,6 +55,8 @@ type FlatConfig struct {
 	ObjectID               *string                `mapstructure:"object_id" cty:"object_id" hcl:"object_id"`
 	TenantID               *string                `mapstructure:"tenant_id" required:"false" cty:"tenant_id" hcl:"tenant_id"`
 	SubscriptionID         *string                `mapstructure:"subscription_id" cty:"subscription_id" hcl:"subscription_id"`
+	OidcRequestToken       *string                `mapstructure:"oidc_request_token" cty:"oidc_request_token" hcl:"oidc_request_token"`
+	OidcRequestURL         *string                `mapstructure:"oidc_request_url" cty:"oidc_request_url" hcl:"oidc_request_url"`
 	UseAzureCLIAuth        *bool                  `mapstructure:"use_azure_cli_auth" required:"false" cty:"use_azure_cli_auth" hcl:"use_azure_cli_auth"`
 	DtlArtifacts           []FlatDtlArtifact      `mapstructure:"dtl_artifacts" required:"true" cty:"dtl_artifacts" hcl:"dtl_artifacts"`
 	LabName                *string                `mapstructure:"lab_name" required:"true" cty:"lab_name" hcl:"lab_name"`
@@ -95,6 +97,8 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"object_id":                  &hcldec.AttrSpec{Name: "object_id", Type: cty.String, Required: false},
 		"tenant_id":                  &hcldec.AttrSpec{Name: "tenant_id", Type: cty.String, Required: false},
 		"subscription_id":            &hcldec.AttrSpec{Name: "subscription_id", Type: cty.String, Required: false},
+		"oidc_request_token":         &hcldec.AttrSpec{Name: "oidc_request_token", Type: cty.String, Required: false},
+		"oidc_request_url":           &hcldec.AttrSpec{Name: "oidc_request_url", Type: cty.String, Required: false},
 		"use_azure_cli_auth":         &hcldec.AttrSpec{Name: "use_azure_cli_auth", Type: cty.Bool, Required: false},
 		"dtl_artifacts":              &hcldec.BlockListSpec{TypeName: "dtl_artifacts", Nested: hcldec.ObjectSpec((*FlatDtlArtifact)(nil).HCL2Spec())},
 		"lab_name":                   &hcldec.AttrSpec{Name: "lab_name", Type: cty.String, Required: false},

@@ -20,6 +20,8 @@ type AzureAuthOptions struct {
 	ClientJWT          string
 	ClientCertPath     string
 	ClientCertPassword string
+	OidcRequestUrl     string
+	OidcRequestToken   string
 	TenantID           string
 	SubscriptionID     string
 }
@@ -78,6 +80,15 @@ func buildAuthorizer(ctx context.Context, authOpts AzureAuthOptions, env environ
 			ClientID:                      authOpts.ClientID,
 			TenantID:                      authOpts.TenantID,
 			OIDCAssertionToken:            authOpts.ClientJWT,
+		}
+	case AuthTypeOidcURL:
+		authConfig = auth.Credentials{
+			Environment:                         env,
+			EnableAuthenticationUsingGitHubOIDC: true,
+			ClientID:                            authOpts.ClientID,
+			TenantID:                            authOpts.TenantID,
+			GitHubOIDCTokenRequestURL:           authOpts.OidcRequestUrl,
+			GitHubOIDCTokenRequestToken:         authOpts.OidcRequestToken,
 		}
 	default:
 		return nil, fmt.Errorf("Unexpected AuthType %s set when trying to create Azure Client", authOpts.AuthType)

@@ -603,6 +603,12 @@ Providing `temp_resource_group_name` or `location` in combination with
 
 - `subscription_id` (string) - The subscription to use.
 
+- `oidc_request_token` (string) - OIDC Request Token is used for GitHub Actions OIDC, this token is used with oidc_request_url to fetch access tokens to Azure
+  Value in GitHub Actions can be extracted from the `ACTIONS_ID_TOKEN_REQUEST_TOKEN` variable
+
+- `oidc_request_url` (string) - OIDC Request URL is used for GitHub Actions OIDC, this token is used with oidc_request_url to fetch access tokens to Azure
+  Value in GitHub Actions can be extracted from the `ARM_OIDC_REQUEST_URL` variable
+
 - `use_azure_cli_auth` (bool) - Flag to use Azure CLI authentication. Defaults to false.
   CLI auth will use the information from an active `az login` session to connect to Azure and set the subscription id and tenant id associated to the signed in account.
   If enabled, it will use the authentication provided by the `az` CLI.
