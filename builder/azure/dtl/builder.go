@@ -81,6 +81,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		ClientCertPassword: b.config.ClientConfig.ClientCertPassword,
 		TenantID:           b.config.ClientConfig.TenantID,
 		SubscriptionID:     b.config.ClientConfig.SubscriptionID,
+		OidcRequestUrl:     b.config.ClientConfig.OidcRequestURL,
+		OidcRequestToken:   b.config.ClientConfig.OidcRequestToken,
 	}
 	ui.Message("Creating Azure DevTestLab (DTL) client ...")
 	azureClient, err := NewAzureClient(
