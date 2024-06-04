@@ -80,7 +80,7 @@ type Config struct {
 	// Value in GitHub Actions can be extracted from the `ACTIONS_ID_TOKEN_REQUEST_TOKEN` variable
 	OidcRequestToken string `mapstructure:"oidc_request_token"`
 	// OIDC Request URL is used for GitHub Actions OIDC, this token is used with oidc_request_url to fetch access tokens to Azure
-	// Value in GitHub Actions can be extracted from the `ARM_OIDC_REQUEST_URL` variable
+	// Value in GitHub Actions can be extracted from the `ACTIONS_ID_TOKEN_REQUEST_URL` variable
 	OidcRequestURL string `mapstructure:"oidc_request_url"`
 	authType       string
 
