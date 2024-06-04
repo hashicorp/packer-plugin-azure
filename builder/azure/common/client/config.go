@@ -81,6 +81,7 @@ type Config struct {
 
 	// OIDC Request Token is used for GitHub Actions OIDC, this token is used with oidc_request_url to fetch access tokens to Azure
 	// Value in GitHub Actions can be extracted from the `ACTIONS_ID_TOKEN_REQUEST_TOKEN` variable
+	// Refer to [Configure a federated identity credential on an app](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-create-trust?pivots=identity-wif-apps-methods-azp#github-actions) for details on how setup GitHub Actions OIDC authentication
 	OidcRequestToken string `mapstructure:"oidc_request_token"`
 	// OIDC Request URL is used for GitHub Actions OIDC, this token is used with oidc_request_url to fetch access tokens to Azure
 	// Value in GitHub Actions can be extracted from the `ACTIONS_ID_TOKEN_REQUEST_URL` variable
