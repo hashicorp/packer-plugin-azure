@@ -246,7 +246,8 @@ func (c Config) UseMSI() bool {
 		c.ClientJWT == "" &&
 		c.ClientCertPath == "" &&
 		c.TenantID == "" &&
-		c.OidcRequestToken == ""
+		c.OidcRequestToken == "" &&
+		c.OidcRequestURL == ""
 }
 
 // FillParameters capture the user intent from the supplied parameter set in AuthType, retrieves the TenantID and CloudEnvironment if not specified.
