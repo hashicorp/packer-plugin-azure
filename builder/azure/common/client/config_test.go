@@ -223,7 +223,6 @@ func Test_ClientConfig_GitHubOIDC_Rejections(t *testing.T) {
 		OidcRequestURL:   "whatever",
 	}
 	assertInvalid(t, cfg)
-
 }
 
 func getEnvOrSkip(t *testing.T, envVar string) string {

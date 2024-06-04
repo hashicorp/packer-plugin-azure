@@ -44,9 +44,12 @@ Packer can create Azure virtual machine images through variety of ways depending
 
 Config allows for various ways to authenticate Azure clients.  When
 `client_id` and `subscription_id` are specified in addition to one of the following
-`client_secret`, `client_jwt`, `client_cert_path`, or `oidc_request_url combined with oidc_request_token` --
-Packer will use the specified Azure Active Directory (AAD) Service Principal
-(SP).
+* `client_secret`
+* `client_jwt`
+* `client_cert_path`
+* `oidc_request_url` combined with `oidc_request_token`
+
+Packer will use the specified Azure Active Directory (AAD) Service Principal (SP).
 If none of these options are specified, Packer will attempt to use the Managed Identity
 and subscription of the VM that Packer is running on.  This will only work if
 Packer is running on an Azure VM with either a System Assigned Managed
