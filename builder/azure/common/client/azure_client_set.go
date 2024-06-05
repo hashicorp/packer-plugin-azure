@@ -74,6 +74,8 @@ func new(c Config, say func(string)) (*azureClientSet, error) {
 		ClientCertPath:     c.ClientCertPath,
 		ClientCertPassword: c.ClientCertPassword,
 		TenantID:           c.TenantID,
+		OidcRequestUrl:     c.OidcRequestURL,
+		OidcRequestToken:   c.OidcRequestToken,
 		SubscriptionID:     c.SubscriptionID,
 	}
 	cloudEnv := c.cloudEnvironment

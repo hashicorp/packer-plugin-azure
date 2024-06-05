@@ -53,6 +53,13 @@ func Test_ClientConfig_RequiredParametersSet(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "oidc request url, oidc request token, client id, and tenant sh",
+			config: Config{
+				TenantID: "ok",
+			},
+			wantErr: true,
+		},
+		{
 			name: "client_secret without client_id should error",
 			config: Config{
 				ClientSecret: "error",
@@ -156,6 +163,66 @@ func Test_ClientConfig_AzureCli(t *testing.T) {
 	if cfg.AuthType() != AuthTypeAzureCLI {
 		t.Fatalf("Expected authType to be %q, but got: %q", AuthTypeAzureCLI, cfg.AuthType())
 	}
+}
+
+func Test_ClientConfig_GitHubOIDC(t *testing.T) {
+	retrievedTid := "my-tenant-id"
+	findTenantID = func(environments.Environment, string) (string, error) { return retrievedTid, nil }
+	cfg := Config{
+		cloudEnvironment: environments.AzurePublic(),
+		OidcRequestToken: "whatever",
+		OidcRequestURL:   "whatever",
+		ClientID:         "whatever",
+		SubscriptionID:   "whatever",
+	}
+	assertValid(t, cfg)
+
+	err := cfg.FillParameters()
+	if err != nil {
+		t.Fatalf("Expected nil err, but got: %v", err)
+	}
+
+	if cfg.AuthType() != AuthTypeOidcURL {
+		t.Fatalf("Expected authType to be %q, but got: %q", AuthTypeAzureCLI, cfg.AuthType())
+	}
+}
+
+func Test_ClientConfig_GitHubOIDC_Rejections(t *testing.T) {
+	// No Subscription
+	cfg := Config{
+		cloudEnvironment: environments.AzurePublic(),
+		OidcRequestToken: "whatever",
+		OidcRequestURL:   "whatever",
+		ClientID:         "whatever",
+	}
+	assertInvalid(t, cfg)
+
+	// No Request Token
+	cfg = Config{
+		cloudEnvironment: environments.AzurePublic(),
+		SubscriptionID:   "whatever",
+		OidcRequestURL:   "whatever",
+		ClientID:         "whatever",
+	}
+	assertInvalid(t, cfg)
+
+	// No Request URL
+	cfg = Config{
+		cloudEnvironment: environments.AzurePublic(),
+		OidcRequestToken: "whatever",
+		SubscriptionID:   "whatever",
+		ClientID:         "whatever",
+	}
+	assertInvalid(t, cfg)
+
+	// No Client ID
+	cfg = Config{
+		cloudEnvironment: environments.AzurePublic(),
+		OidcRequestToken: "whatever",
+		SubscriptionID:   "whatever",
+		OidcRequestURL:   "whatever",
+	}
+	assertInvalid(t, cfg)
 }
 
 func getEnvOrSkip(t *testing.T, envVar string) string {

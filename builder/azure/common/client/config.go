@@ -28,10 +28,13 @@ import (
 var NullModelSDKErr = fmt.Errorf("Unexpected SDK response, please open an issue on the Azure plugin issue tracker")
 
 // Config allows for various ways to authenticate Azure clients.  When
-// `client_id` and `subscription_id` are specified in addition to one and only
-// one of the following: `client_secret`, `client_jwt`, `client_cert_path` --
-// Packer will use the specified Azure Active Directory (AAD) Service Principal
-// (SP).
+// `client_id` and `subscription_id` are specified in addition to one of the following
+// * `client_secret`
+// * `client_jwt`
+// * `client_cert_path`
+// * `oidc_request_url` combined with `oidc_request_token`
+//
+// Packer will use the specified Azure Active Directory (AAD) Service Principal (SP).
 // If none of these options are specified, Packer will attempt to use the Managed Identity
 // and subscription of the VM that Packer is running on.  This will only work if
 // Packer is running on an Azure VM with either a System Assigned Managed
@@ -76,7 +79,14 @@ type Config struct {
 	// The subscription to use.
 	SubscriptionID string `mapstructure:"subscription_id"`
 
-	authType string
+	// OIDC Request Token is used for GitHub Actions OIDC, this token is used with oidc_request_url to fetch access tokens to Azure
+	// Value in GitHub Actions can be extracted from the `ACTIONS_ID_TOKEN_REQUEST_TOKEN` variable
+	// Refer to [Configure a federated identity credential on an app](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-create-trust?pivots=identity-wif-apps-methods-azp#github-actions) for details on how setup GitHub Actions OIDC authentication
+	OidcRequestToken string `mapstructure:"oidc_request_token"`
+	// OIDC Request URL is used for GitHub Actions OIDC, this token is used with oidc_request_url to fetch access tokens to Azure
+	// Value in GitHub Actions can be extracted from the `ACTIONS_ID_TOKEN_REQUEST_URL` variable
+	OidcRequestURL string `mapstructure:"oidc_request_url"`
+	authType       string
 
 	// Flag to use Azure CLI authentication. Defaults to false.
 	// CLI auth will use the information from an active `az login` session to connect to Azure and set the subscription id and tenant id associated to the signed in account.
@@ -95,6 +105,7 @@ const (
 	AuthTypeClientSecret    = "ClientSecret"
 	AuthTypeClientCert      = "ClientCertificate"
 	AuthTypeClientBearerJWT = "ClientBearerJWT"
+	AuthTypeOidcURL         = "OIDCURL"
 	AuthTypeAzureCLI        = "AzureCLI"
 )
 
@@ -212,6 +223,10 @@ func (c Config) Validate(errs *packersdk.MultiError) {
 		return
 	}
 
+	if c.SubscriptionID != "" && c.ClientID != "" && c.OidcRequestToken != "" && c.OidcRequestURL != "" {
+		return
+	}
+
 	errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("No valid set of authentication values specified:\n"+
 		"  to use the Managed Identity of the current machine, do not specify any of the fields below:\n"+
 		"  - client_secret\n"+
@@ -221,7 +236,8 @@ func (c Config) Validate(errs *packersdk.MultiError) {
 		"  to use an Azure Active Directory service principal, specify either:\n"+
 		"  - subscription_id, client_id and client_secret\n"+
 		"  - subscription_id, client_id and client_cert_path\n"+
-		"  - subscription_id, client_id and client_jwt."))
+		"  - subscription_id, client_id and client_jwt\n"+
+		"  - subscription_id, client_id, oidc_request_url, and oidc_request_token."))
 }
 
 func (c Config) UseCLI() bool {
@@ -233,7 +249,9 @@ func (c Config) UseMSI() bool {
 		c.ClientSecret == "" &&
 		c.ClientJWT == "" &&
 		c.ClientCertPath == "" &&
-		c.TenantID == ""
+		c.TenantID == "" &&
+		c.OidcRequestToken == "" &&
+		c.OidcRequestURL == ""
 }
 
 // FillParameters capture the user intent from the supplied parameter set in AuthType, retrieves the TenantID and CloudEnvironment if not specified.
@@ -248,6 +266,8 @@ func (c *Config) FillParameters() error {
 			c.authType = AuthTypeClientSecret
 		} else if c.ClientCertPath != "" {
 			c.authType = AuthTypeClientCert
+		} else if c.OidcRequestToken != "" {
+			c.authType = AuthTypeOidcURL
 		} else {
 			c.authType = AuthTypeClientBearerJWT
 		}

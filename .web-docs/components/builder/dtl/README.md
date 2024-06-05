@@ -179,6 +179,58 @@ options. In addition to the options listed here, a [communicator](/packer/docs/t
 <!-- End of code generated from the comments of the Config struct in builder/azure/dtl/config.go; -->
 
 
+<!-- Code generated from the comments of the Config struct in builder/azure/common/client/config.go; DO NOT EDIT MANUALLY -->
+
+- `cloud_environment_name` (string) - One of Public, China, or
+  USGovernment. Defaults to Public. Long forms such as
+  USGovernmentCloud and AzureUSGovernmentCloud are also supported.
+
+- `metadata_host` (string) - The Hostname of the Azure Metadata Service
+  (for example management.azure.com), used to obtain the Cloud Environment
+  when using a Custom Azure Environment. This can also be sourced from the
+  ARM_METADATA_HOST Environment Variable.
+  Note: CloudEnvironmentName must be set to the requested environment
+  name in the list of available environments held in the metadata_host.
+
+- `client_id` (string) - The application ID of the AAD Service Principal.
+  Requires either `client_secret`, `client_cert_path` or `client_jwt` to be set as well.
+
+- `client_secret` (string) - A password/secret registered for the AAD SP.
+
+- `client_cert_path` (string) - The path to a PKCS#12 bundle (.pfx file) to be used as the client certificate
+  that will be used to authenticate as the specified AAD SP.
+
+- `client_cert_password` (string) - The password for decrypting the client certificate bundle.
+
+- `client_jwt` (string) - A JWT bearer token for client auth (RFC 7523, Sec. 2.2) that will be used
+  to authenticate the AAD SP. Provides more control over token the expiration
+  when using certificate authentication than when using `client_cert_path`.
+
+- `object_id` (string) - The object ID for the AAD SP. Optional, will be derived from the oAuth token if left empty.
+
+- `tenant_id` (string) - The Active Directory tenant identifier with which your `client_id` and
+  `subscription_id` are associated. If not specified, `tenant_id` will be
+  looked up using `subscription_id`.
+
+- `subscription_id` (string) - The subscription to use.
+
+- `oidc_request_token` (string) - OIDC Request Token is used for GitHub Actions OIDC, this token is used with oidc_request_url to fetch access tokens to Azure
+  Value in GitHub Actions can be extracted from the `ACTIONS_ID_TOKEN_REQUEST_TOKEN` variable
+  Refer to [Configure a federated identity credential on an app](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-create-trust?pivots=identity-wif-apps-methods-azp#github-actions) for details on how setup GitHub Actions OIDC authentication
+
+- `oidc_request_url` (string) - OIDC Request URL is used for GitHub Actions OIDC, this token is used with oidc_request_url to fetch access tokens to Azure
+  Value in GitHub Actions can be extracted from the `ACTIONS_ID_TOKEN_REQUEST_URL` variable
+
+- `use_azure_cli_auth` (bool) - Flag to use Azure CLI authentication. Defaults to false.
+  CLI auth will use the information from an active `az login` session to connect to Azure and set the subscription id and tenant id associated to the signed in account.
+  If enabled, it will use the authentication provided by the `az` CLI.
+  Azure CLI authentication will use the credential marked as `isDefault` and can be verified using `az account show`.
+  Works with normal authentication (`az login`) and service principals (`az login --service-principal --username APP_ID --password PASSWORD --tenant TENANT_ID`).
+  Ignores all other configurations if enabled.
+
+<!-- End of code generated from the comments of the Config struct in builder/azure/common/client/config.go; -->
+
+
 <!-- Code generated from the comments of the Config struct in builder/azure/common/config.go; DO NOT EDIT MANUALLY -->
 
 - `skip_create_image` (bool) - Skip creating the image.
