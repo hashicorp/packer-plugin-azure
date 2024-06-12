@@ -146,7 +146,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		groupId := commonids.NewResourceGroupID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName)
 		_, err := azureClient.ResourceGroupsClient.Get(builderPollingContext, groupId)
 		if err != nil {
-			return nil, fmt.Errorf("Cannot locate the managed image resource group %s.", b.config.ManagedImageResourceGroupName)
+			return nil, fmt.Errorf("Cannot locate the managed image resource group %s, received error %s", b.config.ManagedImageResourceGroupName, err.Error())
 		}
 
 		// If a managed image already exists it cannot be overwritten.
@@ -214,7 +214,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		galleryId := galleryimages.NewGalleryImageID(sigSubscriptionID, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
 		_, err = azureClient.GalleryImagesClient.Get(builderPollingContext, galleryId)
 		if err != nil {
-			return nil, fmt.Errorf("the Shared Gallery Image '%s' to which to publish the managed image version to does not exist in the resource group '%s' or does not contain managed image '%s'", b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationImageName)
+			return nil, fmt.Errorf("Cannot locate destination shared image gallery in resource group %s, with gallery name %s and image name %s, received error: %s ", b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName, err.Error())
 		}
 		// Check if a Image Version already exists for our target destination
 		galleryImageVersionId := galleryimageversions.NewImageVersionID(sigSubscriptionID, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion)
@@ -226,7 +226,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				defer cancel()
 				err := azureClient.GalleryImageVersionsClient.DeleteThenPoll(deleteImageContext, galleryImageVersionId)
 				if err != nil {
-					return nil, fmt.Errorf("failed to delete gallery image version for image name:version %s:%s in gallery %s", b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationGalleryName)
+					return nil, fmt.Errorf("failed to delete gallery image version for image name:version %s:%s in gallery %s, received error: %s", b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationGalleryName, err.Error())
 				}
 
 			} else {
@@ -298,7 +298,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		id := galleryimages.NewGalleryImageID(b.config.SharedGallery.Subscription, b.config.SharedGallery.ResourceGroup, b.config.SharedGallery.GalleryName, b.config.SharedGallery.ImageName)
 		galleryImage, err := client.Get(builderPollingContext, id)
 		if err != nil {
-			return nil, fmt.Errorf("the parent Shared Gallery Image '%s' from which to source the managed image version to does not exist in the resource group '%s' or does not contain managed image '%s'", b.config.SharedGallery.GalleryName, b.config.SharedGallery.ResourceGroup, b.config.SharedGallery.ImageName)
+			return nil, fmt.Errorf("Failed to get parent Shared Gallery Image %s in gallery %s in the resource group %s, received error: %s.", b.config.SharedGallery.GalleryName, b.config.SharedGallery.ImageName, b.config.SharedGallery.ResourceGroup, err.Error())
 		}
 		if galleryImage.Model == nil {
 			return nil, commonclient.NullModelSDKErr
