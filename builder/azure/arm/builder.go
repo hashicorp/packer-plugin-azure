@@ -298,7 +298,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		id := galleryimages.NewGalleryImageID(b.config.SharedGallery.Subscription, b.config.SharedGallery.ResourceGroup, b.config.SharedGallery.GalleryName, b.config.SharedGallery.ImageName)
 		galleryImage, err := client.Get(builderPollingContext, id)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to get parent Shared Gallery Image %s in gallery %s in the resource group %s, received error: %s.", b.config.SharedGallery.GalleryName, b.config.SharedGallery.ImageName, b.config.SharedGallery.ResourceGroup, err.Error())
+			return nil, fmt.Errorf("failed to get parent Shared Gallery Image %s in gallery %s in the resource group %s, received error: %s.", b.config.SharedGallery.GalleryName, b.config.SharedGallery.ImageName, b.config.SharedGallery.ResourceGroup, err.Error())
 		}
 		if galleryImage.Model == nil {
 			return nil, commonclient.NullModelSDKErr
