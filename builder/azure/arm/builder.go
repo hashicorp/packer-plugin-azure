@@ -214,7 +214,11 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		galleryId := galleryimages.NewGalleryImageID(sigSubscriptionID, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName)
 		_, err = azureClient.GalleryImagesClient.Get(builderPollingContext, galleryId)
 		if err != nil {
-			return nil, fmt.Errorf("Cannot locate destination shared image gallery in resource group %s, with gallery name %s and image name %s, received error: %s ", b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName, err.Error())
+			return nil, fmt.Errorf("failed to get image %q from image gallery %q in resource group %q: %s",
+				b.config.SharedGalleryDestination.SigDestinationImageName,
+				b.config.SharedGalleryDestination.SigDestinationGalleryName,
+				b.config.SharedGalleryDestination.SigDestinationResourceGroup,
+				err)
 		}
 		// Check if a Image Version already exists for our target destination
 		galleryImageVersionId := galleryimageversions.NewImageVersionID(sigSubscriptionID, b.config.SharedGalleryDestination.SigDestinationResourceGroup, b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion)
