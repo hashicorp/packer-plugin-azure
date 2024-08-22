@@ -95,7 +95,7 @@
   can be used for decommissioning purposes.
 
 - `shared_image_gallery_replica_count` (int64) - The number of replicas of the Image Version to be created per region defined in `replication_regions`.
-  Users using `target_region` blocks can specify individual replica counts per region.
+  Users using `target_region` blocks can specify individual replica counts per region using the `replicas` field.
 
 - `shared_gallery_image_version_exclude_from_latest` (bool) - If set to true, Virtual Machines deployed from the latest version of the
   Image Definition won't use this Image Version.

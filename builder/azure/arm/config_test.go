@@ -1385,7 +1385,7 @@ func TestConfigShouldRejectSigVersionReplicaWithTargetRegion(t *testing.T) {
 		},
 	}
 	var c Config
-	expectedErrorMessage := "`shared_image_gallery_replica_count` can not be defined alongside `target_region`; you can specify the number of replicas per region within target_region blocks"
+	expectedErrorMessage := "shared_image_gallery_replica_count` can not be defined alongside `target_region`; you can define `replicas` inside each target_region block to set the number replicas for each region"
 	_, err := c.Prepare(config, getPackerConfiguration())
 	if err == nil {
 		t.Fatal("expected config to reject target_region block with shared_image_gallery_replica_count set")
