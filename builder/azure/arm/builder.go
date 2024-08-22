@@ -261,9 +261,16 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			for _, region := range b.config.SharedGalleryDestination.SigDestinationReplicationRegions {
 				region := normalizeAzureRegion(region)
 				if strings.EqualFold(region, buildLocation) {
-					// backwards compatibility DiskEncryptionSetId was set on the global config not on the target region.
-					// Users using target_region blocks are responsible for setting the DES within the block
-					normalizedRegions = append(normalizedRegions, TargetRegion{Name: region, DiskEncryptionSetId: b.config.DiskEncryptionSetId})
+					normalizedRegions = append(
+						normalizedRegions, TargetRegion{
+							Name: region,
+							// backwards compatibility DiskEncryptionSetId was set on the global config not on the target region.
+							// Users using target_region blocks are responsible for setting the DES within the block
+							DiskEncryptionSetId: b.config.DiskEncryptionSetId,
+
+							ReplicaCount: b.config.SharedGalleryImageVersionReplicaCount,
+						},
+					)
 					foundMandatoryReplicationRegion = true
 					continue
 				}
