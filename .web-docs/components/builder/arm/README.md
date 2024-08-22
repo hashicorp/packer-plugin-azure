@@ -236,7 +236,7 @@ Providing `temp_resource_group_name` or `location` in combination with
   can be used for decommissioning purposes.
 
 - `shared_image_gallery_replica_count` (int64) - The number of replicas of the Image Version to be created per region defined in `replication_regions`.
-  Users using `target_region` blocks can specify individual replica counts per region.
+  Users using `target_region` blocks can specify individual replica counts per region using the `replicas` field.
 
 - `shared_gallery_image_version_exclude_from_latest` (bool) - If set to true, Virtual Machines deployed from the latest version of the
   Image Definition won't use this Image Version.
@@ -695,6 +695,22 @@ The shared_image_gallery_destination block is available for publishing a new ima
 
 <!-- End of code generated from the comments of the SharedImageGalleryDestination struct in builder/azure/arm/config.go; -->
 
+
+### Target Regions
+
+The `target_regions` block is available inside the `shared_image_gallery_destination` block for setting replica regions and the replica community
+
+<!-- Code generated from the comments of the TargetRegion struct in builder/azure/arm/config.go; DO NOT EDIT MANUALLY -->
+
+- `disk_encryption_set_id` (string) - DiskEncryptionSetId for Disk Encryption Set in Region. Needed for supporting
+  the replication of encrypted disks across regions. CMKs must
+  already exist within the target regions.
+
+- `replicas` (int64) - The number of replicas of the Image Version to be created within the region. Defaults to 1.
+  Replica count must be between 1 and 100, but 50 replicas should be sufficient for most use cases.
+  When using shallow replication `use_shallow_replication=true` the value can only be 1 for the primary build region.
+
+<!-- End of code generated from the comments of the TargetRegion struct in builder/azure/arm/config.go; -->
 
 
 ### Spot

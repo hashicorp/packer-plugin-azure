@@ -264,7 +264,7 @@ type Config struct {
 	// can be used for decommissioning purposes.
 	SharedGalleryImageVersionEndOfLifeDate string `mapstructure:"shared_gallery_image_version_end_of_life_date" required:"false"`
 	// The number of replicas of the Image Version to be created per region defined in `replication_regions`.
-	// Users using `target_region` blocks can specify individual replica counts per region.
+	// Users using `target_region` blocks can specify individual replica counts per region using the `replicas` field.
 	SharedGalleryImageVersionReplicaCount int64 `mapstructure:"shared_image_gallery_replica_count" required:"false"`
 	// If set to true, Virtual Machines deployed from the latest version of the
 	// Image Definition won't use this Image Version.
@@ -1364,7 +1364,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 
 		if (len(c.SharedGalleryDestination.SigDestinationTargetRegions) > 0) && c.SharedGalleryImageVersionReplicaCount != 0 {
-			errs = packersdk.MultiErrorAppend(errs, errors.New("`shared_image_gallery_replica_count` can not be defined alongside `target_region`; you can specify the number of replicas per region within target_region blocks."))
+			errs = packersdk.MultiErrorAppend(errs, errors.New("`shared_image_gallery_replica_count` can not be defined alongside `target_region`; you can define `replicas` inside each target_region block to set the number replicas for each region"))
 		}
 
 		if c.SharedGalleryDestination.SigDestinationUseShallowReplicationMode {
