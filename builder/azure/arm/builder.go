@@ -59,7 +59,7 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	b.setTemplateParameters(b.stateBag)
 	b.setImageParameters(b.stateBag)
 
-	generatedDataKeys := []string{"SourceImageName"}
+	generatedDataKeys := []string{"SourceImageName", "TenantID", "SubscriptionID"}
 
 	return generatedDataKeys, warnings, nil
 }
@@ -436,7 +436,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		NewStepCaptureImage(azureClient, ui),
 		NewStepPublishToSharedImageGallery(azureClient, ui, &b.config),
 	)
-
+	steps = append([]multistep.Step{
+		&StepSetGeneratedData{
+			GeneratedData: generatedData,
+			Config:        &b.config,
+		},
+	}, steps...)
 	steps = append(steps, captureSteps...)
 
 	if b.config.PackerDebug {

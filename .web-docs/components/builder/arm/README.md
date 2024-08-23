@@ -737,6 +737,10 @@ The generated variables available for this builder are:
 shared images the resulting name will point to the actual source used to create the said version.
   building the AMI.
 
+- `SubscriptionID` - The ID of the Azure Subscription where the build takes place.  
+
+- `TenantID` - The ID of the Azure Tenant where the build takes place.
+
 Usage example:
 
 **HCL2**
@@ -761,6 +765,8 @@ post-processor "manifest" {
     strip_path = true
     custom_data = {
         source_image_name = "${build.SourceImageName}"
+	tenant_id = "${build.TenantID}"
+        subscription_id = "${build.SubscriptionID}"
     }
 }
 ```
@@ -773,7 +779,9 @@ post-processor "manifest" {
     "output": "manifest.json",
     "strip_path": true,
     "custom_data": {
-      "source_image_name": "{{ build `SourceImageName` }}"
+        "source_image_name": "{{ build `SourceImageName` }}",
+        "tenant_id": "{{ build `TenantID` }}",
+        "subscription_id": "{{ build `SubscriptionID` }}"
     }
   }
 ]
