@@ -390,10 +390,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			)
 		}
 		steps = append(steps,
-			&StepSetGeneratedData{
-				GeneratedData: generatedData,
-				Config:        &b.config,
-			},
 			NewStepValidateTemplate(azureClient, ui, &b.config, deploymentName, getVirtualMachineDeploymentFunction),
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, getVirtualMachineDeploymentFunction, VirtualMachineTemplate),
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),
@@ -440,7 +436,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		NewStepCaptureImage(azureClient, ui),
 		NewStepPublishToSharedImageGallery(azureClient, ui, &b.config),
 	)
-
+	steps = append([]multistep.Step{
+		&StepSetGeneratedData{
+			GeneratedData: generatedData,
+			Config:        &b.config,
+		},
+	}, steps...)
 	steps = append(steps, captureSteps...)
 
 	if b.config.PackerDebug {
