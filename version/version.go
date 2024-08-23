@@ -11,5 +11,5 @@ var (
 	Version            = "2.1.7"
 	VersionPrerelease  = ""
 	VersionMetadata    = ""
-	AzurePluginVersion = version.NewVersion(Version, VersionPrerelease, VersionMetadata)
+	AzurePluginVersion = version.NewPluginVersion(Version, VersionPrerelease, VersionMetadata)
 )
