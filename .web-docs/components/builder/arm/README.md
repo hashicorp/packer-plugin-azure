@@ -765,7 +765,7 @@ post-processor "manifest" {
     strip_path = true
     custom_data = {
         source_image_name = "${build.SourceImageName}"
-	      tenant_id = "${build.TenantID}"
+        tenant_id = "${build.TenantID}"
         subscription_id = "${build.SubscriptionID}"
     }
 }
