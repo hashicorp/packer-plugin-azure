@@ -1,0 +1,109 @@
+{
+  "builds": [
+    {
+      "name": "linux-sig",
+      "builder_type": "azure-arm",
+      "build_time": 1724367429,
+      "files": null,
+      "artifact_id": "/subscriptions/4712c895-8c02-49ab-b48c-9a3396eb6a78/resourceGroups/jennatest/providers/Microsoft.Compute/galleries/jenna_acctestgallery/images/jenna-arm-linux-specialized-sig/versions/1.0.0",
+      "packer_run_uuid": "1c316a83-3157-4f0c-9798-8ea95de5c7c0",
+      "custom_data": {
+        "source_image_name": "/subscriptions/4712c895-8c02-49ab-b48c-9a3396eb6a78/providers/Microsoft.Compute/locations/South Central US/publishers/canonical/ArtifactTypes/vmimage/offers/0001-com-ubuntu-server-jammy/skus/22_04-lts-arm64/versions/latest",
+        "subscription_id": "4712c895-8c02-49ab-b48c-9a3396eb6a78",
+        "tenant_id": "f5662df6-dc40-4331-bbd5-550bc91adef4"
+      }
+    },
+    {
+      "name": "azure-arm",
+      "builder_type": "azure-arm",
+      "build_time": 1724373507,
+      "files": null,
+      "artifact_id": "https://jennajenna.blob.core.windows.net/system/Microsoft.Compute/Images/containername/prefixname-osDisk.a97f8250-fcaf-4429-8183-5fe52029a19b.vhd",
+      "packer_run_uuid": "2a5eb8ec-3c6f-939d-7ec7-da9d2aec57fb",
+      "custom_data": {
+        "source_image_name": "/subscriptions/4712c895-8c02-49ab-b48c-9a3396eb6a78/providers/Microsoft.Compute/locations/South Central US/publishers/Canonical/ArtifactTypes/vmimage/offers/UbuntuServer/skus/16.04-LTS/versions/latest",
+        "subscription_id": "\u003cno value\u003e",
+        "tenant_id": "\u003cno value\u003e"
+      }
+    },
+    {
+      "name": "azure-arm",
+      "builder_type": "azure-arm",
+      "build_time": 1724373922,
+      "files": null,
+      "artifact_id": "https://jennajenna.blob.core.windows.net/system/Microsoft.Compute/Images/containername/prefixname-osDisk.2d1a01d2-b586-420b-90fc-9e409fecda0a.vhd",
+      "packer_run_uuid": "b760f9ce-b1af-e461-6545-abb2f671ed43",
+      "custom_data": {
+        "source_image_name": "/subscriptions/4712c895-8c02-49ab-b48c-9a3396eb6a78/providers/Microsoft.Compute/locations/South Central US/publishers/Canonical/ArtifactTypes/vmimage/offers/UbuntuServer/skus/16.04-LTS/versions/latest",
+        "subscription_id": "\u003cno value\u003e",
+        "tenant_id": "\u003cno value\u003e"
+      }
+    },
+    {
+      "name": "azure-arm",
+      "builder_type": "azure-arm",
+      "build_time": 1724374390,
+      "files": null,
+      "artifact_id": "https://jennajenna.blob.core.windows.net/system/Microsoft.Compute/Images/containername/prefixname-osDisk.bfc4cfa6-a644-484f-a447-d83044ca6ca5.vhd",
+      "packer_run_uuid": "dda01b3c-d506-7732-66aa-ccf2fa4024ab",
+      "custom_data": {
+        "source_image_name": "/subscriptions/4712c895-8c02-49ab-b48c-9a3396eb6a78/providers/Microsoft.Compute/locations/South Central US/publishers/Canonical/ArtifactTypes/vmimage/offers/UbuntuServer/skus/16.04-LTS/versions/latest",
+        "subscription_id": "4712c895-8c02-49ab-b48c-9a3396eb6a78",
+        "tenant_id": "f5662df6-dc40-4331-bbd5-550bc91adef4"
+      }
+    },
+    {
+      "name": "azure-arm",
+      "builder_type": "azure-arm",
+      "build_time": 1724374630,
+      "files": null,
+      "artifact_id": "https://jennajenna.blob.core.windows.net/system/Microsoft.Compute/Images/containername/prefixname-osDisk.194a6eb8-c711-4994-833f-b81625c5521b.vhd",
+      "packer_run_uuid": "58c2efba-31b1-db5e-20b8-179ab6d863de",
+      "custom_data": {
+        "source_image_name": "/subscriptions/4712c895-8c02-49ab-b48c-9a3396eb6a78/providers/Microsoft.Compute/locations/South Central US/publishers/Canonical/ArtifactTypes/vmimage/offers/UbuntuServer/skus/16.04-LTS/versions/latest",
+        "subscription_id": "4712c895-8c02-49ab-b48c-9a3396eb6a78",
+        "tenant_id": "f5662df6-dc40-4331-bbd5-550bc91adef4"
+      }
+    },
+    {
+      "name": "azure-arm",
+      "builder_type": "azure-arm",
+      "build_time": 1724375201,
+      "files": null,
+      "artifact_id": "https://jennajenna.blob.core.windows.net/system/Microsoft.Compute/Images/containername/prefixname-osDisk.600d161f-239a-42ce-a127-edbbceb78425.vhd",
+      "packer_run_uuid": "d3d7a26a-e17a-e434-90fd-0b7e1f3bf057",
+      "custom_data": {
+        "source_image_name": "/subscriptions/4712c895-8c02-49ab-b48c-9a3396eb6a78/providers/Microsoft.Compute/locations/South Central US/publishers/Canonical/ArtifactTypes/vmimage/offers/UbuntuServer/skus/16.04-LTS/versions/latest",
+        "subscription_id": "4712c895-8c02-49ab-b48c-9a3396eb6a78",
+        "tenant_id": "f5662df6-dc40-4331-bbd5-550bc91adef4"
+      }
+    },
+    {
+      "name": "azure-arm",
+      "builder_type": "azure-arm",
+      "build_time": 1724425162,
+      "files": null,
+      "artifact_id": "https://jennajenna.blob.core.windows.net/system/Microsoft.Compute/Images/containername/prefixname-osDisk.a4a1385c-7cfb-408e-b5e7-5caf6a729ea4.vhd",
+      "packer_run_uuid": "ae96871b-a17c-dae2-3c37-4312675ac6bc",
+      "custom_data": {
+        "source_image_name": "/subscriptions/4712c895-8c02-49ab-b48c-9a3396eb6a78/providers/Microsoft.Compute/locations/South Central US/publishers/Canonical/ArtifactTypes/vmimage/offers/UbuntuServer/skus/16.04-LTS/versions/latest",
+        "subscription_id": "4712c895-8c02-49ab-b48c-9a3396eb6a78",
+        "tenant_id": "f5662df6-dc40-4331-bbd5-550bc91adef4"
+      }
+    },
+    {
+      "name": "azure-arm",
+      "builder_type": "azure-arm",
+      "build_time": 1724425346,
+      "files": null,
+      "artifact_id": "https://jennajenna.blob.core.windows.net/system/Microsoft.Compute/Images/containername/prefixname-osDisk.fefa9d62-bfe5-4883-ab4e-a1d79a652444.vhd",
+      "packer_run_uuid": "092faf59-07b5-070e-eea9-3b3fedfadb43",
+      "custom_data": {
+        "source_image_name": "/subscriptions/4712c895-8c02-49ab-b48c-9a3396eb6a78/providers/Microsoft.Compute/locations/South Central US/publishers/Canonical/ArtifactTypes/vmimage/offers/UbuntuServer/skus/16.04-LTS/versions/latest",
+        "subscription_id": "4712c895-8c02-49ab-b48c-9a3396eb6a78",
+        "tenant_id": "f5662df6-dc40-4331-bbd5-550bc91adef4"
+      }
+    }
+  ],
+  "last_run_uuid": "092faf59-07b5-070e-eea9-3b3fedfadb43"
+}

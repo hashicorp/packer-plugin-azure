@@ -238,69 +238,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			}
 		}
 
-		buildLocation := normalizeAzureRegion(b.stateBag.Get(constants.ArmLocation).(string))
-		if len(b.config.SharedGalleryDestination.SigDestinationTargetRegions) > 0 {
-			normalizedRegions := make([]TargetRegion, 0, len(b.config.SharedGalleryDestination.SigDestinationTargetRegions))
-			for _, tr := range b.config.SharedGalleryDestination.SigDestinationTargetRegions {
-				tr.Name = normalizeAzureRegion(tr.Name)
-				normalizedRegions = append(normalizedRegions, tr)
-				if strings.EqualFold(tr.Name, buildLocation) && tr.ReplicaCount != 0 {
-					// By default the global replica count takes precedence so lets update it to use
-					// the define replica count from the target_region config for the build target_region.
-					b.config.SharedGalleryImageVersionReplicaCount = tr.ReplicaCount
-					b.stateBag.Put(constants.ArmManagedImageSharedGalleryImageVersionReplicaCount, tr.ReplicaCount)
-				}
-			}
-			b.config.SharedGalleryDestination.SigDestinationTargetRegions = normalizedRegions
-		}
-
-		// Convert deprecated replication_regions to []TargetRegion
-		if len(b.config.SharedGalleryDestination.SigDestinationReplicationRegions) > 0 {
-			var foundMandatoryReplicationRegion bool
-			normalizedRegions := make([]TargetRegion, 0, len(b.config.SharedGalleryDestination.SigDestinationReplicationRegions))
-			for _, region := range b.config.SharedGalleryDestination.SigDestinationReplicationRegions {
-				region := normalizeAzureRegion(region)
-				if strings.EqualFold(region, buildLocation) {
-					normalizedRegions = append(
-						normalizedRegions, TargetRegion{
-							Name: region,
-							// backwards compatibility DiskEncryptionSetId was set on the global config not on the target region.
-							// Users using target_region blocks are responsible for setting the DES within the block
-							DiskEncryptionSetId: b.config.DiskEncryptionSetId,
-
-							ReplicaCount: b.config.SharedGalleryImageVersionReplicaCount,
-						},
-					)
-					foundMandatoryReplicationRegion = true
-					continue
-				}
-				normalizedRegions = append(normalizedRegions, TargetRegion{Name: region, ReplicaCount: b.config.SharedGalleryImageVersionReplicaCount})
-			}
-			// SIG requires that replication regions include the region in which the created image version resides
-			if foundMandatoryReplicationRegion == false {
-				normalizedRegions = append(normalizedRegions, TargetRegion{
-					Name:                buildLocation,
-					DiskEncryptionSetId: b.config.DiskEncryptionSetId,
-					ReplicaCount:        b.config.SharedGalleryImageVersionReplicaCount,
-				})
-			}
-			b.config.SharedGalleryDestination.SigDestinationTargetRegions = normalizedRegions
-		}
-
-		if len(b.config.SharedGalleryDestination.SigDestinationTargetRegions) == 0 {
-			buildLocation := normalizeAzureRegion(b.stateBag.Get(constants.ArmLocation).(string))
-			b.config.SharedGalleryDestination.SigDestinationTargetRegions = []TargetRegion{
-				{
-					Name:                buildLocation,
-					DiskEncryptionSetId: b.config.DiskEncryptionSetId,
-					//Default region replica count is set at the Gallery Level
-					ReplicaCount: b.config.SharedGalleryImageVersionReplicaCount,
-				},
-			}
-		}
-
 		b.stateBag.Put(constants.ArmManagedImageSharedGalleryImageVersionReplicaCount, b.config.SharedGalleryImageVersionReplicaCount)
-		b.stateBag.Put(constants.ArmSharedImageGalleryDestinationTargetRegions, b.config.SharedGalleryDestination.SigDestinationTargetRegions)
 	}
 
 	sourceImageSpecialized := false

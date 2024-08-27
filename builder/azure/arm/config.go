@@ -1363,10 +1363,6 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 			errs = packersdk.MultiErrorAppend(errs, errors.New("`replicated_regions` can not be defined alongside `target_region`; you can define a target_region for each destination region you wish to replicate to."))
 		}
 
-		if (len(c.SharedGalleryDestination.SigDestinationTargetRegions) > 0) && c.SharedGalleryImageVersionReplicaCount != 0 {
-			errs = packersdk.MultiErrorAppend(errs, errors.New("`shared_image_gallery_replica_count` can not be defined alongside `target_region`; you can define `replicas` inside each target_region block to set the number replicas for each region"))
-		}
-
 		if c.SharedGalleryDestination.SigDestinationUseShallowReplicationMode {
 			if err := c.SharedGalleryDestination.ValidateShallowReplicationRegion(); err != nil {
 				errs = packersdk.MultiErrorAppend(errs, err)
