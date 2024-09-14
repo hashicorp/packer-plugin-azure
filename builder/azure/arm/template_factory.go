@@ -21,7 +21,7 @@ import (
 type templateFactoryFunc func(*Config) (*deployments.Deployment, error)
 
 func GetCommunicatorSpecificKeyVaultDeployment(config *Config) (*deployments.Deployment, error) {
-	if config.Comm.Type == "ssh" {
+	if config.Comm.Type != "winrm" {
 		privateKey, err := ssh.ParseRawPrivateKey(config.Comm.SSHPrivateKey)
 		if err != nil {
 			return nil, err
