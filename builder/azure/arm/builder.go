@@ -225,7 +225,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		_, err := azureClient.GalleryImageVersionsClient.Get(builderPollingContext, galleryImageVersionId, galleryimageversions.DefaultGetOperationOptions())
 		if err == nil {
 			if b.config.PackerForce {
-				ui.Say(fmt.Sprintf("a gallery image version for image name:version %s:%s already exists in gallery %s, but deleting it due to -force flag", b.config.SharedGalleryDestination.SigDestinationGalleryName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationImageName))
+				ui.Say(fmt.Sprintf("a gallery image version for image name:version %s:%s already exists in gallery %s, but deleting it due to -force flag", b.config.SharedGalleryDestination.SigDestinationImageName, b.config.SharedGalleryDestination.SigDestinationImageVersion, b.config.SharedGalleryDestination.SigDestinationGalleryName))
 				deleteImageContext, cancel := context.WithTimeout(ctx, azureClient.PollingDuration)
 				defer cancel()
 				err := azureClient.GalleryImageVersionsClient.DeleteThenPoll(deleteImageContext, galleryImageVersionId)
