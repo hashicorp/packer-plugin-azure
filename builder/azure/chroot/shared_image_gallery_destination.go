@@ -21,7 +21,7 @@ type SharedImageGalleryDestination struct {
 
 	TargetRegions         []TargetRegion `mapstructure:"target_regions"`
 	ExcludeFromLatest     bool           `mapstructure:"exclude_from_latest"`
-	ExcludeFromLatestTypo bool           `mapstructure:"exlude_from_latest" undocumented:"true"`
+	ExcludeFromLatestTypo bool           `mapstructure:"exclude_from_latest" undocumented:"true"`
 }
 
 // TargetRegion describes a region where the shared image should be replicated
@@ -67,7 +67,7 @@ func (sigd *SharedImageGalleryDestination) Validate(prefix string) (errs []error
 	}
 	if sigd.ExcludeFromLatestTypo == true && sigd.ExcludeFromLatest == false {
 		warns = append(warns,
-			fmt.Sprintf("%s.exlude_from_latest is being deprecated, please use exclude_from_latest", prefix))
+			fmt.Sprintf("%s.exclude_from_latest is being deprecated, please use exclude_from_latest", prefix))
 		sigd.ExcludeFromLatest = sigd.ExcludeFromLatestTypo
 	}
 	return

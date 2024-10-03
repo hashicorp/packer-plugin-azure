@@ -5,9 +5,9 @@ package arm
 
 // Below are the requirements for running the acceptance tests for the Packer Azure plugin ARM Builder
 //
-// * An Azure subscription, with a resource group, app registration based credentails and a few image galleries
+// * An Azure subscription, with a resource group, app registration based credentials and a few image galleries
 // You can use the Terraform config in the terraform folder at the base of the repository
-// It is reccomended to set the required environment variables and then run the acceptance_test_setup.sh script in the terraform directory
+// It is recommended to set the required environment variables and then run the acceptance_test_setup.sh script in the terraform directory
 //
 // * The Azure CLI installed and logged in for testing CLI based authentication
 // * Env Variables for Auth
@@ -328,7 +328,7 @@ func deleteGalleryVersions(t *testing.T, subscriptionID string, resourceGroupNam
 	}
 }
 
-// TODO Move these templates to seperate files inside the testdata directory rather than defined strings here
+// TODO Move these templates to separate files inside the testdata directory rather than defined strings here
 func testBuilderUserDataLinux(userdata string) string {
 	return fmt.Sprintf(`
 {

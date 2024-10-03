@@ -53,7 +53,7 @@ func (da *diskAttacher) DetachDisk(ctx context.Context, diskID string) error {
 	for _, disk := range currentDisks {
 		if disk.ManagedDisk != nil {
 			if disk.ManagedDisk.Id == nil {
-				log.Println("DetatchDisks failure: Azure Client returned a disk without an ID")
+				log.Println("DetachDisks failure: Azure Client returned a disk without an ID")
 				return AzureAPIDiskError
 			}
 			if !strings.EqualFold(*disk.ManagedDisk.Id, diskID) {
