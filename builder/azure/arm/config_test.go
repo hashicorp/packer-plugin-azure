@@ -1084,7 +1084,7 @@ func TestConfigZoneResilientShouldDefaultToFalse(t *testing.T) {
 		"managed_image_name":                "ignore",
 		"managed_image_resource_group_name": "ignore",
 		"build_resource_group_name":         "ignore",
-		"image_publisher":                   "igore",
+		"image_publisher":                   "ignore",
 		"image_offer":                       "ignore",
 		"image_sku":                         "ignore",
 		"os_type":                           "linux",
@@ -1107,7 +1107,7 @@ func TestConfigZoneResilientSetFromConfig(t *testing.T) {
 		"managed_image_name":                "ignore",
 		"managed_image_resource_group_name": "ignore",
 		"build_resource_group_name":         "ignore",
-		"image_publisher":                   "igore",
+		"image_publisher":                   "ignore",
 		"image_offer":                       "ignore",
 		"image_sku":                         "ignore",
 		"os_type":                           "linux",
@@ -3085,7 +3085,7 @@ func TestConfigShouldRejectCVMSourceToBuildManagedImage(t *testing.T) {
 }
 
 func TestConfigShouldRejectNonMatchingSecurityType(t *testing.T) {
-	invaidSecurityType := "ignore"
+	invalidSecurityType := "ignore"
 	config := map[string]interface{}{
 		"image_offer":                       "ignore",
 		"image_publisher":                   "ignore",
@@ -3094,14 +3094,14 @@ func TestConfigShouldRejectNonMatchingSecurityType(t *testing.T) {
 		"subscription_id":                   "ignore",
 		"communicator":                      "none",
 		"managed_image_name":                "ignore",
-		"managed_image_resource_group_name": invaidSecurityType,
+		"managed_image_resource_group_name": invalidSecurityType,
 		"os_type":                           constants.Target_Linux, // Does not matter for this test case, just pick one.
 		"security_type":                     "ignore",
 	}
 
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
-	errorMessage := fmt.Sprintf(`The security_type "%s" must match either "TrustedLaunch" or "ConfidentialVM".`, invaidSecurityType)
+	errorMessage := fmt.Sprintf(`The security_type "%s" must match either "TrustedLaunch" or "ConfidentialVM".`, invalidSecurityType)
 	if err == nil {
 		t.Fatalf("expected config to reject with the following error: %q",
 			errorMessage,

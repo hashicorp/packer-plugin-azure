@@ -13,7 +13,7 @@ package dtl
 // Your resource group should be the South Central US region
 // This test also requires a DTL (Dev Test Lab) named `(ARM_RESOURCE_PREFIX)-packer_acceptance_test`
 // This can be created using the terraform config in the `terraform` folder at the root of this repo
-// It is reccomended to set the required environment variables and then run the acceptance_test_setup.sh script in the terraform directory
+// It is recommended to set the required environment variables and then run the acceptance_test_setup.sh script in the terraform directory
 // In addition, the PACKER_ACC variable should also be set to
 // a non-empty value to enable Packer acceptance tests and the
 // options "-v -timeout 90m" should be provided to the test

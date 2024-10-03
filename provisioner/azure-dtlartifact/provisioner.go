@@ -178,7 +178,7 @@ func (p *Provisioner) Provision(ctx context.Context, ui packersdk.Ui, comm packe
 		}
 	}
 
-	dtlApplyArifactRequest := virtualmachines.ApplyArtifactsRequest{
+	dtlApplyArtifactRequest := virtualmachines.ApplyArtifactsRequest{
 		Artifacts: &dtlArtifacts,
 	}
 
@@ -187,7 +187,7 @@ func (p *Provisioner) Provision(ctx context.Context, ui packersdk.Ui, comm packe
 	pollingContext, cancel := context.WithTimeout(ctx, azureClient.PollingDuration)
 	defer cancel()
 	vmResourceId := virtualmachines.NewVirtualMachineID(p.config.ClientConfig.SubscriptionID, p.config.ResourceGroupName, p.config.LabName, p.config.VMName)
-	err = azureClient.DtlMetaClient.VirtualMachines.ApplyArtifactsThenPoll(pollingContext, vmResourceId, dtlApplyArifactRequest)
+	err = azureClient.DtlMetaClient.VirtualMachines.ApplyArtifactsThenPoll(pollingContext, vmResourceId, dtlApplyArtifactRequest)
 
 	if err != nil {
 		ui.Say(fmt.Sprintf("Error Applying artifact: %s", err))

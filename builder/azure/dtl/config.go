@@ -395,8 +395,8 @@ func (c *Config) createCertificate() (string, string, error) {
 		return "", "", err
 	}
 
-	certifcatePassowrd := base64.StdEncoding.EncodeToString([]byte(c.tmpCertificatePassword))
-	return base64.StdEncoding.EncodeToString(bytes), certifcatePassowrd, nil
+	certifcatePassword := base64.StdEncoding.EncodeToString([]byte(c.tmpCertificatePassword))
+	return base64.StdEncoding.EncodeToString(bytes), certifcatePassword, nil
 }
 
 func (c *Config) Prepare(raws ...interface{}) ([]string, error) {

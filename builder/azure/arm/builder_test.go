@@ -39,7 +39,7 @@ func TestStateBagShouldBePopulatedExpectedValues(t *testing.T) {
 	}
 }
 
-func TestStateBagShouldPoluateExpectedTags(t *testing.T) {
+func TestStateBagShouldPopulateExpectedTags(t *testing.T) {
 	var testSubject Builder
 
 	expectedTags := map[string]string{
