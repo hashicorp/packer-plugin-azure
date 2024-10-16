@@ -71,7 +71,7 @@ func TestSharedImageGalleryDestination_Validate(t *testing.T) {
 			wantWarns: []string{"sigdest.target_regions is empty; image will only be available in the region of the gallery"},
 		},
 		{
-			name: "warn if using exclude_from_latest",
+			name: "warn if using exlude_from_latest",
 			fields: fields{
 				ResourceGroup: "ResourceGroup",
 				GalleryName:   "GalleryName",
@@ -91,7 +91,7 @@ func TestSharedImageGalleryDestination_Validate(t *testing.T) {
 				},
 				ExcludeFromLatestTypo: true,
 			},
-			wantWarns: []string{"sigdest.exclude_from_latest is being deprecated, please use exclude_from_latest"},
+			wantWarns: []string{"sigdest.exlude_from_latest is being deprecated, please use exclude_from_latest"},
 		},
 		{
 			name: "version format",

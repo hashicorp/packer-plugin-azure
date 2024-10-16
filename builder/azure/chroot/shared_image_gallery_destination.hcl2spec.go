@@ -16,7 +16,7 @@ type FlatSharedImageGalleryDestination struct {
 	ImageVersion          *string            `mapstructure:"image_version" required:"true" cty:"image_version" hcl:"image_version"`
 	TargetRegions         []FlatTargetRegion `mapstructure:"target_regions" cty:"target_regions" hcl:"target_regions"`
 	ExcludeFromLatest     *bool              `mapstructure:"exclude_from_latest" cty:"exclude_from_latest" hcl:"exclude_from_latest"`
-	ExcludeFromLatestTypo *bool              `mapstructure:"exclude_from_latest" undocumented:"true" cty:"exclude_from_latest" hcl:"exclude_from_latest"`
+	ExcludeFromLatestTypo *bool              `mapstructure:"exlude_from_latest" undocumented:"true" cty:"exlude_from_latest" hcl:"exlude_from_latest"`
 }
 
 // FlatMapstructure returns a new FlatSharedImageGalleryDestination.
@@ -37,7 +37,7 @@ func (*FlatSharedImageGalleryDestination) HCL2Spec() map[string]hcldec.Spec {
 		"image_version":       &hcldec.AttrSpec{Name: "image_version", Type: cty.String, Required: false},
 		"target_regions":      &hcldec.BlockListSpec{TypeName: "target_regions", Nested: hcldec.ObjectSpec((*FlatTargetRegion)(nil).HCL2Spec())},
 		"exclude_from_latest": &hcldec.AttrSpec{Name: "exclude_from_latest", Type: cty.Bool, Required: false},
-		"exclude_from_latest":  &hcldec.AttrSpec{Name: "exclude_from_latest", Type: cty.Bool, Required: false},
+		"exlude_from_latest":  &hcldec.AttrSpec{Name: "exlude_from_latest", Type: cty.Bool, Required: false},
 	}
 	return s
 }
