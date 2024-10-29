@@ -95,7 +95,7 @@ func (s *TemplateBuilder) BuildWindows(communicatorType string, keyVaultName str
 			VaultCertificates: &[]hashiVMSDK.VaultCertificate{
 				{
 					CertificateStore: &certifacteStore,
-					CertificateUrl:   &certificateUrl,
+					CertificateURL:   &certificateUrl,
 				},
 			},
 		},
@@ -121,7 +121,7 @@ func (s *TemplateBuilder) BuildWindows(communicatorType string, keyVaultName str
 				Listeners: &[]hashiVMSDK.WinRMListener{
 					{
 						Protocol:       &protocol,
-						CertificateUrl: common.StringPtr(certificateUrl),
+						CertificateURL: common.StringPtr(certificateUrl),
 					},
 				},
 			},
