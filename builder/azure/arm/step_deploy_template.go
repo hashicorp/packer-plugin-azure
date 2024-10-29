@@ -37,22 +37,22 @@ const (
 )
 
 type StepDeployTemplate struct {
-	client                   *AzureClient
-	deploy                   func(ctx context.Context, subscriptionId string, resourceGroupName string, deploymentName string) error
-	deleteDetatchedResources func(ctx context.Context, subscriptionId string, resourceGroupName string, resources map[string]string)
-	getDisk                  func(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (string, string, error)
-	deleteDisk               func(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool, subscriptionId string, storageAccountName string) error
-	deleteVM                 func(ctx context.Context, virtualMachineId virtualmachines.VirtualMachineId) error
-	deleteNic                func(ctx context.Context, networkInterfacesId commonids.NetworkInterfaceId) error
-	deleteDeployment         func(ctx context.Context, state multistep.StateBag) error
-	deleteKV                 func(ctx context.Context, id commonids.KeyVaultId) error
-	listDeploymentOps        func(ctx context.Context, id deploymentoperations.ResourceGroupDeploymentId) ([]deploymentoperations.DeploymentOperation, error)
-	say                      func(message string)
-	error                    func(e error)
-	config                   *Config
-	factory                  templateFactoryFunc
-	name                     string
-	templateType             DeploymentTemplateType
+	client                  *AzureClient
+	deploy                  func(ctx context.Context, subscriptionId string, resourceGroupName string, deploymentName string) error
+	deleteDetachedResources func(ctx context.Context, subscriptionId string, resourceGroupName string, resources map[string]string)
+	getDisk                 func(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (string, string, error)
+	deleteDisk              func(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool, subscriptionId string, storageAccountName string) error
+	deleteVM                func(ctx context.Context, virtualMachineId virtualmachines.VirtualMachineId) error
+	deleteNic               func(ctx context.Context, networkInterfacesId commonids.NetworkInterfaceId) error
+	deleteDeployment        func(ctx context.Context, state multistep.StateBag) error
+	deleteKV                func(ctx context.Context, id commonids.KeyVaultId) error
+	listDeploymentOps       func(ctx context.Context, id deploymentoperations.ResourceGroupDeploymentId) ([]deploymentoperations.DeploymentOperation, error)
+	say                     func(message string)
+	error                   func(e error)
+	config                  *Config
+	factory                 templateFactoryFunc
+	name                    string
+	templateType            DeploymentTemplateType
 }
 
 func NewStepDeployTemplate(client *AzureClient, ui packersdk.Ui, config *Config, deploymentName string, factory templateFactoryFunc, templateType DeploymentTemplateType) *StepDeployTemplate {
@@ -69,7 +69,7 @@ func NewStepDeployTemplate(client *AzureClient, ui packersdk.Ui, config *Config,
 	step.deploy = step.deployTemplate
 	step.getDisk = step.getImageDetails
 	step.deleteDisk = step.deleteImage
-	step.deleteDetatchedResources = step.deleteDetatchedResourcesWithQueue
+	step.deleteDetachedResources = step.deleteDetachedResourcesWithQueue
 	step.deleteDeployment = step.deleteDeploymentObject
 	step.deleteNic = step.deleteNetworkInterface
 	step.deleteVM = step.deleteVirtualMachine
@@ -156,7 +156,7 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 
 	deploymentOperations, err := s.listDeploymentOps(ctx, deploymentOpsId)
 	if err != nil {
-		ui.Error(fmt.Sprintf("Could not retrieve deployment operations: %s\n Virtual Machine %s, and its please manually delete it and its ascoiated resources", err, computeName))
+		ui.Error(fmt.Sprintf("Could not retrieve deployment operations: %s\n Virtual Machine %s, and its please manually delete it and its associated resources", err, computeName))
 		return
 	}
 	resources := map[string]string{}
@@ -197,7 +197,7 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 			return
 		}
 	}
-	s.deleteDetatchedResources(ctx, subscriptionId, resourceGroupName, resources)
+	s.deleteDetachedResources(ctx, subscriptionId, resourceGroupName, resources)
 	// The disk was not found on the VM, this is an error.
 	if imageType == "" && imageName == "" {
 		ui.Error(fmt.Sprintf("Failed to find temporary OS disk on VM.  Please delete manually.\n\n"+
@@ -394,7 +394,7 @@ func (s *StepDeployTemplate) listDeploymentOperations(ctx context.Context, id de
 
 // This function is called to delete the resources remaining in the deployment after we delete the Virtual Machine and the deleteNic
 // These resources before the VM and the NIC results in errors
-func (s *StepDeployTemplate) deleteDetatchedResourcesWithQueue(ctx context.Context, subscriptionId string, resourceGroupName string, resources map[string]string) {
+func (s *StepDeployTemplate) deleteDetachedResourcesWithQueue(ctx context.Context, subscriptionId string, resourceGroupName string, resources map[string]string) {
 	var wg sync.WaitGroup
 	wg.Add(len(resources))
 

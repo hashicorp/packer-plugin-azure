@@ -112,7 +112,7 @@ const (
 const DefaultCloudEnvironmentName = "Public"
 
 // CloudEnvironmentName is deprecated in favor of MetadataHost. This is retained
-// for now to preserve backward compatability, but should eventually be removed.
+// for now to preserve backward compatibility, but should eventually be removed.
 func (c *Config) SetDefaultValues() error {
 	if c.CloudEnvironmentName == "" {
 		c.CloudEnvironmentName = DefaultCloudEnvironmentName

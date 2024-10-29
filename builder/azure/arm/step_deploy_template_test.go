@@ -229,7 +229,7 @@ func TestStepDeployTemplateCleanupShouldDeleteVirtualMachineAndNetworkResourcesI
 	testSubject.listDeploymentOps = func(ctx context.Context, id deploymentoperations.ResourceGroupDeploymentId) ([]deploymentoperations.DeploymentOperation, error) {
 		return virtualMachineWithNetworkingDeploymentOperations(), nil
 	}
-	testSubject.deleteDetatchedResources = func(ctx context.Context, subscriptionId, resourceGroupName string, resources map[string]string) {
+	testSubject.deleteDetachedResources = func(ctx context.Context, subscriptionId, resourceGroupName string, resources map[string]string) {
 		if mockTrackers.vmDeleteCalled == nil || *mockTrackers.vmDeleteCalled == false {
 			t.Fatal("deleteNetworkResources called before deleting VM, this will lead to deletion conflicts")
 		}
@@ -393,7 +393,7 @@ func createTestStepDeployTemplateDeleteOSImage(t *testing.T, trackers *mockTrack
 			trackers.deleteNicCalled = common.BoolPtr(true)
 			return nil
 		},
-		deleteDetatchedResources: func(ctx context.Context, subscriptionId string, resourceGroupName string, resources map[string]string) {
+		deleteDetachedResources: func(ctx context.Context, subscriptionId string, resourceGroupName string, resources map[string]string) {
 			if len(resources) != 0 {
 				trackers.actualNetworkResources = &resources
 			}
