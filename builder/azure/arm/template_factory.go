@@ -331,7 +331,8 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 		}
 	}
 
-	if config.PublicIpSKU == "Standard" {
+	// Standard is the default, basic will no longer be supported in the future
+	if config.PublicIpSKU != "Basic" {
 		err = builder.SetPublicIPSKU("Standard", "Regional")
 		if err != nil {
 			return nil, err
