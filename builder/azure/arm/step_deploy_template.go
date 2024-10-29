@@ -37,22 +37,22 @@ const (
 )
 
 type StepDeployTemplate struct {
-	client                   *AzureClient
-	deploy                   func(ctx context.Context, subscriptionId string, resourceGroupName string, deploymentName string) error
+	client                  *AzureClient
+	deploy                  func(ctx context.Context, subscriptionId string, resourceGroupName string, deploymentName string) error
 	deleteDetachedResources func(ctx context.Context, subscriptionId string, resourceGroupName string, resources map[string]string)
-	getDisk                  func(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (string, string, error)
-	deleteDisk               func(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool, subscriptionId string, storageAccountName string) error
-	deleteVM                 func(ctx context.Context, virtualMachineId virtualmachines.VirtualMachineId) error
-	deleteNic                func(ctx context.Context, networkInterfacesId commonids.NetworkInterfaceId) error
-	deleteDeployment         func(ctx context.Context, state multistep.StateBag) error
-	deleteKV                 func(ctx context.Context, id commonids.KeyVaultId) error
-	listDeploymentOps        func(ctx context.Context, id deploymentoperations.ResourceGroupDeploymentId) ([]deploymentoperations.DeploymentOperation, error)
-	say                      func(message string)
-	error                    func(e error)
-	config                   *Config
-	factory                  templateFactoryFunc
-	name                     string
-	templateType             DeploymentTemplateType
+	getDisk                 func(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (string, string, error)
+	deleteDisk              func(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool, subscriptionId string, storageAccountName string) error
+	deleteVM                func(ctx context.Context, virtualMachineId virtualmachines.VirtualMachineId) error
+	deleteNic               func(ctx context.Context, networkInterfacesId commonids.NetworkInterfaceId) error
+	deleteDeployment        func(ctx context.Context, state multistep.StateBag) error
+	deleteKV                func(ctx context.Context, id commonids.KeyVaultId) error
+	listDeploymentOps       func(ctx context.Context, id deploymentoperations.ResourceGroupDeploymentId) ([]deploymentoperations.DeploymentOperation, error)
+	say                     func(message string)
+	error                   func(e error)
+	config                  *Config
+	factory                 templateFactoryFunc
+	name                    string
+	templateType            DeploymentTemplateType
 }
 
 func NewStepDeployTemplate(client *AzureClient, ui packersdk.Ui, config *Config, deploymentName string, factory templateFactoryFunc, templateType DeploymentTemplateType) *StepDeployTemplate {
