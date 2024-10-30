@@ -56,6 +56,10 @@
         },
         "publicIPAllocationMethod": "[variables('publicIPAddressType')]"
       },
+      "sku": {
+        "name": "Standard",
+        "tier": "Regional"
+      },
       "type": "Microsoft.Network/publicIPAddresses"
     },
     {
@@ -235,7 +239,7 @@
     "computeApiVersion": "2023-03-01",
     "location": "[resourceGroup().location]",
     "networkApiVersion": "2023-04-01",
-    "publicIPAddressType": "Dynamic",
+    "publicIPAddressType": "Static",
     "sshKeyPath": "[concat('/home/',parameters('adminUsername'),'/.ssh/authorized_keys')]",
     "subnetAddressPrefix": "10.0.0.0/24",
     "subnetName": "[parameters('subnetName')]",

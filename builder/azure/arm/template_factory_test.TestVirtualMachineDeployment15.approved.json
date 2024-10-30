@@ -56,28 +56,11 @@
         },
         "publicIPAllocationMethod": "[variables('publicIPAddressType')]"
       },
-      "type": "Microsoft.Network/publicIPAddresses"
-    },
-    {
-      "apiVersion": "[variables('networkApiVersion')]",
-      "location": "[variables('location')]",
-      "name": "[variables('virtualNetworkName')]",
-      "properties": {
-        "addressSpace": {
-          "addressPrefixes": [
-            "[variables('addressPrefix')]"
-          ]
-        },
-        "subnets": [
-          {
-            "name": "[variables('subnetName')]",
-            "properties": {
-              "addressPrefix": "[variables('subnetAddressPrefix')]"
-            }
-          }
-        ]
+      "sku": {
+        "name": "Standard",
+        "tier": "Regional"
       },
-      "type": "Microsoft.Network/virtualNetworks"
+      "type": "Microsoft.Network/publicIPAddresses"
     },
     {
       "apiVersion": "[variables('networkApiVersion')]",
@@ -185,6 +168,57 @@
         "typeHandlerVersion": "1.10"
       },
       "type": "Microsoft.Compute/virtualMachines/extensions"
+    },
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "location": "[variables('location')]",
+      "name": "[parameters('nsgName')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "AllowIPsToSshWinRMInbound",
+            "properties": {
+              "access": "Allow",
+              "description": "Allow inbound traffic from specified IP addresses",
+              "destinationAddressPrefix": "VirtualNetwork",
+              "destinationPortRange": "0",
+              "direction": "Inbound",
+              "priority": 100,
+              "protocol": "Tcp",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*"
+            }
+          }
+        ]
+      },
+      "type": "Microsoft.Network/networkSecurityGroups"
+    },
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkSecurityGroups/', parameters('nsgName'))]"
+      ],
+      "location": "[variables('location')]",
+      "name": "[variables('virtualNetworkName')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('addressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('subnetAddressPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('nsgName'))]"
+              }
+            }
+          }
+        ]
+      },
+      "type": "Microsoft.Network/virtualNetworks"
     }
   ],
   "variables": {
@@ -192,7 +226,7 @@
     "computeApiVersion": "2023-03-01",
     "location": "[resourceGroup().location]",
     "networkApiVersion": "2023-04-01",
-    "publicIPAddressType": "Dynamic",
+    "publicIPAddressType": "Static",
     "sshKeyPath": "[concat('/home/',parameters('adminUsername'),'/.ssh/authorized_keys')]",
     "subnetAddressPrefix": "10.0.0.0/24",
     "subnetName": "[parameters('subnetName')]",

@@ -637,8 +637,8 @@ type Config struct {
 	EncryptionAtHost *bool `mapstructure:"encryption_at_host" required:"false"`
 
 	// Specify the Public IP Address SKU for the public IP used to connect to the build Virtual machine.
-	// Valid values are `Basic` and `Standard`. The default value is `Basic`.
-	// On 31 March 2025 Azure will remove the ability to create `Basic` SKU public IPs, before then the plugin will be updated to create a Standard public IP by default
+	// Valid values are `Basic` and `Standard`. The default value is `Standard`.
+	// On 31 March 2025 Azure will remove the ability to create `Basic` SKU public IPs, we reccomend upgrading as soon as possible
 	// You can learn more about public IP SKUs [here](https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/public-ip-addresses#sku)
 	PublicIpSKU string `mapstructure:"public_ip_sku" required:"false"`
 
