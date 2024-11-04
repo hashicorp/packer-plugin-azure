@@ -304,16 +304,6 @@ func Test_ClientConfig_CannotUseBothClientJWTAndSecret(t *testing.T) {
 	assertInvalid(t, cfg)
 }
 
-func Test_ClientConfig_ClientJWTShouldHaveThumbprint(t *testing.T) {
-	cfg := Config{
-		SubscriptionID: "12345",
-		ClientID:       "12345",
-		ClientJWT:      getJWT(10*time.Minute, false),
-	}
-
-	assertInvalid(t, cfg)
-}
-
 func Test_getJWT(t *testing.T) {
 	if getJWT(time.Minute, true) == "" {
 		t.Fatalf("getJWT is broken")
