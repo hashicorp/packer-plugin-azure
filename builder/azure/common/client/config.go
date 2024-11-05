@@ -211,15 +211,10 @@ func (c Config) Validate(errs *packersdk.MultiError) {
 		c.ClientJWT != "" {
 		p := jwt.Parser{}
 		claims := jwt.StandardClaims{}
-		token, _, err := p.ParseUnverified(c.ClientJWT, &claims)
+		_, _, err := p.ParseUnverified(c.ClientJWT, &claims)
 		if err != nil {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("client_jwt is not a JWT: %v", err))
-		} else {
-			if t, ok := token.Header["x5t"]; !ok || t == "" {
-				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("client_jwt is missing the x5t header value, which is required for bearer JWT client authentication to Azure"))
-			}
 		}
-
 		return
 	}
 
