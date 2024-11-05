@@ -730,9 +730,9 @@ func TestPlanInfo02(t *testing.T) {
 
 }
 
-func TestStandardSkuPublicIPVMDeployment(t *testing.T) {
+func TestBasicSkuPublicIPVMDeployment(t *testing.T) {
 	m := getArmBuilderConfiguration()
-	m["public_ip_sku"] = "Standard"
+	m["public_ip_sku"] = "basic"
 
 	var c Config
 	_, err := c.Prepare(m, getPackerConfiguration(), getPackerSSHPasswordCommunicatorConfiguration())
