@@ -151,6 +151,13 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 		if err != nil {
 			return nil, err
 		}
+		patchMode := hashiVMSDK.WindowsVMGuestPatchModeAutomaticByPlatform
+
+		err = builder.SetWindowsPatchMode(&patchMode)
+		if err != nil {
+			return nil, err
+		}
+
 	}
 
 	if len(config.UserAssignedManagedIdentities) != 0 {

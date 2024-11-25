@@ -595,6 +595,23 @@ func (s *TemplateBuilder) SetPublicIpAllocationMethod(allocationMethod string) {
 	s.setVariable("publicIPAddressType", allocationMethod)
 }
 
+func (s *TemplateBuilder) SetWindowsPatchMode(patchMode *hashiVMSDK.WindowsVMGuestPatchMode) error {
+	resource, err := s.getResourceByType(resourceVirtualMachine)
+	if err != nil {
+		return err
+	}
+	if resource.Properties.OsProfile == nil {
+		panic(":(")
+	}
+	if resource.Properties.OsProfile.WindowsConfiguration == nil {
+		return fmt.Errorf("aaa")
+	}
+	resource.Properties.OsProfile.WindowsConfiguration.EnableAutomaticUpdates = common.BoolPtr(true)
+	resource.Properties.OsProfile.WindowsConfiguration.PatchSettings = &hashiVMSDK.PatchSettings{
+		PatchMode: patchMode,
+	}
+	return nil
+}
 func (s *TemplateBuilder) ClearOsProfile() error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
