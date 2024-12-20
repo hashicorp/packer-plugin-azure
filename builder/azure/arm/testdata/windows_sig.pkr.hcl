@@ -31,7 +31,7 @@ source "azure-arm" "windows-sig" {
   os_type         = "Windows"
   image_publisher = "MicrosoftWindowsServer"
   image_offer     = "WindowsServer"
-  image_sku       = "2012-R2-Datacenter"
+  image_sku       = "2022-datacenter"
 
   location = "South Central US"
   vm_size  = "Standard_DS2_v2"
