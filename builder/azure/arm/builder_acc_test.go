@@ -390,7 +390,7 @@ const testBuilderAccManagedDiskWindows = `
 	  "os_type": "Windows",
 	  "image_publisher": "MicrosoftWindowsServer",
 	  "image_offer": "WindowsServer",
-	  "image_sku": "2012-R2-Datacenter",
+	  "image_sku": "2022-datacenter",
 
 	  "communicator": "winrm",
 	  "winrm_use_ssl": "true",
@@ -427,7 +427,7 @@ const testBuilderAccManagedDiskWindowsBuildResourceGroup = `
 	  "os_type": "Windows",
 	  "image_publisher": "MicrosoftWindowsServer",
 	  "image_offer": "WindowsServer",
-	  "image_sku": "2012-R2-Datacenter",
+	  "image_sku": "2022-datacenter",
 
 	  "communicator": "winrm",
 	  "winrm_use_ssl": "true",
@@ -462,7 +462,7 @@ const testBuilderAccManagedDiskWindowsBuildResourceGroupAdditionalDisk = `
 	  "os_type": "Windows",
 	  "image_publisher": "MicrosoftWindowsServer",
 	  "image_offer": "WindowsServer",
-	  "image_sku": "2012-R2-Datacenter",
+	  "image_sku": "2022-datacenter",
 
 	  "communicator": "winrm",
 	  "winrm_use_ssl": "true",
@@ -534,7 +534,7 @@ const testBuilderAccBlobWindows = `
 	  "os_type": "Windows",
 	  "image_publisher": "MicrosoftWindowsServer",
 	  "image_offer": "WindowsServer",
-	  "image_sku": "2012-R2-Datacenter",
+	  "image_sku": "2022-datacenter",
 
 	  "communicator": "winrm",
 	  "winrm_use_ssl": "true",

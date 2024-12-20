@@ -32,7 +32,7 @@ resource "azurerm_shared_image" "windows-sig" {
   identifier {
     publisher = "MicrosoftWindowsServer"
     offer     = "WindowsServer"
-    sku       = "2012-R2-Datacenter"
+    sku       = "2022-datacenter"
   }
 }
 
