@@ -302,7 +302,8 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 		}
 	}
 
-	if config.VirtualNetworkName != "" && DefaultPrivateVirtualNetworkWithPublicIp != config.PrivateVirtualNetworkWithPublicIp {
+	privateVnetWithPublicIP := (config.VirtualNetworkName != "" && config.PrivateVirtualNetworkWithPublicIp)
+	if privateVnetWithPublicIP {
 		err = builder.SetPrivateVirtualNetworkWithPublicIp(
 			config.VirtualNetworkResourceGroupName,
 			config.VirtualNetworkName,
@@ -325,24 +326,24 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 	// They are also required when creating a standard sku public IP Address regardless of inbound IPs allowed.
 	// If a standard IP is set with no inbound addresses, we default to allowing all IP addresses
 	if config.VirtualNetworkName == "" {
-		if (config.PublicIpSKU != "Basic") || (config.AllowedInboundIpAddresses != nil && len(config.AllowedInboundIpAddresses) >= 1) {
+		if (config.PublicIpSKU != "Basic") || len(config.AllowedInboundIpAddresses) >= 1 {
 			err = builder.SetNetworkSecurityGroup(config.AllowedInboundIpAddresses, config.Comm.Port())
 			if err != nil {
 				return nil, err
 			}
 		}
-		// Standard is the default, basic will no longer be supported in the future
-		if config.PublicIpSKU != "Basic" {
-			err = builder.SetPublicIPSKU("Standard", "Regional")
-			if err != nil {
-				return nil, err
-			}
-			// Standard SKU Public IPs only support static assignment
-			// Before this the plugin always set this as dynamic
-			builder.SetPublicIpAllocationMethod("Static")
-		}
 	}
 
+	// Standard is the default, basic will no longer be supported in the future
+	if (config.VirtualNetworkName == "" || config.PrivateVirtualNetworkWithPublicIp) && config.PublicIpSKU != "Basic" {
+		err = builder.SetPublicIPSKU("Standard", "Regional")
+		if err != nil {
+			return nil, err
+		}
+		// Standard SKU Public IPs only support static assignment
+		// Before this the plugin always set this as dynamic
+		builder.SetPublicIpAllocationMethod("Static")
+	}
 	if config.BootDiagSTGAccount != "" {
 		err = builder.SetBootDiagnostics(config.BootDiagSTGAccount)
 		if err != nil {

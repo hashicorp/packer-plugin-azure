@@ -45,11 +45,10 @@ import (
 )
 
 const (
-	DefaultImageVersion                      = "latest"
-	DefaultUserName                          = "packer"
-	DefaultPrivateVirtualNetworkWithPublicIp = false
-	DefaultVMSize                            = "Standard_A1"
-	DefaultKeyVaultSKU                       = "standard"
+	DefaultImageVersion = "latest"
+	DefaultUserName     = "packer"
+	DefaultVMSize       = "Standard_A1"
+	DefaultKeyVaultSKU  = "standard"
 )
 
 const (
