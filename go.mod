@@ -1,6 +1,6 @@
 module github.com/hashicorp/packer-plugin-azure
 
-go 1.21.0
+go 1.22.10
 
 require (
 	github.com/approvals/go-approval-tests v0.0.0-20210131072903-38d0b0ec12b1
