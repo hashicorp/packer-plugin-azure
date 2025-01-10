@@ -173,6 +173,7 @@ func TestVirtualMachineDeployment05(t *testing.T) {
 		"communicator":                        "none",
 		"virtual_network_name":                "virtualNetworkName",
 		"virtual_network_resource_group_name": "virtualNetworkResourceGroupName",
+		"virtual_network_subscription":        "virtualNetworkSubscription",
 		"virtual_network_subnet_name":         "virtualNetworkSubnetName",
 	}
 
@@ -337,6 +338,7 @@ func TestVirtualMachineDeployment10(t *testing.T) {
 		"virtual_network_resource_group_name":    "--virtual_network_resource_group_name--",
 		"virtual_network_name":                   "--virtual_network_name--",
 		"virtual_network_subnet_name":            "--virtual_network_subnet_name--",
+		"virtual_network_subscription":           "--virtual_network_subscription--",
 		"private_virtual_network_with_public_ip": true,
 
 		"managed_image_name":                "ManagedImageName",

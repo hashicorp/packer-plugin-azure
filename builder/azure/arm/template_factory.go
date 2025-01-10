@@ -304,6 +304,7 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 
 	if config.VirtualNetworkName != "" && DefaultPrivateVirtualNetworkWithPublicIp != config.PrivateVirtualNetworkWithPublicIp {
 		err = builder.SetPrivateVirtualNetworkWithPublicIp(
+			config.VirtualNetworkSubscription,
 			config.VirtualNetworkResourceGroupName,
 			config.VirtualNetworkName,
 			config.VirtualNetworkSubnetName)
@@ -312,6 +313,7 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 		}
 	} else if config.VirtualNetworkName != "" {
 		err = builder.SetVirtualNetwork(
+			config.VirtualNetworkSubscription,
 			config.VirtualNetworkResourceGroupName,
 			config.VirtualNetworkName,
 			config.VirtualNetworkSubnetName)
