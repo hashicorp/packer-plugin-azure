@@ -325,16 +325,16 @@ func TestConfigVirtualNetworkNameIsOptional(t *testing.T) {
 // only be set if virtual_network_name was set.
 func TestConfigVirtualNetworkSubscriptionMustBeSetWithVirtualNetworkName(t *testing.T) {
 	config := map[string]string{
-		"capture_name_prefix":                 "ignore",
-		"capture_container_name":              "ignore",
-		"location":                            "ignore",
-		"image_url":                           "ignore",
-		"storage_account":                     "ignore",
-		"resource_group_name":                 "ignore",
-		"subscription_id":                     "ignore",
-		"os_type":                             constants.Target_Linux,
-		"communicator":                        "none",
-		"virtual_network_subscription": 	   "MyVirtualNetworkRG",
+		"capture_name_prefix":          "ignore",
+		"capture_container_name":       "ignore",
+		"location":                     "ignore",
+		"image_url":                    "ignore",
+		"storage_account":              "ignore",
+		"resource_group_name":          "ignore",
+		"subscription_id":              "ignore",
+		"os_type":                      constants.Target_Linux,
+		"communicator":                 "none",
+		"virtual_network_subscription": "MyVirtualNetworkRG",
 	}
 
 	var c Config
