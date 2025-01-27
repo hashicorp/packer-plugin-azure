@@ -163,6 +163,35 @@ func Test_ClientConfig_AzureCli(t *testing.T) {
 	if cfg.AuthType() != AuthTypeAzureCLI {
 		t.Fatalf("Expected authType to be %q, but got: %q", AuthTypeAzureCLI, cfg.AuthType())
 	}
+
+	if cfg.SubscriptionID == "" {
+		t.Fatalf("Expected SubscriptionId to not be empty, but got %s", cfg.SubscriptionID)
+	}
+}
+
+func Test_ClientConfig_AzureCli_with_subscription_id_set(t *testing.T) {
+	// Azure CLI tests skipped unless env 'AZURE_CLI_AUTH' is set, and an active `az login` session has been established
+	getEnvOrSkip(t, "AZURE_CLI_AUTH")
+	subId := "non-default-subscription_id"
+	cfg := Config{
+		UseAzureCLIAuth:  true,
+		cloudEnvironment: environments.AzurePublic(),
+		SubscriptionID:   subId,
+	}
+	assertValid(t, cfg)
+
+	err := cfg.FillParameters()
+	if err != nil {
+		t.Fatalf("Expected nil err, but got: %v", err)
+	}
+
+	if cfg.AuthType() != AuthTypeAzureCLI {
+		t.Fatalf("Expected authType to be %q, but got: %q", AuthTypeAzureCLI, cfg.AuthType())
+	}
+
+	if cfg.SubscriptionID != subId {
+		t.Fatalf("Expected SubscriptionId to be %s, but got: %s", subId, cfg.SubscriptionID)
+	}
 }
 
 func Test_ClientConfig_GitHubOIDC(t *testing.T) {

@@ -289,7 +289,10 @@ func (c *Config) FillParameters() error {
 		}
 
 		c.TenantID = tenantID
-		c.SubscriptionID = subscriptionID
+		// we need to honor the subscription_id if specified in the config instead using the default CLI subscription_id
+		if c.SubscriptionID == "" {
+			c.SubscriptionID = subscriptionID
+		}
 	}
 
 	// Get Tenant ID from Access token
