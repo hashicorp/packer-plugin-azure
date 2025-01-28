@@ -388,6 +388,10 @@ Providing `temp_resource_group_name` or `location` in combination with
   containing the virtual network. If the resource group cannot be found, or
   it cannot be disambiguated, this value should be set.
 
+- `virtual_network_subscription` (string) - If virtual_network_name is
+  set, this value may also be set. If virtual_network_name is set, and
+  this value is not set the builder uses the default subscription.
+
 - `custom_data_file` (string) - Specify a file containing custom data to inject into the cloud-init
   process. The contents of the file are read and injected into the ARM
   template. The custom data will be passed to cloud-init for processing at
