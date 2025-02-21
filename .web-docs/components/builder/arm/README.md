@@ -682,6 +682,7 @@ The shared_image_gallery_destination block is available for publishing a new ima
   a DiskEncryptionSetId can be specified for each target region to support multi-region disk encryption.
   At a minimum their must be one target region entry for the primary build region where the image version will be stored.
   Target region must only contain one entry matching the build region when using shallow replication.
+  See the `shared_image_gallery_destination` block description for an example of using this field
 
 - `storage_account_type` (string) - Specify a storage account type for the Shared Image Gallery Image Version.
   Defaults to `Standard_LRS`. Accepted values are `Standard_LRS`, `Standard_ZRS` and `Premium_LRS`
