@@ -82,7 +82,7 @@ func TestBuildLinux02(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = testSubject.SetVirtualNetwork("--virtual-network-resource-group--", "--virtual-network--", "--subnet-name--")
+	err = testSubject.SetVirtualNetwork("--virtual-network-subscription--", "--virtual-network-resource-group--", "--virtual-network--", "--subnet-name--")
 	if err != nil {
 		t.Fatal(err)
 	}
