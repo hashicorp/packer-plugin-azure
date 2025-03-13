@@ -100,7 +100,8 @@ func TestChrootStepGetSourceImageName_SharedImage(t *testing.T) {
 				Properties: &galleryimageversions.GalleryImageVersionProperties{
 					StorageProfile: galleryimageversions.GalleryImageVersionStorageProfile{
 						Source: &galleryimageversions.GalleryArtifactVersionFullSource{
-							Id: common.StringPtr("/subscription/resource/managed/image/name/as/source"),
+							Id:               common.StringPtr("/subscription/resource/managed/image/name/as/source"),
+							VirtualMachineId: common.StringPtr("/subscription/resource/managed/image/name/as/source"),
 						},
 					},
 				},

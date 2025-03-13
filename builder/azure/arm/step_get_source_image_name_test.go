@@ -30,7 +30,8 @@ func TestStepGetSourceImageName(t *testing.T) {
 		Properties: &galleryimageversions.GalleryImageVersionProperties{
 			StorageProfile: galleryimageversions.GalleryImageVersionStorageProfile{
 				Source: &galleryimageversions.GalleryArtifactVersionFullSource{
-					Id: &vmSourcedSigID,
+					Id:               &vmSourcedSigID,
+					VirtualMachineId: &vmSourcedSigID,
 				},
 			},
 		},
@@ -41,7 +42,8 @@ func TestStepGetSourceImageName(t *testing.T) {
 		Properties: &galleryimageversions.GalleryImageVersionProperties{
 			StorageProfile: galleryimageversions.GalleryImageVersionStorageProfile{
 				Source: &galleryimageversions.GalleryArtifactVersionFullSource{
-					Id: &managedImageSourcedSigID,
+					Id:               &managedImageSourcedSigID,
+					VirtualMachineId: &managedImageSourcedSigID,
 				},
 			},
 		},
