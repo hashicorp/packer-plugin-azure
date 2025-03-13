@@ -63,8 +63,8 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 			return multistep.ActionContinue
 		}
 		if image.Properties != nil &&
-			image.Properties.StorageProfile.Source != nil && image.Properties.StorageProfile.Source.Id != nil {
-			id := *image.Properties.StorageProfile.Source.Id
+			image.Properties.StorageProfile.Source != nil && image.Properties.StorageProfile.Source.VirtualMachineId != nil {
+			id := *image.Properties.StorageProfile.Source.VirtualMachineId
 			ui.Say(fmt.Sprintf(" -> SourceImageName: '%s'", id))
 			s.GeneratedData.Put("SourceImageName", id)
 			return multistep.ActionContinue

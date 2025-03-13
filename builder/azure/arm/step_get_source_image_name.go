@@ -62,14 +62,14 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 		}
 
 		if image.Properties != nil &&
-			image.Properties.StorageProfile.Source != nil && image.Properties.StorageProfile.Source.Id != nil {
+			image.Properties.StorageProfile.Source != nil && image.Properties.StorageProfile.Source.VirtualMachineId != nil {
 
 			// Shared Image Galleries can be created in two different ways
 			// Either directly from a VM (in the builder this means not setting managed_image_name), for these types of images we set the artifact ID as the Gallery Image ID
 			// Or through an intermediate managed image. in which case we use that managed image as the artifact ID.
 
 			// First check if the parent Gallery Image Version source ID is a managed image, if so we use that as our source image name
-			parentSourceID := *image.Properties.StorageProfile.Source.Id
+			parentSourceID := *image.Properties.StorageProfile.Source.VirtualMachineId
 			isSIGSourcedFromManagedImage, _ := regexp.MatchString("/subscriptions/[^/]*/resourceGroups/[^/]*/providers/Microsoft.Compute/images/[^/]*$", parentSourceID)
 
 			if isSIGSourcedFromManagedImage {
