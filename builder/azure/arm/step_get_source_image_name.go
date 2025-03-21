@@ -56,7 +56,7 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 
 		image, err := s.getGalleryVersion(ctx)
 		if err != nil {
-			log.Println("[TRACE] unable to derive managed image URL for shared gallery version image")
+			s.say(fmt.Sprintf("Failed to fetch source gallery image from Azure API, HCP Packer will not be able to track the ancestry of this build: %s", err.Error()))
 			s.GeneratedData.Put("SourceImageName", "ERR_SOURCE_IMAGE_NAME_NOT_FOUND")
 			return multistep.ActionContinue
 		}
