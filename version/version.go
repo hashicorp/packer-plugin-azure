@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	Version            = "2.3.0"
+	Version            = "2.3.1"
 	VersionPrerelease  = ""
 	VersionMetadata    = ""
 	AzurePluginVersion = version.NewPluginVersion(Version, VersionPrerelease, VersionMetadata)
