@@ -85,6 +85,7 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 
 		}
 
+		s.say("Received unexpected response from Azure API, HCP Packer will not be able to track the ancestry of this build.")
 		log.Println("[TRACE] unable to identify the source image for provided gallery image version")
 		s.GeneratedData.Put("SourceImageName", "ERR_SOURCE_IMAGE_NAME_NOT_FOUND")
 		return multistep.ActionContinue
