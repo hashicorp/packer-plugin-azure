@@ -76,13 +76,13 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 				s.say(fmt.Sprintf(" -> SourceImageName: '%s'", parentSourceID))
 				s.GeneratedData.Put("SourceImageName", parentSourceID)
 				return multistep.ActionContinue
-			} else {
-				// If the Gallery Image Version was not sourced from a Managed Image, that means it was captured directly from a VM, so we just use the gallery ID itself as the source image
-				s.say(fmt.Sprintf(" -> SourceImageName: '%s'", *image.Id))
-				s.GeneratedData.Put("SourceImageName", *image.Id)
-				return multistep.ActionContinue
 			}
-
+		}
+		// If the Gallery Image Version was not sourced from a Managed Image, that means it was captured directly from a VM, so we just use the gallery ID itself as the source image
+		if image.Id != nil {
+			s.say(fmt.Sprintf(" -> SourceImageName: '%s'", *image.Id))
+			s.GeneratedData.Put("SourceImageName", *image.Id)
+			return multistep.ActionContinue
 		}
 
 		s.say("Received unexpected response from Azure API, HCP Packer will not be able to track the ancestry of this build.")
