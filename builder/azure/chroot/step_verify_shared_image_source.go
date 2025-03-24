@@ -55,7 +55,7 @@ func (s *StepVerifySharedImageSource) Run(ctx context.Context, state multistep.S
 	}
 
 	if !strings.EqualFold(resource.Provider, "Microsoft.Compute") ||
-		!strings.EqualFold(resource.ResourceType.String(), "galleries/images/versions") {
+			!strings.EqualFold(resource.ResourceType.String(), "galleries/images/versions") {
 		return errorMessage("Resource id %q does not identify a shared image version, expected Microsoft.Compute/galleries/images/versions", s.SharedImageID)
 	}
 
@@ -80,8 +80,8 @@ func (s *StepVerifySharedImageSource) Run(ctx context.Context, state multistep.S
 	}
 
 	if version.Properties == nil ||
-		version.Properties.PublishingProfile == nil ||
-		version.Properties.PublishingProfile.TargetRegions == nil {
+			version.Properties.PublishingProfile == nil ||
+			version.Properties.PublishingProfile.TargetRegions == nil {
 		return errorMessage("Could not retrieve shared image version properties for image %q.", s.SharedImageID)
 	}
 
@@ -103,7 +103,7 @@ func (s *StepVerifySharedImageSource) Run(ctx context.Context, state multistep.S
 
 	imageResource, _ := resource.Parent()
 	galleryImageID := galleryimages.NewGalleryImageID(
-		azcli.SubscriptionID(),
+		resource.Subscription,
 		resource.ResourceGroup,
 		resource.ResourceName[0],
 		resource.ResourceName[1],
