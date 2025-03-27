@@ -81,6 +81,7 @@ type PlanInformation struct {
 }
 
 type SharedImageGallery struct {
+	ID            string `mapstructure:"id"`
 	Subscription  string `mapstructure:"subscription"`
 	ResourceGroup string `mapstructure:"resource_group"`
 	GalleryName   string `mapstructure:"gallery_name"` //Gallery resource name
@@ -703,6 +704,28 @@ func (c *Config) getSourceSharedImageGalleryID() string {
 	return id
 }
 
+func (c *Config) getSharedImageGalleryObjectFromId() *SharedImageGallery {
+
+	if c.SharedGallery.ID == "" {
+		return nil
+	}
+
+	regexp := regexp.MustCompile(`/subscriptions/(.*)/resourceGroups/(.*)/providers/Microsoft.Compute/galleries/(.*)/images/(.*)/versions/(.*)`)
+
+	matches := regexp.FindStringSubmatch(c.SharedGallery.ID)
+
+	if len(matches) != 6 {
+		return nil
+	}
+	return &SharedImageGallery{
+		Subscription:  matches[1],
+		ResourceGroup: matches[2],
+		GalleryName:   matches[3],
+		ImageName:     matches[4],
+		ImageVersion:  matches[5],
+	}
+}
+
 func (c *Config) toVMID() string {
 	var resourceGroupName string
 	if c.tmpResourceGroupName != "" {
@@ -1194,9 +1217,10 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	isImageUrl := c.ImageUrl != ""
 	isCustomManagedImage := c.CustomManagedImageName != "" || c.CustomManagedImageResourceGroupName != ""
 	isSharedGallery := c.SharedGallery.GalleryName != "" || c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.DirectSharedGalleryImageID != ""
+	isSharedGalleryViaID := c.SharedGallery.ID != ""
 	isPlatformImage := c.ImagePublisher != "" || c.ImageOffer != "" || c.ImageSku != ""
 
-	countSourceInputs := toInt(isImageUrl) + toInt(isCustomManagedImage) + toInt(isPlatformImage) + toInt(isSharedGallery)
+	countSourceInputs := toInt(isImageUrl) + toInt(isCustomManagedImage) + toInt(isPlatformImage) + toInt(isSharedGallery) + toInt(isSharedGalleryViaID)
 
 	if countSourceInputs > 1 {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Specify either a VHD (image_url), Image Reference (image_publisher, image_offer, image_sku), a Managed Disk (custom_managed_disk_image_name, custom_managed_disk_resource_group_name), or a Shared Gallery Image (shared_image_gallery)"))
@@ -1224,8 +1248,8 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	}
 
 	if c.SharedGallery.CommunityGalleryImageId != "" || c.SharedGallery.DirectSharedGalleryImageID != "" {
-		if c.SharedGallery.GalleryName != "" {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Cannot specify 2 kinds of azure compute gallery sources"))
+		if c.SharedGallery.GalleryName != "" || c.SharedGallery.ID != "" {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Cannot specify multiple kinds of azure compute gallery sources"))
 		}
 		if c.CaptureContainerName != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_container_name] is not supported when using Shared Image Gallery as source. Use managed_image_resource_group_name instead."))
@@ -1246,11 +1270,31 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		if c.SharedGallery.ImageName == "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A shared_image_gallery.image_name must be specified"))
 		}
+		if c.SharedGallery.ID != "" {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A shared_image_gallery.id must not be specified"))
+		}
 		if c.CaptureContainerName != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_container_name] is not supported when using Shared Image Gallery as source. Use managed_image_resource_group_name instead."))
 		}
 		if c.CaptureNamePrefix != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_name_prefix] is not supported when using Shared Image Gallery as source. Use managed_image_name instead."))
+		}
+	} else if c.SharedGallery.ID != "" {
+		sigIDRegex := regexp.MustCompile("/subscriptions/[^/]*/resourceGroups/[^/]*/providers/Microsoft.Compute/galleries/[^/]*/images/[^/]*/versions/[^/]*")
+		if !sigIDRegex.Match([]byte(c.SharedGallery.ID)) {
+			errs = packer.MultiErrorAppend(errs, fmt.Errorf("shared_image_gallery.id does not match expected format of '/subscriptions/(subscriptionid)/resourceGroups/(rg-name)/providers/Microsoft.Compute/galleries/(gallery-name)/images/image-name/versions/(version)"))
+		}
+		if c.SharedGallery.Subscription != "" {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("When setting shared_image_gallery.id, shared_image_gallery.subscription must not be specified"))
+		}
+		if c.SharedGallery.ResourceGroup != "" {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("When setting shared_image_gallery.id, shared_image_gallery.resource_group must not be specified"))
+		}
+		if c.SharedGallery.ImageName != "" {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("When setting shared_image_gallery.id, shared_image_gallery.image_name must not be specified"))
+		}
+		if c.SharedGallery.ImageVersion != "" {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("When setting shared_image_gallery.id, shared_image_gallery.image_version must not be specified"))
 		}
 	} else if c.ImageUrl == "" && c.CustomManagedImageName == "" {
 		if c.ImagePublisher == "" {

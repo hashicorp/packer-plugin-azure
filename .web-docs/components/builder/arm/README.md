@@ -634,6 +634,8 @@ The shared_image_gallery block is available for building a new image from a priv
 
 <!-- Code generated from the comments of the SharedImageGallery struct in builder/azure/arm/config.go; DO NOT EDIT MANUALLY -->
 
+- `id` (string) - ID
+
 - `subscription` (string) - Subscription
 
 - `resource_group` (string) - Resource Group
