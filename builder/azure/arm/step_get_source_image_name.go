@@ -20,7 +20,7 @@ type StepGetSourceImageName struct {
 	client            *AzureClient
 	config            *Config
 	GeneratedData     *packerbuilderdata.GeneratedData
-	getGalleryVersion func(context.Context) (*galleryimageversions.GalleryImageVersion, error)
+	getGalleryVersion func(context.Context, SharedImageGallery) (*galleryimageversions.GalleryImageVersion, error)
 	say               func(message string)
 	error             func(e error)
 }
@@ -52,9 +52,17 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 		return multistep.ActionContinue
 	}
 
-	if s.config.SharedGallery.Subscription != "" {
-
-		image, err := s.getGalleryVersion(ctx)
+	if s.config.SharedGallery.Subscription != "" || s.config.SharedGallery.ID != "" {
+		acg := s.config.SharedGallery
+		if acg.Subscription == "" {
+			acgPtr := s.config.getSharedImageGalleryObjectFromId()
+			if acgPtr == nil {
+				s.say("Failed to parse Shared Image Gallery object from ID, this is always a Packer Azure plugin bug")
+				return multistep.ActionHalt
+			}
+			acg = *acgPtr
+		}
+		image, err := s.getGalleryVersion(ctx, acg)
 		if err != nil {
 			s.say(fmt.Sprintf("Failed to fetch source gallery image from Azure API, HCP Packer will not be able to track the ancestry of this build: %s", err.Error()))
 			s.GeneratedData.Put("SourceImageName", "ERR_SOURCE_IMAGE_NAME_NOT_FOUND")
@@ -104,12 +112,11 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 	return multistep.ActionContinue
 }
 
-func (s *StepGetSourceImageName) GetGalleryImageVersion(ctx context.Context) (*galleryimageversions.GalleryImageVersion, error) {
+func (s *StepGetSourceImageName) GetGalleryImageVersion(ctx context.Context, acg SharedImageGallery) (*galleryimageversions.GalleryImageVersion, error) {
 	client := s.client.GalleryImageVersionsClient
 	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
 	defer cancel()
-
-	galleryVersionId := galleryimageversions.NewImageVersionID(s.config.SharedGallery.Subscription, s.config.SharedGallery.ResourceGroup, s.config.SharedGallery.GalleryName, s.config.SharedGallery.ImageName, s.config.SharedGallery.ImageVersion)
+	galleryVersionId := galleryimageversions.NewImageVersionID(acg.Subscription, acg.ResourceGroup, acg.GalleryName, acg.ImageName, acg.ImageVersion)
 	result, err := client.Get(pollingContext, galleryVersionId, galleryimageversions.DefaultGetOperationOptions())
 	if err != nil {
 		return nil, err
