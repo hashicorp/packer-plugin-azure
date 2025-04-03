@@ -88,7 +88,7 @@ func testPfxRoundTrip(t *testing.T, privateKey interface{}) interface{} {
 
 	key, _, err := Decode(bytes, "sesame")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	return key
@@ -189,7 +189,7 @@ func newCertificate(hostname string, privateKey interface{}) ([]byte, error) {
 
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, publicKey, privateKey)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to Generate derBytes: " + err.Error())
+		return nil, fmt.Errorf("Failed to Generate derBytes: %s", err.Error())
 	}
 
 	return derBytes, nil

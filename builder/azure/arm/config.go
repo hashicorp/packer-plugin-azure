@@ -1449,7 +1449,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 			errs = packersdk.MultiErrorAppend(errs, invalidSkuError)
 		}
 	}
-	if c.AllowedInboundIpAddresses != nil && len(c.AllowedInboundIpAddresses) >= 1 {
+	if len(c.AllowedInboundIpAddresses) >= 1 {
 		if c.VirtualNetworkName != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If virtual_network_name is specified, allowed_inbound_ip_addresses cannot be specified"))
 		} else {
