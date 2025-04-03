@@ -154,6 +154,22 @@ shared images the resulting name will point to the actual source used to create 
 
 - `TenantID` - The ID of the Azure Tenant where the build takes place.
 
+All of the following variables are temporary resource names that the plugin uses to build resources that are generally deleted at the end of a build.
+
+The presence of these variables does not mean these resources are created, they are just the names that are used for any temporary resources the builder creates. They are all randomly specified, but most can be overridden by builder fields.
+
+- `TempComputeName` - Virtual machine name
+- `TempNicName` - Network interface name
+- `TempOSDiskName` - OS Disk Name
+- `TempDataDiskName` - Data Disk Name
+- `TempDeploymentName` - ARM Deployment name
+- `TempVirtualNetworkName` - Virtual Network name
+- `TempKeyVaultName` - Key vault name
+- `TempResourceGroupName` - Resource Group Name, will be unset if a build resource group name is provided.
+- `TempNsgName` - Network security group name
+- `TempSubnetName` - Subnet name
+- `TempPublicIPAddressName` - Public IP Address name
+
 Usage example:
 
 **HCL2**
@@ -178,8 +194,19 @@ post-processor "manifest" {
     strip_path = true
     custom_data = {
         source_image_name = "${build.SourceImageName}"
-        tenant_id = "${build.TenantID}"
+	tenant_id = "${build.TenantID}"
         subscription_id = "${build.SubscriptionID}"
+        temp_deployment_name = "${build.TempDeploymentName}"
+        temp_compute_name = "${build.TempComputeName}"
+        temp_nic_name = "${build.TempNicName}"
+        temp_os_disk_name = "${build.TempOSDiskName}"
+        temp_data_disk_name = "${build.TempDataDiskName}"
+        temp_resource_group_name = "${build.TempResourceGroupName}"
+        temp_nsg_name = "${build.TempNsgName}"
+        temp_key_vault_name = "${build.TempKeyVaultName}"
+        temp_subnet_name = "${build.TempSubnetName}"
+        temp_virtual_network_name = "${build.TempVirtualNetworkName}"
+        temp_public_ip_address_name = "${build.TempPublicIPAddressName}"
     }
 }
 ```
@@ -192,9 +219,20 @@ post-processor "manifest" {
     "output": "manifest.json",
     "strip_path": true,
     "custom_data": {
-        "source_image_name": "{{ build `SourceImageName` }}",
-        "tenant_id": "{{ build `TenantID` }}",
-        "subscription_id": "{{ build `SubscriptionID` }}"
+    	"source_image_name": "{{ build `SourceImageName` }}",
+    	"tenant_id": "{{ build `TenantID` }}",
+    	"subscription_id": "{{ build `SubscriptionID` }}",
+    	"temp_deployment_name": "{{ build `TempDeploymentName`}}",
+	"temp_compute_name": "{{ build `TempComputeName`}}",
+	"temp_nic_name": "{{ build `TempNicName`}}",
+	"temp_os_disk_name": "{{ build `TempOSDiskName`}}",
+	"temp_data_disk_name": "{{ build `TempDataDiskName`}}",
+	"temp_resource_group_name": "{{ build `TempResourceGroupName`}}",
+	"temp_nsg_name": "{{ build `TempNsgName`}}",
+	"temp_key_vault_name": "{{ build `TempKeyVaultName`}}",
+	"temp_subnet_name": "{{ build `TempSubnetName`}}",
+	"temp_virtual_network_name": "{{ build `TempVirtualNetworkName`}}",
+	"temp_public_ip_address_name": "{{ build `TempPublicIPAddressName`}}"
     }
   }
 ]

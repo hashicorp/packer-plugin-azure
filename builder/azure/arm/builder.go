@@ -59,7 +59,22 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	b.setTemplateParameters(b.stateBag)
 	b.setImageParameters(b.stateBag)
 
-	generatedDataKeys := []string{"SourceImageName", "TenantID", "SubscriptionID"}
+	generatedDataKeys := []string{
+		"SourceImageName",
+		"TenantID",
+		"SubscriptionID",
+		"TempDeploymentName",
+		"TempComputeName",
+		"TempNicName",
+		"TempOSDiskName",
+		"TempResourceGroupName",
+		"TempNsgName",
+		"TempKeyVaultName",
+		"TempSubnetName",
+		"TempDataDiskName",
+		"TempVirtualNetworkName",
+		"TempPublicIPAddressName",
+	}
 
 	return generatedDataKeys, warnings, nil
 }
