@@ -30,7 +30,12 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 )
 
+// DTL Tests were paused in April 2025 after the deprecation of Basic IP SKUs
+// This requires creating a network security group with either overly permissive ingress, or the expected clients IP
+// The complexity of maintaining this in CI is not worth the time currently when there are higher priority problems on the ARM builder, and DTL is very inactive
+
 func TestDTLBuilderAcc_ManagedDisk_Windows(t *testing.T) {
+	t.Skip()
 	t.Parallel()
 	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{})
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
@@ -48,6 +53,7 @@ func TestDTLBuilderAcc_ManagedDisk_Windows(t *testing.T) {
 	})
 }
 func TestDTLBuilderAcc_ManagedDisk_Linux_Artifacts(t *testing.T) {
+	t.Skip()
 	t.Parallel()
 	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{})
 	acctest.TestPlugin(t, &acctest.PluginTestCase{

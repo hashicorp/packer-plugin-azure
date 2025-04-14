@@ -52,7 +52,8 @@ resource "azurerm_shared_image" "linux-sig" {
   }
 }
 
-## DTL Builder Resources
+/*
+## DTL Builder Resources - disabled
 
 resource "azurerm_dev_test_lab" "dtl" {
   name                = "${var.resource_prefix}-packer-acceptance-test"
@@ -68,3 +69,4 @@ resource "azurerm_dev_test_virtual_network" "vnet" {
     use_in_virtual_machine_creation = "Allow"
   }
 }
+*/
