@@ -71,9 +71,7 @@ information.
 
 - `client_cert_password` (string) - The password for decrypting the client certificate bundle.
 
-- `client_jwt` (string) - A JWT bearer token for client auth (RFC 7523, Sec. 2.2) that will be used
-  to authenticate the AAD SP. Provides more control over token the expiration
-  when using certificate authentication than when using `client_cert_path`.
+- `client_jwt` (string) - The ID token when authenticating using OpenID Connect (OIDC).
 
 - `object_id` (string) - The object ID for the AAD SP. Optional, will be derived from the oAuth token if left empty.
 
