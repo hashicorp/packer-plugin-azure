@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/cli"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 
-	jwt "github.com/golang-jwt/jwt"
 	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
@@ -65,9 +64,7 @@ type Config struct {
 	ClientCertPath string `mapstructure:"client_cert_path"`
 	// The password for decrypting the client certificate bundle.
 	ClientCertPassword string `mapstructure:"client_cert_password"`
-	// A JWT bearer token for client auth (RFC 7523, Sec. 2.2) that will be used
-	// to authenticate the AAD SP. Provides more control over token the expiration
-	// when using certificate authentication than when using `client_cert_path`.
+	// The ID token when authenticating using OpenID Connect (OIDC).
 	ClientJWT string `mapstructure:"client_jwt"`
 	// The object ID for the AAD SP. Optional, will be derived from the oAuth token if left empty.
 	ObjectID string `mapstructure:"object_id"`
@@ -209,12 +206,6 @@ func (c Config) Validate(errs *packersdk.MultiError) {
 		c.ClientSecret == "" &&
 		c.ClientCertPath == "" &&
 		c.ClientJWT != "" {
-		p := jwt.Parser{}
-		claims := jwt.StandardClaims{}
-		_, _, err := p.ParseUnverified(c.ClientJWT, &claims)
-		if err != nil {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("client_jwt is not a JWT: %v", err))
-		}
 		return
 	}
 

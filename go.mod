@@ -6,7 +6,6 @@ toolchain go1.23.7
 
 require (
 	github.com/approvals/go-approval-tests v0.0.0-20210131072903-38d0b0ec12b1
-	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/go-azure-helpers v0.67.0
 	github.com/hashicorp/hcl/v2 v2.19.1
@@ -22,6 +21,7 @@ require (
 
 require (
 	github.com/dimchansky/utfbom v1.1.1
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/hashicorp/go-azure-sdk/resource-manager v0.20241025.1143247
 	github.com/hashicorp/go-azure-sdk/sdk v0.20241025.1143247
 	github.com/mitchellh/go-homedir v1.1.0
