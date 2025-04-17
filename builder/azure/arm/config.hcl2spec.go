@@ -338,6 +338,7 @@ func (*FlatPlanInformation) HCL2Spec() map[string]hcldec.Spec {
 // FlatSharedImageGallery is an auto-generated flat version of SharedImageGallery.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatSharedImageGallery struct {
+	ID                         *string `mapstructure:"id" cty:"id" hcl:"id"`
 	Subscription               *string `mapstructure:"subscription" cty:"subscription" hcl:"subscription"`
 	ResourceGroup              *string `mapstructure:"resource_group" cty:"resource_group" hcl:"resource_group"`
 	GalleryName                *string `mapstructure:"gallery_name" cty:"gallery_name" hcl:"gallery_name"`
@@ -359,6 +360,7 @@ func (*SharedImageGallery) FlatMapstructure() interface{ HCL2Spec() map[string]h
 // The decoded values from this spec will then be applied to a FlatSharedImageGallery.
 func (*FlatSharedImageGallery) HCL2Spec() map[string]hcldec.Spec {
 	s := map[string]hcldec.Spec{
+		"id":                             &hcldec.AttrSpec{Name: "id", Type: cty.String, Required: false},
 		"subscription":                   &hcldec.AttrSpec{Name: "subscription", Type: cty.String, Required: false},
 		"resource_group":                 &hcldec.AttrSpec{Name: "resource_group", Type: cty.String, Required: false},
 		"gallery_name":                   &hcldec.AttrSpec{Name: "gallery_name", Type: cty.String, Required: false},
