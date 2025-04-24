@@ -318,22 +318,27 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		b.stateBag.Put(constants.ArmSharedImageGalleryDestinationTargetRegions, b.config.SharedGalleryDestination.SigDestinationTargetRegions)
 	}
 
+	// Specialized images in Azure means that the user was not removed by a sysprep/generalization step.
+	// This means that the user account on the image persists between builds.
+	// When the parent is specialized this changes the deployment of the build VM, since we do not want to create a new user account for specialized parent images.
 	sourceImageSpecialized := false
 	if b.config.SharedGallery.GalleryName != "" {
-		client := azureClient.GalleryImagesClient
-		id := galleryimages.NewGalleryImageID(b.config.SharedGallery.Subscription, b.config.SharedGallery.ResourceGroup, b.config.SharedGallery.GalleryName, b.config.SharedGallery.ImageName)
-		galleryImage, err := client.Get(builderPollingContext, id)
+		sourceImageSpecialized, err = isImageSpecialized(&azureClient.GalleryImagesClient, builderPollingContext, b.config.SharedGallery)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get parent Shared Gallery Image %s in gallery %s in the resource group %s, received error: %s.", b.config.SharedGallery.GalleryName, b.config.SharedGallery.ImageName, b.config.SharedGallery.ResourceGroup, err.Error())
-		}
-		if galleryImage.Model == nil {
-			return nil, commonclient.NullModelSDKErr
-		}
-		if galleryImage.Model.Properties.OsState == galleryimages.OperatingSystemStateTypesSpecialized {
-			sourceImageSpecialized = true
+			return nil, err
 		}
 	}
+	if b.config.SharedGallery.ID != "" {
+		acg := b.config.getSharedImageGalleryObjectFromId()
+		if acg == nil {
+			return nil, errors.New("failed to parse Shared Image Gallery object from ID, this is always a Packer Azure plugin bug")
+		}
+		sourceImageSpecialized, err = isImageSpecialized(&azureClient.GalleryImagesClient, builderPollingContext, *b.config.getSharedImageGalleryObjectFromId())
+		if err != nil {
+			return nil, err
+		}
 
+	}
 	getVirtualMachineDeploymentFunction := GetVirtualMachineDeployment
 	if sourceImageSpecialized {
 		getVirtualMachineDeploymentFunction = GetSpecializedVirtualMachineDeployment
@@ -567,6 +572,19 @@ func equalLocation(location1, location2 string) bool {
 
 func canonicalizeLocation(location string) string {
 	return strings.Replace(location, " ", "", -1)
+}
+
+func isImageSpecialized(client *galleryimages.GalleryImagesClient, ctx context.Context, acg SharedImageGallery) (bool, error) {
+	id := galleryimages.NewGalleryImageID(acg.Subscription, acg.ResourceGroup, acg.GalleryName, acg.ImageName)
+	galleryImage, err := client.Get(ctx, id)
+	if err != nil {
+		return false, fmt.Errorf("failed to get parent Shared Gallery Image %s in gallery %s in the resource group %s, received error: %s.", acg.GalleryName, acg.ImageName, acg.ResourceGroup, err.Error())
+	}
+	if galleryImage.Model == nil {
+		return false, commonclient.NullModelSDKErr
+	}
+	isSpecialized := galleryImage.Model.Properties.OsState == galleryimages.OperatingSystemStateTypesSpecialized
+	return isSpecialized, nil
 }
 
 func (b *Builder) getBlobAccount(ctx context.Context, client *AzureClient, subscriptionId string, resourceGroupName string, storageAccountName string) (*storageaccounts.StorageAccount, error) {
