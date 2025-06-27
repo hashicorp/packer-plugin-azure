@@ -1,5 +1,6 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
+
 variable "subscription" {
   default   = "${env("ARM_SUBSCRIPTION_ID")}"
   type      = string

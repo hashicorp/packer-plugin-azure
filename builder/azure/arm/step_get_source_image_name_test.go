@@ -154,7 +154,7 @@ func TestStepGetSourceImageName(t *testing.T) {
 					error:         func(e error) {},
 					getGalleryVersion: func(ctx context.Context, sig SharedImageGallery) (*galleryimageversions.GalleryImageVersion, error) {
 						if diff := cmp.Diff(sig, *tt.expectedSharedImageGallery); diff != "" {
-							return nil, fmt.Errorf(diff)
+							return nil, fmt.Errorf("%s", diff)
 						}
 						return tt.mockedGalleryImage, nil
 					},
