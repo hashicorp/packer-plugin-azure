@@ -6,8 +6,10 @@ package arm
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	galleryimageversions "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-07-03/galleryimageversions"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -20,8 +22,6 @@ func TestStepGetSourceImageName(t *testing.T) {
 		Reader: new(bytes.Buffer),
 		Writer: new(bytes.Buffer),
 	}
-	state := new(multistep.BasicStateBag)
-	genData := packerbuilderdata.GeneratedData{State: state}
 	vmSourcedSigID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/pkr-Resource-Group-blah/providers/Microsoft.Compute/virtualMachines/pkrvmexample"
 	managedImageSourcedSigID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/pkr-Resource-Group-blah/providers/Microsoft.Compute/images/exampleimage"
 	sigArtifactID := "example-sig-id"
@@ -48,10 +48,11 @@ func TestStepGetSourceImageName(t *testing.T) {
 	}
 
 	tc := []struct {
-		name               string
-		config             *Config
-		expected           string
-		mockedGalleryImage *galleryimageversions.GalleryImageVersion
+		name                       string
+		config                     *Config
+		expected                   string
+		expectedSharedImageGallery *SharedImageGallery
+		mockedGalleryImage         *galleryimageversions.GalleryImageVersion
 	}{
 		{
 			name:     "ImageUrl",
@@ -85,8 +86,15 @@ func TestStepGetSourceImageName(t *testing.T) {
 			config: &Config{
 				ClientConfig: client.Config{SubscriptionID: "1234"},
 				SharedGallery: SharedImageGallery{
-					Subscription: "1234",
+					Subscription:  "1234",
+					ResourceGroup: "blorp",
+					ImageName:     "blorp",
 				},
+			},
+			expectedSharedImageGallery: &SharedImageGallery{
+				Subscription:  "1234",
+				ResourceGroup: "blorp",
+				ImageName:     "blorp",
 			},
 			mockedGalleryImage: vmSourcedSigImageVersion,
 			expected:           sigArtifactID,
@@ -97,15 +105,40 @@ func TestStepGetSourceImageName(t *testing.T) {
 				ClientConfig: client.Config{SubscriptionID: "1234"},
 				SharedGallery: SharedImageGallery{
 					Subscription: "1234",
+					ImageVersion: "1.2",
 				},
+			},
+			expectedSharedImageGallery: &SharedImageGallery{
+				Subscription: "1234",
+				ImageVersion: "1.2",
+			},
+			mockedGalleryImage: managedImageSourcedSigImageVersion,
+			expected:           managedImageSourcedSigID,
+		},
+		{
+			name: "SharedImageGallery - ID reference",
+			config: &Config{
+				ClientConfig: client.Config{SubscriptionID: "1234"},
+				SharedGallery: SharedImageGallery{
+					ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myResourceGroup/providers/Microsoft.Compute/galleries/myGallery/images/myImageDefinition/versions/1.0.0",
+				},
+			},
+			expectedSharedImageGallery: &SharedImageGallery{
+				Subscription:  "00000000-0000-0000-0000-000000000000",
+				ResourceGroup: "myResourceGroup",
+				GalleryName:   "myGallery",
+				ImageName:     "myImageDefinition",
+				ImageVersion:  "1.0.0",
 			},
 			mockedGalleryImage: managedImageSourcedSigImageVersion,
 			expected:           managedImageSourcedSigID,
 		},
 	}
 	for _, tt := range tc {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			state := new(multistep.BasicStateBag)
+
+			genData := packerbuilderdata.GeneratedData{State: state}
 			var step StepGetSourceImageName
 			step = StepGetSourceImageName{
 				config:        tt.config,
@@ -119,7 +152,10 @@ func TestStepGetSourceImageName(t *testing.T) {
 					GeneratedData: &genData,
 					say:           ui.Say,
 					error:         func(e error) {},
-					getGalleryVersion: func(ctx context.Context) (*galleryimageversions.GalleryImageVersion, error) {
+					getGalleryVersion: func(ctx context.Context, sig SharedImageGallery) (*galleryimageversions.GalleryImageVersion, error) {
+						if diff := cmp.Diff(sig, *tt.expectedSharedImageGallery); diff != "" {
+							return nil, fmt.Errorf(diff)
+						}
 						return tt.mockedGalleryImage, nil
 					},
 				}
