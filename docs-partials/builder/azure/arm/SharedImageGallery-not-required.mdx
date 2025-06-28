@@ -1,6 +1,8 @@
 <!-- Code generated from the comments of the SharedImageGallery struct in builder/azure/arm/config.go; DO NOT EDIT MANUALLY -->
 
-- `id` (string) - ID
+- `id` (string) - ID of the Shared Image Gallery used as a base image in the build, this field is useful when using HCP Packer ancestry
+  If this field is set, no other fields in the SharedImageGallery block can be set
+  As those other fields simply build the reference ID
 
 - `subscription` (string) - Subscription
 

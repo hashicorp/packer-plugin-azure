@@ -329,11 +329,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		}
 	}
 	if b.config.SharedGallery.ID != "" {
-		acg := b.config.getSharedImageGalleryObjectFromId()
-		if acg == nil {
+		sigID := b.config.getSharedImageGalleryObjectFromId()
+		if sigID == nil {
+			// The SIG ID should have already been validated at this point
 			return nil, errors.New("failed to parse Shared Image Gallery object from ID, this is always a Packer Azure plugin bug")
 		}
-		sourceImageSpecialized, err = isImageSpecialized(&azureClient.GalleryImagesClient, builderPollingContext, *b.config.getSharedImageGalleryObjectFromId())
+		sourceImageSpecialized, err = isImageSpecialized(&azureClient.GalleryImagesClient, builderPollingContext, *sigID)
 		if err != nil {
 			return nil, err
 		}

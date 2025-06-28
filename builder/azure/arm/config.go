@@ -81,6 +81,9 @@ type PlanInformation struct {
 }
 
 type SharedImageGallery struct {
+	// ID of the Shared Image Gallery used as a base image in the build, this field is useful when using HCP Packer ancestry
+	// If this field is set, no other fields in the SharedImageGallery block can be set
+	// As those other fields simply build the reference ID
 	ID            string `mapstructure:"id"`
 	Subscription  string `mapstructure:"subscription"`
 	ResourceGroup string `mapstructure:"resource_group"`
@@ -183,9 +186,9 @@ type Config struct {
 	CaptureContainerName string `mapstructure:"capture_container_name"`
 	// Use a [Shared Gallery
 	// image](https://azure.microsoft.com/en-us/blog/announcing-the-public-preview-of-shared-image-gallery/)
-	// as the source for this build. *VHD targets are incompatible with this
-	// build type* - the target must be a *Managed Image*. When using shared_image_gallery as a source, image_publisher,
-	// image_offer, image_sku, image_version, and custom_managed_image_name should not be set.
+	// as the source for this build.
+	// *VHD targets are incompatible with this build type*
+	// When using shared_image_gallery as a source, image_publisher, image_offer, image_sku, image_version, and custom_managed_image_name should not be set.
 	//
 	// In JSON
 	// ```json
@@ -196,8 +199,6 @@ type Config struct {
 	//     "image_name": "ImageName",
 	//     "image_version": "1.0.0",
 	// }
-	// "managed_image_name": "TargetImageName",
-	// "managed_image_resource_group_name": "TargetResourceGroup"
 	// ```
 	// In HCL2
 	// ```hcl
@@ -208,8 +209,6 @@ type Config struct {
 	//     image_name = "ImageName"
 	//     image_version = "1.0.0"
 	// }
-	// managed_image_name = "TargetImageName"
-	// managed_image_resource_group_name = "TargetResourceGroup"
 	// ```
 	SharedGallery SharedImageGallery `mapstructure:"shared_image_gallery" required:"false"`
 	// The name of the Shared Image Gallery under which the managed image will be published as Shared Gallery Image version.
@@ -227,8 +226,6 @@ type Config struct {
 	//     "replication_regions": ["regionA", "regionB", "regionC"],
 	//     "storage_account_type": "Standard_LRS"
 	// }
-	// "managed_image_name": "TargetImageName",
-	// "managed_image_resource_group_name": "TargetResourceGroup"
 	// ```
 	// In HCL2
 	// ```hcl
@@ -249,9 +246,9 @@ type Config struct {
 	//       name = "regionC"
 	//     }
 	// }
-	// managed_image_name = "TargetImageName"
-	// managed_image_resource_group_name = "TargetResourceGroup"
 	// ```
+	// A managed image target can also be set when using a shared image gallery destination
+
 	SharedGalleryDestination SharedImageGalleryDestination `mapstructure:"shared_image_gallery_destination"`
 	// How long to wait for an image to be published to the shared image
 	// gallery before timing out. If your Packer build is failing on the
