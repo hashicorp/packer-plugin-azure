@@ -347,6 +347,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			NewStepValidateTemplate(azureClient, ui, &b.config, deploymentName, getVirtualMachineDeploymentFunction),
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, getVirtualMachineDeploymentFunction, VirtualMachineTemplate),
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),
+			NewStepGetOSDisk(azureClient, ui),
+			NewStepGetAdditionalDisks(azureClient, ui),
 			&communicator.StepConnectSSH{
 				Config:    &b.config.Comm,
 				Host:      communicator.CommHost(b.config.Comm.SSHHost, constants.SSHHost),
@@ -356,8 +358,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			&commonsteps.StepCleanupTempKeys{
 				Comm: &b.config.Comm,
 			},
-			NewStepGetOSDisk(azureClient, ui),
-			NewStepGetAdditionalDisks(azureClient, ui),
 			NewStepPowerOffCompute(azureClient, ui),
 			NewStepSnapshotOSDisk(azureClient, ui, &b.config),
 			NewStepSnapshotDataDisks(azureClient, ui, &b.config),
