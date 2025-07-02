@@ -179,6 +179,12 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 		if err != nil {
 			return nil, err
 		}
+	} else if config.SharedGallery.ID != "" {
+		imageID := config.SharedGallery.ID
+		err = builder.SetSharedGalleryImage(config.Location, imageID, config.diskCachingType)
+		if err != nil {
+			return nil, err
+		}
 	} else if config.SharedGallery.CommunityGalleryImageId != "" {
 		imageID := config.SharedGallery.CommunityGalleryImageId
 
