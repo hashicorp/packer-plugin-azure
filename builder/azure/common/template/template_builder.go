@@ -438,7 +438,8 @@ func (s *TemplateBuilder) SetUserData(userData string) error {
 	return nil
 }
 
-func (s *TemplateBuilder) SetVirtualNetwork(virtualNetworkResourceGroup, virtualNetworkName, subnetName string) error {
+func (s *TemplateBuilder) SetVirtualNetwork(virtualNetworkSubscription, virtualNetworkResourceGroup, virtualNetworkName, subnetName string) error {
+	s.setVariable("virtualNetworkSubscriptionID", virtualNetworkSubscription)
 	s.setVariable("virtualNetworkResourceGroup", virtualNetworkResourceGroup)
 	s.setVariable("virtualNetworkName", virtualNetworkName)
 	s.setVariable("subnetName", subnetName)
@@ -460,7 +461,8 @@ func (s *TemplateBuilder) SetVirtualNetwork(virtualNetworkResourceGroup, virtual
 	return nil
 }
 
-func (s *TemplateBuilder) SetPrivateVirtualNetworkWithPublicIp(virtualNetworkResourceGroup, virtualNetworkName, subnetName string) error {
+func (s *TemplateBuilder) SetPrivateVirtualNetworkWithPublicIp(virtualNetworkSubscription, virtualNetworkResourceGroup, virtualNetworkName, subnetName string) error {
+	s.setVariable("virtualNetworkSubscriptionID", virtualNetworkSubscription)
 	s.setVariable("virtualNetworkResourceGroup", virtualNetworkResourceGroup)
 	s.setVariable("virtualNetworkName", virtualNetworkName)
 	s.setVariable("subnetName", subnetName)
@@ -852,8 +854,9 @@ const BasicTemplate = `{
     "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnetName'))]",
     "virtualNetworkName": "[parameters('virtualNetworkName')]",
     "virtualNetworkResourceGroup": "[resourceGroup().name]",
+	"virtualNetworkSubscriptionID": "[subscription().subscriptionId]",
     "vmStorageAccountContainerName": "images",
-    "vnetID": "[resourceId(variables('virtualNetworkResourceGroup'), 'Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
+    "vnetID": "[resourceId(variables('virtualNetworkSubscriptionID'),variables('virtualNetworkResourceGroup'), 'Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
   },
   "resources": [
     {
