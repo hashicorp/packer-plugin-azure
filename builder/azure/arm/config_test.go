@@ -3683,3 +3683,49 @@ func TestConfigShouldAcceptSigID(t *testing.T) {
 		t.Fatalf("Unexpected err %s", err)
 	}
 }
+
+func TestConfigShouldParseValidSigID(t *testing.T) {
+	cfg := &Config{}
+	cfg.SharedGallery = SharedImageGallery{
+		ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myResourceGroup/providers/Microsoft.Compute/galleries/myGallery/images/myImageDefinition/versions/1.0.0",
+	}
+	sigObject := cfg.getSharedImageGalleryObjectFromId()
+	if sigObject == nil {
+		t.Fatalf("getSharedImageGalleryObjectFromId did not parse valid SIG ID")
+	}
+
+	expectedSigObject := &SharedImageGallery{
+		Subscription:  "00000000-0000-0000-0000-000000000000",
+		ResourceGroup: "myResourceGroup",
+		GalleryName:   "myGallery",
+		ImageName:     "myImageDefinition",
+		ImageVersion:  "1.0.0",
+	}
+
+	if diff := cmp.Diff(expectedSigObject, sigObject); diff != "" {
+		t.Fatalf("unexpected diff %s", diff)
+	}
+}
+
+func TestConfigShouldntParseInvalidSigIDs(t *testing.T) {
+	cfg := &Config{}
+	cfg.SharedGallery = SharedImageGallery{
+		ID: "/bufo/some-bad-id",
+	}
+	sigObject := cfg.getSharedImageGalleryObjectFromId()
+	if sigObject != nil {
+		t.Fatalf("getSharedImageGalleryObjectFromId unexpectedly parsed invalid ID")
+	}
+
+	cfg.SharedGallery = SharedImageGallery{}
+	sigObject = cfg.getSharedImageGalleryObjectFromId()
+	if sigObject != nil {
+		t.Fatalf("getSharedImageGalleryObjectFromId unexpectedly parsed invalid ID")
+	}
+
+	cfg = &Config{}
+	sigObject = cfg.getSharedImageGalleryObjectFromId()
+	if sigObject != nil {
+		t.Fatalf("getSharedImageGalleryObjectFromId unexpectedly parsed invalid ID")
+	}
+}
