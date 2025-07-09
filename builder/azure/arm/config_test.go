@@ -3547,3 +3547,185 @@ func TestConfigShouldAcceptValidIPSkus(t *testing.T) {
 		t.Fatalf("Expected standard ip sku to be normalized to %s, but was %s", publicipaddresses.PublicIPAddressSkuNameBasic, basicConfig["public_ip_sku"])
 	}
 }
+
+func TestConfigShouldRejectSIGIDWhenSIGNameSet(t *testing.T) {
+	config := map[string]interface{}{
+		"subscription_id":        "ignore",
+		"os_type":                constants.Target_Linux,
+		"communicator":           "none",
+		"location":               "ignore",
+		"disk_encryption_set_id": "ignore",
+		"shared_image_gallery": map[string]interface{}{
+			"id":         "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myResourceGroup/providers/Microsoft.Compute/galleries/myGallery/images/myImageDefinition/versions/1.0.0",
+			"image_name": "blorp",
+		},
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.1",
+		},
+	}
+	var cfg Config
+	_, err := cfg.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("Expected config to reject but didn't")
+	}
+	if !strings.Contains(err.Error(), "When setting shared_image_gallery.id, shared_image_gallery.image_name must not be specified") {
+		t.Fatalf("Unexpected err %s", err)
+	}
+}
+
+func TestConfigShouldRejectSIGIDWhenSIGVersionSet(t *testing.T) {
+	config := map[string]interface{}{
+		"subscription_id":        "ignore",
+		"os_type":                constants.Target_Linux,
+		"communicator":           "none",
+		"location":               "ignore",
+		"disk_encryption_set_id": "ignore",
+		"shared_image_gallery": map[string]interface{}{
+			"id":            "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myResourceGroup/providers/Microsoft.Compute/galleries/myGallery/images/myImageDefinition/versions/1.0.0",
+			"image_version": "1.0.1",
+		},
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.1",
+		},
+	}
+	var cfg Config
+	_, err := cfg.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("Expected config to reject but didn't")
+	}
+	if !strings.Contains(err.Error(), "When setting shared_image_gallery.id, shared_image_gallery.image_version must not be specified") {
+		t.Fatalf("Unexpected err %s", err)
+	}
+}
+
+func TestConfigShouldRejectSIGIDWhenSIGSubscriptionSet(t *testing.T) {
+	config := map[string]interface{}{
+		"subscription_id":        "ignore",
+		"os_type":                constants.Target_Linux,
+		"communicator":           "none",
+		"location":               "ignore",
+		"disk_encryption_set_id": "ignore",
+		"shared_image_gallery": map[string]interface{}{
+			"id":           "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myResourceGroup/providers/Microsoft.Compute/galleries/myGallery/images/myImageDefinition/versions/1.0.0",
+			"subscription": "whatever",
+		},
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.1",
+		},
+	}
+	var cfg Config
+	_, err := cfg.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("Expected config to reject but didn't")
+	}
+	if !strings.Contains(err.Error(), "When setting shared_image_gallery.id, shared_image_gallery.subscription must not be specified") {
+		t.Fatalf("Unexpected err %s", err)
+	}
+}
+
+func TestConfigShouldRejectSIGIDWhenSIGrgSet(t *testing.T) {
+	config := map[string]interface{}{
+		"subscription_id":        "ignore",
+		"os_type":                constants.Target_Linux,
+		"communicator":           "none",
+		"location":               "ignore",
+		"disk_encryption_set_id": "ignore",
+		"shared_image_gallery": map[string]interface{}{
+			"id":             "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myResourceGroup/providers/Microsoft.Compute/galleries/myGallery/images/myImageDefinition/versions/1.0.0",
+			"resource_group": "ignore",
+		},
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.1",
+		},
+	}
+	var cfg Config
+	_, err := cfg.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("Expected config to reject but didn't")
+	}
+	if !strings.Contains(err.Error(), "When setting shared_image_gallery.id, shared_image_gallery.resource_group must not be specified") {
+		t.Fatalf("Unexpected err %s", err)
+	}
+}
+
+func TestConfigShouldAcceptSigID(t *testing.T) {
+	config := map[string]interface{}{
+		"subscription_id":        "ignore",
+		"os_type":                constants.Target_Linux,
+		"communicator":           "none",
+		"location":               "ignore",
+		"disk_encryption_set_id": "ignore",
+		"shared_image_gallery": map[string]interface{}{
+			"id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myResourceGroup/providers/Microsoft.Compute/galleries/myGallery/images/myImageDefinition/versions/1.0.0",
+		},
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.1",
+		},
+	}
+	var cfg Config
+	_, err := cfg.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("Unexpected err %s", err)
+	}
+}
+
+func TestConfigShouldParseValidSigID(t *testing.T) {
+	cfg := &Config{}
+	cfg.SharedGallery = SharedImageGallery{
+		ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myResourceGroup/providers/Microsoft.Compute/galleries/myGallery/images/myImageDefinition/versions/1.0.0",
+	}
+	sigObject := cfg.getSharedImageGalleryObjectFromId()
+	if sigObject == nil {
+		t.Fatalf("getSharedImageGalleryObjectFromId did not parse valid SIG ID")
+	}
+
+	expectedSigObject := &SharedImageGallery{
+		Subscription:  "00000000-0000-0000-0000-000000000000",
+		ResourceGroup: "myResourceGroup",
+		GalleryName:   "myGallery",
+		ImageName:     "myImageDefinition",
+		ImageVersion:  "1.0.0",
+	}
+
+	if diff := cmp.Diff(expectedSigObject, sigObject); diff != "" {
+		t.Fatalf("unexpected diff %s", diff)
+	}
+}
+
+func TestConfigShouldntParseInvalidSigIDs(t *testing.T) {
+	cfg := &Config{}
+	cfg.SharedGallery = SharedImageGallery{
+		ID: "/bufo/some-bad-id",
+	}
+	sigObject := cfg.getSharedImageGalleryObjectFromId()
+	if sigObject != nil {
+		t.Fatalf("getSharedImageGalleryObjectFromId unexpectedly parsed invalid ID")
+	}
+
+	cfg.SharedGallery = SharedImageGallery{}
+	sigObject = cfg.getSharedImageGalleryObjectFromId()
+	if sigObject != nil {
+		t.Fatalf("getSharedImageGalleryObjectFromId unexpectedly parsed invalid ID")
+	}
+
+	cfg = &Config{}
+	sigObject = cfg.getSharedImageGalleryObjectFromId()
+	if sigObject != nil {
+		t.Fatalf("getSharedImageGalleryObjectFromId unexpectedly parsed invalid ID")
+	}
+}
