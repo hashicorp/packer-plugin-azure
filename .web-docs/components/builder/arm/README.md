@@ -154,9 +154,9 @@ Providing `temp_resource_group_name` or `location` in combination with
 
 - `shared_image_gallery` (SharedImageGallery) - Use a [Shared Gallery
   image](https://azure.microsoft.com/en-us/blog/announcing-the-public-preview-of-shared-image-gallery/)
-  as the source for this build. *VHD targets are incompatible with this
-  build type* - the target must be a *Managed Image*. When using shared_image_gallery as a source, image_publisher,
-  image_offer, image_sku, image_version, and custom_managed_image_name should not be set.
+  as the source for this build.
+  *VHD targets are incompatible with this build type*
+  When using shared_image_gallery as a source, image_publisher, image_offer, image_sku, image_version, and custom_managed_image_name should not be set.
   
   In JSON
   ```json
@@ -167,8 +167,6 @@ Providing `temp_resource_group_name` or `location` in combination with
       "image_name": "ImageName",
       "image_version": "1.0.0",
   }
-  "managed_image_name": "TargetImageName",
-  "managed_image_resource_group_name": "TargetResourceGroup"
   ```
   In HCL2
   ```hcl
@@ -179,50 +177,9 @@ Providing `temp_resource_group_name` or `location` in combination with
       image_name = "ImageName"
       image_version = "1.0.0"
   }
-  managed_image_name = "TargetImageName"
-  managed_image_resource_group_name = "TargetResourceGroup"
   ```
 
-- `shared_image_gallery_destination` (SharedImageGalleryDestination) - The name of the Shared Image Gallery under which the managed image will be published as Shared Gallery Image version.
-  
-  Following is an example.
-  
-  In JSON
-  ```json
-  "shared_image_gallery_destination": {
-      "subscription": "00000000-0000-0000-0000-00000000000",
-      "resource_group": "ResourceGroup",
-      "gallery_name": "GalleryName",
-      "image_name": "ImageName",
-      "image_version": "1.0.0",
-      "replication_regions": ["regionA", "regionB", "regionC"],
-      "storage_account_type": "Standard_LRS"
-  }
-  "managed_image_name": "TargetImageName",
-  "managed_image_resource_group_name": "TargetResourceGroup"
-  ```
-  In HCL2
-  ```hcl
-  shared_image_gallery_destination {
-      subscription = "00000000-0000-0000-0000-00000000000"
-      resource_group = "ResourceGroup"
-      gallery_name = "GalleryName"
-      image_name = "ImageName"
-      image_version = "1.0.0"
-      storage_account_type = "Standard_LRS"
-      target_region {
-        name = "regionA"
-      }
-      target_region {
-        name = "regionB"
-      }
-      target_region {
-        name = "regionC"
-      }
-  }
-  managed_image_name = "TargetImageName"
-  managed_image_resource_group_name = "TargetResourceGroup"
-  ```
+- `shared_image_gallery_destination` (SharedImageGalleryDestination) - Shared Gallery Destination
 
 - `shared_image_gallery_timeout` (duration string | ex: "1h5m2s") - How long to wait for an image to be published to the shared image
   gallery before timing out. If your Packer build is failing on the
@@ -633,6 +590,10 @@ Providing `temp_resource_group_name` or `location` in combination with
 The shared_image_gallery block is available for building a new image from a private or [community shared imaged gallery](https://docs.microsoft.com/en-us/azure/virtual-machines/azure-compute-gallery#community-gallery-preview) owned gallery.
 
 <!-- Code generated from the comments of the SharedImageGallery struct in builder/azure/arm/config.go; DO NOT EDIT MANUALLY -->
+
+- `id` (string) - ID of the Shared Image Gallery used as a base image in the build, this field is useful when using HCP Packer ancestry
+  If this field is set, no other fields in the SharedImageGallery block can be set
+  As those other fields simply build the reference ID
 
 - `subscription` (string) - Subscription
 
