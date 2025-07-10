@@ -10,11 +10,13 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/snapshots"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-07-03/galleryimages"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-07-03/galleryimageversions"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/publicipaddresses"
@@ -176,6 +178,43 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				}
 			} else {
 				return nil, fmt.Errorf("the managed image named %s already exists in the resource group %s, use a different manage image name or use the -force option to automatically delete it.", b.config.ManagedImageName, b.config.ManagedImageResourceGroupName)
+			}
+		}
+
+		if b.config.ManagedImageOSDiskSnapshotName != "" {
+			// If a managed image OS disk snapshot already exists it cannot be overwritten.
+			snapshotId := snapshots.NewSnapshotID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName, b.config.ManagedImageOSDiskSnapshotName)
+			_, err = azureClient.SnapshotsClient.Get(builderPollingContext, snapshotId)
+			if err == nil {
+				if b.config.PackerForce {
+					ui.Say(fmt.Sprintf("the managed image os disk snapshot named %s already exists, but deleting it due to -force flag", b.config.ManagedImageOSDiskSnapshotName))
+					err := azureClient.SnapshotsClient.DeleteThenPoll(builderPollingContext, snapshotId)
+					if err != nil {
+						return nil, fmt.Errorf("failed to delete the managed image os disk snapshot named %s : %s", b.config.ManagedImageOSDiskSnapshotName, azureClient.LastError.Error())
+					}
+				} else {
+					return nil, fmt.Errorf("the managed image os disk snapshot named %s already exists in the resource group %s, use a different manage image name or use the -force option to automatically delete it.", b.config.ManagedImageOSDiskSnapshotName, b.config.ManagedImageResourceGroupName)
+				}
+			}
+		}
+
+		if b.config.ManagedImageDataDiskSnapshotPrefix != "" {
+			// If a managed image Data disk snapshot already exists it cannot be overwritten.
+			for i := range len(b.config.AdditionalDiskSize) {
+				dataDiskSnapshotPrefix := b.config.ManagedImageDataDiskSnapshotPrefix + strconv.Itoa(i)
+				snapshotId := snapshots.NewSnapshotID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName, dataDiskSnapshotPrefix)
+				_, err = azureClient.SnapshotsClient.Get(builderPollingContext, snapshotId)
+				if err == nil {
+					if b.config.PackerForce {
+						ui.Say(fmt.Sprintf("the managed image data disk snapshot named %s already exists, but deleting it due to -force flag", dataDiskSnapshotPrefix))
+						err := azureClient.SnapshotsClient.DeleteThenPoll(builderPollingContext, snapshotId)
+						if err != nil {
+							return nil, fmt.Errorf("failed to delete the managed image data disk snapshot named %s : %s", dataDiskSnapshotPrefix, azureClient.LastError.Error())
+						}
+					} else {
+						return nil, fmt.Errorf("the managed image data disk snapshot named %s already exists in the resource group %s, use a different manage image name or use the -force option to automatically delete it.", b.config.ManagedImageDataDiskSnapshotPrefix, b.config.ManagedImageResourceGroupName)
+					}
+				}
 			}
 		}
 	}
