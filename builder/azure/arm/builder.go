@@ -128,11 +128,10 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		b.config.PollingDurationTimeout,
 		authOptions,
 	)
-
-	ui.Message("ARM Client successfully created")
 	if err != nil {
 		return nil, err
 	}
+	ui.Message("ARM Client successfully created")
 
 	resolver := newResourceResolver(azureClient)
 	if err := resolver.Resolve(&b.config); err != nil {
@@ -236,7 +235,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		if err != nil {
 			return nil, err
 		}
-		b.config.storageAccountBlobEndpoint = *account.Properties.PrimaryEndpoints.Blob
+
+		blobPrimaryEndpoint := *account.Properties.PrimaryEndpoints.Blob
+		b.config.storageAccountBlobEndpoint = blobPrimaryEndpoint
+		// Remove trailing slash
+		azureClient.GiovanniBlobClient.Client.BaseUri = blobPrimaryEndpoint[:len(blobPrimaryEndpoint)-1]
+
 		if !equalLocation(account.Location, b.config.Location) {
 			return nil, fmt.Errorf("The storage account is located in %s, but the build will take place in %s. The locations must be identical", account.Location, b.config.Location)
 		}
