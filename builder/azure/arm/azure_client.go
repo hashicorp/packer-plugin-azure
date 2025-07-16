@@ -235,6 +235,8 @@ func NewAzureClient(ctx context.Context, storageAccountName string, cloud *envir
 		if err != nil {
 			return nil, err
 		}
+		// Note: The client may be initialized with a default or temporary Base URI
+		// that is intended to be overridden with a service-specific endpoint later.
 		blobClient, err := giovanniBlobStorageSDK.NewWithBaseUri(fmt.Sprintf("https://%s.blob.core.windows.net", storageAccountName))
 		if err != nil {
 			return nil, err

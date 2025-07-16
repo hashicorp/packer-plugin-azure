@@ -10,11 +10,13 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/snapshots"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-07-03/galleryimages"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-07-03/galleryimageversions"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/publicipaddresses"
@@ -126,11 +128,10 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		b.config.PollingDurationTimeout,
 		authOptions,
 	)
-
-	ui.Message("ARM Client successfully created")
 	if err != nil {
 		return nil, err
 	}
+	ui.Message("ARM Client successfully created")
 
 	resolver := newResourceResolver(azureClient)
 	if err := resolver.Resolve(&b.config); err != nil {
@@ -178,6 +179,43 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				return nil, fmt.Errorf("the managed image named %s already exists in the resource group %s, use a different manage image name or use the -force option to automatically delete it.", b.config.ManagedImageName, b.config.ManagedImageResourceGroupName)
 			}
 		}
+
+		if b.config.ManagedImageOSDiskSnapshotName != "" {
+			// If a managed image OS disk snapshot already exists it cannot be overwritten.
+			snapshotId := snapshots.NewSnapshotID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName, b.config.ManagedImageOSDiskSnapshotName)
+			_, err = azureClient.SnapshotsClient.Get(builderPollingContext, snapshotId)
+			if err == nil {
+				if b.config.PackerForce {
+					ui.Say(fmt.Sprintf("the managed image os disk snapshot named %s already exists, but deleting it due to -force flag", b.config.ManagedImageOSDiskSnapshotName))
+					err := azureClient.SnapshotsClient.DeleteThenPoll(builderPollingContext, snapshotId)
+					if err != nil {
+						return nil, fmt.Errorf("failed to delete the managed image os disk snapshot named %s : %s", b.config.ManagedImageOSDiskSnapshotName, azureClient.LastError.Error())
+					}
+				} else {
+					return nil, fmt.Errorf("the managed image os disk snapshot named %s already exists in the resource group %s, use a different manage image name or use the -force option to automatically delete it.", b.config.ManagedImageOSDiskSnapshotName, b.config.ManagedImageResourceGroupName)
+				}
+			}
+		}
+
+		if b.config.ManagedImageDataDiskSnapshotPrefix != "" {
+			// If a managed image Data disk snapshot already exists it cannot be overwritten.
+			for i := range len(b.config.AdditionalDiskSize) {
+				dataDiskSnapshotPrefix := b.config.ManagedImageDataDiskSnapshotPrefix + strconv.Itoa(i)
+				snapshotId := snapshots.NewSnapshotID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName, dataDiskSnapshotPrefix)
+				_, err = azureClient.SnapshotsClient.Get(builderPollingContext, snapshotId)
+				if err == nil {
+					if b.config.PackerForce {
+						ui.Say(fmt.Sprintf("the managed image data disk snapshot named %s already exists, but deleting it due to -force flag", dataDiskSnapshotPrefix))
+						err := azureClient.SnapshotsClient.DeleteThenPoll(builderPollingContext, snapshotId)
+						if err != nil {
+							return nil, fmt.Errorf("failed to delete the managed image data disk snapshot named %s : %s", dataDiskSnapshotPrefix, azureClient.LastError.Error())
+						}
+					} else {
+						return nil, fmt.Errorf("the managed image data disk snapshot named %s already exists in the resource group %s, use a different manage image name or use the -force option to automatically delete it.", b.config.ManagedImageDataDiskSnapshotPrefix, b.config.ManagedImageResourceGroupName)
+					}
+				}
+			}
+		}
 	}
 
 	if b.config.BuildResourceGroupName != "" {
@@ -197,7 +235,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		if err != nil {
 			return nil, err
 		}
-		b.config.storageAccountBlobEndpoint = *account.Properties.PrimaryEndpoints.Blob
+
+		blobPrimaryEndpoint := *account.Properties.PrimaryEndpoints.Blob
+		b.config.storageAccountBlobEndpoint = blobPrimaryEndpoint
+		// Remove trailing slash
+		azureClient.GiovanniBlobClient.Client.BaseUri = blobPrimaryEndpoint[:len(blobPrimaryEndpoint)-1]
+
 		if !equalLocation(account.Location, b.config.Location) {
 			return nil, fmt.Errorf("The storage account is located in %s, but the build will take place in %s. The locations must be identical", account.Location, b.config.Location)
 		}
@@ -318,22 +361,28 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		b.stateBag.Put(constants.ArmSharedImageGalleryDestinationTargetRegions, b.config.SharedGalleryDestination.SigDestinationTargetRegions)
 	}
 
+	// Specialized images in Azure means that the user was not removed by a sysprep/generalization step.
+	// This means that the user account on the image persists between builds.
+	// When the parent is specialized this changes the deployment of the build VM, since we do not want to create a new user account for specialized parent images.
 	sourceImageSpecialized := false
 	if b.config.SharedGallery.GalleryName != "" {
-		client := azureClient.GalleryImagesClient
-		id := galleryimages.NewGalleryImageID(b.config.SharedGallery.Subscription, b.config.SharedGallery.ResourceGroup, b.config.SharedGallery.GalleryName, b.config.SharedGallery.ImageName)
-		galleryImage, err := client.Get(builderPollingContext, id)
+		sourceImageSpecialized, err = isImageSpecialized(&azureClient.GalleryImagesClient, builderPollingContext, b.config.SharedGallery)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get parent Shared Gallery Image %s in gallery %s in the resource group %s, received error: %s.", b.config.SharedGallery.GalleryName, b.config.SharedGallery.ImageName, b.config.SharedGallery.ResourceGroup, err.Error())
-		}
-		if galleryImage.Model == nil {
-			return nil, commonclient.NullModelSDKErr
-		}
-		if galleryImage.Model.Properties.OsState == galleryimages.OperatingSystemStateTypesSpecialized {
-			sourceImageSpecialized = true
+			return nil, err
 		}
 	}
+	if b.config.SharedGallery.ID != "" {
+		sigID := b.config.getSharedImageGalleryObjectFromId()
+		if sigID == nil {
+			// The SIG ID should have already been validated at this point
+			return nil, errors.New("failed to parse Shared Image Gallery object from ID, this is always a Packer Azure plugin bug")
+		}
+		sourceImageSpecialized, err = isImageSpecialized(&azureClient.GalleryImagesClient, builderPollingContext, *sigID)
+		if err != nil {
+			return nil, err
+		}
 
+	}
 	getVirtualMachineDeploymentFunction := GetVirtualMachineDeployment
 	if sourceImageSpecialized {
 		getVirtualMachineDeploymentFunction = GetSpecializedVirtualMachineDeployment
@@ -347,6 +396,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			NewStepValidateTemplate(azureClient, ui, &b.config, deploymentName, getVirtualMachineDeploymentFunction),
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, getVirtualMachineDeploymentFunction, VirtualMachineTemplate),
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),
+			NewStepGetOSDisk(azureClient, ui),
+			NewStepGetAdditionalDisks(azureClient, ui),
 			&communicator.StepConnectSSH{
 				Config:    &b.config.Comm,
 				Host:      communicator.CommHost(b.config.Comm.SSHHost, constants.SSHHost),
@@ -356,8 +407,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			&commonsteps.StepCleanupTempKeys{
 				Comm: &b.config.Comm,
 			},
-			NewStepGetOSDisk(azureClient, ui),
-			NewStepGetAdditionalDisks(azureClient, ui),
 			NewStepPowerOffCompute(azureClient, ui),
 			NewStepSnapshotOSDisk(azureClient, ui, &b.config),
 			NewStepSnapshotDataDisks(azureClient, ui, &b.config),
@@ -567,6 +616,19 @@ func equalLocation(location1, location2 string) bool {
 
 func canonicalizeLocation(location string) string {
 	return strings.Replace(location, " ", "", -1)
+}
+
+func isImageSpecialized(client *galleryimages.GalleryImagesClient, ctx context.Context, acg SharedImageGallery) (bool, error) {
+	id := galleryimages.NewGalleryImageID(acg.Subscription, acg.ResourceGroup, acg.GalleryName, acg.ImageName)
+	galleryImage, err := client.Get(ctx, id)
+	if err != nil {
+		return false, fmt.Errorf("failed to get parent Shared Gallery Image %s in gallery %s in the resource group %s, received error: %s.", acg.GalleryName, acg.ImageName, acg.ResourceGroup, err.Error())
+	}
+	if galleryImage.Model == nil {
+		return false, commonclient.NullModelSDKErr
+	}
+	isSpecialized := galleryImage.Model.Properties.OsState == galleryimages.OperatingSystemStateTypesSpecialized
+	return isSpecialized, nil
 }
 
 func (b *Builder) getBlobAccount(ctx context.Context, client *AzureClient, subscriptionId string, resourceGroupName string, storageAccountName string) (*storageaccounts.StorageAccount, error) {
