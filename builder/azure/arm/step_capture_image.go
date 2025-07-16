@@ -6,27 +6,63 @@ package arm
 import (
 	"context"
 	"fmt"
+	"net/http"
 
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
+	sdkclient "github.com/hashicorp/go-azure-sdk/sdk/client"
+	"github.com/hashicorp/go-azure-sdk/sdk/client/pollers"
+	"github.com/hashicorp/go-azure-sdk/sdk/client/resourcemanager"
+	"github.com/hashicorp/go-azure-sdk/sdk/odata"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
+	"github.com/tombuildsstuff/giovanni/storage/2020-08-04/blob/blobs"
 )
 
 type StepCaptureImage struct {
 	client              *AzureClient
+	config              *Config
 	generalizeVM        func(ctx context.Context, vmId virtualmachines.VirtualMachineId) error
 	getVMInternalID     func(ctx context.Context, vmId virtualmachines.VirtualMachineId) (string, error)
 	captureVhd          func(ctx context.Context, vmId virtualmachines.VirtualMachineId, parameters *virtualmachines.VirtualMachineCaptureParameters) error
 	captureManagedImage func(ctx context.Context, subscriptionId string, resourceGroupName string, imageName string, parameters *images.Image) error
+	grantAccess         func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) (string, error)
+	revokeAccess        func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) error
+	copyToStorage       func(ctx context.Context, storageContainerName string, captureNamePrefix string, osDiskName string, accessUri string) error
 	say                 func(message string)
 	error               func(e error)
 }
 
-func NewStepCaptureImage(client *AzureClient, ui packersdk.Ui) *StepCaptureImage {
+type GrantAccessOperationResponse struct {
+	Poller       pollers.Poller
+	HttpResponse *http.Response
+	OData        *odata.OData
+	Model        *AccessUri
+}
+
+type AccessUri struct {
+	StartTime  *string              `json:"startTime,omitempty"`
+	EndTime    *string              `json:"endTime,omitempty"`
+	Status     *string              `json:"status,omitempty"`
+	Name       *string              `json:"name,omitempty"`
+	Properties *AccessUriProperties `json:"properties,omitempty"`
+}
+
+type AccessUriProperties struct {
+	Output *AccessUriOutput `json:"output,omitempty"`
+}
+
+type AccessUriOutput struct {
+	AccessSAS *string `json:"accessSAS,omitempty"`
+}
+
+func NewStepCaptureImage(client *AzureClient, ui packersdk.Ui, config *Config) *StepCaptureImage {
 	var step = &StepCaptureImage{
+		config: config,
 		client: client,
 		say: func(message string) {
 			ui.Say(message)
@@ -40,6 +76,9 @@ func NewStepCaptureImage(client *AzureClient, ui packersdk.Ui) *StepCaptureImage
 	step.captureVhd = step.captureImage
 	step.captureManagedImage = step.captureImageFromVM
 	step.getVMInternalID = step.getVMID
+	step.grantAccess = step.grantDiskAccess
+	step.revokeAccess = step.revokeDiskAccess
+	step.copyToStorage = step.copyVhdToStorage
 	return step
 }
 
@@ -93,7 +132,6 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 	var computeName = state.Get(constants.ArmComputeName).(string)
 	var location = state.Get(constants.ArmLocation).(string)
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
-	var vmCaptureParameters = state.Get(constants.ArmVirtualMachineCaptureParameters).(*virtualmachines.VirtualMachineCaptureParameters)
 	var imageParameters = state.Get(constants.ArmImageParameters).(*images.Image)
 	var subscriptionId = state.Get(constants.ArmSubscription).(string)
 	var isManagedImage = state.Get(constants.ArmIsManagedImage).(bool)
@@ -139,7 +177,7 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 			// Get that ID before capturing the VM so that we know where the resultant VHD is stored
 			vmInternalID, err := s.getVMInternalID(ctx, vmId)
 			if err != nil {
-				err = fmt.Errorf("Failed to get build VM before capturing image with err : %s", err)
+				err = fmt.Errorf("failed to get build VM before capturing image with err : %s", err)
 				state.Put(constants.Error, err)
 				s.error(err)
 				return multistep.ActionHalt
@@ -147,9 +185,34 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 
 			s.say(fmt.Sprintf(" -> VM Internal ID            : '%s'", vmInternalID))
 			state.Put(constants.ArmBuildVMInternalId, vmInternalID)
-			s.say("Capturing VHD ...")
-			err = s.captureVhd(ctx, vmId, vmCaptureParameters)
+
+			var osDiskName = s.config.tmpOSDiskName
+			s.say(fmt.Sprintf(" -> osDiskName                : '%s'", osDiskName))
+
+			accessUri, err := s.grantAccess(ctx, subscriptionId, resourceGroupName, osDiskName)
 			if err != nil {
+				err = fmt.Errorf("failed to grant access with err : %s", err)
+				state.Put(constants.Error, err)
+				s.error(err)
+				return multistep.ActionHalt
+			}
+
+			s.say(fmt.Sprintf(" -> accessUri                 : '%s'", accessUri))
+
+			var storageContainerName = s.config.CaptureContainerName
+			var captureNamePrefix = s.config.CaptureNamePrefix
+
+			err = s.copyToStorage(ctx, storageContainerName, captureNamePrefix, osDiskName, accessUri)
+			if err != nil {
+				err = fmt.Errorf("failed to copy to storage with err : %s", err)
+				state.Put(constants.Error, err)
+				s.error(err)
+				return multistep.ActionHalt
+			}
+
+			err = s.revokeAccess(ctx, subscriptionId, resourceGroupName, osDiskName)
+			if err != nil {
+				err = fmt.Errorf("failed to revoke access with err : %s", err)
 				state.Put(constants.Error, err)
 				s.error(err)
 				return multistep.ActionHalt
@@ -160,4 +223,103 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 }
 
 func (*StepCaptureImage) Cleanup(multistep.StateBag) {
+}
+
+func (s *StepCaptureImage) grantDiskAccess(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) (string, error) {
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+
+	diskID := commonids.NewManagedDiskID(subscriptionId, resourceGroupName, osDiskName)
+	grantAccessData := disks.GrantAccessData{
+		Access:            disks.AccessLevelRead,
+		DurationInSeconds: 600,
+	}
+
+	opts := sdkclient.RequestOptions{
+		ContentType: "application/json; charset=utf-8",
+		ExpectedStatusCodes: []int{
+			http.StatusAccepted,
+			http.StatusOK,
+		},
+		HttpMethod: http.MethodPost,
+		Path:       fmt.Sprintf("%s/beginGetAccess", diskID.ID()),
+	}
+
+	s.say("Capturing VHD ...")
+	req, err := s.client.DisksClient.Client.NewRequest(pollingContext, opts)
+	if err != nil {
+		return "", err
+	}
+
+	if err = req.Marshal(grantAccessData); err != nil {
+		return "", err
+	}
+
+	var resp *sdkclient.Response
+	resp, err = req.Execute(ctx)
+
+	var result GrantAccessOperationResponse
+
+	if resp != nil {
+		result.OData = resp.OData
+		result.HttpResponse = resp.Response
+
+		var model AccessUri
+		result.Model = &model
+	}
+	if err != nil {
+		return "", err
+	}
+
+	result.Poller, err = resourcemanager.PollerFromResponse(resp, s.client.DisksClient.Client)
+	if err != nil {
+		return "", err
+	}
+
+	if err := result.Poller.PollUntilDone(pollingContext); err != nil {
+		return "", fmt.Errorf("polling after GrantAccess: %+v", err)
+	}
+
+	if err := result.Poller.FinalResult(result.Model); err != nil {
+		return "", fmt.Errorf("performing FinalResult: %+v", err)
+	}
+
+	accessUri := result.Model.Properties.Output.AccessSAS
+
+	return *accessUri, nil
+}
+
+func (s *StepCaptureImage) revokeDiskAccess(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) error {
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+	diskID := commonids.NewManagedDiskID(subscriptionId, resourceGroupName, osDiskName)
+
+	s.say("Revoking access ...")
+	err := s.client.DisksClient.RevokeAccessThenPoll(pollingContext, diskID)
+	if err != nil {
+		s.say(s.client.LastError.Error())
+		return err
+	}
+
+	return nil
+}
+
+func (s *StepCaptureImage) copyVhdToStorage(ctx context.Context, storageContainerName string, captureNamePrefix string, osDiskName string, accessUri string) error {
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+
+	var vhdName = fmt.Sprintf("%s%s.vhd", captureNamePrefix, osDiskName)
+	copyInput := blobs.CopyInput{
+		CopySource: accessUri,
+	}
+
+	s.say("Copying VHD to Storage Account ...")
+	s.say(fmt.Sprintf(" -> Storage Container Name    : '%s'", storageContainerName))
+	s.say(fmt.Sprintf(" -> Vhd Name                  : '%s'", vhdName))
+
+	if err := s.client.GiovanniBlobClient.CopyAndWait(pollingContext, storageContainerName, vhdName, copyInput); err != nil {
+		return fmt.Errorf("error copying: %s", err)
+	}
+
+	return nil
 }
