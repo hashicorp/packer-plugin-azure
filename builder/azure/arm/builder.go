@@ -448,7 +448,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	captureSteps := b.config.CaptureSteps(
 		ui.Say,
-		NewStepCaptureImage(azureClient, ui),
+		NewStepCaptureImage(azureClient, ui, &b.config),
 		NewStepPublishToSharedImageGallery(azureClient, ui, &b.config),
 	)
 	steps = append([]multistep.Step{
