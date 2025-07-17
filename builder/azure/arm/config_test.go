@@ -830,6 +830,9 @@ func TestConfigShouldRejectMalformedManagedImageOSDiskSnapshotName(t *testing.T)
 		"underscore_underscore",
 		"0leading_number",
 		"really_loooooooooooooooooooooooooooooooooooooooooooooooooong",
+		"01234567890123456789012345678901234567890123456789012345678901234567890123456789", // 80 characters
+		"MyImage2025-01-01",
+		"MyImage2025.01.01_",
 	}
 
 	for _, x := range wellFormedManagedImageOSDiskSnapshotName {
@@ -844,10 +847,12 @@ func TestConfigShouldRejectMalformedManagedImageOSDiskSnapshotName(t *testing.T)
 
 	malformedManagedImageOSDiskSnapshotName := []string{
 		"-leading-hyphen",
+		"_leading-underscore",
+		".leading-period",
 		"trailing-hyphen-",
 		"trailing-period.",
 		"punc-!@#$%^&*()_+-=-punc",
-		"really_looooooooooooooooooooooooooooooooooooooooooooooooooooooong_exceeding_80_char_limit",
+		"really_looooooooooooooooooooooooooooooooooooooooooooooong_exceeding_80_char_limit", // 81 characters
 	}
 
 	for _, x := range malformedManagedImageOSDiskSnapshotName {
@@ -882,6 +887,9 @@ func TestConfigShouldRejectMalformedManagedImageDataDiskSnapshotPrefix(t *testin
 		"underscore_underscore",
 		"0leading_number",
 		"less_than_sixty_characters",
+		"012345678901234567890123456789012345678901234567890123456789", // 60 characters
+		"MyImage2025-01-01",
+		"MyImage2025.01.01_",
 	}
 
 	for _, x := range wellFormedManagedImageDataDiskSnapshotPrefix {
@@ -896,10 +904,12 @@ func TestConfigShouldRejectMalformedManagedImageDataDiskSnapshotPrefix(t *testin
 
 	malformedManagedImageDataDiskSnapshotPrefix := []string{
 		"-leading-hyphen",
+		"_leading-underscore",
+		".leading-period",
 		"trailing-hyphen-",
 		"trailing-period.",
 		"punc-!@#$%^&*()_+-=-punc",
-		"really_looooooooooooooooooooooooooooooooooooooooooooooooooooooong_exceeding_60_char_limit",
+		"really_looooooooooooooooooooooooooong_exceeding_60_char_limit", // 61 characters
 	}
 
 	for _, x := range malformedManagedImageDataDiskSnapshotPrefix {
