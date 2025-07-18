@@ -12,6 +12,7 @@ import (
 	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	hashiSecurityRulesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/securityrules"
 	hashiSubnetsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/subnets"
+	hashiNSGSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/networksecuritygroups"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 )
 
@@ -478,11 +479,67 @@ func (s *TemplateBuilder) SetPrivateVirtualNetworkWithPublicIp(virtualNetworkRes
 	return nil
 }
 
-func (s *TemplateBuilder) SetNetworkSecurityGroup(ipAddresses []string, port int) error {
-	nsgResource, dependency, resourceId := s.createNsgResource(ipAddresses, port)
+func (s *TemplateBuilder) SetNetworkInterface(name string) error {
+    s.setVariable("nicName", name)
+    s.deleteResourceByType(resourceNetworkInterfaces)
+    return nil
+}
+
+func (s *TemplateBuilder) SetNetworkSecurityGroup(networkSecurityGroup *hashiNSGSDK.NetworkSecurityGroup) error {
+	if networkSecurityGroup.Name != nil {
+		s.setVariable("nsgName", *networkSecurityGroup.Id)
+
+		nicResource, err := s.getResourceByType(resourceNetworkInterfaces)
+		if err != nil {
+			return err
+		}
+
+		nsgResourceID := fmt.Sprintf("[resourceId('Microsoft.Network/networkSecurityGroups', '%s')]", *networkSecurityGroup.Id)
+		nicDependency := fmt.Sprintf("[concat('Microsoft.Network/networkSecurityGroups/', '%s')]", *networkSecurityGroup.Id)
+		s.addResourceDependency(nicResource, nicDependency)
+
+		if nicResource.Properties == nil {
+			return fmt.Errorf("template: could not find network interface to add custom network security group to")
+		}
+		nicResource.Properties.NetworkSecurityGroup = &hashiNSGSDK.NetworkSecurityGroup{
+			Id: common.StringPtr(nsgResourceID),
+		}
+
+		err = s.addResource(nicResource)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	srcIpAddresses := (*networkSecurityGroup.Properties.SecurityRules)[0].Properties.SourceAddressPrefixes
+	port := (*networkSecurityGroup.Properties.SecurityRules)[0].Properties.DestinationPortRange
+	intPort, err := strconv.Atoi(*port)
+	if err != nil {
+		return err
+	}
+
+	nsgResource, dependency, resourceId := s.createNsgResource(*srcIpAddresses, *common.IntPtr(intPort))
 	if err := s.addResource(nsgResource); err != nil {
 		return err
 	}
+
+	// Attaches NSG to NIC as well
+	nicResource, err := s.getResourceByType(resourceNetworkInterfaces)
+    if err == nil {
+        s.addResourceDependency(nicResource, dependency)
+
+        if nicResource.Properties == nil {
+            return fmt.Errorf("template: could not find network interface to add network security group to")
+        }
+        nicResource.Properties.NetworkSecurityGroup = &hashiNSGSDK.NetworkSecurityGroup{
+            Id: common.StringPtr(resourceId),
+        }
+        
+		err = s.addResource(nicResource)
+        if err != nil {
+            return err
+        }
+    }
 
 	vnetResource, err := s.getResourceByType(resourceVirtualNetworks)
 	if err != nil {
@@ -897,6 +954,7 @@ const BasicTemplate = `{
       "dependsOn": [
         "[concat('Microsoft.Network/publicIPAddresses/', parameters('publicIPAddressName'))]",
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
+		"[concat('Microsoft.Network/networkSecurityGroups/', parameters('nsgName'))]"
       ],
       "properties": {
         "ipConfigurations": [
@@ -912,7 +970,10 @@ const BasicTemplate = `{
               }
             }
           }
-        ]
+        ],
+		"networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('nsgName'))]"
+        }
       }
     },
     {
