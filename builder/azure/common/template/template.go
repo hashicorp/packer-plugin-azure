@@ -12,6 +12,7 @@ import (
 	hashiPublicIPSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/publicipaddresses"
 	hashiSubnetsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/subnets"
 	hashiVNETSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/virtualnetworks"
+	hashiNSGSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/networksecuritygroups"
 )
 
 // Template
@@ -112,6 +113,7 @@ type Properties struct {
 	EnableSoftDelete             *string                                       `json:"enableSoftDelete,omitempty"`
 	HardwareProfile              *hashiVMSDK.HardwareProfile                   `json:"hardwareProfile,omitempty"`
 	IPConfigurations             *[]hashiPublicIPSDK.IPConfiguration           `json:"ipConfigurations,omitempty"`
+	NetworkSecurityGroup		 *hashiNSGSDK.NetworkSecurityGroup 			   `json:"networkSecurityGroup,omitempty"`
 	LicenseType                  *string                                       `json:"licenseType,omitempty"`
 	NetworkProfile               *hashiVMSDK.NetworkProfile                    `json:"networkProfile,omitempty"`
 	OsProfile                    *hashiVMSDK.OSProfile                         `json:"osProfile,omitempty"`
@@ -166,4 +168,10 @@ type Sku struct {
 	Family *string `json:"family,omitempty"`
 	Name   *string `json:"name,omitempty"`
 	Tier   *string `json:"tier,omitempty"`
+}
+
+type NSGOptions struct {
+	IPAddresses *[]string 	`json:"ipAddresses,omitempty"`
+	Port 		*int 		`json:"port,omitempty"`
+	Name		*string 	`json:"name,omitempty"`
 }

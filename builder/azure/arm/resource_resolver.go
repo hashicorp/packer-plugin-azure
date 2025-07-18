@@ -23,6 +23,8 @@ type resourceResolver struct {
 	client                          *AzureClient
 	findVirtualNetworkResourceGroup func(*AzureClient, string, string) (string, error)
 	findVirtualNetworkSubnet        func(*AzureClient, string, string, string) (string, error)
+	findNetworkInterfaceName		func(*AzureClient, string, string, string, string) (string, error)
+	findNetworkSecurityGroupName	func(*AzureClient, string, string, string, string) (string, error)
 }
 
 func newResourceResolver(client *AzureClient) *resourceResolver {
@@ -30,6 +32,8 @@ func newResourceResolver(client *AzureClient) *resourceResolver {
 		client:                          client,
 		findVirtualNetworkResourceGroup: findVirtualNetworkResourceGroup,
 		findVirtualNetworkSubnet:        findVirtualNetworkSubnet,
+		findNetworkInterfaceName:		 findNetworkInterfaceName,
+		findNetworkSecurityGroupName:	 findNetworkSecurityGroupName,
 	}
 }
 
@@ -45,8 +49,20 @@ func (s *resourceResolver) Resolve(c *Config) error {
 			return err
 		}
 
+		networkInterfaceName, err := s.findNetworkInterfaceName(s.client, c.ClientConfig.SubscriptionID, resourceGroupName, c.VirtualNetworkName, c.NetworkInterfaceName)
+		if err != nil {
+			return err
+		}
+
+		networkSecurityGroupName, err := s.findNetworkSecurityGroupName(s.client, c.ClientConfig.SubscriptionID, resourceGroupName, c.VirtualNetworkName, c.NetworkSecurityGroupName)
+		if err != nil {
+			return err
+		}
+
 		c.VirtualNetworkResourceGroupName = resourceGroupName
 		c.VirtualNetworkSubnetName = subnetName
+		c.NetworkInterfaceName = networkInterfaceName
+		c.NetworkSecurityGroupName = networkSecurityGroupName
 	}
 
 	if s.shouldResolveManagedImageName(c) {
@@ -141,4 +157,50 @@ func findVirtualNetworkSubnet(client *AzureClient, subscriptionId string, resour
 
 	subnet := subnetList[0]
 	return *subnet.Name, nil
+}
+
+func findNetworkInterfaceName(client *AzureClient, subscriptionId string, resourceGroupName string, virtualNetworkName string, name string) (string, error) {
+
+	networkInterfaceListContext, cancel := context.WithTimeout(context.TODO(), client.PollingDuration)
+	defer cancel()
+	networkInterfaces, err := client.NetworkMetaClient.NetworkInterfaces.List(networkInterfaceListContext, commonids.NewResourceGroupID(subscriptionId, resourceGroupName))
+	if err != nil {
+		return "", err
+	}
+
+	networkInterfaceList := *networkInterfaces.Model
+
+	if len(networkInterfaceList) == 0 {
+		return "", fmt.Errorf("No network interfaces in the resource group %q associated with the virtual network called %q", resourceGroupName, virtualNetworkName)
+	}
+
+	for _, networkInterface := range networkInterfaceList {
+        if networkInterface.Name != nil && *networkInterface.Name == name {
+            return *networkInterface.Name, nil
+        }
+    }
+	return "", fmt.Errorf("Cannot find network interface %q in the resource group %q associated with the virtual network called %q", name, resourceGroupName, virtualNetworkName)
+}
+
+func findNetworkSecurityGroupName(client *AzureClient, subscriptionId string, resourceGroupName string, virtualNetworkName string, name string) (string, error) {
+
+	networkSecurityGroupListContext, cancel := context.WithTimeout(context.TODO(), client.PollingDuration)
+	defer cancel()
+	networkSecurityGroups, err := client.NetworkMetaClient.NetworkSecurityGroups.List(networkSecurityGroupListContext, commonids.NewResourceGroupID(subscriptionId, resourceGroupName))
+	if err != nil {
+		return "", err
+	}
+
+	networkSecurityGroupList := *networkSecurityGroups.Model
+
+	if len(networkSecurityGroupList) == 0 {
+		return "", fmt.Errorf("No network security groups in the resource group %q associated with the virtual network called %q", resourceGroupName, virtualNetworkName)
+	}
+
+	for _, networkSecurityGroup := range networkSecurityGroupList {
+        if networkSecurityGroup.Name != nil && *networkSecurityGroup.Name == name {
+            return *networkSecurityGroup.Name, nil
+        }
+    }
+	return "", fmt.Errorf("Cannot find a network security group %q in the resource group %q associated with the virtual network called %q", name, resourceGroupName, virtualNetworkName)
 }
