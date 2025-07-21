@@ -23,7 +23,7 @@ type resourceResolver struct {
 	client                          *AzureClient
 	findVirtualNetworkResourceGroup func(*AzureClient, string, string) (string, error)
 	findVirtualNetworkSubnet        func(*AzureClient, string, string, string) (string, error)
-	findNetworkSecurityGroupName	func(*AzureClient, string, string, string, string) (string, error)
+	findNetworkSecurityGroupName    func(*AzureClient, string, string, string, string) (string, error)
 }
 
 func newResourceResolver(client *AzureClient) *resourceResolver {
@@ -31,7 +31,7 @@ func newResourceResolver(client *AzureClient) *resourceResolver {
 		client:                          client,
 		findVirtualNetworkResourceGroup: findVirtualNetworkResourceGroup,
 		findVirtualNetworkSubnet:        findVirtualNetworkSubnet,
-		findNetworkSecurityGroupName:	 findNetworkSecurityGroupName,
+		findNetworkSecurityGroupName:    findNetworkSecurityGroupName,
 	}
 }
 
@@ -167,9 +167,9 @@ func findNetworkSecurityGroupName(client *AzureClient, subscriptionId string, re
 	}
 
 	for _, networkSecurityGroup := range networkSecurityGroupList {
-        if networkSecurityGroup.Name != nil && *networkSecurityGroup.Name == name {
-            return *networkSecurityGroup.Name, nil
-        }
-    }
+		if networkSecurityGroup.Name != nil && *networkSecurityGroup.Name == name {
+			return *networkSecurityGroup.Name, nil
+		}
+	}
 	return "", fmt.Errorf("Cannot find a network security group %q in the resource group %q associated with the virtual network called %q", name, resourceGroupName, virtualNetworkName)
 }

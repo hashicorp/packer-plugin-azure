@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	hashiNSGSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/networksecuritygroups"
 	hashiSecurityRulesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/securityrules"
 	hashiSubnetsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/subnets"
-	hashiNSGSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/networksecuritygroups"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 )
 
@@ -519,21 +519,21 @@ func (s *TemplateBuilder) SetNetworkSecurityGroup(networkSecurityGroup *hashiNSG
 
 	// Attaches NSG to NIC as well
 	nicResource, err := s.getResourceByType(resourceNetworkInterfaces)
-    if err == nil {
-        s.addResourceDependency(nicResource, dependency)
+	if err == nil {
+		s.addResourceDependency(nicResource, dependency)
 
-        if nicResource.Properties == nil {
-            return fmt.Errorf("template: could not find network interface to add network security group to")
-        }
-        nicResource.Properties.NetworkSecurityGroup = &hashiNSGSDK.NetworkSecurityGroup{
-            Id: common.StringPtr(resourceId),
-        }
-        
+		if nicResource.Properties == nil {
+			return fmt.Errorf("template: could not find network interface to add network security group to")
+		}
+		nicResource.Properties.NetworkSecurityGroup = &hashiNSGSDK.NetworkSecurityGroup{
+			Id: common.StringPtr(resourceId),
+		}
+
 		err = s.addResource(nicResource)
-        if err != nil {
-            return err
-        }
-    }
+		if err != nil {
+			return err
+		}
+	}
 
 	vnetResource, err := s.getResourceByType(resourceVirtualNetworks)
 	if err != nil {

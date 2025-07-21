@@ -59,20 +59,20 @@ const (
 	//  -> ^[^_\W][\w-._]{0,79}(?<![-.])$
 	//
 	// This is not an exhaustive match, but it should be extremely close.
-	validResourceGroupNameRe 		= "^[^_\\W][\\w-._\\(\\)]{0,89}$"
-	validManagedDiskName     		= "^[^_\\W][\\w-._)]{0,79}$"
+	validResourceGroupNameRe        = "^[^_\\W][\\w-._\\(\\)]{0,89}$"
+	validManagedDiskName            = "^[^_\\W][\\w-._)]{0,79}$"
 	validNetworkSecurityGroupNameRe = "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,78}[a-zA-Z0-9_]$"
 )
 
 var (
-	reCaptureContainerName 		= regexp.MustCompile(`^[a-z0-9][a-z0-9\-]{2,62}$`)
-	reCaptureNamePrefix    		= regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_\-\.]{0,23}$`)
-	reManagedDiskName      		= regexp.MustCompile(validManagedDiskName)
-	reResourceGroupName    		= regexp.MustCompile(validResourceGroupNameRe)
-	reSnapshotName         		= regexp.MustCompile(`^[A-Za-z0-9_]{1,79}$`)
-	reSnapshotPrefix       		= regexp.MustCompile(`^[A-Za-z0-9_]{1,59}$`)
-	reResourceNamePrefix   		= regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]{0,9}$`)
-	reNetworkSecurityGroupName  = regexp.MustCompile(validNetworkSecurityGroupNameRe)
+	reCaptureContainerName     = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]{2,62}$`)
+	reCaptureNamePrefix        = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_\-\.]{0,23}$`)
+	reManagedDiskName          = regexp.MustCompile(validManagedDiskName)
+	reResourceGroupName        = regexp.MustCompile(validResourceGroupNameRe)
+	reSnapshotName             = regexp.MustCompile(`^[A-Za-z0-9_]{1,79}$`)
+	reSnapshotPrefix           = regexp.MustCompile(`^[A-Za-z0-9_]{1,59}$`)
+	reResourceNamePrefix       = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]{0,9}$`)
+	reNetworkSecurityGroupName = regexp.MustCompile(validNetworkSecurityGroupNameRe)
 )
 
 type PlanInformation struct {
@@ -464,11 +464,11 @@ type Config struct {
 	// it cannot be disambiguated, this value should be set.
 	VirtualNetworkResourceGroupName string `mapstructure:"virtual_network_resource_group_name" required:"false"`
 	// If virtual_network_name is
-	// set, this value may also be set. If network_security_group_name is set, 
-	// Packer will associate the specified network security group with the network 
-	// interface Packer will create (tmpNicName). If this value is not set, Packer 
-	// will create a new network security group if necessary. The specified network 
-	// security group must already exist in the specified or determined resource group. 
+	// set, this value may also be set. If network_security_group_name is set,
+	// Packer will associate the specified network security group with the network
+	// interface Packer will create (tmpNicName). If this value is not set, Packer
+	// will create a new network security group if necessary. The specified network
+	// security group must already exist in the specified or determined resource group.
 	// Ensure that the network security group is in the same region as the VM.
 	NetworkSecurityGroupName string `mapstructure:"network_security_group_name" required:"false"`
 	// Specify a file containing custom data to inject into the cloud-init
