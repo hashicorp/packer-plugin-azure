@@ -171,9 +171,6 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 		resourceName := *deploymentOperation.Properties.TargetResource.ResourceName
 		resourceType := *deploymentOperation.Properties.TargetResource.ResourceType
 
-		if resourceType == "Microsoft.Network/networkInterfaces" && config.NetworkInterfaceName != "" && resourceName == config.NetworkInterfaceName {
-			continue
-		}
 		if resourceType == "Microsoft.Network/networkSecurityGroups" && config.NetworkSecurityGroupName != "" && resourceName == config.NetworkSecurityGroupName {
 			continue
 		}

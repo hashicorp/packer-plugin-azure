@@ -340,13 +340,6 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 		}
 	}
 
-	if config.VirtualNetworkName != "" && config.NetworkInterfaceName != "" {
-		err = builder.SetNetworkInterface(config.NetworkInterfaceName)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	// In Azure Network Security Groups define the access controls for the network
 	// They are required when specifiying which inbound IPs are allowed to connect to the network
 	// They are also required when creating a standard sku public IP Address regardless of inbound IPs allowed.

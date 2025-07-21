@@ -466,20 +466,12 @@ type Config struct {
 	// it cannot be disambiguated, this value should be set.
 	VirtualNetworkResourceGroupName string `mapstructure:"virtual_network_resource_group_name" required:"false"`
 	// If virtual_network_name is
-	// set, this value may also be set. If network_interface_name is set, Packer will 
-	// use the specified network interface for the VM. If this value is not set, Packer 
-	// will create a new network interface for the VM. The specified network interface 
-	// must already exist in the specified or determined resource group and virtual 
-	// network. Ensure that the network interface is in the same region as the VM.
-	NetworkInterfaceName string `mapstructure:"network_interface_name" required:"false"`
-	// If virtual_network_name is
 	// set, this value may also be set. If network_security_group_name is set, 
 	// Packer will associate the specified network security group with the network 
-	// interface being used (network_interface_name) or the one Packer will create 
-	// (tmpNicName). If this value is not set, Packer will create a new network 
-	// security group if necessary. The specified network security group must already 
-	// exist in the specified or determined resource group. Ensure that the network 
-	// security group is in the same region as the VM.
+	// interface Packer will create (tmpNicName). If this value is not set, Packer 
+	// will create a new network security group if necessary. The specified network 
+	// security group must already exist in the specified or determined resource group. 
+	// Ensure that the network security group is in the same region as the VM.
 	NetworkSecurityGroupName string `mapstructure:"network_security_group_name" required:"false"`
 	// Specify a file containing custom data to inject into the cloud-init
 	// process. The contents of the file are read and injected into the ARM
@@ -1489,12 +1481,6 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 	}
 
-	if c.NetworkInterfaceName != "" {
-		if ok, err := assertResourceNamePrefix(c.NetworkInterfaceName, "network_interface_name"); !ok {
-			errs = packersdk.MultiErrorAppend(errs, err)
-		}
-	}
-
 	if c.NetworkSecurityGroupName != "" {
 		if ok, err := assertNetworkSecurityGroupName(c.NetworkSecurityGroupName, "network_security_group_name"); !ok {
 			errs = packersdk.MultiErrorAppend(errs, err)
@@ -1506,9 +1492,6 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	}
 	if c.VirtualNetworkName == "" && c.VirtualNetworkSubnetName != "" {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If virtual_network_subnet_name is specified, so must virtual_network_name"))
-	}
-	if c.VirtualNetworkName == "" && c.NetworkInterfaceName != "" {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If network_interface_name is specified, so must virtual_network_name"))
 	}
 	if c.VirtualNetworkName == "" && c.NetworkSecurityGroupName != "" {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If network_security_group_name is specified, so must virtual_network_name"))

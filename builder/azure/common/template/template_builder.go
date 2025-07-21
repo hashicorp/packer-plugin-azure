@@ -479,12 +479,6 @@ func (s *TemplateBuilder) SetPrivateVirtualNetworkWithPublicIp(virtualNetworkRes
 	return nil
 }
 
-func (s *TemplateBuilder) SetNetworkInterface(name string) error {
-    s.setVariable("nicName", name)
-    s.deleteResourceByType(resourceNetworkInterfaces)
-    return nil
-}
-
 func (s *TemplateBuilder) SetNetworkSecurityGroup(networkSecurityGroup *hashiNSGSDK.NetworkSecurityGroup) error {
 	if networkSecurityGroup.Name != nil {
 		s.setVariable("nsgName", *networkSecurityGroup.Id)

@@ -169,9 +169,3 @@ type Sku struct {
 	Name   *string `json:"name,omitempty"`
 	Tier   *string `json:"tier,omitempty"`
 }
-
-type NSGOptions struct {
-	IPAddresses *[]string 	`json:"ipAddresses,omitempty"`
-	Port 		*int 		`json:"port,omitempty"`
-	Name		*string 	`json:"name,omitempty"`
-}
