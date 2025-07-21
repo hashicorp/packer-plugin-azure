@@ -61,7 +61,6 @@ const (
 	// This is not an exhaustive match, but it should be extremely close.
 	validResourceGroupNameRe 		= "^[^_\\W][\\w-._\\(\\)]{0,89}$"
 	validManagedDiskName     		= "^[^_\\W][\\w-._)]{0,79}$"
-	validNetworkInterfaceNameRe 	= "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,78}[a-zA-Z0-9_]$"
 	validNetworkSecurityGroupNameRe = "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,78}[a-zA-Z0-9_]$"
 )
 
@@ -73,7 +72,6 @@ var (
 	reSnapshotName         		= regexp.MustCompile(`^[A-Za-z0-9_]{1,79}$`)
 	reSnapshotPrefix       		= regexp.MustCompile(`^[A-Za-z0-9_]{1,59}$`)
 	reResourceNamePrefix   		= regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]{0,9}$`)
-	reNetworkInterfaceName 		= regexp.MustCompile(validNetworkInterfaceNameRe)
 	reNetworkSecurityGroupName  = regexp.MustCompile(validNetworkSecurityGroupNameRe)
 )
 
@@ -1666,13 +1664,6 @@ func assertManagedImageDataDiskSnapshotName(name, setting string) (bool, error) 
 func assertResourceNamePrefix(name, setting string) (bool, error) {
 	if !reResourceNamePrefix.MatchString(name) {
 		return false, fmt.Errorf("The setting %s must only contain characters from a-z, A-Z, 0-9 and - and the maximum length is 10 characters", setting)
-	}
-	return true, nil
-}
-
-func assertNetworkInterfaceName(name, setting string) (bool, error) {
-	if !reNetworkInterfaceName.MatchString(name) {
-		return false, fmt.Errorf("The setting %s must only contain characters from a-z, A-Z, 0-9 and ._- and the maximum length is 80 characters", setting)
 	}
 	return true, nil
 }
