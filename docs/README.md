@@ -22,6 +22,10 @@ Alternatively, you can use `packer plugins install` to manage installation of th
 $ packer plugins install github.com/hashicorp/azure
 ```
 
+Note: With the new packer release the init command will try to install the azure plugins from the [official](https://releases.hashicorp.com/) release site.
+Also going forward the official plugins mentioned above will be released through the official release site of hashicorp. so if one need to use new version of official plugins they need to use new packer release.
+There are no change in the packer commands for the installing the plugin (both the above command works as is).
+
 ## Components
 
 Packer can create Azure virtual machine images through variety of ways depending on the strategy that you want to use for building the images.
