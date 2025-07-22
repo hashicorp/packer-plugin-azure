@@ -675,6 +675,7 @@ type Config struct {
 	tmpSubnetName          string
 	tmpVirtualNetworkName  string
 	tmpNsgName             string
+	tmpNsgId               string
 	tmpWinRMCertificateUrl string
 
 	// Authentication with the VM via SSH

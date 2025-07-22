@@ -105,7 +105,6 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 	deploymentName := s.name
 	resourceGroupName := state.Get(constants.ArmResourceGroupName).(string)
 	subscriptionId := state.Get(constants.ArmSubscription).(string)
-	config := state.Get("config").(*Config)
 	deploymentOpsId := deploymentoperations.ResourceGroupDeploymentId{
 		DeploymentName:    deploymentName,
 		ResourceGroupName: resourceGroupName,
@@ -170,10 +169,6 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 		}
 		resourceName := *deploymentOperation.Properties.TargetResource.ResourceName
 		resourceType := *deploymentOperation.Properties.TargetResource.ResourceType
-
-		if resourceType == "Microsoft.Network/networkSecurityGroups" && config.NetworkSecurityGroupName != "" && resourceName == config.NetworkSecurityGroupName {
-			continue
-		}
 
 		// Grab the Virtual Machine and Network ID resource names, and save them into Azure Resource IDs to be used later
 		// We always want to delete the VM first, then the NIC, even if the ListDeployment endpoint doesn't return resources sorted in the order we want to delete them
@@ -263,6 +258,7 @@ func (s *StepDeployTemplate) deleteDeploymentObject(ctx context.Context, state m
 	defer cancel()
 	ui.Say(fmt.Sprintf("Removing the created Deployment object: '%s'", deploymentName))
 	id := deployments.NewResourceGroupProviderDeploymentID(subscriptionId, resourceGroupName, deploymentName)
+	ui.Say(id.ID())
 	err := s.client.DeploymentsClient.DeleteThenPoll(pollingContext, id)
 	if err != nil {
 		return err

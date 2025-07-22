@@ -481,30 +481,19 @@ func (s *TemplateBuilder) SetPrivateVirtualNetworkWithPublicIp(virtualNetworkRes
 
 func (s *TemplateBuilder) SetNetworkSecurityGroup(networkSecurityGroup *hashiNSGSDK.NetworkSecurityGroup) error {
 	if networkSecurityGroup.Name != nil {
-		s.setVariable("nsgName", *networkSecurityGroup.Id)
-
 		nicResource, err := s.getResourceByType(resourceNetworkInterfaces)
 		if err != nil {
 			return err
 		}
 
-		nsgResourceID := fmt.Sprintf("[resourceId('Microsoft.Network/networkSecurityGroups', '%s')]", *networkSecurityGroup.Id)
-		nicDependency := fmt.Sprintf("[concat('Microsoft.Network/networkSecurityGroups/', '%s')]", *networkSecurityGroup.Id)
-		s.addResourceDependency(nicResource, nicDependency)
-
-		if nicResource.Properties == nil {
-			return fmt.Errorf("template: could not find network interface to add custom network security group to")
-		}
 		nicResource.Properties.NetworkSecurityGroup = &hashiNSGSDK.NetworkSecurityGroup{
-			Id: common.StringPtr(nsgResourceID),
+			Name: common.StringPtr(*networkSecurityGroup.Name),
+			Id:   common.StringPtr(*networkSecurityGroup.Id),
 		}
 
-		err = s.addResource(nicResource)
-		if err != nil {
-			return err
-		}
 		return nil
 	}
+
 	srcIpAddresses := (*networkSecurityGroup.Properties.SecurityRules)[0].Properties.SourceAddressPrefixes
 	port := (*networkSecurityGroup.Properties.SecurityRules)[0].Properties.DestinationPortRange
 	intPort, err := strconv.Atoi(*port)
@@ -515,24 +504,6 @@ func (s *TemplateBuilder) SetNetworkSecurityGroup(networkSecurityGroup *hashiNSG
 	nsgResource, dependency, resourceId := s.createNsgResource(*srcIpAddresses, *common.IntPtr(intPort))
 	if err := s.addResource(nsgResource); err != nil {
 		return err
-	}
-
-	// Attaches NSG to NIC as well
-	nicResource, err := s.getResourceByType(resourceNetworkInterfaces)
-	if err == nil {
-		s.addResourceDependency(nicResource, dependency)
-
-		if nicResource.Properties == nil {
-			return fmt.Errorf("template: could not find network interface to add network security group to")
-		}
-		nicResource.Properties.NetworkSecurityGroup = &hashiNSGSDK.NetworkSecurityGroup{
-			Id: common.StringPtr(resourceId),
-		}
-
-		err = s.addResource(nicResource)
-		if err != nil {
-			return err
-		}
 	}
 
 	vnetResource, err := s.getResourceByType(resourceVirtualNetworks)
@@ -948,7 +919,6 @@ const BasicTemplate = `{
       "dependsOn": [
         "[concat('Microsoft.Network/publicIPAddresses/', parameters('publicIPAddressName'))]",
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
-		"[concat('Microsoft.Network/networkSecurityGroups/', parameters('nsgName'))]"
       ],
       "properties": {
         "ipConfigurations": [
@@ -964,10 +934,7 @@ const BasicTemplate = `{
               }
             }
           }
-        ],
-		"networkSecurityGroup": {
-          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('nsgName'))]"
-        }
+        ]
       }
     },
     {

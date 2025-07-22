@@ -348,6 +348,7 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 	if config.VirtualNetworkName != "" && config.NetworkSecurityGroupName != "" {
 		networkSecurityGroup = &hashiNSGSDK.NetworkSecurityGroup{
 			Name: &config.NetworkSecurityGroupName,
+			Id:   &config.tmpNsgId,
 		}
 	} else if (config.PublicIpSKU != "Basic") || (len(config.AllowedInboundIpAddresses) >= 1) {
 		if config.VirtualNetworkName == "" {
