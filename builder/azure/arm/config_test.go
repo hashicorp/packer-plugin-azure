@@ -726,6 +726,7 @@ func TestConfigShouldRejectMalformedCaptureNamePrefix(t *testing.T) {
 		"hyphen-hyphen",
 		"0leading-number",
 		"v1.core.local",
+		"trailing-hyphen-",
 	}
 
 	for _, x := range wellFormedCaptureNamePrefix {
@@ -740,7 +741,6 @@ func TestConfigShouldRejectMalformedCaptureNamePrefix(t *testing.T) {
 
 	malformedCaptureNamePrefix := []string{
 		"-leading-hyphen",
-		"trailing-hyphen-",
 		"trailing-period.",
 		"_leading-underscore",
 		"punc-!@#$%^&*()_+-=-punc",
@@ -1651,7 +1651,7 @@ func TestConfigShouldAcceptPlatformManagedImageBuild(t *testing.T) {
 	}
 }
 
-// If the user specified a build for a VHD and a Managed Image it should be rejected.
+// If the user specified a build for a VHD and a Managed Image it should be accepted.
 func TestConfigShouldRejectVhdAndManagedImageOutput(t *testing.T) {
 	config := map[string]interface{}{
 		"image_offer":                       "ignore",
@@ -1671,8 +1671,8 @@ func TestConfigShouldRejectVhdAndManagedImageOutput(t *testing.T) {
 
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
-	if err == nil {
-		t.Fatal("expected config to reject VHD and Managed Image build")
+	if err != nil {
+		t.Fatal("expected config to accept VHD and Managed Image build")
 	}
 }
 

@@ -28,7 +28,6 @@ type StepCaptureImage struct {
 	config              *Config
 	generalizeVM        func(ctx context.Context, vmId virtualmachines.VirtualMachineId) error
 	getVMInternalID     func(ctx context.Context, vmId virtualmachines.VirtualMachineId) (string, error)
-	captureVhd          func(ctx context.Context, vmId virtualmachines.VirtualMachineId, parameters *virtualmachines.VirtualMachineCaptureParameters) error
 	captureManagedImage func(ctx context.Context, subscriptionId string, resourceGroupName string, imageName string, parameters *images.Image) error
 	grantAccess         func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) (string, error)
 	revokeAccess        func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) error
@@ -73,7 +72,6 @@ func NewStepCaptureImage(client *AzureClient, ui packersdk.Ui, config *Config) *
 	}
 
 	step.generalizeVM = step.generalize
-	step.captureVhd = step.captureImage
 	step.captureManagedImage = step.captureImageFromVM
 	step.getVMInternalID = step.getVMID
 	step.grantAccess = step.grantDiskAccess
@@ -101,16 +99,6 @@ func (s *StepCaptureImage) captureImageFromVM(ctx context.Context, subscriptionI
 		s.say(s.client.LastError.Error())
 	}
 	return err
-}
-
-func (s *StepCaptureImage) captureImage(ctx context.Context, vmId virtualmachines.VirtualMachineId, parameters *virtualmachines.VirtualMachineCaptureParameters) error {
-	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
-	defer cancel()
-	if err := s.client.VirtualMachinesClient.CaptureThenPoll(pollingContext, vmId, *parameters); err != nil {
-		s.say(s.client.LastError.Error())
-		return err
-	}
-	return nil
 }
 
 func (s *StepCaptureImage) getVMID(ctx context.Context, vmId virtualmachines.VirtualMachineId) (string, error) {
