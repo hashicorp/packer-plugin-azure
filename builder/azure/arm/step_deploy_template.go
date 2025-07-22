@@ -5,8 +5,10 @@ package arm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -293,7 +295,16 @@ func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, 
 	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
 	defer cancel()
 
-	xs := strings.Split(imageName, "/")
+	u, err := url.Parse(imageName)
+	if err != nil {
+		return err
+	}
+	xs := strings.Split(u.Path, "/")
+	if len(xs) < 3 {
+		return errors.New("Unable to parse path of image " + imageName)
+	}
+
+	xs = strings.Split(imageName, "/")
 	diskName := xs[len(xs)-1]
 	diskId := commonids.NewManagedDiskID(subscriptionId, resourceGroupName, diskName)
 

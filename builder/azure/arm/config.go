@@ -1167,10 +1167,6 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_name_prefix, managed_image_resource_group_name or shared_image_gallery_destination must be specified"))
 	}
 
-	if (c.CaptureNamePrefix != "" || c.CaptureContainerName != "") && (c.ManagedImageResourceGroupName != "" || c.ManagedImageName != "") {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Either a VHD or a managed image can be built, but not both. Please specify either capture_container_name and capture_name_prefix or managed_image_resource_group_name and managed_image_name."))
-	}
-
 	if c.CaptureContainerName != "" {
 		if !reCaptureContainerName.MatchString(c.CaptureContainerName) {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_container_name must satisfy the regular expression %q.", reCaptureContainerName.String()))
@@ -1192,8 +1188,8 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_name_prefix must satisfy the regular expression %q.", reCaptureNamePrefix.String()))
 		}
 
-		if strings.HasSuffix(c.CaptureNamePrefix, "-") || strings.HasSuffix(c.CaptureNamePrefix, ".") {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_name_prefix must not end with a hyphen or period."))
+		if strings.HasSuffix(c.CaptureNamePrefix, ".") {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_name_prefix must not end with a period."))
 		}
 	}
 
