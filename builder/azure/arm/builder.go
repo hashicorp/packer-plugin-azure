@@ -679,6 +679,7 @@ func (b *Builder) configureStateBag(stateBag multistep.StateBag) {
 	}
 
 	stateBag.Put(constants.ArmStorageAccountName, b.config.StorageAccount)
+	stateBag.Put(constants.ArmIsVHDSaveToStorage, b.config.isVHDSaveToStorage())
 	stateBag.Put(constants.ArmIsManagedImage, b.config.isManagedImage())
 	stateBag.Put(constants.ArmManagedImageResourceGroupName, b.config.ManagedImageResourceGroupName)
 	stateBag.Put(constants.ArmManagedImageName, b.config.ManagedImageName)
