@@ -300,6 +300,7 @@ func createTestStateBagStepCaptureImage() multistep.StateBag {
 	stateBag.Put(constants.ArmSubscription, "Unit Test: SubscriptionId")
 	stateBag.Put(constants.ArmVirtualMachineCaptureParameters, &virtualmachines.VirtualMachineCaptureParameters{})
 
+	stateBag.Put(constants.ArmIsVHDSaveToStorage, true)
 	stateBag.Put(constants.ArmIsManagedImage, false)
 	stateBag.Put(constants.ArmManagedImageResourceGroupName, "")
 	stateBag.Put(constants.ArmManagedImageName, "")

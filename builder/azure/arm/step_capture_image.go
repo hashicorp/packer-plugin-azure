@@ -122,6 +122,7 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
 	var imageParameters = state.Get(constants.ArmImageParameters).(*images.Image)
 	var subscriptionId = state.Get(constants.ArmSubscription).(string)
+	var isVHDSaveToStorage = state.Get(constants.ArmIsVHDSaveToStorage).(bool)
 	var isManagedImage = state.Get(constants.ArmIsManagedImage).(bool)
 	var isSIGImage = state.Get(constants.ArmIsSIGImage).(bool)
 	var skipGeneralization = state.Get(constants.ArmSharedImageGalleryDestinationSpecialized).(bool)
@@ -142,6 +143,7 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 
 			return multistep.ActionHalt
 		}
+
 		if isManagedImage {
 			s.say("Capturing image ...")
 			var targetManagedImageResourceGroupName = state.Get(constants.ArmManagedImageResourceGroupName).(string)
@@ -160,7 +162,9 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 		} else if isSIGImage {
 			// It's possible to create SIG image without a managed image
 			return multistep.ActionContinue
-		} else {
+		}
+
+		if isVHDSaveToStorage {
 			// VHD Builds are created with a field called the VMId in its name
 			// Get that ID before capturing the VM so that we know where the resultant VHD is stored
 			vmInternalID, err := s.getVMInternalID(ctx, vmId)
