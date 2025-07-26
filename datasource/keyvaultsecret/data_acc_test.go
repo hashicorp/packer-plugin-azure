@@ -25,7 +25,7 @@ import (
 var testTemplate string
 
 func TestAccAzureKeyVaultSecret(t *testing.T) {
-	testVaultName := "packer-test-vault"
+	testVaultName := "packer-acctest-vault"
 
 	cases := []struct {
 		name       string
