@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 
 variable "vault_name" {
-  default = "packer-test-vault"
+  default = "packer-acctest-vault"
   type    = string
 }
 
