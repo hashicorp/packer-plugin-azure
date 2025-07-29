@@ -38,7 +38,8 @@
   }
   ```
 
-- `shared_image_gallery_destination` (SharedImageGalleryDestination) - Shared Gallery Destination
+- `shared_image_gallery_destination` (SharedImageGalleryDestination) - The name of the Shared Image Gallery under which the managed image will be published as Shared Gallery Image version.
+  A managed image target can also be set when using a shared image gallery destination
 
 - `shared_image_gallery_timeout` (duration string | ex: "1h5m2s") - How long to wait for an image to be published to the shared image
   gallery before timing out. If your Packer build is failing on the
@@ -56,6 +57,48 @@
 
 - `shared_gallery_image_version_exclude_from_latest` (bool) - If set to true, Virtual Machines deployed from the latest version of the
   Image Definition won't use this Image Version.
+  
+  In JSON
+  ```json
+  "shared_image_gallery_destination": {
+      "subscription": "00000000-0000-0000-0000-00000000000",
+      "resource_group": "ResourceGroup",
+      "gallery_name": "GalleryName",
+      "image_name": "ImageName",
+      "image_version": "1.0.0",
+      "replication_regions": ["regionA", "regionB", "regionC"],
+      "storage_account_type": "Standard_LRS"
+  },
+  "shared_image_gallery_timeout": "60m",
+  "shared_gallery_image_version_end_of_life_date": "2006-01-02T15:04:05.99Z",
+  "shared_gallery_image_version_replica_count": 1,
+  "shared_gallery_image_version_exclude_from_latest": true
+  ```
+  
+  In HCL2
+  ```hcl
+  shared_image_gallery_destination {
+      subscription = "00000000-0000-0000-0000-00000000000"
+      resource_group = "ResourceGroup"
+      gallery_name = "GalleryName"
+      image_name = "ImageName"
+      image_version = "1.0.0"
+      storage_account_type = "Standard_LRS"
+      target_region {
+        name = "regionA"
+      }
+      target_region {
+        name = "regionB"
+      }
+      target_region {
+        name = "regionC"
+      }
+  }
+  shared_image_gallery_timeout = "60m"
+  shared_gallery_image_version_end_of_life_date = "2006-01-02T15:04:05.99Z"
+  shared_gallery_image_version_replica_count = 1
+  shared_gallery_image_version_exclude_from_latest = true
+  ```
 
 - `image_version` (string) - Specify a specific version of an OS to boot from.
   Defaults to `latest`. There may be a difference in versions available

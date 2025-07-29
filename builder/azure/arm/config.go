@@ -212,8 +212,24 @@ type Config struct {
 	// ```
 	SharedGallery SharedImageGallery `mapstructure:"shared_image_gallery" required:"false"`
 	// The name of the Shared Image Gallery under which the managed image will be published as Shared Gallery Image version.
-	//
-	// Following is an example.
+	// A managed image target can also be set when using a shared image gallery destination
+	SharedGalleryDestination SharedImageGalleryDestination `mapstructure:"shared_image_gallery_destination"`
+	// How long to wait for an image to be published to the shared image
+	// gallery before timing out. If your Packer build is failing on the
+	// Publishing to Shared Image Gallery step with the error `Original Error:
+	// context deadline exceeded`, but the image is present when you check your
+	// Azure dashboard, then you probably need to increase this timeout from
+	// its default of "60m" (valid time units include `s` for seconds, `m` for
+	// minutes, and `h` for hours.)
+	SharedGalleryTimeout time.Duration `mapstructure:"shared_image_gallery_timeout"`
+	// The end of life date (2006-01-02T15:04:05.99Z) of the gallery Image Version. This property
+	// can be used for decommissioning purposes.
+	SharedGalleryImageVersionEndOfLifeDate string `mapstructure:"shared_gallery_image_version_end_of_life_date" required:"false"`
+	// The number of replicas of the Image Version to be created per region defined in `replication_regions`.
+	// Users using `target_region` blocks can specify individual replica counts per region using the `replicas` field.
+	SharedGalleryImageVersionReplicaCount int64 `mapstructure:"shared_image_gallery_replica_count" required:"false"`
+	// If set to true, Virtual Machines deployed from the latest version of the
+	// Image Definition won't use this Image Version.
 	//
 	// In JSON
 	// ```json
@@ -225,8 +241,13 @@ type Config struct {
 	//     "image_version": "1.0.0",
 	//     "replication_regions": ["regionA", "regionB", "regionC"],
 	//     "storage_account_type": "Standard_LRS"
-	// }
+	// },
+	// "shared_image_gallery_timeout": "60m",
+	// "shared_gallery_image_version_end_of_life_date": "2006-01-02T15:04:05.99Z",
+	// "shared_gallery_image_version_replica_count": 1,
+	// "shared_gallery_image_version_exclude_from_latest": true
 	// ```
+	//
 	// In HCL2
 	// ```hcl
 	// shared_image_gallery_destination {
@@ -246,26 +267,11 @@ type Config struct {
 	//       name = "regionC"
 	//     }
 	// }
+	// shared_image_gallery_timeout = "60m"
+	// shared_gallery_image_version_end_of_life_date = "2006-01-02T15:04:05.99Z"
+	// shared_gallery_image_version_replica_count = 1
+	// shared_gallery_image_version_exclude_from_latest = true
 	// ```
-	// A managed image target can also be set when using a shared image gallery destination
-
-	SharedGalleryDestination SharedImageGalleryDestination `mapstructure:"shared_image_gallery_destination"`
-	// How long to wait for an image to be published to the shared image
-	// gallery before timing out. If your Packer build is failing on the
-	// Publishing to Shared Image Gallery step with the error `Original Error:
-	// context deadline exceeded`, but the image is present when you check your
-	// Azure dashboard, then you probably need to increase this timeout from
-	// its default of "60m" (valid time units include `s` for seconds, `m` for
-	// minutes, and `h` for hours.)
-	SharedGalleryTimeout time.Duration `mapstructure:"shared_image_gallery_timeout"`
-	// The end of life date (2006-01-02T15:04:05.99Z) of the gallery Image Version. This property
-	// can be used for decommissioning purposes.
-	SharedGalleryImageVersionEndOfLifeDate string `mapstructure:"shared_gallery_image_version_end_of_life_date" required:"false"`
-	// The number of replicas of the Image Version to be created per region defined in `replication_regions`.
-	// Users using `target_region` blocks can specify individual replica counts per region using the `replicas` field.
-	SharedGalleryImageVersionReplicaCount int64 `mapstructure:"shared_image_gallery_replica_count" required:"false"`
-	// If set to true, Virtual Machines deployed from the latest version of the
-	// Image Definition won't use this Image Version.
 	SharedGalleryImageVersionExcludeFromLatest bool `mapstructure:"shared_gallery_image_version_exclude_from_latest" required:"false"`
 	// Name of the publisher to use for your base image (Azure Marketplace Images only). See
 	// [documentation](https://docs.microsoft.com/en-us/cli/azure/vm/image)
