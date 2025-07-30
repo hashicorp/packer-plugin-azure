@@ -1163,12 +1163,8 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	/////////////////////////////////////////////
 	// Capture
-	if c.CaptureContainerName == "" && c.ManagedImageName == "" && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_container_name, managed_image_name or shared_image_gallery_destination must be specified"))
-	}
-
-	if c.CaptureNamePrefix == "" && c.ManagedImageResourceGroupName == "" && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_name_prefix, managed_image_resource_group_name or shared_image_gallery_destination must be specified"))
+	if c.CaptureContainerName == "" && (c.ManagedImageName == "" || c.ManagedImageResourceGroupName == "") && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_container_name, managed_image_name and managed_image_resource_group_name, or shared_image_gallery_destination must be specified"))
 	}
 
 	if c.CaptureContainerName != "" {
@@ -1182,18 +1178,6 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 		if strings.Contains(c.CaptureContainerName, "--") {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_container_name must not contain consecutive hyphens, e.g. '--'."))
-		}
-
-		if c.CaptureNamePrefix == "" {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_name_prefix must be specified"))
-		}
-
-		if !reCaptureNamePrefix.MatchString(c.CaptureNamePrefix) {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_name_prefix must satisfy the regular expression %q.", reCaptureNamePrefix.String()))
-		}
-
-		if strings.HasSuffix(c.CaptureNamePrefix, ".") {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_name_prefix must not end with a period."))
 		}
 	}
 

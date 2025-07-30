@@ -543,42 +543,26 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	}
 
 	stateData := map[string]interface{}{"generated_data": b.stateBag.Get("generated_data")}
+	vhdArtifact := VHDArtifact{}
+	managedImageArtifact := ManagedImageArtifact{}
+	sharedImageGalleryArtifact := SharedImageGalleryArtifact{}
+
 	if b.config.isManagedImage() {
-		managedImageID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/images/%s",
-			b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName, b.config.ManagedImageName)
-
-		if b.config.isPublishToSIG() {
-			return b.managedImageArtifactWithSIGAsDestination(managedImageID, stateData)
-		}
-
-		var osDiskUri string
-		if b.stateBag.Get(constants.ArmKeepOSDisk).(bool) {
-			osDiskUri = b.stateBag.Get(constants.ArmOSDiskUri).(string)
-		}
-		return NewManagedImageArtifact(b.config.OSType,
-			b.config.ManagedImageResourceGroupName,
-			b.config.ManagedImageName,
-			b.config.Location,
-			managedImageID,
-			b.config.ManagedImageOSDiskSnapshotName,
-			b.config.ManagedImageDataDiskSnapshotPrefix,
-			stateData,
-			osDiskUri,
-		)
+		b.getManagedImageArtifact(&managedImageArtifact)
 	}
 
 	if b.config.isPublishToSIG() {
-		return b.sharedImageArtifact(stateData)
+		err := b.getSharedImageGalleryArtifact(&sharedImageGalleryArtifact, stateData)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return NewArtifact(
-		b.stateBag.Get(constants.ArmBuildVMInternalId).(string),
-		b.config.CaptureNamePrefix,
-		b.config.CaptureContainerName,
-		b.config.storageAccountBlobEndpoint,
-		b.config.StorageAccount,
-		b.config.OSType,
-		len(b.config.AdditionalDiskSize),
-		stateData)
+
+	if b.config.isVHDSaveToStorage() {
+		b.getVHDArtifact(&vhdArtifact)
+	}
+
+	return NewArtifact(b.config.OSType, vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, stateData), nil
 }
 
 func (b *Builder) writeSSHPrivateKey(ui packersdk.Ui, debugKeyPath string) {
@@ -724,8 +708,7 @@ func normalizeAzureRegion(name string) string {
 	return strings.ToLower(strings.Replace(name, " ", "", -1))
 }
 
-func (b *Builder) managedImageArtifactWithSIGAsDestination(managedImageID string, stateData map[string]interface{}) (*Artifact, error) {
-
+func (b *Builder) enhanceStateData(stateData map[string]interface{}) {
 	sigDestinationStateKeys := []string{
 		constants.ArmManagedImageSigPublishResourceGroup,
 		constants.ArmManagedImageSharedGalleryName,
@@ -742,48 +725,66 @@ func (b *Builder) managedImageArtifactWithSIGAsDestination(managedImageID string
 		stateData[key] = v
 	}
 
-	destinationSharedImageGalleryId := ""
-	if galleryID, ok := b.stateBag.GetOk(constants.ArmManagedImageSharedGalleryId); ok {
-		destinationSharedImageGalleryId = galleryID.(string)
-	} else {
-		return nil, ErrNoImage
-	}
-
-	return NewManagedImageArtifactWithSIGAsDestination(b.config.OSType,
-		b.config.ManagedImageResourceGroupName,
-		b.config.ManagedImageName,
-		b.config.Location,
-		managedImageID,
-		b.config.ManagedImageOSDiskSnapshotName,
-		b.config.ManagedImageDataDiskSnapshotPrefix,
-		destinationSharedImageGalleryId,
-		stateData)
+	return
 }
 
-func (b *Builder) sharedImageArtifact(stateData map[string]interface{}) (*Artifact, error) {
-
-	sigDestinationStateKeys := []string{
-		constants.ArmManagedImageSigPublishResourceGroup,
-		constants.ArmManagedImageSharedGalleryName,
-		constants.ArmManagedImageSharedGalleryImageName,
-		constants.ArmManagedImageSharedGalleryImageVersion,
-		constants.ArmManagedImageSharedGalleryReplicationRegions,
-	}
-
-	for _, key := range sigDestinationStateKeys {
-		v, ok := b.stateBag.GetOk(key)
-		if !ok {
-			continue
-		}
-		stateData[key] = v
-	}
-
-	destinationSharedImageGalleryId := ""
+func (b *Builder) getDestinationSharedImageGalleryId() (destinationSharedImageGalleryId string, err error) {
+	destinationSharedImageGalleryId = ""
 	if galleryID, ok := b.stateBag.GetOk(constants.ArmManagedImageSharedGalleryId); ok {
 		destinationSharedImageGalleryId = galleryID.(string)
 	} else {
-		return nil, ErrNoImage
+		err = ErrNoImage
+	}
+	return
+}
+
+func (b *Builder) getManagedImageArtifact(managedImageArtifact *ManagedImageArtifact) {
+	managedImageID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/images/%s",
+		b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName, b.config.ManagedImageName)
+
+	managedImageArtifact.ManagedImageResourceGroupName = b.config.ManagedImageResourceGroupName
+	managedImageArtifact.ManagedImageName = b.config.ManagedImageName
+	managedImageArtifact.ManagedImageLocation = b.config.Location
+	managedImageArtifact.ManagedImageId = managedImageID
+	managedImageArtifact.ManagedImageOSDiskSnapshotName = b.config.ManagedImageOSDiskSnapshotName
+	managedImageArtifact.ManagedImageDataDiskSnapshotPrefix = b.config.ManagedImageDataDiskSnapshotPrefix
+
+	var osDiskUri string
+	if b.stateBag.Get(constants.ArmKeepOSDisk).(bool) {
+		osDiskUri = b.stateBag.Get(constants.ArmOSDiskUri).(string)
+		managedImageArtifact.ManagedImageOSDiskUri = osDiskUri
+	}
+}
+
+func (b *Builder) getSharedImageGalleryArtifact(sharedImageGalleryArtifact *SharedImageGalleryArtifact, stateData map[string]interface{}) (err error) {
+	destinationSharedImageGalleryId, err := b.getDestinationSharedImageGalleryId()
+	if err != nil {
+		return
 	}
 
-	return NewSharedImageArtifact(b.config.OSType, destinationSharedImageGalleryId, b.config.Location, stateData)
+	b.enhanceStateData(stateData)
+	sharedImageGalleryArtifact.ManagedImageSharedImageGalleryId = destinationSharedImageGalleryId
+	sharedImageGalleryArtifact.SharedImageGalleryLocation = b.config.Location
+
+	return
+}
+
+func (b *Builder) getVHDArtifact(vhdArtifact *VHDArtifact) {
+	vhdUri := fmt.Sprintf("%s%s/%s%s.vhd", b.config.storageAccountBlobEndpoint, b.config.CaptureContainerName, b.config.CaptureNamePrefix, b.config.tmpOSDiskName)
+	templateUri := fmt.Sprintf("%ssystem/Microsoft.Compute/Images/%s/%s-vmTemplate.%s.json",
+		b.config.storageAccountBlobEndpoint, b.config.CaptureContainerName, b.config.CaptureNamePrefix, b.stateBag.Get(constants.ArmBuildVMInternalId).(string))
+
+	additionalDiskCount := len(b.config.AdditionalDiskSize)
+	if additionalDiskCount > 0 {
+		dataDisks := make([]AdditionalDiskArtifact, additionalDiskCount)
+		for i := 0; i < additionalDiskCount; i++ {
+			dataDisks[i].AdditionalDiskUri = fmt.Sprintf("%ssystem/Microsoft.Compute/Images/%s/%s-datadisk-%d.%s.vhd",
+				b.config.storageAccountBlobEndpoint, b.config.CaptureContainerName, b.config.CaptureNamePrefix, i, b.stateBag.Get(constants.ArmBuildVMInternalId).(string))
+		}
+		vhdArtifact.AdditionalDisks = &dataDisks
+	}
+
+	vhdArtifact.StorageAccountLocation = b.config.Location
+	vhdArtifact.OSDiskUri = vhdUri
+	vhdArtifact.TemplateUri = templateUri
 }

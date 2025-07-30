@@ -198,6 +198,8 @@ func TestStepCaptureImageShouldCallGeneralizeIfSpecializedIsFalse(t *testing.T) 
 	}
 
 	stateBag := createTestStateBagStepCaptureImage()
+	stateBag.Put(constants.ArmIsManagedImage, false)
+	stateBag.Put(constants.ArmIsVHDSaveToStorage, false)
 	stateBag.Put(constants.ArmIsSIGImage, true)
 	stateBag.Put(constants.ArmSharedImageGalleryDestinationSpecialized, false)
 	var result = testSubject.Run(context.Background(), stateBag)

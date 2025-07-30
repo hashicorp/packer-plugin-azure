@@ -20,111 +20,65 @@ type AdditionalDiskArtifact struct {
 	AdditionalDiskUri string
 }
 
-type Artifact struct {
-	// OS type: Linux, Windows
-	OSType string
-
-	// VHD
-	StorageAccountLocation string
-	OSDiskUri              string
-	TemplateUri            string
-
+type ManagedImageArtifact struct {
 	// Managed Image
 	ManagedImageResourceGroupName      string
 	ManagedImageName                   string
 	ManagedImageLocation               string
 	ManagedImageId                     string
 	ManagedImageOSDiskSnapshotName     string
+	ManagedImageOSDiskUri              string // this is used when ArmKeepOSDisk is true
 	ManagedImageDataDiskSnapshotPrefix string
+}
 
+type VHDArtifact struct {
+	// VHD
+	StorageAccountLocation string
+	OSDiskUri              string
+	TemplateUri            string
+	AdditionalDisks        *[]AdditionalDiskArtifact
+}
+
+type SharedImageGalleryArtifact struct {
 	// Shared Image Gallery
 	// ARM resource id for Shared Image Gallery
 	ManagedImageSharedImageGalleryId string
 	SharedImageGalleryLocation       string
+}
 
-	// Additional Disks
-	AdditionalDisks *[]AdditionalDiskArtifact
+type Artifact struct {
+	// OS type: Linux, Windows
+	OSType string
+
+	VHD                VHDArtifact
+	ManagedImage       ManagedImageArtifact
+	SharedImageGallery SharedImageGalleryArtifact
 
 	// StateData should store data such as GeneratedData
 	// to be shared with post-processors
 	StateData map[string]interface{}
 }
 
-func NewManagedImageArtifact(osType, resourceGroup, name, location, id, osDiskSnapshotName, dataDiskSnapshotPrefix string, generatedData map[string]interface{}, osDiskUri string) (*Artifact, error) {
-	res := Artifact{
-		ManagedImageResourceGroupName:      resourceGroup,
-		ManagedImageName:                   name,
-		ManagedImageLocation:               location,
-		ManagedImageId:                     id,
-		OSType:                             osType,
-		ManagedImageOSDiskSnapshotName:     osDiskSnapshotName,
-		ManagedImageDataDiskSnapshotPrefix: dataDiskSnapshotPrefix,
-		StateData:                          generatedData,
-	}
-
-	if osDiskUri != "" {
-		res.OSDiskUri = osDiskUri
-	}
-
-	return &res, nil
-}
-
-func NewManagedImageArtifactWithSIGAsDestination(osType, resourceGroup, name, location, id, osDiskSnapshotName, dataDiskSnapshotPrefix, destinationSharedImageGalleryId string, generatedData map[string]interface{}) (*Artifact, error) {
+func NewArtifact(osType string, vhd VHDArtifact, managedImage ManagedImageArtifact, sig SharedImageGalleryArtifact, stateData map[string]interface{}) *Artifact {
 	return &Artifact{
-		ManagedImageResourceGroupName:      resourceGroup,
-		ManagedImageName:                   name,
-		ManagedImageLocation:               location,
-		ManagedImageId:                     id,
-		OSType:                             osType,
-		ManagedImageOSDiskSnapshotName:     osDiskSnapshotName,
-		ManagedImageDataDiskSnapshotPrefix: dataDiskSnapshotPrefix,
-		ManagedImageSharedImageGalleryId:   destinationSharedImageGalleryId,
-		StateData:                          generatedData,
-	}, nil
-}
-
-func NewSharedImageArtifact(osType, destinationSharedImageGalleryId string, location string, generatedData map[string]interface{}) (*Artifact, error) {
-	return &Artifact{
-		OSType:                           osType,
-		ManagedImageSharedImageGalleryId: destinationSharedImageGalleryId,
-		StateData:                        generatedData,
-		SharedImageGalleryLocation:       location,
-	}, nil
-}
-
-func NewArtifact(vmInternalID string, captureContainerPrefix string, captureContainerName string, storageAccountUrl string, storageAccountLocation string, osType string, additionalDiskCount int, generatedData map[string]interface{}) (*Artifact, error) {
-	vhdUri := fmt.Sprintf("%ssystem/Microsoft.Compute/Images/%s/%s-osDisk.%s.vhd", storageAccountUrl, captureContainerName, captureContainerPrefix, vmInternalID)
-
-	templateUri := fmt.Sprintf("%ssystem/Microsoft.Compute/Images/%s/%s-vmTemplate.%s.json", storageAccountUrl, captureContainerName, captureContainerPrefix, vmInternalID)
-
-	var additional_disks *[]AdditionalDiskArtifact
-	if additionalDiskCount > 0 {
-		data_disks := make([]AdditionalDiskArtifact, additionalDiskCount)
-		for i := 0; i < additionalDiskCount; i++ {
-			data_disks[i].AdditionalDiskUri = fmt.Sprintf("%ssystem/Microsoft.Compute/Images/%s/%s-datadisk-%d.%s.vhd", storageAccountUrl, captureContainerName, captureContainerPrefix, i, vmInternalID)
-		}
-		additional_disks = &data_disks
+		OSType:             osType,
+		VHD:                vhd,
+		ManagedImage:       managedImage,
+		SharedImageGallery: sig,
+		StateData:          stateData,
 	}
-
-	return &Artifact{
-		OSType:      osType,
-		OSDiskUri:   vhdUri,
-		TemplateUri: templateUri,
-
-		AdditionalDisks: additional_disks,
-
-		StorageAccountLocation: storageAccountLocation,
-
-		StateData: generatedData,
-	}, nil
 }
 
 func (a *Artifact) isManagedImage() bool {
-	return a.ManagedImageResourceGroupName != ""
+	return a.ManagedImage.ManagedImageResourceGroupName != ""
+}
+
+func (a *Artifact) isVHDCopyToStorage() bool {
+	return a.VHD.OSDiskUri != ""
 }
 
 func (a *Artifact) isPublishedToSIG() bool {
-	return a.ManagedImageSharedImageGalleryId != ""
+	return a.SharedImageGallery.ManagedImageSharedImageGalleryId != ""
 }
 
 func (*Artifact) BuilderId() string {
@@ -136,14 +90,17 @@ func (*Artifact) Files() []string {
 }
 
 func (a *Artifact) Id() string {
-	if a.OSDiskUri != "" {
-		return a.OSDiskUri
+	if a.ManagedImage.ManagedImageOSDiskUri != "" {
+		return a.ManagedImage.ManagedImageOSDiskUri
 	}
-	if a.ManagedImageId != "" {
-		return a.ManagedImageId
+	if a.ManagedImage.ManagedImageId != "" {
+		return a.ManagedImage.ManagedImageId
 	}
-	if a.ManagedImageSharedImageGalleryId != "" {
-		return a.ManagedImageSharedImageGalleryId
+	if a.SharedImageGallery.ManagedImageSharedImageGalleryId != "" {
+		return a.SharedImageGallery.ManagedImageSharedImageGalleryId
+	}
+	if a.VHD.OSDiskUri != "" {
+		return a.VHD.OSDiskUri
 	}
 	return "UNKNOWN ID"
 }
@@ -165,32 +122,36 @@ func (a *Artifact) String() string {
 
 	buf.WriteString(fmt.Sprintf("%s:\n\n", a.BuilderId()))
 	buf.WriteString(fmt.Sprintf("OSType: %s\n", a.OSType))
+	// fix to string
 	if a.isManagedImage() {
-		buf.WriteString(fmt.Sprintf("ManagedImageResourceGroupName: %s\n", a.ManagedImageResourceGroupName))
-		buf.WriteString(fmt.Sprintf("ManagedImageName: %s\n", a.ManagedImageName))
-		buf.WriteString(fmt.Sprintf("ManagedImageId: %s\n", a.ManagedImageId))
-		buf.WriteString(fmt.Sprintf("ManagedImageLocation: %s\n", a.ManagedImageLocation))
-		if a.ManagedImageOSDiskSnapshotName != "" {
-			buf.WriteString(fmt.Sprintf("ManagedImageOSDiskSnapshotName: %s\n", a.ManagedImageOSDiskSnapshotName))
+		buf.WriteString(fmt.Sprintf("ManagedImageResourceGroupName: %s\n", a.ManagedImage.ManagedImageResourceGroupName))
+		buf.WriteString(fmt.Sprintf("ManagedImageName: %s\n", a.ManagedImage.ManagedImageName))
+		buf.WriteString(fmt.Sprintf("ManagedImageId: %s\n", a.ManagedImage.ManagedImageId))
+		buf.WriteString(fmt.Sprintf("ManagedImageLocation: %s\n", a.ManagedImage.ManagedImageLocation))
+		if a.ManagedImage.ManagedImageOSDiskSnapshotName != "" {
+			buf.WriteString(fmt.Sprintf("ManagedImageOSDiskSnapshotName: %s\n", a.ManagedImage.ManagedImageOSDiskSnapshotName))
 		}
-		if a.ManagedImageDataDiskSnapshotPrefix != "" {
-			buf.WriteString(fmt.Sprintf("ManagedImageDataDiskSnapshotPrefix: %s\n", a.ManagedImageDataDiskSnapshotPrefix))
+		if a.ManagedImage.ManagedImageDataDiskSnapshotPrefix != "" {
+			buf.WriteString(fmt.Sprintf("ManagedImageDataDiskSnapshotPrefix: %s\n", a.ManagedImage.ManagedImageDataDiskSnapshotPrefix))
 		}
-		if a.OSDiskUri != "" {
-			buf.WriteString(fmt.Sprintf("OSDiskUri: %s\n", a.OSDiskUri))
+		if a.ManagedImage.ManagedImageOSDiskUri != "" {
+			buf.WriteString(fmt.Sprintf("OSDiskUri: %s\n", a.ManagedImage.ManagedImageOSDiskUri))
 		}
-	} else if !a.isPublishedToSIG() {
-		buf.WriteString(fmt.Sprintf("StorageAccountLocation: %s\n", a.StorageAccountLocation))
-		buf.WriteString(fmt.Sprintf("OSDiskUri: %s\n", a.OSDiskUri))
-		buf.WriteString(fmt.Sprintf("TemplateUri: %s\n", a.TemplateUri))
-		if a.AdditionalDisks != nil {
-			for i, additionaldisk := range *a.AdditionalDisks {
-				buf.WriteString(fmt.Sprintf("AdditionalDiskUri (datadisk-%d): %s\n", i+1, additionaldisk.AdditionalDiskUri))
+	}
+
+	if a.isVHDCopyToStorage() {
+		buf.WriteString(fmt.Sprintf("StorageAccountLocation: %s\n", a.VHD.StorageAccountLocation))
+		buf.WriteString(fmt.Sprintf("VHDOSDiskUri: %s\n", a.VHD.OSDiskUri))
+		buf.WriteString(fmt.Sprintf("TemplateUri: %s\n", a.VHD.TemplateUri))
+		if a.VHD.AdditionalDisks != nil {
+			for i, additionalDisk := range *a.VHD.AdditionalDisks {
+				buf.WriteString(fmt.Sprintf("AdditionalDiskUri (datadisk-%d): %s\n", i+1, additionalDisk.AdditionalDiskUri))
 			}
 		}
 	}
+
 	if a.isPublishedToSIG() {
-		buf.WriteString(fmt.Sprintf("ManagedImageSharedImageGalleryId: %s\n", a.ManagedImageSharedImageGalleryId))
+		buf.WriteString(fmt.Sprintf("ManagedImageSharedImageGalleryId: %s\n", a.SharedImageGallery.ManagedImageSharedImageGalleryId))
 		if x, ok := a.State(constants.ArmManagedImageSigPublishResourceGroup).(string); ok {
 			buf.WriteString(fmt.Sprintf("SharedImageGalleryResourceGroup: %s\n", x))
 		}
@@ -229,7 +190,22 @@ func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
 
 	labels := make(map[string]interface{})
 
+	var id, location string
+
+	// If image is a VHD
+	if a.isVHDCopyToStorage() {
+		id = a.VHD.OSDiskUri
+		location = a.VHD.StorageAccountLocation
+
+		labels["storage_account_location"] = a.VHD.StorageAccountLocation
+		labels["template_uri"] = a.VHD.TemplateUri
+	}
+
+	// If image is published to SharedImageGallery
 	if a.isPublishedToSIG() {
+		id = a.SharedImageGallery.ManagedImageSharedImageGalleryId
+		location = a.SharedImageGallery.SharedImageGalleryLocation
+
 		labels["sig_resource_group"] = a.State(constants.ArmManagedImageSigPublishResourceGroup).(string)
 		labels["sig_name"] = a.State(constants.ArmManagedImageSharedGalleryName).(string)
 		labels["sig_image_name"] = a.State(constants.ArmManagedImageSharedGalleryImageName).(string)
@@ -241,46 +217,18 @@ func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
 
 	// If image is captured as a managed image
 	if a.isManagedImage() {
-		id := a.ManagedImageId
-		location := a.ManagedImageLocation
+		id = a.ManagedImage.ManagedImageId
+		location = a.ManagedImage.ManagedImageLocation
 
 		labels["os_type"] = a.OSType
-		labels["managed_image_resourcegroup_name"] = a.ManagedImageResourceGroupName
-		labels["managed_image_name"] = a.ManagedImageName
+		labels["managed_image_resourcegroup_name"] = a.ManagedImage.ManagedImageResourceGroupName
+		labels["managed_image_name"] = a.ManagedImage.ManagedImageName
 
-		if a.OSDiskUri != "" {
-			labels["os_disk_uri"] = a.OSDiskUri
+		if a.ManagedImage.ManagedImageOSDiskUri != "" {
+			labels["os_disk_uri"] = a.ManagedImage.ManagedImageOSDiskUri
 		}
-
-		img, _ := registryimage.FromArtifact(a,
-			registryimage.WithID(id),
-			registryimage.WithRegion(location),
-			registryimage.WithProvider("azure"),
-			registryimage.WithSourceID(sourceID),
-			registryimage.SetLabels(labels),
-		)
-
-		return img
 	}
 
-	if a.isPublishedToSIG() {
-		img, _ := registryimage.FromArtifact(a,
-			registryimage.WithID(a.ManagedImageSharedImageGalleryId),
-			registryimage.WithRegion(a.SharedImageGalleryLocation),
-			registryimage.WithProvider("azure"),
-			registryimage.WithSourceID(sourceID),
-			registryimage.SetLabels(labels),
-		)
-
-		return img
-	}
-
-	// If image is a VHD
-	labels["storage_account_location"] = a.StorageAccountLocation
-	labels["template_uri"] = a.TemplateUri
-
-	id := a.OSDiskUri
-	location := a.StorageAccountLocation
 	img, _ := registryimage.FromArtifact(a,
 		registryimage.WithID(id),
 		registryimage.WithRegion(location),
