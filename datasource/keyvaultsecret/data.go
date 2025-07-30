@@ -8,12 +8,17 @@ package keyvaultsecret
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
+	"io"
+	"net/http"
+	"time"
 
+	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-07-01/secrets"
+	sdkClient "github.com/hashicorp/go-azure-sdk/sdk/client"
+	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 	"github.com/hashicorp/hcl/v2/hcldec"
+	azclient "github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 	"github.com/hashicorp/packer-plugin-sdk/common"
 	"github.com/hashicorp/packer-plugin-sdk/hcl2helper"
@@ -21,10 +26,6 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 
 	"github.com/zclconf/go-cty/cty"
-
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/Azure/azure-sdk-for-go/sdk/keyvault/azsecrets"
 )
 
 type Config struct {
@@ -37,13 +38,7 @@ type Config struct {
 	// The version of the secret to fetch. If not provided, the latest version will be used.
 	Version string `mapstructure:"version"`
 
-	// Optional fields for authentication.
-	// If not provided, the DefaultAzureCredential will be used.
-	// This includes environment variables, managed identity, etc.
-
-	TenantID     string `mapstructure:"tenant_id"`
-	ClientID     string `mapstructure:"client_id"`
-	ClientSecret string `mapstructure:"client_secret"`
+	azclient.Config `mapstructure:",squash"` // Embed ClientConfig to allow for common client configuration
 }
 
 type Datasource struct {
@@ -72,7 +67,7 @@ func (d *Datasource) Configure(raws ...interface{}) error {
 		return err
 	}
 
-	var errs *packersdk.MultiError
+	errs := new(packersdk.MultiError)
 
 	if d.config.VaultName == "" {
 		errs = packersdk.MultiErrorAppend(errs, errors.New("a 'vault_name' must be specified"))
@@ -81,14 +76,11 @@ func (d *Datasource) Configure(raws ...interface{}) error {
 		errs = packersdk.MultiErrorAppend(errs, errors.New("a 'secret_name' must be specified"))
 	}
 
-	if d.config.TenantID == "" {
-		d.config.TenantID = os.Getenv("AZURE_TENANT_ID")
-	}
-	if d.config.ClientID == "" {
-		d.config.ClientID = os.Getenv("AZURE_CLIENT_ID")
-	}
-	if d.config.ClientSecret == "" {
-		d.config.ClientSecret = os.Getenv("AZURE_CLIENT_SECRET")
+	d.config.Validate(errs)
+
+	err = d.config.SetDefaultValues()
+	if err != nil {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("failed to set default values: %w", err))
 	}
 
 	if errs != nil && len(errs.Errors) > 0 {
@@ -99,44 +91,92 @@ func (d *Datasource) Configure(raws ...interface{}) error {
 
 func (d *Datasource) Execute() (cty.Value, error) {
 
-	var cred azcore.TokenCredential
-	var err error
-
-	if d.config.TenantID != "" && d.config.ClientID == "" && d.config.ClientSecret == "" {
-		log.Printf("Using ClientSecretCredential for vault %q", d.config.VaultName)
-		cred, err = azidentity.NewClientSecretCredential(d.config.TenantID, d.config.ClientID, d.config.ClientSecret, nil)
-	} else {
-		log.Printf("Using DefaultAzureCredential for vault %q", d.config.VaultName)
-		cred, err = azidentity.NewDefaultAzureCredential(nil)
-	}
+	err := d.config.FillParameters()
 	if err != nil {
-		log.Printf("failed to obtain a credential: %v", err)
-		return cty.NullVal(cty.EmptyObject), fmt.Errorf("failed to obtain a credential for vault %q: %w", d.config.VaultName, err)
+		return cty.NullVal(cty.EmptyObject), err
 	}
 
 	vaultURI := fmt.Sprintf("https://%s.vault.azure.net", d.config.VaultName)
-	// Establish a connection to the Key Vault client
-	client, err := azsecrets.NewClient(vaultURI, cred, nil)
+	endpoint := environments.NewApiEndpoint("KeyVault", vaultURI, nil)
+	client, err := NewSecretsClientWithBaseURI(endpoint)
 	if err != nil {
-		log.Printf("failed to create a Key Vault client: %v", err)
-		return cty.NullVal(cty.EmptyObject), fmt.Errorf("failed to create Key Vault client for vault %q: %w", d.config.VaultName, err)
+		return cty.NullVal(cty.EmptyObject), fmt.Errorf("failed to create secrets client: %w", err)
 	}
 
-	resp, err := client.GetSecret(context.TODO(), d.config.SecretName, d.config.Version, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 1000*time.Second)
+	defer cancel()
+
+	authOptions := azclient.AzureAuthOptions{
+		AuthType:           d.config.AuthType(),
+		ClientID:           d.config.ClientID,
+		ClientSecret:       d.config.ClientSecret,
+		ClientJWT:          d.config.ClientJWT,
+		ClientCertPath:     d.config.ClientCertPath,
+		ClientCertPassword: d.config.ClientCertPassword,
+		TenantID:           d.config.TenantID,
+		SubscriptionID:     d.config.SubscriptionID,
+		OidcRequestUrl:     d.config.OidcRequestURL,
+		OidcRequestToken:   d.config.OidcRequestToken,
+	}
+
+	authorizer, err := azclient.BuildKeyVaultAuthorizer(ctx, authOptions, *d.config.CloudEnvironment())
 	if err != nil {
-		log.Printf("failed to get the secret: %v", err)
+		log.Printf("failed to create Key Vault authorizer: %v", err)
+		return cty.NullVal(cty.EmptyObject), fmt.Errorf("failed to create Key Vault authorizer: %w", err)
+	}
+
+	client.Client.SetAuthorizer(authorizer)
+
+	result, err := d.getSecret(ctx, client)
+	if err != nil {
+		log.Printf("failed to get secret: %v", err)
 		return cty.NullVal(cty.EmptyObject), fmt.Errorf("failed to get secret %q from vault %q: %w", d.config.SecretName, d.config.VaultName, err)
 	}
 
-	jsonResp, err := json.Marshal(resp.SecretBundle)
+	bytes, err := io.ReadAll(result.HttpResponse.Body)
 	if err != nil {
-		log.Printf("failed to marshal secret bundle: %v", err)
-		return cty.NullVal(cty.EmptyObject), fmt.Errorf("failed to marshal secret bundle for secret %q in vault %q: %w", d.config.SecretName, d.config.VaultName, err)
+		return cty.NullVal(cty.EmptyObject), fmt.Errorf("failed to read response body: %w", err)
+	}
+	log.Printf("[DEBUG] Retrieved secret %q from vault %q", d.config.SecretName, d.config.VaultName)
+
+	return hcl2helper.HCL2ValueFromConfig(DatasourceOutput{
+		Response: string(bytes),
+		Value:    result.Model.Value,
+	}, d.OutputSpec()), nil
+}
+
+func (d *Datasource) getSecret(ctx context.Context, client *secrets.SecretsClient) (result GetOperationResponse, err error) {
+	// Implementation for retrieving the secret goes here
+	opts := sdkClient.RequestOptions{
+		ContentType: "application/json; charset=utf-8",
+		ExpectedStatusCodes: []int{
+			http.StatusOK,
+		},
+		HttpMethod: http.MethodGet,
+		Path:       fmt.Sprintf("/secrets/%s/%s", d.config.SecretName, d.config.Version),
 	}
 
-	output := DatasourceOutput{
-		Response: string(jsonResp),
-		Value:    *resp.Value,
+	req, err := client.Client.NewRequest(ctx, opts)
+	if err != nil {
+		return
 	}
-	return hcl2helper.HCL2ValueFromConfig(output, d.OutputSpec()), nil
+
+	var resp *sdkClient.Response
+	resp, err = req.Execute(ctx)
+	if resp != nil {
+		result.OData = resp.OData
+		result.HttpResponse = resp.Response
+	}
+	if err != nil {
+		return
+	}
+
+	var model Secret
+	result.Model = &model
+	if err = resp.Unmarshal(result.Model); err != nil {
+		return
+	}
+
+	return result, nil
+
 }

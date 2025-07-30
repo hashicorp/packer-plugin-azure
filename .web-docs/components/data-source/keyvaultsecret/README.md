@@ -40,12 +40,6 @@ with the [jsondecode() function](/packer/docs/templates/hcl_templates/functions/
 
 - `version` (string) - The version of the secret to fetch. If not provided, the latest version will be used.
 
-- `tenant_id` (string) - Tenant ID
-
-- `client_id` (string) - Client ID
-
-- `client_secret` (string) - Client Secret
-
 <!-- End of code generated from the comments of the Config struct in datasource/keyvaultsecret/data.go; -->
 
 

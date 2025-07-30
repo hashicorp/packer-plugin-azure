@@ -10,20 +10,30 @@ import (
 // FlatConfig is an auto-generated flat version of Config.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatConfig struct {
-	PackerBuildName     *string           `mapstructure:"packer_build_name" cty:"packer_build_name" hcl:"packer_build_name"`
-	PackerBuilderType   *string           `mapstructure:"packer_builder_type" cty:"packer_builder_type" hcl:"packer_builder_type"`
-	PackerCoreVersion   *string           `mapstructure:"packer_core_version" cty:"packer_core_version" hcl:"packer_core_version"`
-	PackerDebug         *bool             `mapstructure:"packer_debug" cty:"packer_debug" hcl:"packer_debug"`
-	PackerForce         *bool             `mapstructure:"packer_force" cty:"packer_force" hcl:"packer_force"`
-	PackerOnError       *string           `mapstructure:"packer_on_error" cty:"packer_on_error" hcl:"packer_on_error"`
-	PackerUserVars      map[string]string `mapstructure:"packer_user_variables" cty:"packer_user_variables" hcl:"packer_user_variables"`
-	PackerSensitiveVars []string          `mapstructure:"packer_sensitive_variables" cty:"packer_sensitive_variables" hcl:"packer_sensitive_variables"`
-	VaultName           *string           `mapstructure:"vault_name" required:"true" cty:"vault_name" hcl:"vault_name"`
-	SecretName          *string           `mapstructure:"secret_name" required:"true" cty:"secret_name" hcl:"secret_name"`
-	Version             *string           `mapstructure:"version" cty:"version" hcl:"version"`
-	TenantID            *string           `mapstructure:"tenant_id" cty:"tenant_id" hcl:"tenant_id"`
-	ClientID            *string           `mapstructure:"client_id" cty:"client_id" hcl:"client_id"`
-	ClientSecret        *string           `mapstructure:"client_secret" cty:"client_secret" hcl:"client_secret"`
+	PackerBuildName      *string           `mapstructure:"packer_build_name" cty:"packer_build_name" hcl:"packer_build_name"`
+	PackerBuilderType    *string           `mapstructure:"packer_builder_type" cty:"packer_builder_type" hcl:"packer_builder_type"`
+	PackerCoreVersion    *string           `mapstructure:"packer_core_version" cty:"packer_core_version" hcl:"packer_core_version"`
+	PackerDebug          *bool             `mapstructure:"packer_debug" cty:"packer_debug" hcl:"packer_debug"`
+	PackerForce          *bool             `mapstructure:"packer_force" cty:"packer_force" hcl:"packer_force"`
+	PackerOnError        *string           `mapstructure:"packer_on_error" cty:"packer_on_error" hcl:"packer_on_error"`
+	PackerUserVars       map[string]string `mapstructure:"packer_user_variables" cty:"packer_user_variables" hcl:"packer_user_variables"`
+	PackerSensitiveVars  []string          `mapstructure:"packer_sensitive_variables" cty:"packer_sensitive_variables" hcl:"packer_sensitive_variables"`
+	VaultName            *string           `mapstructure:"vault_name" required:"true" cty:"vault_name" hcl:"vault_name"`
+	SecretName           *string           `mapstructure:"secret_name" required:"true" cty:"secret_name" hcl:"secret_name"`
+	Version              *string           `mapstructure:"version" cty:"version" hcl:"version"`
+	CloudEnvironmentName *string           `mapstructure:"cloud_environment_name" required:"false" cty:"cloud_environment_name" hcl:"cloud_environment_name"`
+	MetadataHost         *string           `mapstructure:"metadata_host" required:"false" cty:"metadata_host" hcl:"metadata_host"`
+	ClientID             *string           `mapstructure:"client_id" cty:"client_id" hcl:"client_id"`
+	ClientSecret         *string           `mapstructure:"client_secret" cty:"client_secret" hcl:"client_secret"`
+	ClientCertPath       *string           `mapstructure:"client_cert_path" cty:"client_cert_path" hcl:"client_cert_path"`
+	ClientCertPassword   *string           `mapstructure:"client_cert_password" cty:"client_cert_password" hcl:"client_cert_password"`
+	ClientJWT            *string           `mapstructure:"client_jwt" cty:"client_jwt" hcl:"client_jwt"`
+	ObjectID             *string           `mapstructure:"object_id" cty:"object_id" hcl:"object_id"`
+	TenantID             *string           `mapstructure:"tenant_id" required:"false" cty:"tenant_id" hcl:"tenant_id"`
+	SubscriptionID       *string           `mapstructure:"subscription_id" cty:"subscription_id" hcl:"subscription_id"`
+	OidcRequestToken     *string           `mapstructure:"oidc_request_token" cty:"oidc_request_token" hcl:"oidc_request_token"`
+	OidcRequestURL       *string           `mapstructure:"oidc_request_url" cty:"oidc_request_url" hcl:"oidc_request_url"`
+	UseAzureCLIAuth      *bool             `mapstructure:"use_azure_cli_auth" required:"false" cty:"use_azure_cli_auth" hcl:"use_azure_cli_auth"`
 }
 
 // FlatMapstructure returns a new FlatConfig.
@@ -49,9 +59,19 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"vault_name":                 &hcldec.AttrSpec{Name: "vault_name", Type: cty.String, Required: false},
 		"secret_name":                &hcldec.AttrSpec{Name: "secret_name", Type: cty.String, Required: false},
 		"version":                    &hcldec.AttrSpec{Name: "version", Type: cty.String, Required: false},
-		"tenant_id":                  &hcldec.AttrSpec{Name: "tenant_id", Type: cty.String, Required: false},
+		"cloud_environment_name":     &hcldec.AttrSpec{Name: "cloud_environment_name", Type: cty.String, Required: false},
+		"metadata_host":              &hcldec.AttrSpec{Name: "metadata_host", Type: cty.String, Required: false},
 		"client_id":                  &hcldec.AttrSpec{Name: "client_id", Type: cty.String, Required: false},
 		"client_secret":              &hcldec.AttrSpec{Name: "client_secret", Type: cty.String, Required: false},
+		"client_cert_path":           &hcldec.AttrSpec{Name: "client_cert_path", Type: cty.String, Required: false},
+		"client_cert_password":       &hcldec.AttrSpec{Name: "client_cert_password", Type: cty.String, Required: false},
+		"client_jwt":                 &hcldec.AttrSpec{Name: "client_jwt", Type: cty.String, Required: false},
+		"object_id":                  &hcldec.AttrSpec{Name: "object_id", Type: cty.String, Required: false},
+		"tenant_id":                  &hcldec.AttrSpec{Name: "tenant_id", Type: cty.String, Required: false},
+		"subscription_id":            &hcldec.AttrSpec{Name: "subscription_id", Type: cty.String, Required: false},
+		"oidc_request_token":         &hcldec.AttrSpec{Name: "oidc_request_token", Type: cty.String, Required: false},
+		"oidc_request_url":           &hcldec.AttrSpec{Name: "oidc_request_url", Type: cty.String, Required: false},
+		"use_azure_cli_auth":         &hcldec.AttrSpec{Name: "use_azure_cli_auth", Type: cty.Bool, Required: false},
 	}
 	return s
 }

@@ -68,7 +68,6 @@ func TestAccAzureKeyVaultSecret(t *testing.T) {
 				VaultName:  testVaultName,
 			},
 			wantErr:    true,
-			expect:     "Secret Payload cannot be empty",
 			skipCreate: true,
 		},
 	}
@@ -78,12 +77,10 @@ func TestAccAzureKeyVaultSecret(t *testing.T) {
 		extraArgs := []string{
 			"-var", fmt.Sprintf("secret_name=%s", tc.secret.SecretName),
 			"-var", fmt.Sprintf("vault_name=%s", testVaultName),
+			"-var", fmt.Sprintf("tenant_id=%s", os.Getenv("AZURE_TENANT_ID")),
+			"-var", fmt.Sprintf("client_id=%s", os.Getenv("AZURE_CLIENT_ID")),
+			"-var", fmt.Sprintf("client_secret=%s", os.Getenv("AZURE_CLIENT_SECRET")),
 		}
-
-		// if value is not json, we need to set the key to empty string
-		// if tc.secret.Value != "" && !json.Valid([]byte(tc.secret.Value)) {
-		// 	extraArgs = append(extraArgs, "-var", "key=")
-		// }
 
 		t.Run(tc.name, func(t *testing.T) {
 			testCase := &acctest.PluginTestCase{
@@ -111,7 +108,7 @@ func TestAccAzureKeyVaultSecret(t *testing.T) {
 
 					log.Print("Checking logs for expected output...")
 					if tc.wantErr {
-						if matched := regexp.MustCompile("failed to get the secret:").MatchString(logsString); !matched {
+						if matched := regexp.MustCompile("failed to get secret:").MatchString(logsString); !matched {
 							t.Errorf("Expected failure not found in logs")
 						}
 						return nil
