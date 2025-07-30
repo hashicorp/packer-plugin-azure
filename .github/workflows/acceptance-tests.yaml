@@ -84,6 +84,10 @@ jobs:
           echo "ARM_RESOURCE_GROUP_NAME=packercigroup" >> $GITHUB_ENV
           echo "ARM_STORAGE_ACCOUNT=packerciaccount" >> $GITHUB_ENV
           echo "ARM_RESOURCE_PREFIX=packerci" >> $GITHUB_ENV
+          echo "ARM_TENANT_ID=${{ secrets.ARM_TENANT_ID }}" >> $GITHUB_ENV
+
+          OBJECT_ID=$(az ad sp show --id "${{ secrets.ARM_CLIENT_ID }}" | jq -r '.id')
+          echo "AZURE_OBJECT_ID=${OBJECT_ID}" >> $GITHUB_ENV
 
       - name: Run `terraform apply` to create resources for acceptance tests
         working-directory: ./terraform

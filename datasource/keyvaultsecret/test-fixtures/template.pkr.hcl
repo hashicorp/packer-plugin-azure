@@ -1,0 +1,53 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+variable "vault_name" {
+  default = "packer-acctest-vault"
+  type    = string
+}
+
+variable "secret_name" {
+  default = "test-secret"
+  type    = string
+}
+
+variable "client_id" {
+  type = string
+}
+variable "client_secret" {
+  type = string
+}
+variable "tenant_id" {
+  type = string
+}
+
+data "azure-keyvaultsecret" "test" {
+  vault_name = var.vault_name
+  secret_name   = var.secret_name
+
+  client_id     = var.client_id
+  client_secret = var.client_secret
+  tenant_id     = var.tenant_id
+}
+
+locals {
+  value = data.azure-keyvaultsecret.test.value
+  response = data.azure-keyvaultsecret.test.response
+}
+
+source "null" "basic-example" {
+  communicator = "none"
+}
+
+build {
+  sources = [
+    "source.null.basic-example"
+  ]
+
+  provisioner "shell-local" {
+    inline = [
+      "echo secret value: ${local.value}",
+      "echo secret response: ${local.response}",
+    ]
+  }
+}

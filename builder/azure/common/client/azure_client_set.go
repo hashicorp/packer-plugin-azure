@@ -40,6 +40,8 @@ type AzureClientSet interface {
 	SubscriptionID() string
 
 	PollingDuration() time.Duration
+
+	TokenAuthorizer() auth.Authorizer
 }
 
 // AzureClientSet is used for API requests on the chroot builder
@@ -153,6 +155,10 @@ func new(c Config, say func(string)) (*azureClientSet, error) {
 
 func (s azureClientSet) SubscriptionID() string {
 	return s.subscriptionID
+}
+
+func (s azureClientSet) TokenAuthorizer() auth.Authorizer {
+	return s.authorizer
 }
 
 func (s azureClientSet) PollingDuration() time.Duration {
