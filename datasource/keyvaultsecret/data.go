@@ -145,6 +145,12 @@ func (d *Datasource) Execute() (cty.Value, error) {
 	}, d.OutputSpec()), nil
 }
 
+// We are using the SecretsClient from the secrets package, which is a wrapper around the resourcemanager.Client.
+// This allows us to use the same client for both the SecretsClient and the resourcemanager.Client,
+// while still providing the necessary functionality to interact with Azure Key Vault secrets.
+//
+// Using the SecretsClient directly for fetching secrets currently only allows us
+// to get the secret's metadata, and not the actual secret value.
 func (d *Datasource) getSecret(ctx context.Context, client *secrets.SecretsClient) (result GetOperationResponse, err error) {
 	// Implementation for retrieving the secret goes here
 	opts := sdkClient.RequestOptions{
