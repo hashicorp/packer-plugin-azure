@@ -1232,12 +1232,6 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		if c.SharedGallery.GalleryName != "" || c.SharedGallery.ID != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Cannot specify multiple kinds of azure compute gallery sources"))
 		}
-		if c.CaptureContainerName != "" {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_container_name] is not supported when using Shared Image Gallery as source. Use managed_image_resource_group_name instead."))
-		}
-		if c.CaptureNamePrefix != "" {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_name_prefix] is not supported when using Shared Image Gallery as source. Use managed_image_name instead."))
-		}
 		if c.SharedGallery.CommunityGalleryImageId != "" && c.SharedGallery.DirectSharedGalleryImageID != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Cannot specify both community gallery and direct shared gallery as a source"))
 		}
@@ -1253,12 +1247,6 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 		if c.SharedGallery.ID != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A shared_image_gallery.id must not be specified"))
-		}
-		if c.CaptureContainerName != "" {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_container_name] is not supported when using Shared Image Gallery as source. Use managed_image_resource_group_name instead."))
-		}
-		if c.CaptureNamePrefix != "" {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_name_prefix] is not supported when using Shared Image Gallery as source. Use managed_image_name instead."))
 		}
 	} else if c.SharedGallery.ID != "" {
 		sigIDRegex := regexp.MustCompile("/subscriptions/[^/]*/resourceGroups/[^/]*/providers/Microsoft.Compute/galleries/[^/]*/images/[^/]*/versions/[^/]*")
