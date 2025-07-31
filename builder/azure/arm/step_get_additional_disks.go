@@ -66,18 +66,13 @@ func (s *StepGetDataDisk) Run(ctx context.Context, state multistep.StateBag) mul
 
 	if vm.Properties.StorageProfile.DataDisks != nil {
 		var vhdUri string
-		additional_disks := make([]string, len(*vm.Properties.StorageProfile.DataDisks))
-		for i, additionaldisk := range *vm.Properties.StorageProfile.DataDisks {
-			if additionaldisk.Vhd != nil {
-				vhdUri = *additionaldisk.Vhd.Uri
-				s.say(fmt.Sprintf(" -> Additional Disk %d          : '%s'", i+1, vhdUri))
-			} else {
-				vhdUri = *additionaldisk.ManagedDisk.Id
-				s.say(fmt.Sprintf(" -> Managed Additional Disk %d  : '%s'", i+1, vhdUri))
-			}
-			additional_disks[i] = vhdUri
+		additionalDisks := make([]string, len(*vm.Properties.StorageProfile.DataDisks))
+		for i, additionalDisk := range *vm.Properties.StorageProfile.DataDisks {
+			vhdUri = *additionalDisk.ManagedDisk.Id
+			s.say(fmt.Sprintf(" -> Managed Additional Disk %d  : '%s'", i+1, vhdUri))
+			additionalDisks[i] = vhdUri
 		}
-		state.Put(constants.ArmAdditionalDiskVhds, additional_disks)
+		state.Put(constants.ArmAdditionalDiskVhds, additionalDisks)
 	}
 
 	return multistep.ActionContinue
