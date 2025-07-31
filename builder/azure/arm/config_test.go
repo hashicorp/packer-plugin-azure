@@ -19,7 +19,7 @@ import (
 
 // List of configuration parameters that are required by the ARM builder.
 var requiredConfigValues = []string{
-	//"capture_name_prefix",
+	"capture_name_prefix",
 	"capture_container_name",
 	"image_offer",
 	"image_publisher",
@@ -702,6 +702,59 @@ func TestUserDeviceLoginIsEnabledForLinux(t *testing.T) {
 	_, err := c.Prepare(config, getPackerConfiguration())
 	if err != nil {
 		t.Fatalf("failed to use device login for Linux: %s", err)
+	}
+}
+
+func TestConfigShouldRejectMalformedCaptureNamePrefix(t *testing.T) {
+	config := map[string]string{
+		"capture_container_name": "ignore",
+		"image_offer":            "ignore",
+		"image_publisher":        "ignore",
+		"image_sku":              "ignore",
+		"location":               "ignore",
+		"storage_account":        "ignore",
+		"resource_group_name":    "ignore",
+		"subscription_id":        "ignore",
+		"communicator":           "none",
+		// Does not matter for this test case, just pick one.
+		"os_type": constants.Target_Linux,
+	}
+
+	wellFormedCaptureNamePrefix := []string{
+		"packer",
+		"AbcdefghijklmnopqrstuvwX",
+		"hyphen-hyphen",
+		"0leading-number",
+		"v1.core.local",
+		"trailing-hyphen-",
+	}
+
+	for _, x := range wellFormedCaptureNamePrefix {
+		config["capture_name_prefix"] = x
+		var c Config
+		_, err := c.Prepare(config, getPackerConfiguration())
+
+		if err != nil {
+			t.Errorf("Expected test to pass, but it failed with the well-formed capture_name_prefix set to %q.", x)
+		}
+	}
+
+	malformedCaptureNamePrefix := []string{
+		"-leading-hyphen",
+		"trailing-period.",
+		"_leading-underscore",
+		"punc-!@#$%^&*()_+-=-punc",
+		"There-are-too-many-characters-in-the-name-and-the-limit-is-twenty-four",
+	}
+
+	for _, x := range malformedCaptureNamePrefix {
+		config["capture_name_prefix"] = x
+		var c Config
+		_, err := c.Prepare(config, getPackerConfiguration())
+
+		if err == nil {
+			t.Errorf("Expected test to fail, but it succeeded with the malformed capture_name_prefix set to %q.", x)
+		}
 	}
 }
 
