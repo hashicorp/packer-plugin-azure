@@ -17,12 +17,15 @@ func generatedData() map[string]interface{} {
 }
 
 func TestArtifactIdVHD(t *testing.T) {
-	artifact, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "packer", "images", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 0, generatedData())
-	if err != nil {
-		t.Fatalf("err=%s", err)
+	vhdArtifact := VHDArtifact{
+		OSDiskUri: "https://storage.blob.core.windows.net/packer/packer.pkros128o59crqz.vhd",
 	}
+	managedImageArtifact := ManagedImageArtifact{}
+	sharedImageGalleryArtifact := SharedImageGalleryArtifact{}
 
-	expected := "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd"
+	artifact := NewArtifact("Linux", vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, generatedData())
+
+	expected := "https://storage.blob.core.windows.net/packer/packer.pkros128o59crqz.vhd"
 
 	result := artifact.Id()
 	if result != expected {
@@ -31,10 +34,18 @@ func TestArtifactIdVHD(t *testing.T) {
 }
 
 func TestArtifactIDManagedImage(t *testing.T) {
-	artifact, err := NewManagedImageArtifact("Linux", "fakeResourceGroup", "fakeName", "fakeLocation", "fakeID", "fakeOsDiskSnapshotName", "fakeDataDiskSnapshotPrefix", generatedData(), "")
-	if err != nil {
-		t.Fatalf("err=%s", err)
+	vhdArtifact := VHDArtifact{}
+	managedImageArtifact := ManagedImageArtifact{
+		ManagedImageResourceGroupName:      "fakeResourceGroup",
+		ManagedImageName:                   "fakeName",
+		ManagedImageId:                     "fakeID",
+		ManagedImageLocation:               "fakeLocation",
+		ManagedImageOSDiskSnapshotName:     "fakeOsDiskSnapshotName",
+		ManagedImageDataDiskSnapshotPrefix: "fakeDataDiskSnapshotPrefix",
 	}
+	sharedImageGalleryArtifact := SharedImageGalleryArtifact{}
+
+	artifact := NewArtifact("Linux", vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, generatedData())
 
 	expected := `Azure.ResourceManagement.VMImage:
 
@@ -54,10 +65,18 @@ ManagedImageDataDiskSnapshotPrefix: fakeDataDiskSnapshotPrefix
 }
 
 func TestArtifactIDManagedImageWithoutOSDiskSnapshotName(t *testing.T) {
-	artifact, err := NewManagedImageArtifact("Linux", "fakeResourceGroup", "fakeName", "fakeLocation", "fakeID", "", "fakeDataDiskSnapshotPrefix", generatedData(), "")
-	if err != nil {
-		t.Fatalf("err=%s", err)
+	vhdArtifact := VHDArtifact{}
+	managedImageArtifact := ManagedImageArtifact{
+		ManagedImageResourceGroupName:      "fakeResourceGroup",
+		ManagedImageName:                   "fakeName",
+		ManagedImageId:                     "fakeID",
+		ManagedImageLocation:               "fakeLocation",
+		ManagedImageOSDiskSnapshotName:     "",
+		ManagedImageDataDiskSnapshotPrefix: "fakeDataDiskSnapshotPrefix",
 	}
+	sharedImageGalleryArtifact := SharedImageGalleryArtifact{}
+
+	artifact := NewArtifact("Linux", vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, generatedData())
 
 	expected := `Azure.ResourceManagement.VMImage:
 
@@ -76,10 +95,18 @@ ManagedImageDataDiskSnapshotPrefix: fakeDataDiskSnapshotPrefix
 }
 
 func TestArtifactIDManagedImageWithoutDataDiskSnapshotPrefix(t *testing.T) {
-	artifact, err := NewManagedImageArtifact("Linux", "fakeResourceGroup", "fakeName", "fakeLocation", "fakeID", "fakeOsDiskSnapshotName", "", generatedData(), "")
-	if err != nil {
-		t.Fatalf("err=%s", err)
+	vhdArtifact := VHDArtifact{}
+	managedImageArtifact := ManagedImageArtifact{
+		ManagedImageResourceGroupName:      "fakeResourceGroup",
+		ManagedImageName:                   "fakeName",
+		ManagedImageId:                     "fakeID",
+		ManagedImageLocation:               "fakeLocation",
+		ManagedImageOSDiskSnapshotName:     "fakeOsDiskSnapshotName",
+		ManagedImageDataDiskSnapshotPrefix: "",
 	}
+	sharedImageGalleryArtifact := SharedImageGalleryArtifact{}
+
+	artifact := NewArtifact("Linux", vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, generatedData())
 
 	expected := `Azure.ResourceManagement.VMImage:
 
@@ -98,10 +125,19 @@ ManagedImageOSDiskSnapshotName: fakeOsDiskSnapshotName
 }
 
 func TestArtifactIDManagedImageWithKeepingTheOSDisk(t *testing.T) {
-	artifact, err := NewManagedImageArtifact("Linux", "fakeResourceGroup", "fakeName", "fakeLocation", "fakeID", "fakeOsDiskSnapshotName", "", generatedData(), "/subscriptions/subscription/resourceGroups/test/providers/Microsoft.Compute/images/myimage")
-	if err != nil {
-		t.Fatalf("err=%s", err)
+	vhdArtifact := VHDArtifact{}
+	managedImageArtifact := ManagedImageArtifact{
+		ManagedImageResourceGroupName:      "fakeResourceGroup",
+		ManagedImageName:                   "fakeName",
+		ManagedImageId:                     "fakeID",
+		ManagedImageLocation:               "fakeLocation",
+		ManagedImageOSDiskSnapshotName:     "fakeOsDiskSnapshotName",
+		ManagedImageDataDiskSnapshotPrefix: "",
+		ManagedImageOSDiskUri:              "/subscriptions/subscription/resourceGroups/test/providers/Microsoft.Compute/images/myimage",
 	}
+	sharedImageGalleryArtifact := SharedImageGalleryArtifact{}
+
+	artifact := NewArtifact("Linux", vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, generatedData())
 
 	expected := `Azure.ResourceManagement.VMImage:
 
@@ -121,10 +157,20 @@ OSDiskUri: /subscriptions/subscription/resourceGroups/test/providers/Microsoft.C
 }
 
 func TestArtifactIDManagedImageWithSharedImageGalleryId(t *testing.T) {
-	artifact, err := NewManagedImageArtifactWithSIGAsDestination("Linux", "fakeResourceGroup", "fakeName", "fakeLocation", "fakeID", "fakeOsDiskSnapshotName", "fakeDataDiskSnapshotPrefix", "fakeSharedImageGallery", generatedData())
-	if err != nil {
-		t.Fatalf("err=%s", err)
+	vhdArtifact := VHDArtifact{}
+	managedImageArtifact := ManagedImageArtifact{
+		ManagedImageResourceGroupName:      "fakeResourceGroup",
+		ManagedImageName:                   "fakeName",
+		ManagedImageId:                     "fakeID",
+		ManagedImageLocation:               "fakeLocation",
+		ManagedImageOSDiskSnapshotName:     "fakeOsDiskSnapshotName",
+		ManagedImageDataDiskSnapshotPrefix: "fakeDataDiskSnapshotPrefix",
 	}
+	sharedImageGalleryArtifact := SharedImageGalleryArtifact{
+		ManagedImageSharedImageGalleryId: "fakeSharedImageGallery",
+	}
+
+	artifact := NewArtifact("Linux", vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, generatedData())
 
 	expected := `Azure.ResourceManagement.VMImage:
 
@@ -145,7 +191,6 @@ ManagedImageSharedImageGalleryId: fakeSharedImageGallery
 }
 
 func TestArtifactIDManagedImageWithSharedImageGalleryWithoutManagedImage_PARMetadata(t *testing.T) {
-
 	fakeGalleryResourceGroup := "fakeResourceGroup"
 	fakeGalleryName := "fakeName"
 	fakeGalleryImageName := "fakeGalleryImageName"
@@ -169,10 +214,14 @@ func TestArtifactIDManagedImageWithSharedImageGalleryWithoutManagedImage_PARMeta
 	stateData[constants.ArmManagedImageSharedGalleryImageVersion] = fakeGalleryImageVersion
 	stateData[constants.ArmManagedImageSharedGalleryReplicationRegions] = fakeGalleryReplicationRegions
 
-	artifact, err := NewSharedImageArtifact("Linux", "fakeSharedImageGallery", "fakeLocation", stateData)
-	if err != nil {
-		t.Fatalf("err=%s", err)
+	vhdArtifact := VHDArtifact{}
+	managedImageArtifact := ManagedImageArtifact{}
+	sharedImageGalleryArtifact := SharedImageGalleryArtifact{
+		ManagedImageSharedImageGalleryId: "fakeSharedImageGallery",
+		SharedImageGalleryLocation:       "fakeLocation",
 	}
+
+	artifact := NewArtifact("Linux", vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, stateData)
 
 	expected := `Azure.ResourceManagement.VMImage:
 
@@ -196,7 +245,7 @@ SharedImageGalleryReplicatedRegions: fake-region-1, fake-region-2
 	}
 
 	var image registryimage.Image
-	err = mapstructure.Decode(hcpImage, &image)
+	err := mapstructure.Decode(hcpImage, &image)
 	if err != nil {
 		t.Errorf("Bad: unexpected error when trying to decode state into registryimage.Image %v", err)
 	}
@@ -218,12 +267,12 @@ SharedImageGalleryReplicatedRegions: fake-region-1, fake-region-2
 			t.Errorf("expected labels[%q] to have a non-empty string value, but got %#v", key, v)
 		}
 	}
-	if artifact.SharedImageGalleryLocation != "fakeLocation" {
-		t.Errorf("expected fakeLocation got %s", artifact.SharedImageGalleryLocation)
+	if artifact.SharedImageGallery.SharedImageGalleryLocation != "fakeLocation" {
+		t.Errorf("expected fakeLocation got %s", artifact.SharedImageGallery.SharedImageGalleryLocation)
 	}
 }
-func TestArtifactIDManagedImageWithSharedImageGallery_PARMetadata(t *testing.T) {
 
+func TestArtifactIDManagedImageWithSharedImageGallery_PARMetadata(t *testing.T) {
 	fakeGalleryResourceGroup := "fakeResourceGroup"
 	fakeGalleryName := "fakeName"
 	fakeGalleryImageName := "fakeGalleryImageName"
@@ -247,10 +296,20 @@ func TestArtifactIDManagedImageWithSharedImageGallery_PARMetadata(t *testing.T) 
 	stateData[constants.ArmManagedImageSharedGalleryImageVersion] = fakeGalleryImageVersion
 	stateData[constants.ArmManagedImageSharedGalleryReplicationRegions] = fakeGalleryReplicationRegions
 
-	artifact, err := NewManagedImageArtifactWithSIGAsDestination("Linux", "fakeResourceGroup", "fakeName", "fakeLocation", "fakeID", "fakeOsDiskSnapshotName", "fakeDataDiskSnapshotPrefix", "fakeSharedImageGallery", stateData)
-	if err != nil {
-		t.Fatalf("err=%s", err)
+	vhdArtifact := VHDArtifact{}
+	managedImageArtifact := ManagedImageArtifact{
+		ManagedImageResourceGroupName:      "fakeResourceGroup",
+		ManagedImageName:                   "fakeName",
+		ManagedImageLocation:               "fakeLocation",
+		ManagedImageId:                     "fakeID",
+		ManagedImageOSDiskSnapshotName:     "fakeOsDiskSnapshotName",
+		ManagedImageDataDiskSnapshotPrefix: "fakeDataDiskSnapshotPrefix",
 	}
+	sharedImageGalleryArtifact := SharedImageGalleryArtifact{
+		ManagedImageSharedImageGalleryId: "fakeSharedImageGallery",
+	}
+
+	artifact := NewArtifact("Linux", vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, stateData)
 
 	expected := `Azure.ResourceManagement.VMImage:
 
@@ -280,7 +339,7 @@ SharedImageGalleryReplicatedRegions: fake-region-1, fake-region-2
 	}
 
 	var image registryimage.Image
-	err = mapstructure.Decode(hcpImage, &image)
+	err := mapstructure.Decode(hcpImage, &image)
 	if err != nil {
 		t.Errorf("Bad: unexpected error when trying to decode state into registryimage.Image %v", err)
 	}
@@ -306,17 +365,18 @@ SharedImageGalleryReplicatedRegions: fake-region-1, fake-region-2
 }
 
 func TestArtifactString(t *testing.T) {
-	artifact, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "packer", "images", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 0, generatedData())
-	if err != nil {
-		t.Fatalf("err=%s", err)
+	vhdArtifact := VHDArtifact{
+		OSDiskUri:              "https://storage.blob.core.windows.net/packer/packer.pkros128o59crqz.vhd",
+		StorageAccountLocation: "southcentralus",
 	}
+	managedImageArtifact := ManagedImageArtifact{}
+	sharedImageGalleryArtifact := SharedImageGalleryArtifact{}
+
+	artifact := NewArtifact("Linux", vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, generatedData())
 
 	testSubject := artifact.String()
-	if !strings.Contains(testSubject, "OSDiskUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
+	if !strings.Contains(testSubject, "OSDiskUri: https://storage.blob.core.windows.net/packer/packer.pkros128o59crqz.vhd") {
 		t.Errorf("Expected String() output to contain OSDiskUri")
-	}
-	if !strings.Contains(testSubject, "TemplateUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json") {
-		t.Errorf("Expected String() output to contain TemplateUri")
 	}
 	if !strings.Contains(testSubject, "StorageAccountLocation: southcentralus") {
 		t.Errorf("Expected String() output to contain StorageAccountLocation")
@@ -327,17 +387,21 @@ func TestArtifactString(t *testing.T) {
 }
 
 func TestAdditionalDiskArtifactString(t *testing.T) {
-	artifact, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "anotherprefix", "anothercontainername", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 1, generatedData())
-	if err != nil {
-		t.Fatalf("err=%s", err)
+	vhdArtifact := VHDArtifact{
+		OSDiskUri:              "https://storage.blob.core.windows.net/packer/packer.pkros128o59crqz.vhd",
+		StorageAccountLocation: "southcentralus",
+		AdditionalDisks: &[]AdditionalDiskArtifact{
+			{AdditionalDiskUri: "https://storage.blob.core.windows.net/packer/packer.pkros128o59crqz-1.vhd"},
+		},
 	}
+	managedImageArtifact := ManagedImageArtifact{}
+	sharedImageGalleryArtifact := SharedImageGalleryArtifact{}
+
+	artifact := NewArtifact("Linux", vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, generatedData())
 
 	testSubject := artifact.String()
-	if !strings.Contains(testSubject, "OSDiskUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/anothercontainername/anotherprefix-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
+	if !strings.Contains(testSubject, "OSDiskUri: https://storage.blob.core.windows.net/packer/packer.pkros128o59crqz.vhd") {
 		t.Errorf("Expected String() output to contain OSDiskUri")
-	}
-	if !strings.Contains(testSubject, "TemplateUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/anothercontainername/anotherprefix-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json") {
-		t.Errorf("Expected String() output to contain TemplateUri")
 	}
 	if !strings.Contains(testSubject, "StorageAccountLocation: southcentralus") {
 		t.Errorf("Expected String() output to contain StorageAccountLocation")
@@ -345,25 +409,26 @@ func TestAdditionalDiskArtifactString(t *testing.T) {
 	if !strings.Contains(testSubject, "OSType: Linux") {
 		t.Errorf("Expected String() output to contain OSType")
 	}
-	if !strings.Contains(testSubject, "AdditionalDiskUri (datadisk-1): https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/anothercontainername/anotherprefix-datadisk-0.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
+	if !strings.Contains(testSubject, "AdditionalDiskUri (datadisk-1): https://storage.blob.core.windows.net/packer/packer.pkros128o59crqz-1.vhd") {
 		t.Errorf("Expected String() output to contain AdditionalDiskUri")
 	}
 }
 
 func TestArtifactProperties(t *testing.T) {
-	testSubject, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "packer", "images", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 0, generatedData())
-	if err != nil {
-		t.Fatalf("err=%s", err)
+	vhdArtifact := VHDArtifact{
+		OSDiskUri:              "https://storage.blob.core.windows.net/packer/packer.pkros128o59crqz.vhd",
+		StorageAccountLocation: "southcentralus",
 	}
+	managedImageArtifact := ManagedImageArtifact{}
+	sharedImageGalleryArtifact := SharedImageGalleryArtifact{}
 
-	if testSubject.OSDiskUri != "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd" {
-		t.Errorf("Expected template to be 'https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd', but got %s", testSubject.OSDiskUri)
+	testSubject := NewArtifact("Linux", vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, generatedData())
+
+	if testSubject.VHD.OSDiskUri != "https://storage.blob.core.windows.net/packer/packer.pkros128o59crqz.vhd" {
+		t.Errorf("Expected template to be 'https://storage.blob.core.windows.net/packer/packer.pkros128o59crqz.vhd', but got %s", testSubject.VHD.OSDiskUri)
 	}
-	if testSubject.TemplateUri != "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json" {
-		t.Errorf("Expected template to be 'https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json', but got %s", testSubject.TemplateUri)
-	}
-	if testSubject.StorageAccountLocation != "southcentralus" {
-		t.Errorf("Expected StorageAccountLocation to be 'southcentral', but got %s", testSubject.StorageAccountLocation)
+	if testSubject.VHD.StorageAccountLocation != "southcentralus" {
+		t.Errorf("Expected StorageAccountLocation to be 'southcentral', but got %s", testSubject.VHD.StorageAccountLocation)
 	}
 	if testSubject.OSType != "Linux" {
 		t.Errorf("Expected OSType to be 'Linux', but got %s", testSubject.OSType)
@@ -371,31 +436,35 @@ func TestArtifactProperties(t *testing.T) {
 }
 
 func TestAdditionalDiskArtifactProperties(t *testing.T) {
-	testSubject, err := NewArtifact("4085bb15-3644-4641-b9cd-f575918640b4", "packer", "images", "https://storage.blob.core.windows.net/", "southcentralus", "Linux", 1, generatedData())
-	if err != nil {
-		t.Fatalf("err=%s", err)
+	vhdArtifact := VHDArtifact{
+		OSDiskUri:              "https://storage.blob.core.windows.net/packer/packer.pkros128o59crqz.vhd",
+		StorageAccountLocation: "southcentralus",
+		AdditionalDisks: &[]AdditionalDiskArtifact{
+			{AdditionalDiskUri: "https://storage.blob.core.windows.net/packer/packer.pkros128o59crqz-1.vhd"},
+		},
 	}
+	managedImageArtifact := ManagedImageArtifact{}
+	sharedImageGalleryArtifact := SharedImageGalleryArtifact{}
 
-	if testSubject.OSDiskUri != "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd" {
-		t.Errorf("Expected template to be 'https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd', but got %s", testSubject.OSDiskUri)
+	testSubject := NewArtifact("Linux", vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, generatedData())
+
+	if testSubject.VHD.OSDiskUri != "https://storage.blob.core.windows.net/packer/packer.pkros128o59crqz.vhd" {
+		t.Errorf("Expected template to be 'https://storage.blob.core.windows.net/packer/packer.pkros128o59crqz.vhd', but got %s", testSubject.VHD.OSDiskUri)
 	}
-	if testSubject.TemplateUri != "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json" {
-		t.Errorf("Expected template to be 'https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json', but got %s", testSubject.TemplateUri)
-	}
-	if testSubject.StorageAccountLocation != "southcentralus" {
-		t.Errorf("Expected StorageAccountLocation to be 'southcentral', but got %s", testSubject.StorageAccountLocation)
+	if testSubject.VHD.StorageAccountLocation != "southcentralus" {
+		t.Errorf("Expected StorageAccountLocation to be 'southcentral', but got %s", testSubject.VHD.StorageAccountLocation)
 	}
 	if testSubject.OSType != "Linux" {
 		t.Errorf("Expected OSType to be 'Linux', but got %s", testSubject.OSType)
 	}
-	if testSubject.AdditionalDisks == nil {
+	if testSubject.VHD.AdditionalDisks == nil {
 		t.Errorf("Expected AdditionalDisks to be not nil")
 	}
-	if len(*testSubject.AdditionalDisks) != 1 {
-		t.Errorf("Expected AdditionalDisks to have one additional disk, but got %d", len(*testSubject.AdditionalDisks))
+	if len(*testSubject.VHD.AdditionalDisks) != 1 {
+		t.Errorf("Expected AdditionalDisks to have one additional disk, but got %d", len(*testSubject.VHD.AdditionalDisks))
 	}
-	if (*testSubject.AdditionalDisks)[0].AdditionalDiskUri != "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-datadisk-0.4085bb15-3644-4641-b9cd-f575918640b4.vhd" {
-		t.Errorf("Expected additional disk uri to be 'https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-datadisk-0.4085bb15-3644-4641-b9cd-f575918640b4.vhd', but got %s", (*testSubject.AdditionalDisks)[0].AdditionalDiskUri)
+	if (*testSubject.VHD.AdditionalDisks)[0].AdditionalDiskUri != "https://storage.blob.core.windows.net/packer/packer.pkros128o59crqz-1.vhd" {
+		t.Errorf("Expected additional disk uri to be 'https://storage.blob.core.windows.net/packer/packer.pkros128o59crqz-1.vhd', but got %s", (*testSubject.VHD.AdditionalDisks)[0].AdditionalDiskUri)
 	}
 }
 

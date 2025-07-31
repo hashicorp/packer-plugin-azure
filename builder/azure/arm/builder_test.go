@@ -77,7 +77,9 @@ func TestManagedImageArtifactWithSIGAsDestinationNoImage(t *testing.T) {
 	_, _, err := testSubject.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
 	assert.NoErrorf(t, err, "failed to prepare: %s", err)
 
-	_, err = testSubject.managedImageArtifactWithSIGAsDestination("fakeID", generatedData())
+	sharedImageGalleryArtifact := SharedImageGalleryArtifact{}
+
+	err = testSubject.getSharedImageGalleryArtifact(&sharedImageGalleryArtifact, generatedData())
 	assert.ErrorIs(t, err, ErrNoImage)
 }
 
@@ -104,10 +106,21 @@ func TestBuildSharedImageGalleryArtifact_withState(t *testing.T) {
 	testSubject.config.ManagedImageOSDiskSnapshotName = "fakeOsDiskSnapshotName"
 	testSubject.config.ManagedImageDataDiskSnapshotPrefix = "fakeDataDiskSnapshotPrefix"
 
-	artifact, err := testSubject.managedImageArtifactWithSIGAsDestination("fakeID", generatedData())
+	managedImageArtifact := ManagedImageArtifact{}
+	sharedImageGalleryArtifact := SharedImageGalleryArtifact{}
+	vhdArtifact := VHDArtifact{}
+	stateData := generatedData()
+
+	testSubject.getManagedImageArtifact(&managedImageArtifact)
+
+	// set ManagedImageId manually since ClientConfig.SubscriptionID is empty
+	managedImageArtifact.ManagedImageId = "fakeID"
+	err = testSubject.getSharedImageGalleryArtifact(&sharedImageGalleryArtifact, stateData)
 	if err != nil {
 		t.Fatalf("err=%s", err)
 	}
+
+	artifact := NewArtifact(testSubject.config.OSType, vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, stateData)
 
 	expected := `Azure.ResourceManagement.VMImage:
 

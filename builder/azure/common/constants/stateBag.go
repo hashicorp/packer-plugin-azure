@@ -44,6 +44,7 @@ const (
 	ArmVirtualMachineCaptureParameters                                string = "arm.VirtualMachineCaptureParameters"
 	ArmIsExistingResourceGroup                                        string = "arm.IsExistingResourceGroup"
 	ArmIsExistingKeyVault                                             string = "arm.IsExistingKeyVault"
+	ArmIsVHDSaveToStorage                                             string = "arm.IsVHDSaveToStorage"
 	ArmIsManagedImage                                                 string = "arm.IsManagedImage"
 	ArmIsSIGImage                                                     string = "arm.IsSIGImage"
 	ArmManagedImageResourceGroupName                                  string = "arm.ManagedImageResourceGroupName"
