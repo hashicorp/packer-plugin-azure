@@ -116,7 +116,6 @@ func (s *StepCaptureImage) getVMID(ctx context.Context, vmId virtualmachines.Vir
 }
 
 func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-
 	var computeName = state.Get(constants.ArmComputeName).(string)
 	var location = state.Get(constants.ArmLocation).(string)
 	var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
@@ -178,33 +177,29 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 			var osDiskName = s.config.tmpOSDiskName
 			s.say(fmt.Sprintf(" -> osDiskName                : '%s'", osDiskName))
 
-			accessUri, err := s.grantAccess(ctx, subscriptionId, resourceGroupName, osDiskName)
+			s.say("OS Disk...")
+			err = s.captureVHD(ctx, subscriptionId, resourceGroupName, osDiskName)
 			if err != nil {
-				err = fmt.Errorf("failed to grant access with err : %s", err)
+				err = fmt.Errorf("failed to capture OS Disk with err : %s", err)
 				state.Put(constants.Error, err)
 				s.error(err)
 				return multistep.ActionHalt
 			}
 
-			s.say(fmt.Sprintf(" -> accessUri                 : '%s'", accessUri))
+			s.say("Data Disk...")
+			additionalDiskCount := len(s.config.AdditionalDiskSize)
+			if additionalDiskCount > 0 {
+				for i := 0; i < additionalDiskCount; i++ {
+					dataDiskName := fmt.Sprintf("%s-%d", osDiskName, i+1)
 
-			var storageContainerName = s.config.CaptureContainerName
-			var captureNamePrefix = s.config.CaptureNamePrefix
-
-			err = s.copyToStorage(ctx, storageContainerName, captureNamePrefix, osDiskName, accessUri)
-			if err != nil {
-				err = fmt.Errorf("failed to copy to storage with err : %s", err)
-				state.Put(constants.Error, err)
-				s.error(err)
-				return multistep.ActionHalt
-			}
-
-			err = s.revokeAccess(ctx, subscriptionId, resourceGroupName, osDiskName)
-			if err != nil {
-				err = fmt.Errorf("failed to revoke access with err : %s", err)
-				state.Put(constants.Error, err)
-				s.error(err)
-				return multistep.ActionHalt
+					err = s.captureVHD(ctx, subscriptionId, resourceGroupName, dataDiskName)
+					if err != nil {
+						err = fmt.Errorf("failed to capture data Disk with err : %s", err)
+						state.Put(constants.Error, err)
+						s.error(err)
+						return multistep.ActionHalt
+					}
+				}
 			}
 		}
 
@@ -218,11 +213,38 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 func (*StepCaptureImage) Cleanup(multistep.StateBag) {
 }
 
-func (s *StepCaptureImage) grantDiskAccess(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) (string, error) {
+func (s *StepCaptureImage) captureVHD(ctx context.Context, subscriptionId string, resourceGroupName string, diskName string) error {
+	accessUri, err := s.grantAccess(ctx, subscriptionId, resourceGroupName, diskName)
+	if err != nil {
+		err = fmt.Errorf("failed to grant access with err : %s", err)
+		return err
+	}
+
+	s.say(fmt.Sprintf(" -> accessUri                 : '%s'", accessUri))
+
+	var storageContainerName = s.config.CaptureContainerName
+	var captureNamePrefix = s.config.CaptureNamePrefix
+
+	err = s.copyToStorage(ctx, storageContainerName, captureNamePrefix, diskName, accessUri)
+	if err != nil {
+		err = fmt.Errorf("failed to copy to storage with err : %s", err)
+		return err
+	}
+
+	err = s.revokeAccess(ctx, subscriptionId, resourceGroupName, diskName)
+	if err != nil {
+		err = fmt.Errorf("failed to revoke access with err : %s", err)
+		return err
+	}
+
+	return nil
+}
+
+func (s *StepCaptureImage) grantDiskAccess(ctx context.Context, subscriptionId string, resourceGroupName string, diskName string) (string, error) {
 	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
 	defer cancel()
 
-	diskID := commonids.NewManagedDiskID(subscriptionId, resourceGroupName, osDiskName)
+	diskID := commonids.NewManagedDiskID(subscriptionId, resourceGroupName, diskName)
 	grantAccessData := disks.GrantAccessData{
 		Access:            disks.AccessLevelRead,
 		DurationInSeconds: 600,
@@ -282,10 +304,10 @@ func (s *StepCaptureImage) grantDiskAccess(ctx context.Context, subscriptionId s
 	return *accessUri, nil
 }
 
-func (s *StepCaptureImage) revokeDiskAccess(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) error {
+func (s *StepCaptureImage) revokeDiskAccess(ctx context.Context, subscriptionId string, resourceGroupName string, diskName string) error {
 	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
 	defer cancel()
-	diskID := commonids.NewManagedDiskID(subscriptionId, resourceGroupName, osDiskName)
+	diskID := commonids.NewManagedDiskID(subscriptionId, resourceGroupName, diskName)
 
 	s.say("Revoking access ...")
 	err := s.client.DisksClient.RevokeAccessThenPoll(pollingContext, diskID)
@@ -297,18 +319,18 @@ func (s *StepCaptureImage) revokeDiskAccess(ctx context.Context, subscriptionId 
 	return nil
 }
 
-func (s *StepCaptureImage) copyVhdToStorage(ctx context.Context, storageContainerName string, captureNamePrefix string, osDiskName string, accessUri string) error {
+func (s *StepCaptureImage) copyVhdToStorage(ctx context.Context, storageContainerName string, captureNamePrefix string, diskName string, accessUri string) error {
 	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
 	defer cancel()
 
-	var vhdName = fmt.Sprintf("%s%s.vhd", captureNamePrefix, osDiskName)
+	var vhdName = fmt.Sprintf("%s%s.vhd", captureNamePrefix, diskName)
 	copyInput := blobs.CopyInput{
 		CopySource: accessUri,
 	}
 
 	s.say("Copying VHD to Storage Account ...")
 	s.say(fmt.Sprintf(" -> Storage Container Name    : '%s'", storageContainerName))
-	s.say(fmt.Sprintf(" -> Vhd Name                  : '%s'", vhdName))
+	s.say(fmt.Sprintf(" -> VHD Name                  : '%s'", vhdName))
 
 	if err := s.client.GiovanniBlobClient.CopyAndWait(pollingContext, storageContainerName, vhdName, copyInput); err != nil {
 		return fmt.Errorf("error copying: %s", err)

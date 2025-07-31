@@ -18,14 +18,14 @@ func generatedData() map[string]interface{} {
 
 func TestArtifactIdVHD(t *testing.T) {
 	vhdArtifact := VHDArtifact{
-		OSDiskUri: "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
+		OSDiskUri: "https://storage.blob.core.windows.net/tianyipackervhd/packer.pkros128o59crqz.vhd",
 	}
 	managedImageArtifact := ManagedImageArtifact{}
 	sharedImageGalleryArtifact := SharedImageGalleryArtifact{}
 
 	artifact := NewArtifact("Linux", vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, generatedData())
 
-	expected := "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd"
+	expected := "https://storage.blob.core.windows.net/tianyipackervhd/packer.pkros128o59crqz.vhd"
 
 	result := artifact.Id()
 	if result != expected {
@@ -366,7 +366,7 @@ SharedImageGalleryReplicatedRegions: fake-region-1, fake-region-2
 
 func TestArtifactString(t *testing.T) {
 	vhdArtifact := VHDArtifact{
-		OSDiskUri:              "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
+		OSDiskUri:              "https://storage.blob.core.windows.net/tianyipackervhd/packer.pkros128o59crqz.vhd",
 		StorageAccountLocation: "southcentralus",
 	}
 	managedImageArtifact := ManagedImageArtifact{}
@@ -375,7 +375,7 @@ func TestArtifactString(t *testing.T) {
 	artifact := NewArtifact("Linux", vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, generatedData())
 
 	testSubject := artifact.String()
-	if !strings.Contains(testSubject, "OSDiskUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
+	if !strings.Contains(testSubject, "OSDiskUri: https://storage.blob.core.windows.net/tianyipackervhd/packer.pkros128o59crqz.vhd") {
 		t.Errorf("Expected String() output to contain OSDiskUri")
 	}
 	if !strings.Contains(testSubject, "StorageAccountLocation: southcentralus") {
@@ -388,10 +388,10 @@ func TestArtifactString(t *testing.T) {
 
 func TestAdditionalDiskArtifactString(t *testing.T) {
 	vhdArtifact := VHDArtifact{
-		OSDiskUri:              "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/anothercontainername/anotherprefix-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
+		OSDiskUri:              "https://storage.blob.core.windows.net/tianyipackervhd/packer.pkros128o59crqz.vhd",
 		StorageAccountLocation: "southcentralus",
 		AdditionalDisks: &[]AdditionalDiskArtifact{
-			{AdditionalDiskUri: "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/anothercontainername/anotherprefix-datadisk-0.4085bb15-3644-4641-b9cd-f575918640b4.vhd"},
+			{AdditionalDiskUri: "https://storage.blob.core.windows.net/tianyipackervhd/packer.pkros128o59crqz-1.vhd"},
 		},
 	}
 	managedImageArtifact := ManagedImageArtifact{}
@@ -400,7 +400,7 @@ func TestAdditionalDiskArtifactString(t *testing.T) {
 	artifact := NewArtifact("Linux", vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, generatedData())
 
 	testSubject := artifact.String()
-	if !strings.Contains(testSubject, "OSDiskUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/anothercontainername/anotherprefix-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
+	if !strings.Contains(testSubject, "OSDiskUri: https://storage.blob.core.windows.net/tianyipackervhd/packer.pkros128o59crqz.vhd") {
 		t.Errorf("Expected String() output to contain OSDiskUri")
 	}
 	if !strings.Contains(testSubject, "StorageAccountLocation: southcentralus") {
@@ -409,14 +409,14 @@ func TestAdditionalDiskArtifactString(t *testing.T) {
 	if !strings.Contains(testSubject, "OSType: Linux") {
 		t.Errorf("Expected String() output to contain OSType")
 	}
-	if !strings.Contains(testSubject, "AdditionalDiskUri (datadisk-1): https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/anothercontainername/anotherprefix-datadisk-0.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
+	if !strings.Contains(testSubject, "AdditionalDiskUri (datadisk-1): https://storage.blob.core.windows.net/tianyipackervhd/packer.pkros128o59crqz-1.vhd") {
 		t.Errorf("Expected String() output to contain AdditionalDiskUri")
 	}
 }
 
 func TestArtifactProperties(t *testing.T) {
 	vhdArtifact := VHDArtifact{
-		OSDiskUri:              "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
+		OSDiskUri:              "https://storage.blob.core.windows.net/tianyipackervhd/packer.pkros128o59crqz.vhd",
 		StorageAccountLocation: "southcentralus",
 	}
 	managedImageArtifact := ManagedImageArtifact{}
@@ -424,8 +424,8 @@ func TestArtifactProperties(t *testing.T) {
 
 	testSubject := NewArtifact("Linux", vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, generatedData())
 
-	if testSubject.VHD.OSDiskUri != "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd" {
-		t.Errorf("Expected template to be 'https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd', but got %s", testSubject.VHD.OSDiskUri)
+	if testSubject.VHD.OSDiskUri != "https://storage.blob.core.windows.net/tianyipackervhd/packer.pkros128o59crqz.vhd" {
+		t.Errorf("Expected template to be 'https://storage.blob.core.windows.net/tianyipackervhd/packer.pkros128o59crqz.vhd', but got %s", testSubject.VHD.OSDiskUri)
 	}
 	if testSubject.VHD.StorageAccountLocation != "southcentralus" {
 		t.Errorf("Expected StorageAccountLocation to be 'southcentral', but got %s", testSubject.VHD.StorageAccountLocation)
@@ -437,10 +437,10 @@ func TestArtifactProperties(t *testing.T) {
 
 func TestAdditionalDiskArtifactProperties(t *testing.T) {
 	vhdArtifact := VHDArtifact{
-		OSDiskUri:              "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
+		OSDiskUri:              "https://storage.blob.core.windows.net/tianyipackervhd/packer.pkros128o59crqz.vhd",
 		StorageAccountLocation: "southcentralus",
 		AdditionalDisks: &[]AdditionalDiskArtifact{
-			{AdditionalDiskUri: "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-datadisk-0.4085bb15-3644-4641-b9cd-f575918640b4.vhd"},
+			{AdditionalDiskUri: "https://storage.blob.core.windows.net/tianyipackervhd/packer.pkros128o59crqz-1.vhd"},
 		},
 	}
 	managedImageArtifact := ManagedImageArtifact{}
@@ -448,8 +448,8 @@ func TestAdditionalDiskArtifactProperties(t *testing.T) {
 
 	testSubject := NewArtifact("Linux", vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, generatedData())
 
-	if testSubject.VHD.OSDiskUri != "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd" {
-		t.Errorf("Expected template to be 'https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd', but got %s", testSubject.VHD.OSDiskUri)
+	if testSubject.VHD.OSDiskUri != "https://storage.blob.core.windows.net/tianyipackervhd/packer.pkros128o59crqz.vhd" {
+		t.Errorf("Expected template to be 'https://storage.blob.core.windows.net/tianyipackervhd/packer.pkros128o59crqz.vhd', but got %s", testSubject.VHD.OSDiskUri)
 	}
 	if testSubject.VHD.StorageAccountLocation != "southcentralus" {
 		t.Errorf("Expected StorageAccountLocation to be 'southcentral', but got %s", testSubject.VHD.StorageAccountLocation)
@@ -463,8 +463,8 @@ func TestAdditionalDiskArtifactProperties(t *testing.T) {
 	if len(*testSubject.VHD.AdditionalDisks) != 1 {
 		t.Errorf("Expected AdditionalDisks to have one additional disk, but got %d", len(*testSubject.VHD.AdditionalDisks))
 	}
-	if (*testSubject.VHD.AdditionalDisks)[0].AdditionalDiskUri != "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-datadisk-0.4085bb15-3644-4641-b9cd-f575918640b4.vhd" {
-		t.Errorf("Expected additional disk uri to be 'https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-datadisk-0.4085bb15-3644-4641-b9cd-f575918640b4.vhd', but got %s", (*testSubject.VHD.AdditionalDisks)[0].AdditionalDiskUri)
+	if (*testSubject.VHD.AdditionalDisks)[0].AdditionalDiskUri != "https://storage.blob.core.windows.net/tianyipackervhd/packer.pkros128o59crqz-1.vhd" {
+		t.Errorf("Expected additional disk uri to be 'https://storage.blob.core.windows.net/tianyipackervhd/packer.pkros128o59crqz-1.vhd', but got %s", (*testSubject.VHD.AdditionalDisks)[0].AdditionalDiskUri)
 	}
 }
 

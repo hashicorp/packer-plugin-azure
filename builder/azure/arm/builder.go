@@ -776,8 +776,8 @@ func (b *Builder) getVHDArtifact(vhdArtifact *VHDArtifact) {
 	if additionalDiskCount > 0 {
 		dataDisks := make([]AdditionalDiskArtifact, additionalDiskCount)
 		for i := 0; i < additionalDiskCount; i++ {
-			dataDisks[i].AdditionalDiskUri = fmt.Sprintf("%ssystem/Microsoft.Compute/Images/%s/%s-datadisk-%d.%s.vhd",
-				b.config.storageAccountBlobEndpoint, b.config.CaptureContainerName, b.config.CaptureNamePrefix, i, b.stateBag.Get(constants.ArmBuildVMInternalId).(string))
+			dataDisks[i].AdditionalDiskUri = fmt.Sprintf("%s%s/%s%s-%d.vhd",
+				b.config.storageAccountBlobEndpoint, b.config.CaptureContainerName, b.config.CaptureNamePrefix, b.config.tmpOSDiskName, i+1)
 		}
 		vhdArtifact.AdditionalDisks = &dataDisks
 	}
