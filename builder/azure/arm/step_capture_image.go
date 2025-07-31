@@ -174,7 +174,7 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 			s.say(fmt.Sprintf(" -> VM Internal ID            : '%s'", vmInternalID))
 			state.Put(constants.ArmBuildVMInternalId, vmInternalID)
 
-			s.say("OS Disk...")
+			s.say("OS Disk ...")
 			var osDiskName = s.config.tmpOSDiskName
 			s.say(fmt.Sprintf(" -> osDiskName                : '%s'", osDiskName))
 			err = s.captureVHD(ctx, subscriptionId, resourceGroupName, osDiskName)
@@ -187,9 +187,9 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 
 			additionalDiskCount := len(s.config.AdditionalDiskSize)
 			if additionalDiskCount > 0 {
-				s.say("Data Disk...")
+				s.say("Data Disk ...")
 				var dataDiskName = s.config.tmpDataDiskName
-				s.say(fmt.Sprintf(" -> dataDiskName                : '%s'", dataDiskName))
+				s.say(fmt.Sprintf(" -> dataDiskName              : '%s'", dataDiskName))
 
 				for i := 0; i < additionalDiskCount; i++ {
 					subDataDiskName := fmt.Sprintf("%s-%d", dataDiskName, i+1)
