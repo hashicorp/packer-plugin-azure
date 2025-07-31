@@ -159,9 +159,6 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 
 				return multistep.ActionHalt
 			}
-		} else if isSIGImage {
-			// It's possible to create SIG image without a managed image
-			return multistep.ActionContinue
 		}
 
 		if isVHDSaveToStorage {
@@ -209,6 +206,10 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 				s.error(err)
 				return multistep.ActionHalt
 			}
+		}
+
+		if isSIGImage {
+			return multistep.ActionContinue
 		}
 	}
 	return multistep.ActionContinue

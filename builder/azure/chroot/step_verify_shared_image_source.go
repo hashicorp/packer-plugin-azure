@@ -63,7 +63,7 @@ func (s *StepVerifySharedImageSource) Run(ctx context.Context, state multistep.S
 		s.SharedImageID))
 
 	galleryImageVersionID := galleryimageversions.NewImageVersionID(
-		resource.Subscription,
+		azcli.SubscriptionID(),
 		resource.ResourceGroup,
 		resource.ResourceName[0],
 		resource.ResourceName[1],
@@ -103,7 +103,7 @@ func (s *StepVerifySharedImageSource) Run(ctx context.Context, state multistep.S
 
 	imageResource, _ := resource.Parent()
 	galleryImageID := galleryimages.NewGalleryImageID(
-		resource.Subscription,
+		azcli.SubscriptionID(),
 		resource.ResourceGroup,
 		resource.ResourceName[0],
 		resource.ResourceName[1],
