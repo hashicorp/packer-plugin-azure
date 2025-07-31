@@ -367,7 +367,6 @@ SharedImageGalleryReplicatedRegions: fake-region-1, fake-region-2
 func TestArtifactString(t *testing.T) {
 	vhdArtifact := VHDArtifact{
 		OSDiskUri:              "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
-		TemplateUri:            "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json",
 		StorageAccountLocation: "southcentralus",
 	}
 	managedImageArtifact := ManagedImageArtifact{}
@@ -378,9 +377,6 @@ func TestArtifactString(t *testing.T) {
 	testSubject := artifact.String()
 	if !strings.Contains(testSubject, "OSDiskUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
 		t.Errorf("Expected String() output to contain OSDiskUri")
-	}
-	if !strings.Contains(testSubject, "TemplateUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json") {
-		t.Errorf("Expected String() output to contain TemplateUri")
 	}
 	if !strings.Contains(testSubject, "StorageAccountLocation: southcentralus") {
 		t.Errorf("Expected String() output to contain StorageAccountLocation")
@@ -393,7 +389,6 @@ func TestArtifactString(t *testing.T) {
 func TestAdditionalDiskArtifactString(t *testing.T) {
 	vhdArtifact := VHDArtifact{
 		OSDiskUri:              "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/anothercontainername/anotherprefix-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
-		TemplateUri:            "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/anothercontainername/anotherprefix-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json",
 		StorageAccountLocation: "southcentralus",
 		AdditionalDisks: &[]AdditionalDiskArtifact{
 			{AdditionalDiskUri: "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/anothercontainername/anotherprefix-datadisk-0.4085bb15-3644-4641-b9cd-f575918640b4.vhd"},
@@ -407,9 +402,6 @@ func TestAdditionalDiskArtifactString(t *testing.T) {
 	testSubject := artifact.String()
 	if !strings.Contains(testSubject, "OSDiskUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/anothercontainername/anotherprefix-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd") {
 		t.Errorf("Expected String() output to contain OSDiskUri")
-	}
-	if !strings.Contains(testSubject, "TemplateUri: https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/anothercontainername/anotherprefix-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json") {
-		t.Errorf("Expected String() output to contain TemplateUri")
 	}
 	if !strings.Contains(testSubject, "StorageAccountLocation: southcentralus") {
 		t.Errorf("Expected String() output to contain StorageAccountLocation")
@@ -425,7 +417,6 @@ func TestAdditionalDiskArtifactString(t *testing.T) {
 func TestArtifactProperties(t *testing.T) {
 	vhdArtifact := VHDArtifact{
 		OSDiskUri:              "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
-		TemplateUri:            "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json",
 		StorageAccountLocation: "southcentralus",
 	}
 	managedImageArtifact := ManagedImageArtifact{}
@@ -435,9 +426,6 @@ func TestArtifactProperties(t *testing.T) {
 
 	if testSubject.VHD.OSDiskUri != "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd" {
 		t.Errorf("Expected template to be 'https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd', but got %s", testSubject.VHD.OSDiskUri)
-	}
-	if testSubject.VHD.TemplateUri != "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json" {
-		t.Errorf("Expected template to be 'https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json', but got %s", testSubject.VHD.TemplateUri)
 	}
 	if testSubject.VHD.StorageAccountLocation != "southcentralus" {
 		t.Errorf("Expected StorageAccountLocation to be 'southcentral', but got %s", testSubject.VHD.StorageAccountLocation)
@@ -450,7 +438,6 @@ func TestArtifactProperties(t *testing.T) {
 func TestAdditionalDiskArtifactProperties(t *testing.T) {
 	vhdArtifact := VHDArtifact{
 		OSDiskUri:              "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd",
-		TemplateUri:            "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json",
 		StorageAccountLocation: "southcentralus",
 		AdditionalDisks: &[]AdditionalDiskArtifact{
 			{AdditionalDiskUri: "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-datadisk-0.4085bb15-3644-4641-b9cd-f575918640b4.vhd"},
@@ -463,9 +450,6 @@ func TestAdditionalDiskArtifactProperties(t *testing.T) {
 
 	if testSubject.VHD.OSDiskUri != "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd" {
 		t.Errorf("Expected template to be 'https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.4085bb15-3644-4641-b9cd-f575918640b4.vhd', but got %s", testSubject.VHD.OSDiskUri)
-	}
-	if testSubject.VHD.TemplateUri != "https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json" {
-		t.Errorf("Expected template to be 'https://storage.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-vmTemplate.4085bb15-3644-4641-b9cd-f575918640b4.json', but got %s", testSubject.VHD.TemplateUri)
 	}
 	if testSubject.VHD.StorageAccountLocation != "southcentralus" {
 		t.Errorf("Expected StorageAccountLocation to be 'southcentral', but got %s", testSubject.VHD.StorageAccountLocation)

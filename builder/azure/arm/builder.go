@@ -771,8 +771,6 @@ func (b *Builder) getSharedImageGalleryArtifact(sharedImageGalleryArtifact *Shar
 
 func (b *Builder) getVHDArtifact(vhdArtifact *VHDArtifact) {
 	vhdUri := fmt.Sprintf("%s%s/%s%s.vhd", b.config.storageAccountBlobEndpoint, b.config.CaptureContainerName, b.config.CaptureNamePrefix, b.config.tmpOSDiskName)
-	templateUri := fmt.Sprintf("%ssystem/Microsoft.Compute/Images/%s/%s-vmTemplate.%s.json",
-		b.config.storageAccountBlobEndpoint, b.config.CaptureContainerName, b.config.CaptureNamePrefix, b.stateBag.Get(constants.ArmBuildVMInternalId).(string))
 
 	additionalDiskCount := len(b.config.AdditionalDiskSize)
 	if additionalDiskCount > 0 {
@@ -786,5 +784,4 @@ func (b *Builder) getVHDArtifact(vhdArtifact *VHDArtifact) {
 
 	vhdArtifact.StorageAccountLocation = b.config.Location
 	vhdArtifact.OSDiskUri = vhdUri
-	vhdArtifact.TemplateUri = templateUri
 }

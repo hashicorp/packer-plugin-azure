@@ -35,7 +35,6 @@ type VHDArtifact struct {
 	// VHD
 	StorageAccountLocation string
 	OSDiskUri              string
-	TemplateUri            string
 	AdditionalDisks        *[]AdditionalDiskArtifact
 }
 
@@ -142,7 +141,6 @@ func (a *Artifact) String() string {
 	if a.isVHDCopyToStorage() {
 		buf.WriteString(fmt.Sprintf("StorageAccountLocation: %s\n", a.VHD.StorageAccountLocation))
 		buf.WriteString(fmt.Sprintf("VHDOSDiskUri: %s\n", a.VHD.OSDiskUri))
-		buf.WriteString(fmt.Sprintf("TemplateUri: %s\n", a.VHD.TemplateUri))
 		if a.VHD.AdditionalDisks != nil {
 			for i, additionalDisk := range *a.VHD.AdditionalDisks {
 				buf.WriteString(fmt.Sprintf("AdditionalDiskUri (datadisk-%d): %s\n", i+1, additionalDisk.AdditionalDiskUri))
@@ -198,7 +196,6 @@ func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
 		location = a.VHD.StorageAccountLocation
 
 		labels["storage_account_location"] = a.VHD.StorageAccountLocation
-		labels["template_uri"] = a.VHD.TemplateUri
 	}
 
 	// If image is published to SharedImageGallery
