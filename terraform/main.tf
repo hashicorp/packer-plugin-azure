@@ -53,7 +53,7 @@ resource "azurerm_shared_image" "linux-sig" {
 }
 
 resource "azurerm_key_vault" "vault" {
-  name                        = "packer-acctest-vault"
+  name                        = "${var.resource_prefix}-pkr-test-vault"
   location                    = azurerm_resource_group.rg.location
   resource_group_name         = azurerm_resource_group.rg.name
   enabled_for_disk_encryption = true

@@ -20,14 +20,18 @@ variable "client_secret" {
 variable "tenant_id" {
   type = string
 }
+variable "subscription_id" {
+  type = string
+}
 
 data "azure-keyvaultsecret" "test" {
   vault_name = var.vault_name
   secret_name   = var.secret_name
 
-  client_id     = var.client_id
-  client_secret = var.client_secret
-  tenant_id     = var.tenant_id
+  subscription_id      = var.subscription_id
+  client_id            = var.client_id
+  client_secret        = var.client_secret
+  tenant_id            = var.tenant_id
 }
 
 locals {

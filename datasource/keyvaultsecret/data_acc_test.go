@@ -77,9 +77,10 @@ func TestAccAzureKeyVaultSecret(t *testing.T) {
 		extraArgs := []string{
 			"-var", fmt.Sprintf("secret_name=%s", tc.secret.SecretName),
 			"-var", fmt.Sprintf("vault_name=%s", testVaultName),
-			"-var", fmt.Sprintf("tenant_id=%s", os.Getenv("AZURE_TENANT_ID")),
-			"-var", fmt.Sprintf("client_id=%s", os.Getenv("AZURE_CLIENT_ID")),
-			"-var", fmt.Sprintf("client_secret=%s", os.Getenv("AZURE_CLIENT_SECRET")),
+			"-var", fmt.Sprintf("tenant_id=%s", os.Getenv("ARM_TENANT_ID")),
+			"-var", fmt.Sprintf("client_id=%s", os.Getenv("ARM_CLIENT_ID")),
+			"-var", fmt.Sprintf("client_secret=%s", os.Getenv("ARM_CLIENT_SECRET")),
+			"-var", fmt.Sprintf("subscription_id=%s", os.Getenv("ARM_SUBSCRIPTION_ID")),
 		}
 
 		t.Run(tc.name, func(t *testing.T) {

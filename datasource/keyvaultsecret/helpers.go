@@ -11,6 +11,8 @@ import (
 	sdkEnv "github.com/hashicorp/go-azure-sdk/sdk/environments"
 )
 
+const KeyVaultAPIVersion = "7.5"
+
 type Secret struct {
 	secrets.Secret `mapstructure:",squash"`
 	Value          string `mapstructure:"value"`
@@ -23,7 +25,7 @@ type GetOperationResponse struct {
 }
 
 func NewSecretsClientWithBaseURI(sdkApi sdkEnv.Api) (*secrets.SecretsClient, error) {
-	client, err := resourcemanager.NewClient(sdkApi, "secrets", "")
+	client, err := resourcemanager.NewClient(sdkApi, "secrets", KeyVaultAPIVersion)
 	if err != nil {
 		return nil, fmt.Errorf("instantiating SecretsClient: %+v", err)
 	}
