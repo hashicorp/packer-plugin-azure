@@ -29,7 +29,7 @@ func TestAccAzureKeyVaultSecret(t *testing.T) {
 	if packerResourcePrefix == "" {
 		packerResourcePrefix = "packer"
 	}
-	testVaultName := fmt.Sprintf("%s-test-vault", packerResourcePrefix)
+	testVaultName := fmt.Sprintf("%s-pkr-test-vault", packerResourcePrefix)
 
 	cases := []struct {
 		name       string

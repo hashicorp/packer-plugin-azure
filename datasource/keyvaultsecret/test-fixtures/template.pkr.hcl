@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 
 variable "vault_name" {
-  default = "${env("ARM_RESOURCE_PREFIX")}-test-vault"
+  default = "${env("ARM_RESOURCE_PREFIX")}-pkr-test-vault"
   type    = string
 }
 
