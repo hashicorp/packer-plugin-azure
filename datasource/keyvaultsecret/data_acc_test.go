@@ -25,7 +25,11 @@ import (
 var testTemplate string
 
 func TestAccAzureKeyVaultSecret(t *testing.T) {
-	testVaultName := "packer-test-vault"
+	packerResourcePrefix := os.Getenv("ARM_RESOURCE_PREFIX")
+	if packerResourcePrefix == "" {
+		packerResourcePrefix = "packer"
+	}
+	testVaultName := fmt.Sprintf("%s-test-vault", packerResourcePrefix)
 
 	cases := []struct {
 		name       string
