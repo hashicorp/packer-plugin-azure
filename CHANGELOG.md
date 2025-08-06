@@ -3,6 +3,26 @@
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-azure/releases) for the latest CHANGELOG information.
 
 ---
+## 2.4.0 (August 6, 2025)
+
+## What's Changed
+
+### Exciting New Features
+* Allow parent SIG images to referenced by their ID in [GH-482](https://github.com/hashicorp/packer-plugin-azure/pull/482)
+* Added KeyVaultSecret Datasource in [GH-516](https://github.com/hashicorp/packer-plugin-azure/pull/516)
+
+### Bug Fixes
+* Updating ARM Builder Disk Steps order in [GH-505](https://github.com/hashicorp/packer-plugin-azure/pull/505)
+* Prevents snapshot overwrite conflicts in managed images in [GH-509](https://github.com/hashicorp/packer-plugin-azure/pull/509)
+* Fetching the Blob Endpoint for Deletion from Account in [GH-508](https://github.com/hashicorp/packer-plugin-azure/pull/508)
+* fixes subscription ID while validating image in [GH-473](https://github.com/hashicorp/packer-plugin-azure/pull/473)
+
+### Other Changes
+* Update Golang-JWT to v5.2.2 in [GH-493](https://github.com/hashicorp/packer-plugin-azure/pull/493)
+* Enforce /x/net 0.38 in [GH-494](https://github.com/hashicorp/packer-plugin-azure/pull/494)
+* Updated SharedImageGallery param docs examples in [GH-519](https://github.com/hashicorp/packer-plugin-azure/pull/519)
+* CRT Migration Changes in [GH-517](https://github.com/hashicorp/packer-plugin-azure/pull/517)
+
 ## 1.0.4 (October 18, 2021)
 
 ### NOTES:
