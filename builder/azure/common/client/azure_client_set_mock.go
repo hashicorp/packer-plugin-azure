@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/snapshots"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-07-03/galleryimages"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-07-03/galleryimageversions"
+	"github.com/hashicorp/go-azure-sdk/sdk/auth"
 )
 
 var _ AzureClientSet = &AzureClientSetMock{}
@@ -29,6 +30,7 @@ type AzureClientSetMock struct {
 	MetadataClientMock             MetadataClientAPI
 	SubscriptionIDMock             string
 	PollingDurationMock            time.Duration
+	AuthorizerMock                 auth.Authorizer
 }
 
 // DisksClient returns a DisksClient
@@ -78,4 +80,8 @@ func (m *AzureClientSetMock) SubscriptionID() string {
 
 func (m *AzureClientSetMock) PollingDuration() time.Duration {
 	return m.PollingDurationMock
+}
+
+func (m *AzureClientSetMock) TokenAuthorizer() auth.Authorizer {
+	return m.AuthorizerMock
 }

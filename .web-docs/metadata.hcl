@@ -24,6 +24,11 @@ integration {
     slug = "dtl"
   }
   component {
+    type = "data-source"
+    name = "Key Vault Secret"
+    slug = "keyvaultsecret"
+  }
+  component {
     type = "provisioner"
     name = "DTL Artifact"
     slug = "dtlartifact"
