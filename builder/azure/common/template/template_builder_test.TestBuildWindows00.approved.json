@@ -208,7 +208,8 @@
     "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnetName'))]",
     "virtualNetworkName": "[parameters('virtualNetworkName')]",
     "virtualNetworkResourceGroup": "[resourceGroup().name]",
+    "virtualNetworkSubscriptionID": "[subscription().subscriptionId]",
     "vmStorageAccountContainerName": "images",
-    "vnetID": "[resourceId(variables('virtualNetworkResourceGroup'), 'Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
+    "vnetID": "[resourceId(variables('virtualNetworkSubscriptionID'),variables('virtualNetworkResourceGroup'), 'Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
   }
 }

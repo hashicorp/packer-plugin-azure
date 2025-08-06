@@ -467,6 +467,10 @@ type Config struct {
 	// containing the virtual network. If the resource group cannot be found, or
 	// it cannot be disambiguated, this value should be set.
 	VirtualNetworkResourceGroupName string `mapstructure:"virtual_network_resource_group_name" required:"false"`
+	// If virtual_network_name is
+	// set, this value may also be set. If virtual_network_name is set, and
+	// this value is not set the builder uses the default subscription.
+	VirtualNetworkSubscription string `mapstructure:"virtual_network_subscription" required:"false"`
 	// Specify a file containing custom data to inject into the cloud-init
 	// process. The contents of the file are read and injected into the ARM
 	// template. The custom data will be passed to cloud-init for processing at
@@ -1477,6 +1481,9 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	if c.VirtualNetworkName == "" && c.VirtualNetworkResourceGroupName != "" {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If virtual_network_resource_group_name is specified, so must virtual_network_name"))
+	}
+	if c.VirtualNetworkName == "" && c.VirtualNetworkSubscription != "" {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If virtual_network_subscription is specified, so must virtual_network_name"))
 	}
 	if c.VirtualNetworkName == "" && c.VirtualNetworkSubnetName != "" {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If virtual_network_subnet_name is specified, so must virtual_network_name"))

@@ -3,6 +3,7 @@
 
 # This is an example goreleaser.yaml file with some defaults.
 # Make sure to check the documentation at http://goreleaser.com
+version: 2
 env:
   - CGO_ENABLED=0
 before:
