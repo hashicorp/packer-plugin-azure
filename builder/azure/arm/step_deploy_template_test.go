@@ -110,7 +110,7 @@ func TestStepDeployTemplateDeleteImageShouldFailWhenImageUrlCannotBeParsed(t *te
 		client:       &AzureClient{PollingDuration: time.Minute * 5},
 	}
 	// Invalid URL per https://golang.org/src/net/url/url_test.go
-	err := testSubject.deleteImage(context.TODO(), "http://[fe80::1%en0]/", "Unit Test: ResourceGroupName", false, "subscriptionId", "")
+	err := testSubject.deleteImage(context.TODO(), "http://[fe80::1%en0]/", "Unit Test: ResourceGroupName", "subscriptionId")
 	if err == nil {
 		t.Fatal("Expected a failure because of the failed image name")
 	}
@@ -124,7 +124,7 @@ func TestStepDeployTemplateDeleteImageShouldFailWithInvalidImage(t *testing.T) {
 		name:         "--deployment-name--",
 		templateType: VirtualMachineTemplate,
 	}
-	err := testSubject.deleteImage(context.TODO(), "storage.blob.core.windows.net/abc", "Unit Test: ResourceGroupName", false, "subscriptionId", "")
+	err := testSubject.deleteImage(context.TODO(), "storage.blob.core.windows.net/abc", "Unit Test: ResourceGroupName", "subscriptionId")
 	if err == nil {
 		t.Fatal("Expected a failure because of the failed image name")
 	}
@@ -379,7 +379,7 @@ func createTestStepDeployTemplateDeleteOSImage(t *testing.T, trackers *mockTrack
 		deploy: func(context.Context, string, string, string) error { return nil },
 		say:    func(message string) {},
 		error:  func(e error) {},
-		deleteDisk: func(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool, subscriptionId string, storageAccountName string) error {
+		deleteDisk: func(ctx context.Context, imageName string, resourceGroupName string, subscriptionId string) error {
 			*trackers.deleteDiskCounter++
 			return nil
 		},
