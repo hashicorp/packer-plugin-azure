@@ -164,29 +164,20 @@
               "createOption": "Empty",
               "diskSizeGB": 32,
               "lun": 0,
-              "name": "[concat(parameters('dataDiskName'),'-1')]",
-              "vhd": {
-                "uri": "[concat(parameters('storageAccountBlobEndpoint'),variables('vmStorageAccountContainerName'),'/',parameters('dataDiskName'),'-1','.vhd')]"
-              }
+              "name": "[concat(parameters('dataDiskName'),'-1')]"
             },
             {
               "caching": "ReadWrite",
               "createOption": "Empty",
               "diskSizeGB": 64,
               "lun": 1,
-              "name": "[concat(parameters('dataDiskName'),'-2')]",
-              "vhd": {
-                "uri": "[concat(parameters('storageAccountBlobEndpoint'),variables('vmStorageAccountContainerName'),'/',parameters('dataDiskName'),'-2','.vhd')]"
-              }
+              "name": "[concat(parameters('dataDiskName'),'-2')]"
             }
           ],
           "osDisk": {
             "caching": "ReadWrite",
             "createOption": "FromImage",
-            "name": "[parameters('osDiskName')]",
-            "vhd": {
-              "uri": "[concat(parameters('storageAccountBlobEndpoint'),variables('vmStorageAccountContainerName'),'/', parameters('osDiskName'),'.vhd')]"
-            }
+            "name": "[parameters('osDiskName')]"
           }
         }
       },

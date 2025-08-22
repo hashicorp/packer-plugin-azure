@@ -301,7 +301,12 @@ func (s *StepCaptureImage) grantDiskAccess(ctx context.Context, subscriptionId s
 		return "", fmt.Errorf("performing FinalResult: %+v", err)
 	}
 
-	accessUri := result.Model.Properties.Output.AccessSAS
+	var accessUri *string
+	if result.Model != nil && result.Model.Properties != nil && result.Model.Properties.Output != nil && result.Model.Properties.Output.AccessSAS != nil {
+		accessUri = result.Model.Properties.Output.AccessSAS
+	} else {
+		return "", fmt.Errorf("retrieving result from output: %+v", err)
+	}
 
 	return *accessUri, nil
 }

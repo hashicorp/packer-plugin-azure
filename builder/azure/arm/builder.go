@@ -724,8 +724,6 @@ func (b *Builder) enhanceStateData(stateData map[string]interface{}) {
 		}
 		stateData[key] = v
 	}
-
-	return
 }
 
 func (b *Builder) getDestinationSharedImageGalleryId() (destinationSharedImageGalleryId string, err error) {

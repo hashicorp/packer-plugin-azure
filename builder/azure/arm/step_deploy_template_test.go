@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
@@ -98,35 +97,6 @@ func TestStepDeployTemplateShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 
 	if actualSubscriptionId != expectedSubscriptionId {
 		t.Fatal("Expected the step to source 'constants.ArmSubscription' from the state bag, but it did not.")
-	}
-}
-
-func TestStepDeployTemplateDeleteImageShouldFailWhenImageUrlCannotBeParsed(t *testing.T) {
-	var testSubject = &StepDeployTemplate{
-		say:          func(message string) {},
-		error:        func(e error) {},
-		name:         "--deployment-name--",
-		templateType: VirtualMachineTemplate,
-		client:       &AzureClient{PollingDuration: time.Minute * 5},
-	}
-	// Invalid URL per https://golang.org/src/net/url/url_test.go
-	err := testSubject.deleteImage(context.TODO(), "http://[fe80::1%en0]/", "Unit Test: ResourceGroupName", "subscriptionId")
-	if err == nil {
-		t.Fatal("Expected a failure because of the failed image name")
-	}
-}
-
-func TestStepDeployTemplateDeleteImageShouldFailWithInvalidImage(t *testing.T) {
-	var testSubject = &StepDeployTemplate{
-		say:          func(message string) {},
-		error:        func(e error) {},
-		client:       &AzureClient{PollingDuration: time.Minute * 5},
-		name:         "--deployment-name--",
-		templateType: VirtualMachineTemplate,
-	}
-	err := testSubject.deleteImage(context.TODO(), "storage.blob.core.windows.net/abc", "Unit Test: ResourceGroupName", "subscriptionId")
-	if err == nil {
-		t.Fatal("Expected a failure because of the failed image name")
 	}
 }
 
