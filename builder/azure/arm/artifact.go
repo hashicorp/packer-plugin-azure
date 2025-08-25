@@ -189,20 +189,24 @@ func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
 	labels := make(map[string]interface{})
 
 	var id, location string
+	if a.isManagedImage() {
+		id = a.ManagedImage.ManagedImageId
+		location = a.ManagedImage.ManagedImageLocation
+	} else if a.isPublishedToSIG() {
+		id = a.SharedImageGallery.ManagedImageSharedImageGalleryId
+		location = a.SharedImageGallery.SharedImageGalleryLocation
+	} else {
+		id = a.VHD.OSDiskUri
+		location = a.VHD.StorageAccountLocation
+	}
 
 	// If image is a VHD
 	if a.isVHDCopyToStorage() {
-		id = a.VHD.OSDiskUri
-		location = a.VHD.StorageAccountLocation
-
 		labels["storage_account_location"] = a.VHD.StorageAccountLocation
 	}
 
 	// If image is published to SharedImageGallery
 	if a.isPublishedToSIG() {
-		id = a.SharedImageGallery.ManagedImageSharedImageGalleryId
-		location = a.SharedImageGallery.SharedImageGalleryLocation
-
 		labels["sig_resource_group"] = a.State(constants.ArmManagedImageSigPublishResourceGroup).(string)
 		labels["sig_name"] = a.State(constants.ArmManagedImageSharedGalleryName).(string)
 		labels["sig_image_name"] = a.State(constants.ArmManagedImageSharedGalleryImageName).(string)
@@ -214,9 +218,6 @@ func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
 
 	// If image is captured as a managed image
 	if a.isManagedImage() {
-		id = a.ManagedImage.ManagedImageId
-		location = a.ManagedImage.ManagedImageLocation
-
 		labels["os_type"] = a.OSType
 		labels["managed_image_resourcegroup_name"] = a.ManagedImage.ManagedImageResourceGroupName
 		labels["managed_image_name"] = a.ManagedImage.ManagedImageName
