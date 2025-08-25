@@ -77,10 +77,10 @@ When creating a VHD the following additional options are required:
 - `capture_container_name` (string) - Destination container name. Essentially
   the "directory" where your VHD will be organized in Azure. The captured
   VHD's URL will be
-  `https://<storage_account>.blob.core.windows.net/system/Microsoft.Compute/Images/<capture_container_name>/<capture_name_prefix>.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.vhd`.
+  `https://<storage_account>.blob.core.windows.net/<capture_container_name>/<capture_name_prefix><os_disk_name>.vhd`.
 
 - `capture_name_prefix` (string) - VHD prefix. The final artifacts will be
-  named `PREFIX-osDisk.UUID` and `PREFIX-vmTemplate.UUID`.
+  named `<PREFIX><osDisk>.vhd`.
 
 - `resource_group_name` (string) - Resource group under which the final
   artifact will be stored.
@@ -500,9 +500,8 @@ Providing `temp_resource_group_name` or `location` in combination with
   for more information.
   
   For VHD builds the final artifacts will be named
-  `PREFIX-dataDisk-<n>.UUID.vhd` and stored in the specified capture
-  container along side the OS disk. The additional disks are included in
-  the deployment template `PREFIX-vmTemplate.UUID`.
+  `<PREFIX><dataDisk>-<n>.vhd` and stored in the specified capture
+  container along-side the OS disk.
   
   For Managed build the final artifacts are included in the managed image.
   The additional disk will have the same storage account type as the OS
