@@ -115,19 +115,19 @@ func createTestStateBagStepGetAdditionalDisks() multistep.StateBag {
 	return stateBag
 }
 
-func createVirtualMachineWithDataDisksFromUri(vhdUri string) *virtualmachines.VirtualMachine {
+func createVirtualMachineWithDataDisksFromUri(ManagedDiskUri string) *virtualmachines.VirtualMachine {
 	vm := virtualmachines.VirtualMachine{
 		Properties: &virtualmachines.VirtualMachineProperties{
 			StorageProfile: &virtualmachines.StorageProfile{
 				OsDisk: &virtualmachines.OSDisk{
-					Vhd: &virtualmachines.VirtualHardDisk{
-						Uri: &vhdUri,
+					ManagedDisk: &virtualmachines.ManagedDiskParameters{
+						Id: &ManagedDiskUri,
 					},
 				},
 				DataDisks: &[]virtualmachines.DataDisk{
 					{
-						Vhd: &virtualmachines.VirtualHardDisk{
-							Uri: &vhdUri,
+						ManagedDisk: &virtualmachines.ManagedDiskParameters{
+							Id: &ManagedDiskUri,
 						},
 					},
 				},

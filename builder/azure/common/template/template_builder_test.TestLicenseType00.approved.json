@@ -147,10 +147,7 @@
           "osDisk": {
             "caching": "ReadWrite",
             "createOption": "FromImage",
-            "name": "[parameters('osDiskName')]",
-            "vhd": {
-              "uri": "[concat(parameters('storageAccountBlobEndpoint'),variables('vmStorageAccountContainerName'),'/', parameters('osDiskName'),'.vhd')]"
-            }
+            "name": "[parameters('osDiskName')]"
           }
         }
       },

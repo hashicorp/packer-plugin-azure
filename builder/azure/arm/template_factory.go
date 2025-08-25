@@ -273,8 +273,7 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 	}
 
 	if len(config.AdditionalDiskSize) > 0 {
-		isLegacyVHD := config.CustomManagedImageName == "" && config.ManagedImageName == "" && config.SharedGalleryDestination.SigDestinationGalleryName == ""
-		err = builder.SetAdditionalDisks(config.AdditionalDiskSize, config.tmpDataDiskName, isLegacyVHD, config.diskCachingType)
+		err = builder.SetAdditionalDisks(config.AdditionalDiskSize, config.tmpDataDiskName, config.diskCachingType)
 		if err != nil {
 			return nil, err
 		}
