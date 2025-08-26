@@ -57,6 +57,39 @@ func TestResourceResolverIgnoresSetVirtualNetwork(t *testing.T) {
 	}
 }
 
+// If the user fully specified the virtual network name and resource group then
+// there is no need to do a lookup.
+func TestResourceResolverIgnoresSetNetworkSecurityGroup(t *testing.T) {
+	var c Config
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.VirtualNetworkName = "--virtual-network-name--"
+	c.VirtualNetworkResourceGroupName = "--virtual-network-resource-group-name--"
+	c.VirtualNetworkSubnetName = "--virtual-network-subnet-name--"
+	c.NetworkSecurityGroupName = "--network-security-group-name--"
+
+	sut := newTestResourceResolver()
+	sut.findVirtualNetworkResourceGroup = nil // assert that this is not even called
+	sut.findVirtualNetworkSubnet = nil        // assert that this is not even called
+	sut.findNetworkSecurityGroupName = nil        // assert that this is not even called
+	_ = sut.Resolve(&c)
+
+	if c.VirtualNetworkName != "--virtual-network-name--" {
+		t.Fatalf("Expected VirtualNetworkName to be --virtual-network-name--")
+	}
+	if c.VirtualNetworkResourceGroupName != "--virtual-network-resource-group-name--" {
+		t.Fatalf("Expected VirtualNetworkResourceGroupName to be --virtual-network-resource-group-name--")
+	}
+	if c.VirtualNetworkSubnetName != "--virtual-network-subnet-name--" {
+		t.Fatalf("Expected VirtualNetworkSubnetName to be --virtual-network-subnet-name--")
+	}
+	if c.NetworkSecurityGroupName != "--network-security-group-name--" {
+		t.Fatalf("Expected NetworkSecurityGroupName to be --network-security-group-name--")
+	}
+}
+
 // If the user set virtual network name then the code should resolve virtual network
 // resource group name.
 func TestResourceResolverSetVirtualNetworkResourceGroupName(t *testing.T) {
