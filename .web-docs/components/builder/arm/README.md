@@ -345,6 +345,11 @@ Providing `temp_resource_group_name` or `location` in combination with
   containing the virtual network. If the resource group cannot be found, or
   it cannot be disambiguated, this value should be set.
 
+- `network_security_group_name` (string) - Use a pre-existing network security group for the
+  VM. virtual_network_name must be set for this field. This option prevents 
+  Packer from creating a temporary NSG and uses the pre-existing one 
+  under the specified virtual network.
+
 - `custom_data_file` (string) - Specify a file containing custom data to inject into the cloud-init
   process. The contents of the file are read and injected into the ARM
   template. The custom data will be passed to cloud-init for processing at
