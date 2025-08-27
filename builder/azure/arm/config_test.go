@@ -3684,6 +3684,33 @@ func TestConfigShouldAcceptSigID(t *testing.T) {
 	}
 }
 
+func TestConfigShouldRejectInvalidSigID(t *testing.T) {
+	config := map[string]interface{}{
+		"subscription_id":        "ignore",
+		"os_type":                constants.Target_Linux,
+		"communicator":           "none",
+		"location":               "ignore",
+		"disk_encryption_set_id": "ignore",
+		"shared_image_gallery": map[string]interface{}{
+			"id": "coolranchdip",
+		},
+		"shared_image_gallery_destination": map[string]interface{}{
+			"resource_group": "ignore",
+			"gallery_name":   "ignore",
+			"image_name":     "ignore",
+			"image_version":  "1.0.1",
+		},
+	}
+	var cfg Config
+	_, err := cfg.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatalf("Config unexpectedly allowed invalid SIG ID")
+	}
+	expectedErrorMessage := "shared_image_gallery.id (coolranchdip) does not match expected format of '/subscriptions/(subscriptionid)/resourceGroups/(rg-name)/providers/Microsoft.Compute/galleries/(gallery-name)/images/image-name/versions/(version)"
+	if !strings.Contains(err.Error(), expectedErrorMessage) {
+		t.Fatalf("Unexpected error (%s), expected (%s)", err.Error(), expectedErrorMessage)
+	}
+}
 func TestConfigShouldParseValidSigID(t *testing.T) {
 	cfg := &Config{}
 	cfg.SharedGallery = SharedImageGallery{

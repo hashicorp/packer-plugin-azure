@@ -1285,7 +1285,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	} else if c.SharedGallery.ID != "" {
 		sigIDRegex := regexp.MustCompile("/subscriptions/[^/]*/resourceGroups/[^/]*/providers/Microsoft.Compute/galleries/[^/]*/images/[^/]*/versions/[^/]*")
 		if !sigIDRegex.Match([]byte(c.SharedGallery.ID)) {
-			errs = packer.MultiErrorAppend(errs, fmt.Errorf("shared_image_gallery.id does not match expected format of '/subscriptions/(subscriptionid)/resourceGroups/(rg-name)/providers/Microsoft.Compute/galleries/(gallery-name)/images/image-name/versions/(version)"))
+			errs = packer.MultiErrorAppend(errs, fmt.Errorf("shared_image_gallery.id (%s) does not match expected format of '/subscriptions/(subscriptionid)/resourceGroups/(rg-name)/providers/Microsoft.Compute/galleries/(gallery-name)/images/image-name/versions/(version)", c.SharedGallery.ID))
 		}
 		if c.SharedGallery.Subscription != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("When setting shared_image_gallery.id, shared_image_gallery.subscription must not be specified"))
