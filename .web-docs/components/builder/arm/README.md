@@ -147,7 +147,7 @@ Providing `temp_resource_group_name` or `location` in combination with
 
 - `capture_name_prefix` (string) - VHD prefix.
 
-- `capture_container_name` (string) - Destination container name.
+- `capture_container_name` (string) - Destination container name. This must be created before the build in the storage account
 
 - `shared_image_gallery` (SharedImageGallery) - Use a [Shared Gallery
   image](https://azure.microsoft.com/en-us/blog/announcing-the-public-preview-of-shared-image-gallery/)
