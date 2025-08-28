@@ -30,11 +30,8 @@ options. In addition to the options listed here, a [communicator](https://packer
 
 ### Azure ARM builder specific options
 
-The Azure builder can create either a VHD, managed image or create a Shared Image Gallery.
-If you are creating a VHD, you **must** start with a VHD. Likewise, if you want to create
-a managed image you **must** start with a managed image.
-Managed images can also be published to shared image galleries,
-but a managed image definition is not required to publish to a gallery.
+The Azure builder can create a VHD, a managed image, and a Shared Image Gallery version.
+All builds must start from a managed image source, such as an Azure Marketplace image or another custom managed image, regardless of the desired output artifact.
 
 ### Required:
 

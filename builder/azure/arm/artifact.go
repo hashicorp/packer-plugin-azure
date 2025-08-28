@@ -188,6 +188,10 @@ func (a *Artifact) hcpPackerRegistryMetadata() *registryimage.Image {
 
 	labels := make(map[string]interface{})
 
+	// Determine the primary artifact ID and location for the build.
+	// There is an intentional priority order here. If multiple artifacts are created
+	// simultaneously, we prefer the most "managed" artifact as the primary identifier.
+	// The priority is: Managed Image > Shared Image Gallery > VHD.
 	var id, location string
 	if a.isManagedImage() {
 		id = a.ManagedImage.ManagedImageId
