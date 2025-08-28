@@ -65,7 +65,6 @@ const (
 
 var (
 	reCaptureContainerName = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]{2,62}$`)
-	reCaptureNamePrefix    = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_\-\.]{0,23}$`)
 	reManagedDiskName      = regexp.MustCompile(validManagedDiskName)
 	reResourceGroupName    = regexp.MustCompile(validResourceGroupNameRe)
 	reSnapshotName         = regexp.MustCompile(`^[A-Za-z0-9_]{1,79}$`)
