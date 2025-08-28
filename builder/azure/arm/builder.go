@@ -374,7 +374,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	}
 	if b.config.SharedGallery.ID != "" {
 		if !b.IsSigIDValid() {
-			return nil, errors.New(fmt.Sprintf("shared_image_gallery.id (%s) does not match expected format of '/subscriptions/(subscriptionid)/resourceGroups/(rg-name)/providers/Microsoft.Compute/galleries/(gallery-name)/images/image-name/versions/(version)", b.config.SharedGallery.ID))
+			return nil, fmt.Errorf("shared_image_gallery.id (%s) does not match expected format of '/subscriptions/(subscriptionid)/resourceGroups/(rg-name)/providers/Microsoft.Compute/galleries/(gallery-name)/images/image-name/versions/(version)", b.config.SharedGallery.ID)
 		}
 		sigID := b.config.getSharedImageGalleryObjectFromId()
 		if sigID == nil {
