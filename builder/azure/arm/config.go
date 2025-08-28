@@ -1283,10 +1283,6 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_name_prefix] is not supported when using Shared Image Gallery as source. Use managed_image_name instead."))
 		}
 	} else if c.SharedGallery.ID != "" {
-		sigIDRegex := regexp.MustCompile("/subscriptions/[^/]*/resourceGroups/[^/]*/providers/Microsoft.Compute/galleries/[^/]*/images/[^/]*/versions/[^/]*")
-		if !sigIDRegex.Match([]byte(c.SharedGallery.ID)) {
-			errs = packer.MultiErrorAppend(errs, fmt.Errorf("shared_image_gallery.id does not match expected format of '/subscriptions/(subscriptionid)/resourceGroups/(rg-name)/providers/Microsoft.Compute/galleries/(gallery-name)/images/image-name/versions/(version)"))
-		}
 		if c.SharedGallery.Subscription != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("When setting shared_image_gallery.id, shared_image_gallery.subscription must not be specified"))
 		}

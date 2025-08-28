@@ -180,3 +180,20 @@ func TestBuilderConfig_SSHHost(t *testing.T) {
 	}
 
 }
+
+func Test_IsSIGValid(t *testing.T) {
+	var testSubject Builder
+	testSubject.config.SharedGallery = SharedImageGallery{
+		ID: "blorp",
+	}
+	if testSubject.IsSigIDValid() {
+		t.Fatal("Expected invalid SIG ID to be invalid, but was validated")
+	}
+	testSubject.config.SharedGallery = SharedImageGallery{
+		ID: "/subscriptions/acd03ed1-6c95-4568-b14c-2a793bd601a8/resourceGroups/jennatest/providers/Microsoft.Compute/galleries/blah_acctestgallery/images/blah-arm-linux-specialized-sig/versions/92827891.1928371238.12392323",
+	}
+	if !testSubject.IsSigIDValid() {
+		t.Fatal("Expected valid SIG ID to be valid, but was invalidated")
+	}
+
+}

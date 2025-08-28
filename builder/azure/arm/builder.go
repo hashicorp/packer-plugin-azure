@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -372,6 +373,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		}
 	}
 	if b.config.SharedGallery.ID != "" {
+		if !b.IsSigIDValid() {
+			return nil, errors.New(fmt.Sprintf("shared_image_gallery.id (%s) does not match expected format of '/subscriptions/(subscriptionid)/resourceGroups/(rg-name)/providers/Microsoft.Compute/galleries/(gallery-name)/images/image-name/versions/(version)", b.config.SharedGallery.ID))
+		}
 		sigID := b.config.getSharedImageGalleryObjectFromId()
 		if sigID == nil {
 			// The SIG ID should have already been validated at this point
@@ -600,6 +604,11 @@ func (b *Builder) writeSSHPrivateKey(ui packersdk.Ui, debugKeyPath string) {
 			ui.Say(fmt.Sprintf("Error setting permissions of debug key: %s", err))
 		}
 	}
+}
+
+func (b *Builder) IsSigIDValid() bool {
+	sigIDRegex := regexp.MustCompile("/subscriptions/[^/]*/resourceGroups/[^/]*/providers/Microsoft.Compute/galleries/[^/]*/images/[^/]*/versions/[^/]*")
+	return sigIDRegex.Match([]byte(b.config.SharedGallery.ID))
 }
 
 func (b *Builder) isPublicPrivateNetworkCommunication() bool {
