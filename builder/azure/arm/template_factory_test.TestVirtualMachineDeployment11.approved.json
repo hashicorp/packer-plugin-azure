@@ -133,10 +133,7 @@
               "createOption": "Empty",
               "diskSizeGB": 32,
               "lun": 0,
-              "name": "[concat(parameters('dataDiskName'),'-1')]",
-              "vhd": {
-                "uri": "[concat(parameters('storageAccountBlobEndpoint'),variables('vmStorageAccountContainerName'),'/',parameters('dataDiskName'),'-1','.vhd')]"
-              }
+              "name": "[concat(parameters('dataDiskName'),'-1')]"
             }
           ],
           "imageReference": {
@@ -148,10 +145,7 @@
           "osDisk": {
             "caching": "ReadWrite",
             "createOption": "FromImage",
-            "name": "[parameters('osDiskName')]",
-            "vhd": {
-              "uri": "[concat(parameters('storageAccountBlobEndpoint'),variables('vmStorageAccountContainerName'),'/', parameters('osDiskName'),'.vhd')]"
-            }
+            "name": "[parameters('osDiskName')]"
           }
         }
       },
