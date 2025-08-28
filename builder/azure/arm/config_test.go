@@ -365,6 +365,30 @@ func TestConfigVirtualNetworkSubnetNameMustBeSetWithVirtualNetworkName(t *testin
 	}
 }
 
+// The user can pass the value virtual_network_subnet_name to avoid the lookup of
+// a virtual network subnet's name, or to help with disambiguation.  The value should
+// only be set if virtual_network_name was set.
+func TestConfigVirtualNetworkSecurityGroupNameMustBeSetWithVirtualNetworkName(t *testing.T) {
+	config := map[string]string{
+		"capture_name_prefix":         "ignore",
+		"capture_container_name":      "ignore",
+		"location":                    "ignore",
+		"image_url":                   "ignore",
+		"storage_account":             "ignore",
+		"resource_group_name":         "ignore",
+		"subscription_id":             "ignore",
+		"os_type":                     constants.Target_Linux,
+		"communicator":                "none",
+		"network_security_group_name": "MyVirtualNSG",
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Error("Expected Config to reject network_security_group_name, if virtual_network_name is not set.")
+	}
+}
+
 func TestConfigAllowedInboundIpAddressesIsOptional(t *testing.T) {
 	config := map[string]string{
 		"capture_name_prefix":    "ignore",
