@@ -181,7 +181,7 @@ type Config struct {
 
 	// VHD prefix.
 	CaptureNamePrefix string `mapstructure:"capture_name_prefix"`
-	// Destination container name.
+	// Destination container name. This must be created before the build in the storage account
 	CaptureContainerName string `mapstructure:"capture_container_name"`
 	// Use a [Shared Gallery
 	// image](https://azure.microsoft.com/en-us/blog/announcing-the-public-preview-of-shared-image-gallery/)

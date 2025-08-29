@@ -24,16 +24,17 @@ import (
 )
 
 type StepCaptureImage struct {
-	client              *AzureClient
-	config              *Config
-	generalizeVM        func(ctx context.Context, vmId virtualmachines.VirtualMachineId) error
-	getVMInternalID     func(ctx context.Context, vmId virtualmachines.VirtualMachineId) (string, error)
-	captureManagedImage func(ctx context.Context, subscriptionId string, resourceGroupName string, imageName string, parameters *images.Image) error
-	grantAccess         func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) (string, error)
-	revokeAccess        func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) error
-	copyToStorage       func(ctx context.Context, storageContainerName string, captureNamePrefix string, osDiskName string, accessUri string) error
-	say                 func(message string)
-	error               func(e error)
+	client                   *AzureClient
+	config                   *Config
+	generalizeVM             func(ctx context.Context, vmId virtualmachines.VirtualMachineId) error
+	getVMInternalID          func(ctx context.Context, vmId virtualmachines.VirtualMachineId) (string, error)
+	captureManagedImage      func(ctx context.Context, subscriptionId string, resourceGroupName string, imageName string, parameters *images.Image) error
+	grantAccess              func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) (string, error)
+	revokeAccess             func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) error
+	copyToStorage            func(ctx context.Context, storageContainerName string, captureNamePrefix string, osDiskName string, accessUri string) error
+	say                      func(message string)
+	error                    func(e error)
+	diskNameToRevokeAccessTo string
 }
 
 type GrantAccessOperationResponse struct {
@@ -212,7 +213,15 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 	return multistep.ActionContinue
 }
 
-func (*StepCaptureImage) Cleanup(multistep.StateBag) {
+func (s *StepCaptureImage) Cleanup(state multistep.StateBag) {
+	if s.diskNameToRevokeAccessTo != "" {
+		var subscriptionId = state.Get(constants.ArmSubscription).(string)
+		var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
+		err := s.revokeAccess(context.Background(), subscriptionId, resourceGroupName, s.diskNameToRevokeAccessTo)
+		if err != nil {
+			state.Get("ui").(packersdk.Ui).Errorf("Failed to revoke access to disk, this will lead to failures cleaning up resources. Err: %s", err.Error())
+		}
+	}
 }
 
 func (s *StepCaptureImage) captureVHD(ctx context.Context, subscriptionId string, resourceGroupName string, diskName string) error {
@@ -221,7 +230,8 @@ func (s *StepCaptureImage) captureVHD(ctx context.Context, subscriptionId string
 		err = fmt.Errorf("failed to grant access with err : %s", err)
 		return err
 	}
-
+	// If the code is canceled or fails after this point, we must call to cleanup this granted access, otherwise delete operations will fail
+	s.diskNameToRevokeAccessTo = s.config.tmpOSDiskName
 	s.say(fmt.Sprintf(" -> accessUri                 : '%s'", accessUri))
 
 	var storageContainerName = s.config.CaptureContainerName
@@ -230,12 +240,6 @@ func (s *StepCaptureImage) captureVHD(ctx context.Context, subscriptionId string
 	err = s.copyToStorage(ctx, storageContainerName, captureNamePrefix, diskName, accessUri)
 	if err != nil {
 		err = fmt.Errorf("failed to copy to storage with err : %s", err)
-		return err
-	}
-
-	err = s.revokeAccess(ctx, subscriptionId, resourceGroupName, diskName)
-	if err != nil {
-		err = fmt.Errorf("failed to revoke access with err : %s", err)
 		return err
 	}
 

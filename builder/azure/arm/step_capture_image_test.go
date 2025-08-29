@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 )
@@ -110,26 +111,16 @@ func TestStepCaptureImageShouldFailIfCopyToStorageFails(t *testing.T) {
 	}
 }
 
-func TestStepCaptureImageShouldFailIfRevokeAccessFails(t *testing.T) {
+func TestStepCaptureImageShouldRevokeAccessOnCleanup(t *testing.T) {
+	revokeAccessCalled := false
+	revokeAccessPtr := &revokeAccessCalled
 	var testSubject = &StepCaptureImage{
 		config: &Config{
-			tmpOSDiskName:        "tmpOSDiskName",
 			CaptureContainerName: "CaptureContainerName",
 			CaptureNamePrefix:    "CaptureNamePrefix",
 		},
-		grantAccess: func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) (string, error) {
-			return "accessuri", nil
-		},
-		copyToStorage: func(ctx context.Context, storageContainerName string, captureNamePrefix string, osDiskName string, accessUri string) error {
-			return nil
-		},
 		revokeAccess: func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) error {
-			return fmt.Errorf("!! Unit Test FAIL !!")
-		},
-		getVMInternalID: func(context.Context, virtualmachines.VirtualMachineId) (string, error) {
-			return "id", nil
-		},
-		generalizeVM: func(context.Context, virtualmachines.VirtualMachineId) error {
+			revokeAccessPtr = common.BoolPtr(true)
 			return nil
 		},
 		say:   func(message string) {},
@@ -138,13 +129,14 @@ func TestStepCaptureImageShouldFailIfRevokeAccessFails(t *testing.T) {
 
 	stateBag := createTestStateBagStepCaptureImage()
 
-	var result = testSubject.Run(context.Background(), stateBag)
-	if result != multistep.ActionHalt {
-		t.Fatalf("Expected the step to return 'ActionHalt', but got '%d'.", result)
+	testSubject.Cleanup(stateBag)
+	if *revokeAccessPtr {
+		t.Fatal("Revoke Access should not be called on TestCaptureImage.Cleanup when a tmpOSDiskName is set, but was")
 	}
-
-	if _, ok := stateBag.GetOk(constants.Error); ok == false {
-		t.Fatalf("Expected the step to set stateBag['%s'], but it was not.", constants.Error)
+	testSubject.diskNameToRevokeAccessTo = "tmpOSDiskName"
+	testSubject.Cleanup(stateBag)
+	if !*revokeAccessPtr {
+		t.Fatal("Revoke Access should be called on TestCaptureImage.Cleanup when a tmpOSDiskName is set, but wasn't")
 	}
 }
 
