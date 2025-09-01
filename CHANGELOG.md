@@ -3,6 +3,24 @@
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-azure/releases) for the latest CHANGELOG information.
 
 ---
+## 2.5.0 (September 3, 2025)
+
+## What's Changed
+
+### Exciting New Features
+* Added Support for multiple artifact, (i.e. VHD, SharedImageGallery and Managed Image) creation in the same build in [GH-522](https://github.com/hashicorp/packer-plugin-azure/pull/522)
+
+### Bug Fixes
+* Move SIG Regex check to builder to fix validation failures in [GH-531](https://github.com/hashicorp/packer-plugin-azure/pull/531)
+* Fixed Release Artifact Schema file name in [GH-532](https://github.com/hashicorp/packer-plugin-azure/pull/532)
+* Fixed Unmanaged Disks in [GH-522](https://github.com/hashicorp/packer-plugin-azure/pull/522)
+* VHD Migrations Fixes - VHD Acceptance Tests, and Disk Revoke Access on Failures in [GH-534](https://github.com/hashicorp/packer-plugin-azure/pull/534)
+
+### Other Changes
+* Packer Plugin SDK v0.6.1 => v0.6.2 and run make generate in [GH-525](https://github.com/hashicorp/packer-plugin-azure/pull/525)
+* Remove unused constant causing linter failure in [GH-533](https://github.com/hashicorp/packer-plugin-azure/pull/533)
+* Updated Module for Security Vulnerability in [GH-535](https://github.com/hashicorp/packer-plugin-azure/pull/535)
+
 ## 2.4.0 (August 6, 2025)
 
 ## What's Changed
