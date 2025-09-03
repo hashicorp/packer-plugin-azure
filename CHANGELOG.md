@@ -6,7 +6,8 @@ Please refer to [releases](https://github.com/hashicorp/packer-plugin-azure/rele
 ## 2.5.0 (September 3, 2025)
 
 ## What's Changed
-
+### Breaking Changes
+* VHDs are no longer built using unmanaged disks, this change was made because of the following deprecation notice from Microsoft https://learn.microsoft.com/en-us/azure/virtual-machines/unmanaged-disks-deprecation.  Users must now create the capture container in their storage account at the root of the container.  The plugin no longer relies on Azure system created capture containers.
 ### Exciting New Features
 * Added Support for multiple artifact, (i.e. VHD, SharedImageGallery and Managed Image) creation in the same build in [GH-522](https://github.com/hashicorp/packer-plugin-azure/pull/522)
 
