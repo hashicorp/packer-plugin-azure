@@ -1431,6 +1431,12 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 	}
 
+	if c.CustomResourcePrefix == ""	{
+		val, ok := os.LookupEnv("PACKER_AZURE_CUSTOM_RESOURCE_BUILD_PREFIX")
+		if ok {
+			c.CustomResourcePrefix = val
+		}
+	}
 	if c.CustomResourcePrefix != "" {
 		if ok, err := assertResourceNamePrefix(c.CustomResourcePrefix, "custom_resource_build_prefix"); !ok {
 			errs = packersdk.MultiErrorAppend(errs, err)
