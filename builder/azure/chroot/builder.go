@@ -61,6 +61,10 @@ type Config struct {
 	// a command with sudo or so on. This is a configuration template where the `.Command` variable
 	// is replaced with the command to be run. Defaults to `{{.Command}}`.
 	CommandWrapper string `mapstructure:"command_wrapper"`
+	// Manual Mount Command that is executed to manually mount the
+	// root device and before the post mount commands. The device and
+	// mount path are provided by `{{.Device}}` and `{{.MountPath}}`.
+	ManualMountCommand string `mapstructure:"manual_mount_command" required:"false"`
 	// A series of commands to execute after attaching the root volume and before mounting the chroot.
 	// This is not required unless using `from_scratch`. If so, this should include any partitioning
 	// and filesystem creation commands. The path to the device is provided by `{{.Device}}`.
@@ -169,6 +173,7 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 				"command_wrapper",
 				"post_mount_commands",
 				"pre_mount_commands",
+				"manual_mount_command",
 				"mount_path",
 			},
 		},
@@ -611,11 +616,28 @@ func buildsteps(
 		&chroot.StepPreMountCommands{
 			Commands: config.PreMountCommands,
 		},
-		&StepMountDevice{
-			MountOptions:   config.MountOptions,
-			MountPartition: config.MountPartition,
-			MountPath:      config.MountPath,
-		},
+	)
+
+	if config.ManualMountCommand == "" {
+		addSteps(
+			&StepMountDevice{
+				MountOptions:   config.MountOptions,
+				MountPartition: config.MountPartition,
+				MountPath:      config.MountPath,
+			},
+		)
+	} else {
+		addSteps(
+			&StepManualMountCommand{
+				Command:        config.ManualMountCommand,
+				MountPartition: config.MountPartition,
+				MountPath:      config.MountPath,
+			},
+		)
+
+	}
+
+	addSteps(
 		&chroot.StepPostMountCommands{
 			Commands: config.PostMountCommands,
 		},
