@@ -616,7 +616,7 @@ type Config struct {
 	// `custom_resource_build_prefix` + resourcetype + 5 character random alphanumeric string
 	//
 	// You can also set this via the environment variable `PACKER_AZURE_CUSTOM_RESOURCE_BUILD_PREFIX`.
-  // If both the config field and the environment variable are present, the config field takes precedence.
+	// If both the config field and the environment variable are present, the config field takes precedence.
 	CustomResourcePrefix string `mapstructure:"custom_resource_build_prefix" required:"false"`
 
 	// Specify a license type for the build VM to enable Azure Hybrid Benefit. If not set, Pay-As-You-Go license
@@ -1434,7 +1434,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 	}
 
-	if c.CustomResourcePrefix == ""	{
+	if c.CustomResourcePrefix == "" {
 		val, ok := os.LookupEnv("PACKER_AZURE_CUSTOM_RESOURCE_BUILD_PREFIX")
 		if ok {
 			c.CustomResourcePrefix = val
