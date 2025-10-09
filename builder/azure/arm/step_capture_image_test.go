@@ -10,13 +10,83 @@ import (
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 )
 
-func TestStepCaptureImageShouldFailIfCaptureFails(t *testing.T) {
+func TestStepCaptureImageShouldFailIfGetVMIDFails(t *testing.T) {
 	var testSubject = &StepCaptureImage{
-		captureVhd: func(context.Context, virtualmachines.VirtualMachineId, *virtualmachines.VirtualMachineCaptureParameters) error {
+		config: &Config{
+			tmpOSDiskName:        "tmpOSDiskName",
+			CaptureContainerName: "CaptureContainerName",
+			CaptureNamePrefix:    "CaptureNamePrefix",
+		},
+		getVMInternalID: func(context.Context, virtualmachines.VirtualMachineId) (string, error) {
+			return "", fmt.Errorf("!! Unit Test FAIL !!")
+		},
+		generalizeVM: func(context.Context, virtualmachines.VirtualMachineId) error {
+			return nil
+		},
+		say:   func(message string) {},
+		error: func(e error) {},
+	}
+
+	stateBag := createTestStateBagStepCaptureImage()
+
+	var result = testSubject.Run(context.Background(), stateBag)
+	if result != multistep.ActionHalt {
+		t.Fatalf("Expected the step to return 'ActionHalt', but got '%d'.", result)
+	}
+
+	if _, ok := stateBag.GetOk(constants.Error); ok == false {
+		t.Fatalf("Expected the step to set stateBag['%s'], but it was not.", constants.Error)
+	}
+}
+
+func TestStepCaptureImageShouldFailIfGrantAccessFails(t *testing.T) {
+	var testSubject = &StepCaptureImage{
+		config: &Config{
+			tmpOSDiskName:        "tmpOSDiskName",
+			CaptureContainerName: "CaptureContainerName",
+			CaptureNamePrefix:    "CaptureNamePrefix",
+		},
+		grantAccess: func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) (string, error) {
+			return "", fmt.Errorf("!! Unit Test FAIL !!")
+		},
+		getVMInternalID: func(context.Context, virtualmachines.VirtualMachineId) (string, error) {
+			return "id", nil
+		},
+		generalizeVM: func(context.Context, virtualmachines.VirtualMachineId) error {
+			return nil
+		},
+		say:   func(message string) {},
+		error: func(e error) {},
+	}
+
+	stateBag := createTestStateBagStepCaptureImage()
+
+	var result = testSubject.Run(context.Background(), stateBag)
+	if result != multistep.ActionHalt {
+		t.Fatalf("Expected the step to return 'ActionHalt', but got '%d'.", result)
+	}
+
+	if _, ok := stateBag.GetOk(constants.Error); ok == false {
+		t.Fatalf("Expected the step to set stateBag['%s'], but it was not.", constants.Error)
+	}
+}
+
+func TestStepCaptureImageShouldFailIfCopyToStorageFails(t *testing.T) {
+	var testSubject = &StepCaptureImage{
+		config: &Config{
+			tmpOSDiskName:        "tmpOSDiskName",
+			CaptureContainerName: "CaptureContainerName",
+			CaptureNamePrefix:    "CaptureNamePrefix",
+		},
+		grantAccess: func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) (string, error) {
+			return "accessuri", nil
+		},
+		copyToStorage: func(ctx context.Context, storageContainerName string, captureNamePrefix string, osDiskName string, accessUri string) error {
 			return fmt.Errorf("!! Unit Test FAIL !!")
 		},
 		getVMInternalID: func(context.Context, virtualmachines.VirtualMachineId) (string, error) {
@@ -41,15 +111,16 @@ func TestStepCaptureImageShouldFailIfCaptureFails(t *testing.T) {
 	}
 }
 
-func TestStepCaptureImageShouldFailIfGetVMIDFails(t *testing.T) {
+func TestStepCaptureImageShouldRevokeAccessOnCleanup(t *testing.T) {
+	revokeAccessCalled := false
+	revokeAccessPtr := &revokeAccessCalled
 	var testSubject = &StepCaptureImage{
-		captureVhd: func(context.Context, virtualmachines.VirtualMachineId, *virtualmachines.VirtualMachineCaptureParameters) error {
-			return nil
+		config: &Config{
+			CaptureContainerName: "CaptureContainerName",
+			CaptureNamePrefix:    "CaptureNamePrefix",
 		},
-		getVMInternalID: func(context.Context, virtualmachines.VirtualMachineId) (string, error) {
-			return "", fmt.Errorf("!! Unit Test FAIL !!")
-		},
-		generalizeVM: func(context.Context, virtualmachines.VirtualMachineId) error {
+		revokeAccess: func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) error {
+			revokeAccessPtr = common.BoolPtr(true)
 			return nil
 		},
 		say:   func(message string) {},
@@ -58,18 +129,31 @@ func TestStepCaptureImageShouldFailIfGetVMIDFails(t *testing.T) {
 
 	stateBag := createTestStateBagStepCaptureImage()
 
-	var result = testSubject.Run(context.Background(), stateBag)
-	if result != multistep.ActionHalt {
-		t.Fatalf("Expected the step to return 'ActionHalt', but got '%d'.", result)
+	testSubject.Cleanup(stateBag)
+	if *revokeAccessPtr {
+		t.Fatal("Revoke Access should not be called on TestCaptureImage.Cleanup when a tmpOSDiskName is set, but was")
 	}
-
-	if _, ok := stateBag.GetOk(constants.Error); ok == false {
-		t.Fatalf("Expected the step to set stateBag['%s'], but it was not.", constants.Error)
+	testSubject.diskNameToRevokeAccessTo = "tmpOSDiskName"
+	testSubject.Cleanup(stateBag)
+	if !*revokeAccessPtr {
+		t.Fatal("Revoke Access should be called on TestCaptureImage.Cleanup when a tmpOSDiskName is set, but wasn't")
 	}
 }
+
 func TestStepCaptureImageShouldPassIfCapturePasses(t *testing.T) {
 	var testSubject = &StepCaptureImage{
-		captureVhd: func(ctx context.Context, vmId virtualmachines.VirtualMachineId, parameters *virtualmachines.VirtualMachineCaptureParameters) error {
+		config: &Config{
+			tmpOSDiskName:        "tmpOSDiskName",
+			CaptureContainerName: "CaptureContainerName",
+			CaptureNamePrefix:    "CaptureNamePrefix",
+		},
+		grantAccess: func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) (string, error) {
+			return "accessuri", nil
+		},
+		copyToStorage: func(ctx context.Context, storageContainerName string, captureNamePrefix string, osDiskName string, accessUri string) error {
+			return nil
+		},
+		revokeAccess: func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) error {
 			return nil
 		},
 		generalizeVM: func(context.Context, virtualmachines.VirtualMachineId) error {
@@ -97,9 +181,6 @@ func TestStepCaptureImageShouldPassIfCapturePasses(t *testing.T) {
 func TestStepCaptureImageShouldCallGeneralizeIfSpecializedIsFalse(t *testing.T) {
 	generalizeCount := 0
 	var testSubject = &StepCaptureImage{
-		captureVhd: func(context.Context, virtualmachines.VirtualMachineId, *virtualmachines.VirtualMachineCaptureParameters) error {
-			return nil
-		},
 		generalizeVM: func(context.Context, virtualmachines.VirtualMachineId) error {
 			generalizeCount++
 			return nil
@@ -109,6 +190,8 @@ func TestStepCaptureImageShouldCallGeneralizeIfSpecializedIsFalse(t *testing.T) 
 	}
 
 	stateBag := createTestStateBagStepCaptureImage()
+	stateBag.Put(constants.ArmIsManagedImage, false)
+	stateBag.Put(constants.ArmIsVHDSaveToStorage, false)
 	stateBag.Put(constants.ArmIsSIGImage, true)
 	stateBag.Put(constants.ArmSharedImageGalleryDestinationSpecialized, false)
 	var result = testSubject.Run(context.Background(), stateBag)
@@ -127,9 +210,6 @@ func TestStepCaptureImageShouldCallGeneralizeIfSpecializedIsFalse(t *testing.T) 
 func TestStepCaptureImageShouldNotCallGeneralizeIfSpecializedIsTrue(t *testing.T) {
 	generalizeCount := 0
 	var testSubject = &StepCaptureImage{
-		captureVhd: func(context.Context, virtualmachines.VirtualMachineId, *virtualmachines.VirtualMachineCaptureParameters) error {
-			return nil
-		},
 		generalizeVM: func(context.Context, virtualmachines.VirtualMachineId) error {
 			generalizeCount++
 			return nil
@@ -158,15 +238,22 @@ func TestStepCaptureImageShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 	defer close(cancelCh)
 
 	var actualResourceGroupName string
-	var actualComputeName string
-	var actualVirtualMachineCaptureParameters *virtualmachines.VirtualMachineCaptureParameters
 	expectedVirtualMachineID := "id"
 	var testSubject = &StepCaptureImage{
-		captureVhd: func(ctx context.Context, id virtualmachines.VirtualMachineId, parameters *virtualmachines.VirtualMachineCaptureParameters) error {
-			actualResourceGroupName = id.ResourceGroupName
-			actualComputeName = id.VirtualMachineName
-			actualVirtualMachineCaptureParameters = parameters
+		config: &Config{
+			tmpOSDiskName:        "tmpOSDiskName",
+			CaptureContainerName: "CaptureContainerName",
+			CaptureNamePrefix:    "CaptureNamePrefix",
+		},
+		grantAccess: func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) (string, error) {
+			actualResourceGroupName = resourceGroupName
 
+			return "accessuri", nil
+		},
+		copyToStorage: func(ctx context.Context, storageContainerName string, captureNamePrefix string, osDiskName string, accessUri string) error {
+			return nil
+		},
+		revokeAccess: func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) error {
 			return nil
 		},
 		getVMInternalID: func(ctx context.Context, vmId virtualmachines.VirtualMachineId) (string, error) {
@@ -186,26 +273,16 @@ func TestStepCaptureImageShouldTakeStepArgumentsFromStateBag(t *testing.T) {
 		t.Fatalf("Expected the step to return 'ActionContinue', but got '%d'.", result)
 	}
 
-	var expectedComputeName = stateBag.Get(constants.ArmComputeName).(string)
 	var expectedResourceGroupName = stateBag.Get(constants.ArmResourceGroupName).(string)
-	var expectedVirtualMachineCaptureParameters = stateBag.Get(constants.ArmVirtualMachineCaptureParameters).(*virtualmachines.VirtualMachineCaptureParameters)
 
 	actualVirtualMachineID := stateBag.Get(constants.ArmBuildVMInternalId).(string)
 	if actualVirtualMachineID != expectedVirtualMachineID {
 		t.Fatalf("Expected StepCaptureImage to set 'constants.ArmBuildVMInternalId' to the state bag to %s, but it was set to %s.", expectedVirtualMachineID, actualVirtualMachineID)
 	}
-	if actualComputeName != expectedComputeName {
-		t.Fatal("Expected StepCaptureImage to source 'constants.ArmComputeName' from the state bag, but it did not.")
-	}
 
 	if actualResourceGroupName != expectedResourceGroupName {
 		t.Fatal("Expected StepCaptureImage to source 'constants.ArmResourceGroupName' from the state bag, but it did not.")
 	}
-
-	if actualVirtualMachineCaptureParameters != expectedVirtualMachineCaptureParameters {
-		t.Fatal("Expected StepCaptureImage to source 'constants.ArmVirtualMachineCaptureParameters' from the state bag, but it did not.")
-	}
-
 }
 
 func createTestStateBagStepCaptureImage() multistep.StateBag {
@@ -217,6 +294,7 @@ func createTestStateBagStepCaptureImage() multistep.StateBag {
 	stateBag.Put(constants.ArmSubscription, "Unit Test: SubscriptionId")
 	stateBag.Put(constants.ArmVirtualMachineCaptureParameters, &virtualmachines.VirtualMachineCaptureParameters{})
 
+	stateBag.Put(constants.ArmIsVHDSaveToStorage, true)
 	stateBag.Put(constants.ArmIsManagedImage, false)
 	stateBag.Put(constants.ArmManagedImageResourceGroupName, "")
 	stateBag.Put(constants.ArmManagedImageName, "")

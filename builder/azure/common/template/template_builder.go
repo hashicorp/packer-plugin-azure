@@ -371,7 +371,7 @@ func (s *TemplateBuilder) SetDiskEncryptionWithPaaSKey(securityType *hashiVMSDK.
 	return nil
 }
 
-func (s *TemplateBuilder) SetAdditionalDisks(diskSizeGB []int32, dataDiskname string, isLegacyVHD bool, cachingType hashiVMSDK.CachingTypes) error {
+func (s *TemplateBuilder) SetAdditionalDisks(diskSizeGB []int32, dataDiskname string, cachingType hashiVMSDK.CachingTypes) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
@@ -387,15 +387,9 @@ func (s *TemplateBuilder) SetAdditionalDisks(diskSizeGB []int32, dataDiskname st
 		dataDisks[i].Name = common.StringPtr(fmt.Sprintf("[concat(parameters('dataDiskName'),'-%d')]", i+1))
 		dataDisks[i].CreateOption = "Empty"
 		dataDisks[i].Caching = cachingType
-		if !isLegacyVHD {
-			dataDisks[i].Vhd = nil
-			dataDisks[i].ManagedDisk = profile.OsDisk.ManagedDisk
-		} else {
-			dataDisks[i].Vhd = &hashiVMSDK.VirtualHardDisk{
-				Uri: common.StringPtr(fmt.Sprintf("[concat(parameters('storageAccountBlobEndpoint'),variables('vmStorageAccountContainerName'),'/',parameters('dataDiskName'),'-%d','.vhd')]", i+1)),
-			}
-			dataDisks[i].ManagedDisk = nil
-		}
+
+		dataDisks[i].Vhd = nil
+		dataDisks[i].ManagedDisk = profile.OsDisk.ManagedDisk
 	}
 	profile.DataDisks = &dataDisks
 	return nil
@@ -957,9 +951,6 @@ const BasicTemplate = `{
         "storageProfile": {
           "osDisk": {
             "name": "[parameters('osDiskName')]",
-            "vhd": {
-              "uri": "[concat(parameters('storageAccountBlobEndpoint'),variables('vmStorageAccountContainerName'),'/', parameters('osDiskName'),'.vhd')]"
-            },
             "caching": "ReadWrite",
             "createOption": "FromImage"
           }

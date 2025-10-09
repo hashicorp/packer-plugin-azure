@@ -42,6 +42,14 @@ func BuildStorageAuthorizer(ctx context.Context, authOpts AzureAuthOptions, env 
 	return authorizer, nil
 }
 
+func BuildKeyVaultAuthorizer(ctx context.Context, authOpts AzureAuthOptions, env environments.Environment) (auth.Authorizer, error) {
+	authorizer, err := buildAuthorizer(ctx, authOpts, env, env.KeyVault)
+	if err != nil {
+		return nil, fmt.Errorf("building Key Vault authorizer from credentials: %+v", err)
+	}
+	return authorizer, nil
+}
+
 func buildAuthorizer(ctx context.Context, authOpts AzureAuthOptions, env environments.Environment, api environments.Api) (auth.Authorizer, error) {
 	var authConfig auth.Credentials
 	switch authOpts.AuthType {

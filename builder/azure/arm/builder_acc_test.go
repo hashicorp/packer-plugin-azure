@@ -348,7 +348,7 @@ func testBuilderUserDataLinux(userdata string) string {
 
 	  "storage_account": "{{user `+"`storage_account`"+`}}",
 	  "resource_group_name": "{{user `+"`resource_group_name`"+`}}",
-	  "capture_container_name": "test",
+	  "capture_container_name": "packeracc",
 	  "capture_name_prefix": "testBuilderUserDataLinux",
 
 	  "os_type": "Linux",
@@ -528,7 +528,7 @@ const testBuilderAccBlobWindows = `
 
 	  "storage_account": "{{user ` + "`storage_account`" + `}}",
 	  "resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
-	  "capture_container_name": "azure-arm",
+	  "capture_container_name": "packeracc",
 	  "capture_name_prefix": "testBuilderAccBlobWin",
 
 	  "os_type": "Windows",
@@ -566,7 +566,7 @@ const testBuilderAccBlobLinux = `
 
 	  "storage_account": "{{user ` + "`storage_account`" + `}}",
 	  "resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
-	  "capture_container_name": "test",
+	  "capture_container_name": "packeracc",
 	  "capture_name_prefix": "testBuilderAccBlobLinux",
 
 	  "os_type": "Linux",

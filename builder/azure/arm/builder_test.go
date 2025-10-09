@@ -77,7 +77,9 @@ func TestManagedImageArtifactWithSIGAsDestinationNoImage(t *testing.T) {
 	_, _, err := testSubject.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
 	assert.NoErrorf(t, err, "failed to prepare: %s", err)
 
-	_, err = testSubject.managedImageArtifactWithSIGAsDestination("fakeID", generatedData())
+	sharedImageGalleryArtifact := SharedImageGalleryArtifact{}
+
+	err = testSubject.getSharedImageGalleryArtifact(&sharedImageGalleryArtifact, generatedData())
 	assert.ErrorIs(t, err, ErrNoImage)
 }
 
@@ -104,10 +106,21 @@ func TestBuildSharedImageGalleryArtifact_withState(t *testing.T) {
 	testSubject.config.ManagedImageOSDiskSnapshotName = "fakeOsDiskSnapshotName"
 	testSubject.config.ManagedImageDataDiskSnapshotPrefix = "fakeDataDiskSnapshotPrefix"
 
-	artifact, err := testSubject.managedImageArtifactWithSIGAsDestination("fakeID", generatedData())
+	managedImageArtifact := ManagedImageArtifact{}
+	sharedImageGalleryArtifact := SharedImageGalleryArtifact{}
+	vhdArtifact := VHDArtifact{}
+	stateData := generatedData()
+
+	testSubject.getManagedImageArtifact(&managedImageArtifact)
+
+	// set ManagedImageId manually since ClientConfig.SubscriptionID is empty
+	managedImageArtifact.ManagedImageId = "fakeID"
+	err = testSubject.getSharedImageGalleryArtifact(&sharedImageGalleryArtifact, stateData)
 	if err != nil {
 		t.Fatalf("err=%s", err)
 	}
+
+	artifact := NewArtifact(testSubject.config.OSType, vhdArtifact, managedImageArtifact, sharedImageGalleryArtifact, stateData)
 
 	expected := `Azure.ResourceManagement.VMImage:
 
@@ -177,6 +190,23 @@ func TestBuilderConfig_SSHHost(t *testing.T) {
 	if host != "172.10.10.3" {
 		t.Errorf("Expected custom ssh_host to take precedences over state value but it got %q", host)
 
+	}
+
+}
+
+func Test_IsSIGValid(t *testing.T) {
+	var testSubject Builder
+	testSubject.config.SharedGallery = SharedImageGallery{
+		ID: "blorp",
+	}
+	if testSubject.IsSigIDValid() {
+		t.Fatal("Expected invalid SIG ID to be invalid, but was validated")
+	}
+	testSubject.config.SharedGallery = SharedImageGallery{
+		ID: "/subscriptions/acd03ed1-6c95-4568-b14c-2a793bd601a8/resourceGroups/jennatest/providers/Microsoft.Compute/galleries/blah_acctestgallery/images/blah-arm-linux-specialized-sig/versions/92827891.1928371238.12392323",
+	}
+	if !testSubject.IsSigIDValid() {
+		t.Fatal("Expected valid SIG ID to be valid, but was invalidated")
 	}
 
 }

@@ -5,10 +5,8 @@ package arm
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -23,7 +21,6 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
-	giovanniBlobStorageSDK "github.com/tombuildsstuff/giovanni/storage/2020-08-04/blob/blobs"
 )
 
 type DeploymentTemplateType int
@@ -41,7 +38,7 @@ type StepDeployTemplate struct {
 	deploy                  func(ctx context.Context, subscriptionId string, resourceGroupName string, deploymentName string) error
 	deleteDetachedResources func(ctx context.Context, subscriptionId string, resourceGroupName string, resources map[string]string)
 	getDisk                 func(ctx context.Context, subscriptionId string, resourceGroupName string, computeName string) (string, string, error)
-	deleteDisk              func(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool, subscriptionId string, storageAccountName string) error
+	deleteDisk              func(ctx context.Context, imageName string, resourceGroupName string, subscriptionId string) error
 	deleteVM                func(ctx context.Context, virtualMachineId virtualmachines.VirtualMachineId) error
 	deleteNic               func(ctx context.Context, networkInterfacesId commonids.NetworkInterfaceId) error
 	deleteDeployment        func(ctx context.Context, state multistep.StateBag) error
@@ -146,9 +143,6 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 	// Get image disk details before deleting the image; otherwise we won't be able to
 	// delete the disk as the image request will return a 404
 	computeName := state.Get(constants.ArmComputeName).(string)
-	isManagedDisk := state.Get(constants.ArmIsManagedImage).(bool)
-	isSIGImage := state.Get(constants.ArmIsSIGImage).(bool)
-	armStorageAccountName := state.Get(constants.ArmStorageAccountName).(string)
 	imageType, imageName, err := s.getDisk(ctx, subscriptionId, resourceGroupName, computeName)
 	if err != nil {
 		ui.Error(fmt.Sprintf("Could not retrieve OS Image details: %s", err))
@@ -206,7 +200,7 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 		return
 	}
 	if !state.Get(constants.ArmKeepOSDisk).(bool) {
-		err = s.deleteDisk(ctx, imageName, resourceGroupName, (isManagedDisk || isSIGImage), subscriptionId, armStorageAccountName)
+		err = s.deleteDisk(ctx, imageName, resourceGroupName, subscriptionId)
 		if err != nil {
 			s.reportResourceDeletionFailure(err, imageName)
 
@@ -220,13 +214,13 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 	if disks := state.Get(constants.ArmAdditionalDiskVhds); disks != nil {
 		dataDisks = disks.([]string)
 	}
-	for i, additionaldisk := range dataDisks {
-		err := s.deleteImage(ctx, additionaldisk, resourceGroupName, (isManagedDisk || isSIGImage), subscriptionId, armStorageAccountName)
+	for i, additionalDisk := range dataDisks {
+		err := s.deleteImage(ctx, additionalDisk, resourceGroupName, subscriptionId)
 		if err == nil {
-			s.say(fmt.Sprintf("Deleted Additional Disk -> %d: '%s'", i+1, additionaldisk))
+			s.say(fmt.Sprintf("Deleted Additional Disk -> %d: '%s'", i+1, additionalDisk))
 
 		} else {
-			s.reportResourceDeletionFailure(err, additionaldisk)
+			s.reportResourceDeletionFailure(err, additionalDisk)
 		}
 	}
 
@@ -295,38 +289,23 @@ func (s *StepDeployTemplate) getImageDetails(ctx context.Context, subscriptionId
 	return imageType, imageName, nil
 }
 
-// TODO Let's split this into two separate methods
-// deleteVHD and deleteManagedDisk, and then just check in Cleanup which function to call
-func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, resourceGroupName string, isManagedDisk bool, subscriptionId string, storageAccountName string) error {
+func (s *StepDeployTemplate) deleteImage(ctx context.Context, imageName string, resourceGroupName string, subscriptionId string) error {
 	// Managed disk
 	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
 	defer cancel()
-	if isManagedDisk {
-		xs := strings.Split(imageName, "/")
-		diskName := xs[len(xs)-1]
-		diskId := commonids.NewManagedDiskID(subscriptionId, resourceGroupName, diskName)
 
-		if err := s.client.DisksClient.DeleteThenPoll(pollingContext, diskId); err != nil {
-			return err
-		}
-		return nil
-	}
+	xs := strings.Split(imageName, "/")
+	diskName := xs[len(xs)-1]
+	diskId := commonids.NewManagedDiskID(subscriptionId, resourceGroupName, diskName)
 
-	// VHD image
-	u, err := url.Parse(imageName)
-	if err != nil {
+	if err := s.client.DisksClient.DeleteThenPoll(pollingContext, diskId); err != nil {
 		return err
 	}
-	xs := strings.Split(u.Path, "/")
-	var blobName = strings.Join(xs[2:], "/")
-	if len(xs) < 3 {
-		return errors.New("Unable to parse path of image " + imageName)
-	}
-	_, err = s.client.GiovanniBlobClient.Delete(pollingContext, "images", blobName, giovanniBlobStorageSDK.DeleteInput{})
-	return err
+
+	return nil
 }
 
-func (s *StepDeployTemplate) retryDeletion(ctx context.Context, resourceType string, resourceName string, deleteResourceFunction func() error) error {
+func (s *StepDeployTemplate) retryDeletion(ctx context.Context, resourceName string, resourceType string, deleteResourceFunction func() error) error {
 	log.Printf("[INFO] Attempting deletion -> %s : %s", resourceType, resourceName)
 	retryConfig := retry.Config{
 		Tries: 5,

@@ -65,14 +65,13 @@ const (
 )
 
 var (
-	reCaptureContainerName     = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]{2,62}$`)
-	reCaptureNamePrefix        = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_\-\.]{0,23}$`)
-	reManagedDiskName          = regexp.MustCompile(validManagedDiskName)
-	reResourceGroupName        = regexp.MustCompile(validResourceGroupNameRe)
-	reSnapshotName             = regexp.MustCompile(`^[A-Za-z0-9_]{1,79}$`)
-	reSnapshotPrefix           = regexp.MustCompile(`^[A-Za-z0-9_]{1,59}$`)
-	reResourceNamePrefix       = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]{0,9}$`)
-	reNetworkSecurityGroupName = regexp.MustCompile(validNetworkSecurityGroupNameRe)
+	reCaptureContainerName = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]{2,62}$`)
+	reManagedDiskName      = regexp.MustCompile(validManagedDiskName)
+	reResourceGroupName    = regexp.MustCompile(validResourceGroupNameRe)
+	reSnapshotName         = regexp.MustCompile(`^[A-Za-z0-9_]{1,79}$`)
+	reSnapshotPrefix       = regexp.MustCompile(`^[A-Za-z0-9_]{1,59}$`)
+	reResourceNamePrefix   = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]{0,9}$`)
+  reNetworkSecurityGroupName = regexp.MustCompile(validNetworkSecurityGroupNameRe)
 )
 
 type PlanInformation struct {
@@ -184,7 +183,7 @@ type Config struct {
 
 	// VHD prefix.
 	CaptureNamePrefix string `mapstructure:"capture_name_prefix"`
-	// Destination container name.
+	// Destination container name. This must be created before the build in the storage account
 	CaptureContainerName string `mapstructure:"capture_container_name"`
 	// Use a [Shared Gallery
 	// image](https://azure.microsoft.com/en-us/blog/announcing-the-public-preview-of-shared-image-gallery/)
@@ -214,8 +213,24 @@ type Config struct {
 	// ```
 	SharedGallery SharedImageGallery `mapstructure:"shared_image_gallery" required:"false"`
 	// The name of the Shared Image Gallery under which the managed image will be published as Shared Gallery Image version.
-	//
-	// Following is an example.
+	// A managed image target can also be set when using a shared image gallery destination
+	SharedGalleryDestination SharedImageGalleryDestination `mapstructure:"shared_image_gallery_destination"`
+	// How long to wait for an image to be published to the shared image
+	// gallery before timing out. If your Packer build is failing on the
+	// Publishing to Shared Image Gallery step with the error `Original Error:
+	// context deadline exceeded`, but the image is present when you check your
+	// Azure dashboard, then you probably need to increase this timeout from
+	// its default of "60m" (valid time units include `s` for seconds, `m` for
+	// minutes, and `h` for hours.)
+	SharedGalleryTimeout time.Duration `mapstructure:"shared_image_gallery_timeout"`
+	// The end of life date (2006-01-02T15:04:05.99Z) of the gallery Image Version. This property
+	// can be used for decommissioning purposes.
+	SharedGalleryImageVersionEndOfLifeDate string `mapstructure:"shared_gallery_image_version_end_of_life_date" required:"false"`
+	// The number of replicas of the Image Version to be created per region defined in `replication_regions`.
+	// Users using `target_region` blocks can specify individual replica counts per region using the `replicas` field.
+	SharedGalleryImageVersionReplicaCount int64 `mapstructure:"shared_image_gallery_replica_count" required:"false"`
+	// If set to true, Virtual Machines deployed from the latest version of the
+	// Image Definition won't use this Image Version.
 	//
 	// In JSON
 	// ```json
@@ -227,8 +242,13 @@ type Config struct {
 	//     "image_version": "1.0.0",
 	//     "replication_regions": ["regionA", "regionB", "regionC"],
 	//     "storage_account_type": "Standard_LRS"
-	// }
+	// },
+	// "shared_image_gallery_timeout": "60m",
+	// "shared_gallery_image_version_end_of_life_date": "2006-01-02T15:04:05.99Z",
+	// "shared_gallery_image_version_replica_count": 1,
+	// "shared_gallery_image_version_exclude_from_latest": true
 	// ```
+	//
 	// In HCL2
 	// ```hcl
 	// shared_image_gallery_destination {
@@ -248,26 +268,11 @@ type Config struct {
 	//       name = "regionC"
 	//     }
 	// }
+	// shared_image_gallery_timeout = "60m"
+	// shared_gallery_image_version_end_of_life_date = "2006-01-02T15:04:05.99Z"
+	// shared_gallery_image_version_replica_count = 1
+	// shared_gallery_image_version_exclude_from_latest = true
 	// ```
-	// A managed image target can also be set when using a shared image gallery destination
-
-	SharedGalleryDestination SharedImageGalleryDestination `mapstructure:"shared_image_gallery_destination"`
-	// How long to wait for an image to be published to the shared image
-	// gallery before timing out. If your Packer build is failing on the
-	// Publishing to Shared Image Gallery step with the error `Original Error:
-	// context deadline exceeded`, but the image is present when you check your
-	// Azure dashboard, then you probably need to increase this timeout from
-	// its default of "60m" (valid time units include `s` for seconds, `m` for
-	// minutes, and `h` for hours.)
-	SharedGalleryTimeout time.Duration `mapstructure:"shared_image_gallery_timeout"`
-	// The end of life date (2006-01-02T15:04:05.99Z) of the gallery Image Version. This property
-	// can be used for decommissioning purposes.
-	SharedGalleryImageVersionEndOfLifeDate string `mapstructure:"shared_gallery_image_version_end_of_life_date" required:"false"`
-	// The number of replicas of the Image Version to be created per region defined in `replication_regions`.
-	// Users using `target_region` blocks can specify individual replica counts per region using the `replicas` field.
-	SharedGalleryImageVersionReplicaCount int64 `mapstructure:"shared_image_gallery_replica_count" required:"false"`
-	// If set to true, Virtual Machines deployed from the latest version of the
-	// Image Definition won't use this Image Version.
 	SharedGalleryImageVersionExcludeFromLatest bool `mapstructure:"shared_gallery_image_version_exclude_from_latest" required:"false"`
 	// Name of the publisher to use for your base image (Azure Marketplace Images only). See
 	// [documentation](https://docs.microsoft.com/en-us/cli/azure/vm/image)
@@ -590,9 +595,8 @@ type Config struct {
 	// for more information.
 	//
 	// For VHD builds the final artifacts will be named
-	// `PREFIX-dataDisk-<n>.UUID.vhd` and stored in the specified capture
-	// container along side the OS disk. The additional disks are included in
-	// the deployment template `PREFIX-vmTemplate.UUID`.
+	// `<PREFIX><dataDisk>-<n>.vhd` and stored in the specified capture
+	// container along-side the OS disk.
 	//
 	// For Managed build the final artifacts are included in the managed image.
 	// The additional disk will have the same storage account type as the OS
@@ -620,6 +624,9 @@ type Config struct {
 	// specify custom azure resource names during build limited to max 10 characters
 	// this will set the prefix for the resources. The actual resource names will be
 	// `custom_resource_build_prefix` + resourcetype + 5 character random alphanumeric string
+	//
+	// You can also set this via the environment variable `PACKER_AZURE_CUSTOM_RESOURCE_BUILD_PREFIX`.
+	// If both the config field and the environment variable are present, the config field takes precedence.
 	CustomResourcePrefix string `mapstructure:"custom_resource_build_prefix" required:"false"`
 
 	// Specify a license type for the build VM to enable Azure Hybrid Benefit. If not set, Pay-As-You-Go license
@@ -742,6 +749,10 @@ func (c *Config) toVMID() string {
 		resourceGroupName = c.BuildResourceGroupName
 	}
 	return fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s", c.ClientConfig.SubscriptionID, resourceGroupName, c.tmpComputeName)
+}
+
+func (c *Config) isVHDSaveToStorage() bool {
+	return c.StorageAccount != ""
 }
 
 func (c *Config) isManagedImage() bool {
@@ -1170,16 +1181,8 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	/////////////////////////////////////////////
 	// Capture
-	if c.CaptureContainerName == "" && c.ManagedImageName == "" && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_container_name, managed_image_name or shared_image_gallery_destination must be specified"))
-	}
-
-	if c.CaptureNamePrefix == "" && c.ManagedImageResourceGroupName == "" && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_name_prefix, managed_image_resource_group_name or shared_image_gallery_destination must be specified"))
-	}
-
-	if (c.CaptureNamePrefix != "" || c.CaptureContainerName != "") && (c.ManagedImageResourceGroupName != "" || c.ManagedImageName != "") {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Either a VHD or a managed image can be built, but not both. Please specify either capture_container_name and capture_name_prefix or managed_image_resource_group_name and managed_image_name."))
+	if c.CaptureContainerName == "" && (c.ManagedImageName == "" || c.ManagedImageResourceGroupName == "") && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_container_name, managed_image_name and managed_image_resource_group_name, or shared_image_gallery_destination must be specified"))
 	}
 
 	if c.CaptureContainerName != "" {
@@ -1193,18 +1196,6 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 		if strings.Contains(c.CaptureContainerName, "--") {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_container_name must not contain consecutive hyphens, e.g. '--'."))
-		}
-
-		if c.CaptureNamePrefix == "" {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_name_prefix must be specified"))
-		}
-
-		if !reCaptureNamePrefix.MatchString(c.CaptureNamePrefix) {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_name_prefix must satisfy the regular expression %q.", reCaptureNamePrefix.String()))
-		}
-
-		if strings.HasSuffix(c.CaptureNamePrefix, "-") || strings.HasSuffix(c.CaptureNamePrefix, ".") {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_name_prefix must not end with a hyphen or period."))
 		}
 	}
 
@@ -1259,12 +1250,6 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		if c.SharedGallery.GalleryName != "" || c.SharedGallery.ID != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Cannot specify multiple kinds of azure compute gallery sources"))
 		}
-		if c.CaptureContainerName != "" {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_container_name] is not supported when using Shared Image Gallery as source. Use managed_image_resource_group_name instead."))
-		}
-		if c.CaptureNamePrefix != "" {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_name_prefix] is not supported when using Shared Image Gallery as source. Use managed_image_name instead."))
-		}
 		if c.SharedGallery.CommunityGalleryImageId != "" && c.SharedGallery.DirectSharedGalleryImageID != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Cannot specify both community gallery and direct shared gallery as a source"))
 		}
@@ -1281,17 +1266,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		if c.SharedGallery.ID != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A shared_image_gallery.id must not be specified"))
 		}
-		if c.CaptureContainerName != "" {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_container_name] is not supported when using Shared Image Gallery as source. Use managed_image_resource_group_name instead."))
-		}
-		if c.CaptureNamePrefix != "" {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("VHD Target [capture_name_prefix] is not supported when using Shared Image Gallery as source. Use managed_image_name instead."))
-		}
 	} else if c.SharedGallery.ID != "" {
-		sigIDRegex := regexp.MustCompile("/subscriptions/[^/]*/resourceGroups/[^/]*/providers/Microsoft.Compute/galleries/[^/]*/images/[^/]*/versions/[^/]*")
-		if !sigIDRegex.Match([]byte(c.SharedGallery.ID)) {
-			errs = packer.MultiErrorAppend(errs, fmt.Errorf("shared_image_gallery.id does not match expected format of '/subscriptions/(subscriptionid)/resourceGroups/(rg-name)/providers/Microsoft.Compute/galleries/(gallery-name)/images/image-name/versions/(version)"))
-		}
 		if c.SharedGallery.Subscription != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("When setting shared_image_gallery.id, shared_image_gallery.subscription must not be specified"))
 		}
@@ -1341,10 +1316,6 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	// Deployment
 	xor := func(a, b bool) bool {
 		return (a || b) && !(a && b)
-	}
-
-	if !xor(c.StorageAccount != "" || c.ResourceGroupName != "", c.ManagedImageName != "" || c.ManagedImageResourceGroupName != "" || c.SharedGalleryDestination.SigDestinationGalleryName != "") {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Specify either a VHD (storage_account and resource_group_name), a Managed Image (managed_image_resource_group_name and managed_image_name) or a Shared Image Gallery (shared_image_gallery_destination) output (Managed Images can also be published to Shared Image Galleries)"))
 	}
 
 	if !xor(c.Location != "", c.BuildResourceGroupName != "") {
@@ -1474,6 +1445,12 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 	}
 
+	if c.CustomResourcePrefix == "" {
+		val, ok := os.LookupEnv("PACKER_AZURE_CUSTOM_RESOURCE_BUILD_PREFIX")
+		if ok {
+			c.CustomResourcePrefix = val
+		}
+	}
 	if c.CustomResourcePrefix != "" {
 		if ok, err := assertResourceNamePrefix(c.CustomResourcePrefix, "custom_resource_build_prefix"); !ok {
 			errs = packersdk.MultiErrorAppend(errs, err)

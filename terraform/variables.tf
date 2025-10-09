@@ -14,6 +14,14 @@ variable "storage_account_name" {
   type    = string
 }
 
+variable "tenant_id" {
+  type = string
+}
+
+variable "object_id" {
+  type = string
+}
+
 // Variable applied to resources that have uniqueness constraints at a subscription level
 // For example you can't have two shared image galleries named `linux` in the same Subscription in different resource group
 variable "resource_prefix" {

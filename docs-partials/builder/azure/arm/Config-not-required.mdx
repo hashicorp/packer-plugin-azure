@@ -9,7 +9,7 @@
 
 - `capture_name_prefix` (string) - VHD prefix.
 
-- `capture_container_name` (string) - Destination container name.
+- `capture_container_name` (string) - Destination container name. This must be created before the build in the storage account
 
 - `shared_image_gallery` (SharedImageGallery) - Use a [Shared Gallery
   image](https://azure.microsoft.com/en-us/blog/announcing-the-public-preview-of-shared-image-gallery/)
@@ -38,7 +38,8 @@
   }
   ```
 
-- `shared_image_gallery_destination` (SharedImageGalleryDestination) - Shared Gallery Destination
+- `shared_image_gallery_destination` (SharedImageGalleryDestination) - The name of the Shared Image Gallery under which the managed image will be published as Shared Gallery Image version.
+  A managed image target can also be set when using a shared image gallery destination
 
 - `shared_image_gallery_timeout` (duration string | ex: "1h5m2s") - How long to wait for an image to be published to the shared image
   gallery before timing out. If your Packer build is failing on the
@@ -56,6 +57,48 @@
 
 - `shared_gallery_image_version_exclude_from_latest` (bool) - If set to true, Virtual Machines deployed from the latest version of the
   Image Definition won't use this Image Version.
+  
+  In JSON
+  ```json
+  "shared_image_gallery_destination": {
+      "subscription": "00000000-0000-0000-0000-00000000000",
+      "resource_group": "ResourceGroup",
+      "gallery_name": "GalleryName",
+      "image_name": "ImageName",
+      "image_version": "1.0.0",
+      "replication_regions": ["regionA", "regionB", "regionC"],
+      "storage_account_type": "Standard_LRS"
+  },
+  "shared_image_gallery_timeout": "60m",
+  "shared_gallery_image_version_end_of_life_date": "2006-01-02T15:04:05.99Z",
+  "shared_gallery_image_version_replica_count": 1,
+  "shared_gallery_image_version_exclude_from_latest": true
+  ```
+  
+  In HCL2
+  ```hcl
+  shared_image_gallery_destination {
+      subscription = "00000000-0000-0000-0000-00000000000"
+      resource_group = "ResourceGroup"
+      gallery_name = "GalleryName"
+      image_name = "ImageName"
+      image_version = "1.0.0"
+      storage_account_type = "Standard_LRS"
+      target_region {
+        name = "regionA"
+      }
+      target_region {
+        name = "regionB"
+      }
+      target_region {
+        name = "regionC"
+      }
+  }
+  shared_image_gallery_timeout = "60m"
+  shared_gallery_image_version_end_of_life_date = "2006-01-02T15:04:05.99Z"
+  shared_gallery_image_version_replica_count = 1
+  shared_gallery_image_version_exclude_from_latest = true
+  ```
 
 - `image_version` (string) - Specify a specific version of an OS to boot from.
   Defaults to `latest`. There may be a difference in versions available
@@ -316,9 +359,8 @@
   for more information.
   
   For VHD builds the final artifacts will be named
-  `PREFIX-dataDisk-<n>.UUID.vhd` and stored in the specified capture
-  container along side the OS disk. The additional disks are included in
-  the deployment template `PREFIX-vmTemplate.UUID`.
+  `<PREFIX><dataDisk>-<n>.vhd` and stored in the specified capture
+  container along-side the OS disk.
   
   For Managed build the final artifacts are included in the managed image.
   The additional disk will have the same storage account type as the OS
@@ -343,6 +385,9 @@
 - `custom_resource_build_prefix` (string) - specify custom azure resource names during build limited to max 10 characters
   this will set the prefix for the resources. The actual resource names will be
   `custom_resource_build_prefix` + resourcetype + 5 character random alphanumeric string
+  
+  You can also set this via the environment variable `PACKER_AZURE_CUSTOM_RESOURCE_BUILD_PREFIX`.
+  If both the config field and the environment variable are present, the config field takes precedence.
 
 - `license_type` (string) - Specify a license type for the build VM to enable Azure Hybrid Benefit. If not set, Pay-As-You-Go license
   model (default) will be used. Valid values are:

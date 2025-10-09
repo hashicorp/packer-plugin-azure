@@ -22,11 +22,8 @@ options. In addition to the options listed here, a [communicator](https://packer
 
 ### Azure ARM builder specific options
 
-The Azure builder can create either a VHD, managed image or create a Shared Image Gallery.
-If you are creating a VHD, you **must** start with a VHD. Likewise, if you want to create
-a managed image you **must** start with a managed image.
-Managed images can also be published to shared image galleries,
-but a managed image definition is not required to publish to a gallery.
+The Azure builder can create a VHD, a managed image, and a Shared Image Gallery version.
+All builds must start from a managed image source, such as an Azure Marketplace image or another custom managed image, regardless of the desired output artifact.
 
 ### Required:
 
@@ -77,10 +74,10 @@ When creating a VHD the following additional options are required:
 - `capture_container_name` (string) - Destination container name. Essentially
   the "directory" where your VHD will be organized in Azure. The captured
   VHD's URL will be
-  `https://<storage_account>.blob.core.windows.net/system/Microsoft.Compute/Images/<capture_container_name>/<capture_name_prefix>.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.vhd`.
+  `https://<storage_account>.blob.core.windows.net/<capture_container_name>/<capture_name_prefix><os_disk_name>.vhd`.
 
 - `capture_name_prefix` (string) - VHD prefix. The final artifacts will be
-  named `PREFIX-osDisk.UUID` and `PREFIX-vmTemplate.UUID`.
+  named `<PREFIX><osDisk>.vhd`.
 
 - `resource_group_name` (string) - Resource group under which the final
   artifact will be stored.
@@ -150,7 +147,7 @@ Providing `temp_resource_group_name` or `location` in combination with
 
 - `capture_name_prefix` (string) - VHD prefix.
 
-- `capture_container_name` (string) - Destination container name.
+- `capture_container_name` (string) - Destination container name. This must be created before the build in the storage account
 
 - `shared_image_gallery` (SharedImageGallery) - Use a [Shared Gallery
   image](https://azure.microsoft.com/en-us/blog/announcing-the-public-preview-of-shared-image-gallery/)
@@ -179,7 +176,8 @@ Providing `temp_resource_group_name` or `location` in combination with
   }
   ```
 
-- `shared_image_gallery_destination` (SharedImageGalleryDestination) - Shared Gallery Destination
+- `shared_image_gallery_destination` (SharedImageGalleryDestination) - The name of the Shared Image Gallery under which the managed image will be published as Shared Gallery Image version.
+  A managed image target can also be set when using a shared image gallery destination
 
 - `shared_image_gallery_timeout` (duration string | ex: "1h5m2s") - How long to wait for an image to be published to the shared image
   gallery before timing out. If your Packer build is failing on the
@@ -197,6 +195,48 @@ Providing `temp_resource_group_name` or `location` in combination with
 
 - `shared_gallery_image_version_exclude_from_latest` (bool) - If set to true, Virtual Machines deployed from the latest version of the
   Image Definition won't use this Image Version.
+  
+  In JSON
+  ```json
+  "shared_image_gallery_destination": {
+      "subscription": "00000000-0000-0000-0000-00000000000",
+      "resource_group": "ResourceGroup",
+      "gallery_name": "GalleryName",
+      "image_name": "ImageName",
+      "image_version": "1.0.0",
+      "replication_regions": ["regionA", "regionB", "regionC"],
+      "storage_account_type": "Standard_LRS"
+  },
+  "shared_image_gallery_timeout": "60m",
+  "shared_gallery_image_version_end_of_life_date": "2006-01-02T15:04:05.99Z",
+  "shared_gallery_image_version_replica_count": 1,
+  "shared_gallery_image_version_exclude_from_latest": true
+  ```
+  
+  In HCL2
+  ```hcl
+  shared_image_gallery_destination {
+      subscription = "00000000-0000-0000-0000-00000000000"
+      resource_group = "ResourceGroup"
+      gallery_name = "GalleryName"
+      image_name = "ImageName"
+      image_version = "1.0.0"
+      storage_account_type = "Standard_LRS"
+      target_region {
+        name = "regionA"
+      }
+      target_region {
+        name = "regionB"
+      }
+      target_region {
+        name = "regionC"
+      }
+  }
+  shared_image_gallery_timeout = "60m"
+  shared_gallery_image_version_end_of_life_date = "2006-01-02T15:04:05.99Z"
+  shared_gallery_image_version_replica_count = 1
+  shared_gallery_image_version_exclude_from_latest = true
+  ```
 
 - `image_version` (string) - Specify a specific version of an OS to boot from.
   Defaults to `latest`. There may be a difference in versions available
@@ -462,9 +502,8 @@ Providing `temp_resource_group_name` or `location` in combination with
   for more information.
   
   For VHD builds the final artifacts will be named
-  `PREFIX-dataDisk-<n>.UUID.vhd` and stored in the specified capture
-  container along side the OS disk. The additional disks are included in
-  the deployment template `PREFIX-vmTemplate.UUID`.
+  `<PREFIX><dataDisk>-<n>.vhd` and stored in the specified capture
+  container along-side the OS disk.
   
   For Managed build the final artifacts are included in the managed image.
   The additional disk will have the same storage account type as the OS
@@ -489,6 +528,9 @@ Providing `temp_resource_group_name` or `location` in combination with
 - `custom_resource_build_prefix` (string) - specify custom azure resource names during build limited to max 10 characters
   this will set the prefix for the resources. The actual resource names will be
   `custom_resource_build_prefix` + resourcetype + 5 character random alphanumeric string
+  
+  You can also set this via the environment variable `PACKER_AZURE_CUSTOM_RESOURCE_BUILD_PREFIX`.
+  If both the config field and the environment variable are present, the config field takes precedence.
 
 - `license_type` (string) - Specify a license type for the build VM to enable Azure Hybrid Benefit. If not set, Pay-As-You-Go license
   model (default) will be used. Valid values are:
@@ -924,9 +966,13 @@ In addition to the builder options, a communicator may also be defined:
   useful if, for example, packer hangs on a connection after a reboot.
   Example: `5m`. Disabled by default.
 
-- `ssh_remote_tunnels` ([]string) - 
+- `ssh_remote_tunnels` ([]string) - Remote tunnels forward a port from your local machine to the instance.
+  Format: ["REMOTE_PORT:LOCAL_HOST:LOCAL_PORT"]
+  Example: "9090:localhost:80" forwards localhost:9090 on your machine to port 80 on the instance.
 
-- `ssh_local_tunnels` ([]string) - 
+- `ssh_local_tunnels` ([]string) - Local tunnels forward a port from the instance to your local machine.
+  Format: ["LOCAL_PORT:REMOTE_HOST:REMOTE_PORT"]
+  Example: "8080:localhost:3000" allows the instance to access your local machine’s port 3000 via localhost:8080.
 
 <!-- End of code generated from the comments of the SSH struct in communicator/config.go; -->
 

@@ -19,7 +19,6 @@ import (
 
 // List of configuration parameters that are required by the ARM builder.
 var requiredConfigValues = []string{
-	"capture_name_prefix",
 	"capture_container_name",
 	"image_offer",
 	"image_publisher",
@@ -726,59 +725,6 @@ func TestUserDeviceLoginIsEnabledForLinux(t *testing.T) {
 	_, err := c.Prepare(config, getPackerConfiguration())
 	if err != nil {
 		t.Fatalf("failed to use device login for Linux: %s", err)
-	}
-}
-
-func TestConfigShouldRejectMalformedCaptureNamePrefix(t *testing.T) {
-	config := map[string]string{
-		"capture_container_name": "ignore",
-		"image_offer":            "ignore",
-		"image_publisher":        "ignore",
-		"image_sku":              "ignore",
-		"location":               "ignore",
-		"storage_account":        "ignore",
-		"resource_group_name":    "ignore",
-		"subscription_id":        "ignore",
-		"communicator":           "none",
-		// Does not matter for this test case, just pick one.
-		"os_type": constants.Target_Linux,
-	}
-
-	wellFormedCaptureNamePrefix := []string{
-		"packer",
-		"AbcdefghijklmnopqrstuvwX",
-		"hyphen-hyphen",
-		"0leading-number",
-		"v1.core.local",
-	}
-
-	for _, x := range wellFormedCaptureNamePrefix {
-		config["capture_name_prefix"] = x
-		var c Config
-		_, err := c.Prepare(config, getPackerConfiguration())
-
-		if err != nil {
-			t.Errorf("Expected test to pass, but it failed with the well-formed capture_name_prefix set to %q.", x)
-		}
-	}
-
-	malformedCaptureNamePrefix := []string{
-		"-leading-hyphen",
-		"trailing-hyphen-",
-		"trailing-period.",
-		"_leading-underscore",
-		"punc-!@#$%^&*()_+-=-punc",
-		"There-are-too-many-characters-in-the-name-and-the-limit-is-twenty-four",
-	}
-
-	for _, x := range malformedCaptureNamePrefix {
-		config["capture_name_prefix"] = x
-		var c Config
-		_, err := c.Prepare(config, getPackerConfiguration())
-
-		if err == nil {
-			t.Errorf("Expected test to fail, but it succeeded with the malformed capture_name_prefix set to %q.", x)
-		}
 	}
 }
 
@@ -1675,7 +1621,7 @@ func TestConfigShouldAcceptPlatformManagedImageBuild(t *testing.T) {
 	}
 }
 
-// If the user specified a build for a VHD and a Managed Image it should be rejected.
+// If the user specified a build for a VHD and a Managed Image it should be accepted.
 func TestConfigShouldRejectVhdAndManagedImageOutput(t *testing.T) {
 	config := map[string]interface{}{
 		"image_offer":                       "ignore",
@@ -1695,8 +1641,8 @@ func TestConfigShouldRejectVhdAndManagedImageOutput(t *testing.T) {
 
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
-	if err == nil {
-		t.Fatal("expected config to reject VHD and Managed Image build")
+	if err != nil {
+		t.Fatal("expected config to accept VHD and Managed Image build")
 	}
 }
 
@@ -2847,6 +2793,56 @@ func TestConfigShouldAcceptValidCustomResourceBuildPrefix(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected config to accept %s as custom_resource_build_prefix but got error: %s", resourcePrefix, err)
 		}
+	}
+}
+
+func TestEnvVarSetsCustomResourceBuildPrefix_Invalid(t *testing.T) {
+	// Invalid env var should cause validation to fail when field not explicitly set
+	t.Setenv("PACKER_AZURE_CUSTOM_RESOURCE_BUILD_PREFIX", "pkr_123456")
+
+	config := map[string]interface{}{
+		"location":               "ignore",
+		"subscription_id":        "ignore",
+		"image_offer":            "ignore",
+		"image_publisher":        "ignore",
+		"image_sku":              "ignore",
+		"os_type":                "linux",
+		"resource_group_name":    "ignore",
+		"storage_account":        "ignore",
+		"capture_container_name": "ignore",
+		"capture_name_prefix":    "ignore",
+	}
+
+	var c Config
+	if _, err := c.Prepare(config, getPackerConfiguration()); err == nil {
+		t.Fatal("expected config to reject invalid env var value for custom_resource_build_prefix")
+	}
+}
+
+func TestConfigCustomResourceBuildPrefixTakesPrecedenceOverEnv(t *testing.T) {
+	// When both are present, the config value should win
+	t.Setenv("PACKER_AZURE_CUSTOM_RESOURCE_BUILD_PREFIX", "pkr-env99")
+
+	config := map[string]interface{}{
+		"location":                     "ignore",
+		"subscription_id":              "ignore",
+		"image_offer":                  "ignore",
+		"image_publisher":              "ignore",
+		"image_sku":                    "ignore",
+		"os_type":                      "linux",
+		"resource_group_name":          "ignore",
+		"storage_account":              "ignore",
+		"capture_container_name":       "ignore",
+		"capture_name_prefix":          "ignore",
+		"custom_resource_build_prefix": "pkr-12345-",
+	}
+
+	var c Config
+	if _, err := c.Prepare(config, getPackerConfiguration()); err != nil {
+		t.Fatalf("expected config to succeed when both env and config set, got error: %s", err)
+	}
+	if c.CustomResourcePrefix != "pkr-12345-" {
+		t.Fatalf("expected CustomResourcePrefix to be set from config (precedence), got %q", c.CustomResourcePrefix)
 	}
 }
 

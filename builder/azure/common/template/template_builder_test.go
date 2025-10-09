@@ -142,7 +142,7 @@ func TestBuildWindows01(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = testSubject.SetAdditionalDisks([]int32{32, 64}, "datadisk", false, compute.CachingTypesReadWrite)
+	err = testSubject.SetAdditionalDisks([]int32{32, 64}, "datadisk", compute.CachingTypesReadWrite)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +167,7 @@ func TestBuildWindows02(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = testSubject.SetAdditionalDisks([]int32{32, 64}, "datadisk", true, compute.CachingTypesReadWrite)
+	err = testSubject.SetAdditionalDisks([]int32{32, 64}, "datadisk", compute.CachingTypesReadWrite)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -279,7 +279,7 @@ func TestBuildEncryptedWindows(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = testSubject.SetAdditionalDisks([]int32{32, 64}, "datadisk", false, compute.CachingTypesReadWrite)
+	err = testSubject.SetAdditionalDisks([]int32{32, 64}, "datadisk", compute.CachingTypesReadWrite)
 	if err != nil {
 		t.Fatal(err)
 	}
