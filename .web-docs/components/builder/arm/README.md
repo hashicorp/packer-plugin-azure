@@ -523,6 +523,9 @@ Providing `temp_resource_group_name` or `location` in combination with
 - `custom_resource_build_prefix` (string) - specify custom azure resource names during build limited to max 10 characters
   this will set the prefix for the resources. The actual resource names will be
   `custom_resource_build_prefix` + resourcetype + 5 character random alphanumeric string
+  
+  You can also set this via the environment variable `PACKER_AZURE_CUSTOM_RESOURCE_BUILD_PREFIX`.
+  If both the config field and the environment variable are present, the config field takes precedence.
 
 - `license_type` (string) - Specify a license type for the build VM to enable Azure Hybrid Benefit. If not set, Pay-As-You-Go license
   model (default) will be used. Valid values are:

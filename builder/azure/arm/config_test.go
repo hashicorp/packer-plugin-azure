@@ -2772,6 +2772,56 @@ func TestConfigShouldAcceptValidCustomResourceBuildPrefix(t *testing.T) {
 	}
 }
 
+func TestEnvVarSetsCustomResourceBuildPrefix_Invalid(t *testing.T) {
+	// Invalid env var should cause validation to fail when field not explicitly set
+	t.Setenv("PACKER_AZURE_CUSTOM_RESOURCE_BUILD_PREFIX", "pkr_123456")
+
+	config := map[string]interface{}{
+		"location":               "ignore",
+		"subscription_id":        "ignore",
+		"image_offer":            "ignore",
+		"image_publisher":        "ignore",
+		"image_sku":              "ignore",
+		"os_type":                "linux",
+		"resource_group_name":    "ignore",
+		"storage_account":        "ignore",
+		"capture_container_name": "ignore",
+		"capture_name_prefix":    "ignore",
+	}
+
+	var c Config
+	if _, err := c.Prepare(config, getPackerConfiguration()); err == nil {
+		t.Fatal("expected config to reject invalid env var value for custom_resource_build_prefix")
+	}
+}
+
+func TestConfigCustomResourceBuildPrefixTakesPrecedenceOverEnv(t *testing.T) {
+	// When both are present, the config value should win
+	t.Setenv("PACKER_AZURE_CUSTOM_RESOURCE_BUILD_PREFIX", "pkr-env99")
+
+	config := map[string]interface{}{
+		"location":                     "ignore",
+		"subscription_id":              "ignore",
+		"image_offer":                  "ignore",
+		"image_publisher":              "ignore",
+		"image_sku":                    "ignore",
+		"os_type":                      "linux",
+		"resource_group_name":          "ignore",
+		"storage_account":              "ignore",
+		"capture_container_name":       "ignore",
+		"capture_name_prefix":          "ignore",
+		"custom_resource_build_prefix": "pkr-12345-",
+	}
+
+	var c Config
+	if _, err := c.Prepare(config, getPackerConfiguration()); err != nil {
+		t.Fatalf("expected config to succeed when both env and config set, got error: %s", err)
+	}
+	if c.CustomResourcePrefix != "pkr-12345-" {
+		t.Fatalf("expected CustomResourcePrefix to be set from config (precedence), got %q", c.CustomResourcePrefix)
+	}
+}
+
 func TestConfigShouldNormalizeLicenseTypeCase(t *testing.T) {
 	config := map[string]string{
 		"capture_name_prefix":    "ignore",
