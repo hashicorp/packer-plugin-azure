@@ -30,8 +30,8 @@ type StepMountDevice struct {
 	MountPartition string
 	MountPath      string
 
-	mountPath string
-	isManualMount   bool
+	mountPath     string
+	isManualMount bool
 }
 
 func (s *StepMountDevice) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -87,7 +87,7 @@ func (s *StepMountDevice) Run(ctx context.Context, state multistep.StateBag) mul
 
 	ui.Say("Mounting the root device...")
 	stderr := new(bytes.Buffer)
-	if !isManualMount{
+	if !isManualMount {
 		// build mount options from mount_options config, useful for nouuid options
 		// or other specific device type settings for mount
 		opts := ""
@@ -105,7 +105,7 @@ func (s *StepMountDevice) Run(ctx context.Context, state multistep.StateBag) mul
 		log.Printf("[DEBUG] (step mount) mount command is %s", mountCommand)
 		cmd := common.ShellCommand(mountCommand)
 
-	}else {
+	} else {
 		log.Printf("[DEBUG] (step mount) mount command is %s", s.Command)
 		cmd := common.ShellCommand(fmt.Sprintf("%s %s", s.Command, mountPath))
 	}
@@ -155,8 +155,8 @@ func (s *StepMountDevice) CleanupFunc(state multistep.StateBag) error {
 			return fmt.Errorf("error unmounting root device: %s", err)
 		}
 	} else {
-		ui.Say("Skipping Unmounting the root device, it is manually unmounted via manual mount command script...")ui.Say("Skipping Unmounting the root device, it is manually unmounted via manual mount command script...")
+		ui.Say("Skipping Unmounting the root device, it is manually unmounted via manual mount command script...")
 	}
-		s.mountPath = ""
+	s.mountPath = ""
 	return nil
 }
