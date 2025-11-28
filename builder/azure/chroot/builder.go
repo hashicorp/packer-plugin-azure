@@ -616,28 +616,12 @@ func buildsteps(
 		&chroot.StepPreMountCommands{
 			Commands: config.PreMountCommands,
 		},
-	)
-
-	if config.ManualMountCommand == "" {
-		addSteps(
-			&StepMountDevice{
-				MountOptions:   config.MountOptions,
-				MountPartition: config.MountPartition,
-				MountPath:      config.MountPath,
-			},
-		)
-	} else {
-		addSteps(
-			&StepManualMountCommand{
-				Command:        config.ManualMountCommand,
-				MountPartition: config.MountPartition,
-				MountPath:      config.MountPath,
-			},
-		)
-
-	}
-
-	addSteps(
+		&StepMountDevice{
+			MountOptions:   config.MountOptions,
+			Command:        config.ManualMountCommand,
+			MountPartition: config.MountPartition,
+			MountPath:      config.MountPath,
+		},
 		&chroot.StepPostMountCommands{
 			Commands: config.PostMountCommands,
 		},
