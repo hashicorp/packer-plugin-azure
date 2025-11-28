@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -38,13 +39,7 @@ func (s *StepMountDevice) Run(ctx context.Context, state multistep.StateBag) mul
 	ui := state.Get("ui").(packersdk.Ui)
 	device := state.Get("device").(string)
 	config := state.Get("config").(*Config)
-
 	isManualMount := s.Command != ""
-
-	if !isManualMount {
-		wrappedCommand := state.Get("wrappedCommand").(common.CommandWrapper)
-	}
-
 	ictx := config.ctx
 
 	ictx.Data = &struct{ Device string }{Device: filepath.Base(device)}
@@ -87,6 +82,7 @@ func (s *StepMountDevice) Run(ctx context.Context, state multistep.StateBag) mul
 
 	ui.Say("Mounting the root device...")
 	stderr := new(bytes.Buffer)
+	var cmd *exec.Cmd
 	if !isManualMount {
 		// build mount options from mount_options config, useful for nouuid options
 		// or other specific device type settings for mount
@@ -94,6 +90,7 @@ func (s *StepMountDevice) Run(ctx context.Context, state multistep.StateBag) mul
 		if len(s.MountOptions) > 0 {
 			opts = "-o " + strings.Join(s.MountOptions, " -o ")
 		}
+		wrappedCommand := state.Get("wrappedCommand").(common.CommandWrapper)
 		mountCommand, err := wrappedCommand(
 			fmt.Sprintf("mount %s %s %s", opts, deviceMount, mountPath))
 		if err != nil {
@@ -103,11 +100,11 @@ func (s *StepMountDevice) Run(ctx context.Context, state multistep.StateBag) mul
 			return multistep.ActionHalt
 		}
 		log.Printf("[DEBUG] (step mount) mount command is %s", mountCommand)
-		cmd := common.ShellCommand(mountCommand)
+		cmd = common.ShellCommand(mountCommand)
 
 	} else {
 		log.Printf("[DEBUG] (step mount) mount command is %s", s.Command)
-		cmd := common.ShellCommand(fmt.Sprintf("%s %s", s.Command, mountPath))
+		cmd = common.ShellCommand(fmt.Sprintf("%s %s", s.Command, mountPath))
 	}
 
 	cmd.Stderr = stderr
