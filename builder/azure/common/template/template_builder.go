@@ -70,6 +70,8 @@ func (s *TemplateBuilder) BuildLinux(sshAuthorizedKey string, disablePasswordAut
 	if disablePasswordAuthentication {
 		profile.LinuxConfiguration.DisablePasswordAuthentication = common.BoolPtr(true)
 		profile.AdminPassword = nil
+	} else {
+		profile.LinuxConfiguration.DisablePasswordAuthentication = common.BoolPtr(false)
 	}
 
 	s.osType = hashiVMSDK.OperatingSystemTypesLinux
