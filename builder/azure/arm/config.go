@@ -1128,7 +1128,7 @@ func provideDefaultValues(c *Config) {
 }
 
 func assertTagProperties(c *Config, errs *packersdk.MultiError) {
-	if len(c.AzureTags) > 15 {
+	if len(c.AzureTags) > 50 {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("a max of 15 tags are supported, but %d were provided", len(c.AzureTags)))
 	}
 
