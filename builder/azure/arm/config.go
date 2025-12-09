@@ -389,7 +389,7 @@ type Config struct {
 	ManagedImageZoneResilient bool `mapstructure:"managed_image_zone_resilient" required:"false"`
 	// Name/value pair tags to apply to every resource deployed i.e. Resource
 	// Group, VM, NIC, VNET, Public IP, KeyVault, etc. The user can define up
-	// to 15 tags. Tag names cannot exceed 512 characters, and tag values
+	// to 50 tags. Tag names cannot exceed 512 characters, and tag values
 	// cannot exceed 256 characters.
 	AzureTags map[string]string `mapstructure:"azure_tags" required:"false"`
 	// Same as [`azure_tags`](#azure_tags) but defined as a singular repeatable block
@@ -1128,8 +1128,8 @@ func provideDefaultValues(c *Config) {
 }
 
 func assertTagProperties(c *Config, errs *packersdk.MultiError) {
-	if len(c.AzureTags) > 15 {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("a max of 15 tags are supported, but %d were provided", len(c.AzureTags)))
+	if len(c.AzureTags) > 50 {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("a max of 50 tags are supported, but %d were provided", len(c.AzureTags)))
 	}
 
 	for k, v := range c.AzureTags {
