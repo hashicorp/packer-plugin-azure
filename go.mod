@@ -1,8 +1,8 @@
 module github.com/hashicorp/packer-plugin-azure
 
-go 1.23.0
+go 1.24.0
 
-toolchain go1.23.7
+toolchain go1.24.2
 
 require (
 	github.com/approvals/go-approval-tests v0.0.0-20210131072903-38d0b0ec12b1
@@ -15,8 +15,8 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2
 	github.com/stretchr/testify v1.10.0
 	github.com/zclconf/go-cty v1.13.3
-	golang.org/x/crypto v0.38.0
-	golang.org/x/net v0.40.0 // indirect
+	golang.org/x/crypto v0.46.0
+	golang.org/x/net v0.47.0 // indirect
 )
 
 require (
@@ -128,10 +128,10 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
 	golang.org/x/oauth2 v0.27.0 // indirect
-	golang.org/x/sync v0.14.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
-	golang.org/x/term v0.32.0 // indirect
-	golang.org/x/text v0.25.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/term v0.38.0 // indirect
+	golang.org/x/text v0.32.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.150.0 // indirect
