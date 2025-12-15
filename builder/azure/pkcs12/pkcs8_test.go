@@ -14,7 +14,7 @@ import (
 )
 
 func TestRoundTripPkcs8Rsa(t *testing.T) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 512)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatalf("failed to generate a private key: %s", err)
 	}
@@ -92,7 +92,7 @@ func TestRoundTripPkcs8Ecdsa(t *testing.T) {
 }
 
 func TestNullParametersPkcs8Rsa(t *testing.T) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 512)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatalf("failed to generate a private key: %s", err)
 	}
