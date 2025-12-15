@@ -276,9 +276,9 @@ func TestConfigShouldAcceptTags(t *testing.T) {
 	}
 }
 
-func TestConfigShouldRejectTagsInExcessOf15AcceptTags(t *testing.T) {
+func TestConfigShouldRejectTagsInExcessOf50AcceptTags(t *testing.T) {
 	tooManyTags := map[string]string{}
-	for i := 0; i < 16; i++ {
+	for i := 0; i < 51; i++ {
 		tooManyTags[fmt.Sprintf("tag%.2d", i)] = "ignored"
 	}
 
