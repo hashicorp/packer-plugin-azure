@@ -3,6 +3,26 @@
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-azure/releases) for the latest CHANGELOG information.
 
 ---
+## 2.5.1 (December 18, 2025)
+
+## What's Changed
+### Exciting New Features
+* Support setting custom_resource_build_prefix via environment variable [GH-541](https://github.com/hashicorp/packer-plugin-azure/pull/541)
+* Add manual mount command option [GH-545](https://github.com/hashicorp/packer-plugin-azure/pull/545)
+
+### Bug Fixes
+* Fix disablePasswordAuthentication option [GH-550](https://github.com/hashicorp/packer-plugin-azure/pull/550)
+* Fix: Update number of allowed resource tags [GH-552](https://github.com/hashicorp/packer-plugin-azure/pull/552)
+* Increases RSA key size in tests to 2048 bits [GH-555](https://github.com/hashicorp/packer-plugin-azure/pull/555)
+
+### Other Changes
+* Add backport-assistant [GH-542](https://github.com/hashicorp/packer-plugin-azure/pull/542)
+* Bump github.com/hashicorp/packer-plugin-sdk from 0.6.2 to 0.6.4 [GH-546](https://github.com/hashicorp/packer-plugin-azure/pull/546)
+* [COMPLIANCE] Update Copyright Headers by @oss-core-libraries-dashboard[bot] [GH-551](https://github.com/hashicorp/packer-plugin-azure/pull/551)
+* Bump x/crypto to v0.46.0 [GH-554](https://github.com/hashicorp/packer-plugin-azure/pull/554)
+
+**Full Changelog**: https://github.com/hashicorp/packer-plugin-azure/compare/v2.5.0...v2.5.1
+
 ## 2.5.0 (September 3, 2025)
 
 ## What's Changed
