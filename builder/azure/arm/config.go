@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2013, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 //go:generate packer-sdc struct-markdown
@@ -389,7 +389,7 @@ type Config struct {
 	ManagedImageZoneResilient bool `mapstructure:"managed_image_zone_resilient" required:"false"`
 	// Name/value pair tags to apply to every resource deployed i.e. Resource
 	// Group, VM, NIC, VNET, Public IP, KeyVault, etc. The user can define up
-	// to 15 tags. Tag names cannot exceed 512 characters, and tag values
+	// to 50 tags. Tag names cannot exceed 512 characters, and tag values
 	// cannot exceed 256 characters.
 	AzureTags map[string]string `mapstructure:"azure_tags" required:"false"`
 	// Same as [`azure_tags`](#azure_tags) but defined as a singular repeatable block
@@ -614,6 +614,9 @@ type Config struct {
 	// specify custom azure resource names during build limited to max 10 characters
 	// this will set the prefix for the resources. The actual resource names will be
 	// `custom_resource_build_prefix` + resourcetype + 5 character random alphanumeric string
+	//
+	// You can also set this via the environment variable `PACKER_AZURE_CUSTOM_RESOURCE_BUILD_PREFIX`.
+	// If both the config field and the environment variable are present, the config field takes precedence.
 	CustomResourcePrefix string `mapstructure:"custom_resource_build_prefix" required:"false"`
 
 	// Specify a license type for the build VM to enable Azure Hybrid Benefit. If not set, Pay-As-You-Go license
@@ -1125,8 +1128,8 @@ func provideDefaultValues(c *Config) {
 }
 
 func assertTagProperties(c *Config, errs *packersdk.MultiError) {
-	if len(c.AzureTags) > 15 {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("a max of 15 tags are supported, but %d were provided", len(c.AzureTags)))
+	if len(c.AzureTags) > 50 {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("a max of 50 tags are supported, but %d were provided", len(c.AzureTags)))
 	}
 
 	for k, v := range c.AzureTags {
@@ -1431,6 +1434,12 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 	}
 
+	if c.CustomResourcePrefix == "" {
+		val, ok := os.LookupEnv("PACKER_AZURE_CUSTOM_RESOURCE_BUILD_PREFIX")
+		if ok {
+			c.CustomResourcePrefix = val
+		}
+	}
 	if c.CustomResourcePrefix != "" {
 		if ok, err := assertResourceNamePrefix(c.CustomResourcePrefix, "custom_resource_build_prefix"); !ok {
 			errs = packersdk.MultiErrorAppend(errs, err)

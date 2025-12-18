@@ -116,6 +116,7 @@
           "adminUsername": "[parameters('adminUsername')]",
           "computerName": "[parameters('vmName')]",
           "linuxConfiguration": {
+            "disablePasswordAuthentication": false,
             "ssh": {
               "publicKeys": [
                 {

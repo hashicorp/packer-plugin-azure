@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2013, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package template
@@ -70,6 +70,8 @@ func (s *TemplateBuilder) BuildLinux(sshAuthorizedKey string, disablePasswordAut
 	if disablePasswordAuthentication {
 		profile.LinuxConfiguration.DisablePasswordAuthentication = common.BoolPtr(true)
 		profile.AdminPassword = nil
+	} else {
+		profile.LinuxConfiguration.DisablePasswordAuthentication = common.BoolPtr(false)
 	}
 
 	s.osType = hashiVMSDK.OperatingSystemTypesLinux

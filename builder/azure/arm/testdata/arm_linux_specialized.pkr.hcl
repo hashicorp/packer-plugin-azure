@@ -1,4 +1,4 @@
-# Copyright (c) HashiCorp, Inc.
+# Copyright IBM Corp. 2013, 2025
 # SPDX-License-Identifier: MPL-2.0
 variable "ssh_private_key_location" {
   default = "${env("ARM_SSH_PRIVATE_KEY_FILE")}"

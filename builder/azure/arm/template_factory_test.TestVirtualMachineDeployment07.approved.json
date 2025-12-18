@@ -117,6 +117,7 @@
           "computerName": "[parameters('vmName')]",
           "customData": "I2Nsb3VkLWNvbmZpZwpncm93cGFydDoKICBtb2RlOiBvZmYK",
           "linuxConfiguration": {
+            "disablePasswordAuthentication": false,
             "ssh": {
               "publicKeys": [
                 {

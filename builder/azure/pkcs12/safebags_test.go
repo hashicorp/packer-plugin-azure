@@ -15,7 +15,7 @@ import (
 //  1. IterationCount, defaults to 2,048 long.
 //  2. Salt, is 8 bytes long.
 func TestDefaultAlgorithmParametersPkcs8ShroudedKeyBag(t *testing.T) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 512)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatalf("failed to generate a private key: %s", err)
 	}
@@ -55,7 +55,7 @@ func TestDefaultAlgorithmParametersPkcs8ShroudedKeyBag(t *testing.T) {
 }
 
 func TestRoundTripPkcs8ShroudedKeyBag(t *testing.T) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 512)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatalf("failed to generate a private key: %s", err)
 	}

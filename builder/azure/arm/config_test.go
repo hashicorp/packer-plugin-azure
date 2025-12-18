@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2013, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package arm
@@ -931,9 +931,9 @@ func TestConfigShouldAcceptTag(t *testing.T) {
 	}
 }
 
-func TestConfigShouldRejectTagsInExcessOf15AcceptTags(t *testing.T) {
+func TestConfigShouldRejectTagsInExcessOf50AcceptTags(t *testing.T) {
 	tooManyTags := map[string]string{}
-	for i := 0; i < 16; i++ {
+	for i := 0; i < 51; i++ {
 		tooManyTags[fmt.Sprintf("tag%.2d", i)] = "ignored"
 	}
 
@@ -2096,7 +2096,7 @@ func TestPlanInfoPromotionCode(t *testing.T) {
 // exceeds the max tag amount, the builder should reject the configuration.
 func TestPlanInfoTooManyTagsErrors(t *testing.T) {
 	exactMaxNumberOfTags := map[string]string{}
-	for i := 0; i < 15; i++ {
+	for i := 0; i < 50; i++ {
 		exactMaxNumberOfTags[fmt.Sprintf("tag%.2d", i)] = "ignored"
 	}
 
@@ -2769,6 +2769,56 @@ func TestConfigShouldAcceptValidCustomResourceBuildPrefix(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected config to accept %s as custom_resource_build_prefix but got error: %s", resourcePrefix, err)
 		}
+	}
+}
+
+func TestEnvVarSetsCustomResourceBuildPrefix_Invalid(t *testing.T) {
+	// Invalid env var should cause validation to fail when field not explicitly set
+	t.Setenv("PACKER_AZURE_CUSTOM_RESOURCE_BUILD_PREFIX", "pkr_123456")
+
+	config := map[string]interface{}{
+		"location":               "ignore",
+		"subscription_id":        "ignore",
+		"image_offer":            "ignore",
+		"image_publisher":        "ignore",
+		"image_sku":              "ignore",
+		"os_type":                "linux",
+		"resource_group_name":    "ignore",
+		"storage_account":        "ignore",
+		"capture_container_name": "ignore",
+		"capture_name_prefix":    "ignore",
+	}
+
+	var c Config
+	if _, err := c.Prepare(config, getPackerConfiguration()); err == nil {
+		t.Fatal("expected config to reject invalid env var value for custom_resource_build_prefix")
+	}
+}
+
+func TestConfigCustomResourceBuildPrefixTakesPrecedenceOverEnv(t *testing.T) {
+	// When both are present, the config value should win
+	t.Setenv("PACKER_AZURE_CUSTOM_RESOURCE_BUILD_PREFIX", "pkr-env99")
+
+	config := map[string]interface{}{
+		"location":                     "ignore",
+		"subscription_id":              "ignore",
+		"image_offer":                  "ignore",
+		"image_publisher":              "ignore",
+		"image_sku":                    "ignore",
+		"os_type":                      "linux",
+		"resource_group_name":          "ignore",
+		"storage_account":              "ignore",
+		"capture_container_name":       "ignore",
+		"capture_name_prefix":          "ignore",
+		"custom_resource_build_prefix": "pkr-12345-",
+	}
+
+	var c Config
+	if _, err := c.Prepare(config, getPackerConfiguration()); err != nil {
+		t.Fatalf("expected config to succeed when both env and config set, got error: %s", err)
+	}
+	if c.CustomResourcePrefix != "pkr-12345-" {
+		t.Fatalf("expected CustomResourcePrefix to be set from config (precedence), got %q", c.CustomResourcePrefix)
 	}
 }
 

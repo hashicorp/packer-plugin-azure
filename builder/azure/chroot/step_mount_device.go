@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2013, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package chroot
@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -25,19 +26,20 @@ import (
 var _ multistep.Step = &StepMountDevice{}
 
 type StepMountDevice struct {
+	Command        string
 	MountOptions   []string
 	MountPartition string
 	MountPath      string
 
-	mountPath string
+	mountPath     string
+	isManualMount bool
 }
 
 func (s *StepMountDevice) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	ui := state.Get("ui").(packersdk.Ui)
 	device := state.Get("device").(string)
 	config := state.Get("config").(*Config)
-	wrappedCommand := state.Get("wrappedCommand").(common.CommandWrapper)
-
+	isManualMount := s.Command != ""
 	ictx := config.ctx
 
 	ictx.Data = &struct{ Device string }{Device: filepath.Base(device)}
@@ -59,12 +61,13 @@ func (s *StepMountDevice) Run(ctx context.Context, state multistep.StateBag) mul
 	}
 
 	log.Printf("Mount path: %s", mountPath)
-
-	if err := os.MkdirAll(mountPath, 0755); err != nil {
-		err := fmt.Errorf("error creating mount directory: %s", err)
-		state.Put("error", err)
-		ui.Error(err.Error())
-		return multistep.ActionHalt
+	if !isManualMount {
+		if err := os.MkdirAll(mountPath, 0755); err != nil {
+			err := fmt.Errorf("error creating mount directory: %s", err)
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		}
 	}
 
 	var deviceMount string
@@ -79,23 +82,31 @@ func (s *StepMountDevice) Run(ctx context.Context, state multistep.StateBag) mul
 
 	ui.Say("Mounting the root device...")
 	stderr := new(bytes.Buffer)
+	var cmd *exec.Cmd
+	if !isManualMount {
+		// build mount options from mount_options config, useful for nouuid options
+		// or other specific device type settings for mount
+		opts := ""
+		if len(s.MountOptions) > 0 {
+			opts = "-o " + strings.Join(s.MountOptions, " -o ")
+		}
+		wrappedCommand := state.Get("wrappedCommand").(common.CommandWrapper)
+		mountCommand, err := wrappedCommand(
+			fmt.Sprintf("mount %s %s %s", opts, deviceMount, mountPath))
+		if err != nil {
+			err := fmt.Errorf("error creating mount command: %s", err)
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		}
+		log.Printf("[DEBUG] (step mount) mount command is %s", mountCommand)
+		cmd = common.ShellCommand(mountCommand)
 
-	// build mount options from mount_options config, useful for nouuid options
-	// or other specific device type settings for mount
-	opts := ""
-	if len(s.MountOptions) > 0 {
-		opts = "-o " + strings.Join(s.MountOptions, " -o ")
+	} else {
+		log.Printf("[DEBUG] (step mount) mount command is %s", s.Command)
+		cmd = common.ShellCommand(fmt.Sprintf("%s %s", s.Command, mountPath))
 	}
-	mountCommand, err := wrappedCommand(
-		fmt.Sprintf("mount %s %s %s", opts, deviceMount, mountPath))
-	if err != nil {
-		err := fmt.Errorf("error creating mount command: %s", err)
-		state.Put("error", err)
-		ui.Error(err.Error())
-		return multistep.ActionHalt
-	}
-	log.Printf("[DEBUG] (step mount) mount command is %s", mountCommand)
-	cmd := common.ShellCommand(mountCommand)
+
 	cmd.Stderr = stderr
 	if err := cmd.Run(); err != nil {
 		err := fmt.Errorf(
@@ -107,6 +118,7 @@ func (s *StepMountDevice) Run(ctx context.Context, state multistep.StateBag) mul
 
 	// Set the mount path so we remember to unmount it later
 	s.mountPath = mountPath
+	s.isManualMount = isManualMount
 	state.Put("mount_path", s.mountPath)
 	state.Put("mount_device_cleanup", s)
 
@@ -126,19 +138,22 @@ func (s *StepMountDevice) CleanupFunc(state multistep.StateBag) error {
 	}
 
 	ui := state.Get("ui").(packersdk.Ui)
-	wrappedCommand := state.Get("wrappedCommand").(common.CommandWrapper)
+	if !s.isManualMount {
+		wrappedCommand := state.Get("wrappedCommand").(common.CommandWrapper)
 
-	ui.Say("Unmounting the root device...")
-	unmountCommand, err := wrappedCommand(fmt.Sprintf("umount -R %s", s.mountPath))
-	if err != nil {
-		return fmt.Errorf("error creating unmount command: %s", err)
+		ui.Say("Unmounting the root device...")
+		unmountCommand, err := wrappedCommand(fmt.Sprintf("umount -R %s", s.mountPath))
+		if err != nil {
+			return fmt.Errorf("error creating unmount command: %s", err)
+		}
+
+		cmd := common.ShellCommand(unmountCommand)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("error unmounting root device: %s", err)
+		}
+	} else {
+		ui.Say("Skipping Unmounting the root device, it is manually unmounted via manual mount command script...")
 	}
-
-	cmd := common.ShellCommand(unmountCommand)
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("error unmounting root device: %s", err)
-	}
-
 	s.mountPath = ""
 	return nil
 }

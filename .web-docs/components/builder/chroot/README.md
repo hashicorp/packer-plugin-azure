@@ -122,6 +122,10 @@ information.
   a command with sudo or so on. This is a configuration template where the `.Command` variable
   is replaced with the command to be run. Defaults to `{{.Command}}`.
 
+- `manual_mount_command` (string) - Manual Mount Command that is executed to manually mount the
+  root device and before the post mount commands. The device and
+  mount path are provided by `{{.Device}}` and `{{.MountPath}}`.
+
 - `pre_mount_commands` ([]string) - A series of commands to execute after attaching the root volume and before mounting the chroot.
   This is not required unless using `from_scratch`. If so, this should include any partitioning
   and filesystem creation commands. The path to the device is provided by `{{.Device}}`.

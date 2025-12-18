@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2013, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package dtl
@@ -14,7 +14,7 @@ func TestFart(t *testing.T) {
 }
 
 func TestAuthorizedKeyShouldParse(t *testing.T) {
-	testSubject, err := NewOpenSshKeyPairWithSize(512)
+	testSubject, err := NewOpenSshKeyPairWithSize(2048)
 	if err != nil {
 		t.Fatalf("Failed to create a new OpenSSH key pair, err=%s.", err)
 	}
@@ -28,7 +28,7 @@ func TestAuthorizedKeyShouldParse(t *testing.T) {
 }
 
 func TestPrivateKeyShouldParse(t *testing.T) {
-	testSubject, err := NewOpenSshKeyPairWithSize(512)
+	testSubject, err := NewOpenSshKeyPairWithSize(2048)
 	if err != nil {
 		t.Fatalf("Failed to create a new OpenSSH key pair, err=%s.", err)
 	}

@@ -35,6 +35,7 @@ type FlatConfig struct {
 	FromScratch                       *bool                              `mapstructure:"from_scratch" cty:"from_scratch" hcl:"from_scratch"`
 	Source                            *string                            `mapstructure:"source" required:"true" cty:"source" hcl:"source"`
 	CommandWrapper                    *string                            `mapstructure:"command_wrapper" cty:"command_wrapper" hcl:"command_wrapper"`
+	ManualMountCommand                *string                            `mapstructure:"manual_mount_command" required:"false" cty:"manual_mount_command" hcl:"manual_mount_command"`
 	PreMountCommands                  []string                           `mapstructure:"pre_mount_commands" cty:"pre_mount_commands" hcl:"pre_mount_commands"`
 	MountOptions                      []string                           `mapstructure:"mount_options" cty:"mount_options" hcl:"mount_options"`
 	MountPartition                    *string                            `mapstructure:"mount_partition" cty:"mount_partition" hcl:"mount_partition"`
@@ -94,6 +95,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"from_scratch":                    &hcldec.AttrSpec{Name: "from_scratch", Type: cty.Bool, Required: false},
 		"source":                          &hcldec.AttrSpec{Name: "source", Type: cty.String, Required: false},
 		"command_wrapper":                 &hcldec.AttrSpec{Name: "command_wrapper", Type: cty.String, Required: false},
+		"manual_mount_command":            &hcldec.AttrSpec{Name: "manual_mount_command", Type: cty.String, Required: false},
 		"pre_mount_commands":              &hcldec.AttrSpec{Name: "pre_mount_commands", Type: cty.List(cty.String), Required: false},
 		"mount_options":                   &hcldec.AttrSpec{Name: "mount_options", Type: cty.List(cty.String), Required: false},
 		"mount_partition":                 &hcldec.AttrSpec{Name: "mount_partition", Type: cty.String, Required: false},
