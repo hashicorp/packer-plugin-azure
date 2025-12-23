@@ -70,6 +70,48 @@ func encodePkcs8ShroudedKeyBag(privateKey interface{}, password []byte) (bytes [
 	return bytes, err
 }
 
+// encodePkcs8ShroudedKeyBagModern encodes a private key using modern AES-256-CBC encryption.
+// This provides much stronger security than the legacy Triple DES implementation.
+func encodePkcs8ShroudedKeyBagModern(privateKey interface{}, password []byte) (bytes []byte, err error) {
+	privateKeyBytes, err := marshalPKCS8PrivateKey(privateKey)
+
+	if err != nil {
+		return nil, errors.New("pkcs12: error encoding PKCS#8 private key: " + err.Error())
+	}
+
+	salt, err := makeSalt(pbeSaltSizeBytes)
+	if err != nil {
+		return nil, errors.New("pkcs12: error creating PKCS#8 salt: " + err.Error())
+	}
+
+	pkData, err := pbEncryptModern(privateKeyBytes, salt, password, pbeIterationCountModern)
+	if err != nil {
+		return nil, errors.New("pkcs12: error encoding PKCS#8 shrouded key bag when encrypting cert bag: " + err.Error())
+	}
+
+	// Use high iteration count in params so decoder can detect modern encryption
+	params, err := getAlgorithmParams(salt, pbeIterationCountModern)
+	if err != nil {
+		return nil, errors.New("pkcs12: error encoding PKCS#8 shrouded key bag algorithm's parameters: " + err.Error())
+	}
+
+	pkinfo := encryptedPrivateKeyInfo{
+		AlgorithmIdentifier: pkix.AlgorithmIdentifier{
+			// Keep same OID for compatibility, but use high iteration count to signal AES-256
+			Algorithm:  oidPBEWithSHAAnd3KeyTripleDESCBC,
+			Parameters: params,
+		},
+		EncryptedData: pkData,
+	}
+
+	bytes, err = asn1.Marshal(pkinfo)
+	if err != nil {
+		return nil, errors.New("pkcs12: error encoding PKCS#8 shrouded key bag: " + err.Error())
+	}
+
+	return bytes, err
+}
+
 func decodePkcs8ShroudedKeyBag(asn1Data, password []byte) (privateKey interface{}, err error) {
 	pkinfo := new(encryptedPrivateKeyInfo)
 	if err = unmarshal(asn1Data, pkinfo); err != nil {
