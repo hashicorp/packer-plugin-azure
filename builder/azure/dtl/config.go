@@ -377,7 +377,7 @@ func (c *Config) createCertificate() (string, string, error) {
 		return "", "", err
 	}
 
-	pfxBytes, err := pkcs12.Encode(derBytes, privateKey, c.tmpCertificatePassword)
+	pfxBytes, err := pkcs12.EncodeModern(derBytes, privateKey, c.tmpCertificatePassword)
 	if err != nil {
 		err = fmt.Errorf("Failed to encode certificate as PFX: %s", err)
 		return "", "", err
