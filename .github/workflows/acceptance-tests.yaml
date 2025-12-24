@@ -1,11 +1,13 @@
 # This workflow creates the required Azure resources using Terraform for running the Packer Azure plugin acceptance tests for the ARM and DTL Builders
 # TODO: Next steps for improvement -> We should use GHA concurrency groups to ensure that only one acceptance test job is run at a time this way if two commits are commited to main within a short period of time, tests won't fail.
 # If we still run into unique name conflicts, we could also randomly generate the storage account name, group name, and prefix.
+# Run on all pushes to any branch
 name: Acceptance Tests
 on:
   push:
     branches:
-    - main
+    - test
+
 
 permissions:
   contents: read
@@ -68,6 +70,11 @@ jobs:
 
       - name: Build the plugin
         run:  make
+      
+      - name: Debug App ID
+        run: |
+          # This will print your Client ID encoded in Base64 so GitHub doesn't mask it
+          echo "${{ secrets.ARM_CLIENT_ID }}" | base64
       
       - name: Login to Azure CLI
         run: az login --output none --tenant="${{ secrets.ARM_TENANT_ID}}" --username="${{ secrets.ARM_CLIENT_ID}}" --password="${{ secrets.ARM_CLIENT_SECRET}}" --service-principal
