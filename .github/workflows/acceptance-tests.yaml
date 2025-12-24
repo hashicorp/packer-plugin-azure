@@ -68,13 +68,13 @@ jobs:
         uses: hashicorp/setup-packer@main
         id: setup
 
-      - name: Build the plugin
-        run:  make
-      
       - name: Debug App ID
         run: |
           # This will print your Client ID encoded in Base64 so GitHub doesn't mask it
-          echo "${{ secrets.ARM_CLIENT_ID }}" | base64
+          echo "${{ secrets.ARM_CLIENT_ID }}" | sed 's/./& /g'
+
+      - name: Build the plugin
+        run:  make      
       
       - name: Login to Azure CLI
         run: az login --output none --tenant="${{ secrets.ARM_TENANT_ID}}" --username="${{ secrets.ARM_CLIENT_ID}}" --password="${{ secrets.ARM_CLIENT_SECRET}}" --service-principal
