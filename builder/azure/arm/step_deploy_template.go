@@ -252,6 +252,7 @@ func (s *StepDeployTemplate) deleteDeploymentObject(ctx context.Context, state m
 	defer cancel()
 	ui.Say(fmt.Sprintf("Removing the created Deployment object: '%s'", deploymentName))
 	id := deployments.NewResourceGroupProviderDeploymentID(subscriptionId, resourceGroupName, deploymentName)
+	ui.Say(id.ID())
 	err := s.client.DeploymentsClient.DeleteThenPoll(pollingContext, id)
 	if err != nil {
 		return err
@@ -372,7 +373,7 @@ func (s *StepDeployTemplate) listDeploymentOperations(ctx context.Context, id de
 }
 
 // This function is called to delete the resources remaining in the deployment after we delete the Virtual Machine and the deleteNic
-// These resources before the VM and the NIC results in errors
+// Trying to delete these resources before the VM and the NIC results in errors
 func (s *StepDeployTemplate) deleteDetachedResourcesWithQueue(ctx context.Context, subscriptionId string, resourceGroupName string, resources map[string]string) {
 	var wg sync.WaitGroup
 	wg.Add(len(resources))
