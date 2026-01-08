@@ -12,9 +12,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-07-03/galleryimages"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-07-03/galleryimageversions"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2024-03-01/images"
 	dtl "github.com/hashicorp/go-azure-sdk/resource-manager/devtestlab/2018-09-15"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-07-01/vaults"
 	networks "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01"
