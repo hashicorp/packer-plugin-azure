@@ -194,7 +194,7 @@ func (da diskAttacher) setDisks(ctx context.Context, disks []hashiVMSDK.DataDisk
 	defer cancel()
 	vmID := hashiVMSDK.NewVirtualMachineID(da.azcli.SubscriptionID(), da.vm.ResourceGroupName, da.vm.Name)
 	// update the VM resource, attach disk
-	_, err = da.azcli.VirtualMachinesClient().CreateOrUpdate(pollingContext, vmID, vmResource)
+	_, err = da.azcli.VirtualMachinesClient().CreateOrUpdate(pollingContext, vmID, vmResource, hashiVMSDK.DefaultCreateOrUpdateOperationOptions())
 
 	return err
 }
