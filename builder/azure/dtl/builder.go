@@ -194,7 +194,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		ui.Message(fmt.Sprintf("No lab network information provided. Using %s Virtual network and %s subnet for Virtual Machine creation", b.config.LabVirtualNetworkName, b.config.LabSubnetName))
 	}
 
-	if b.config.OSType == constants.Target_Linux {
+	switch b.config.OSType {
+	case constants.Target_Linux:
 		steps = []multistep.Step{
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			&communicator.StepConnectSSH{
@@ -208,7 +209,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			},
 			NewStepPowerOffCompute(azureClient, ui, &b.config),
 		}
-	} else if b.config.OSType == constants.Target_Windows {
+	case constants.Target_Windows:
 		steps = []multistep.Step{
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			&StepSaveWinRMPassword{
@@ -230,7 +231,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			&commonsteps.StepProvision{},
 			NewStepPowerOffCompute(azureClient, ui, &b.config),
 		}
-	} else {
+	default:
 		return nil, fmt.Errorf("Builder does not support the os_type '%s'", b.config.OSType)
 	}
 
