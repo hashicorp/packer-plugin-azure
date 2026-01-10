@@ -1776,7 +1776,6 @@ func (c *Config) validateLocationZoneResiliency(say func(s string)) {
 	zones["switzerlandnorth"] = struct{}{}
 	zones["uksouth"] = struct{}{}
 	zones["usgovvirginia"] = struct{}{}
-	zones["westeurope"] = struct{}{}
 	zones["westus2"] = struct{}{}
 	zones["westus3"] = struct{}{}
 
