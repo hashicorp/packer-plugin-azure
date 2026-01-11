@@ -258,7 +258,6 @@ SharedImageGalleryReplicatedRegions: fake-region-1, fake-region-2
 		"sig_replicated_regions",
 	}
 	for _, key := range expectedSIGLabels {
-		key := key
 		v, ok := image.Labels[key]
 		if !ok {
 			t.Errorf("expected labels to have %q but no entry was found", key)
@@ -352,7 +351,6 @@ SharedImageGalleryReplicatedRegions: fake-region-1, fake-region-2
 		"sig_replicated_regions",
 	}
 	for _, key := range expectedSIGLabels {
-		key := key
 		v, ok := image.Labels[key]
 		if !ok {
 			t.Errorf("expected labels to have %q but no entry was found", key)
