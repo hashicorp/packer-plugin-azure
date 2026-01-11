@@ -104,7 +104,7 @@ func TestRoundTripPkc12EncryptDecrypt(t *testing.T) {
 	password := salt
 
 	// Sweep the possible padding lengths
-	for i := 0; i < 9; i++ {
+	for i := range 9 {
 		bs := make([]byte, i)
 		_, err := io.ReadFull(rand.Reader, bs)
 		if err != nil {

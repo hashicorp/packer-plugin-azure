@@ -1197,9 +1197,8 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	toInt := func(b bool) int {
 		if b {
 			return 1
-		} else {
-			return 0
 		}
+		return 0
 	}
 
 	isImageUrl := c.ImageUrl != ""
@@ -1724,7 +1723,7 @@ func isValidAzureName(re *regexp.Regexp, rgn string) bool {
 // 4) Contains a special character
 // 5) Control characters are not allowed (a very specific case - not included in this validation)
 func isValidPassword(password string) bool {
-	if !(len(password) >= 8 && len(password) <= 123) {
+	if len(password) < 8 || len(password) > 123 {
 		return false
 	}
 
