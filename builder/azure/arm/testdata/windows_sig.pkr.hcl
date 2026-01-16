@@ -19,7 +19,6 @@ source "azure-arm" "windows-sig" {
   winrm_username     = "packer"
   use_azure_cli_auth = true
   polling_duration_timeout = "60m"
-  azure_deployment_timeout = "45m"
   public_ip_sku      = "Standard"
   shared_image_gallery_destination {
     image_name     = "${var.resource_prefix}-windows-sig"
