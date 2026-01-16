@@ -19,6 +19,7 @@ source "azure-arm" "windows-sig" {
   winrm_username     = "packer"
   use_azure_cli_auth = true
   polling_duration_timeout = "60m"
+  azure_deployment_timeout = "45m"
   public_ip_sku      = "Standard"
   shared_image_gallery_destination {
     image_name     = "${var.resource_prefix}-windows-sig"
@@ -34,8 +35,8 @@ source "azure-arm" "windows-sig" {
   image_offer     = "WindowsServer"
   image_sku       = "2022-datacenter"
 
-  location = "South Central US"
-  vm_size  = "Standard_DS2_v2"
+  location = "West US 2"
+  vm_size  = "Standard_D2s_v3"
 }
 
 build {
