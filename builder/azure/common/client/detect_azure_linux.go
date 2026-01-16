@@ -5,7 +5,7 @@ package client
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 )
 
 var (
@@ -19,7 +19,7 @@ func IsAzure() bool {
 }
 
 func isAzureAssetTag(filename string) bool {
-	if d, err := ioutil.ReadFile(filename); err == nil {
+	if d, err := os.ReadFile(filename); err == nil {
 		return bytes.Equal(d, azureAssetTag)
 	}
 	return false

@@ -4,7 +4,6 @@
 package client
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -12,7 +11,7 @@ import (
 )
 
 func TestIsAzure(t *testing.T) {
-	f, err := ioutil.TempFile("", "TestIsAzure*")
+	f, err := os.CreateTemp("", "TestIsAzure*")
 	if err != nil {
 		t.Fatal(err)
 	}

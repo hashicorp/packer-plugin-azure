@@ -136,7 +136,10 @@ func TestEncodeModernRsa(t *testing.T) {
 
 func TestPEM(t *testing.T) {
 	for commonName, base64P12 := range testdata {
-		p12, _ := base64.StdEncoding.DecodeString(base64P12)
+		p12, err := base64.StdEncoding.DecodeString(base64P12)
+		if err != nil {
+			t.Fatalf("failed to decode base64 p12: %v", err)
+		}
 
 		blocks, err := ToPEM(p12, "")
 		if err != nil {
@@ -152,13 +155,37 @@ func TestPEM(t *testing.T) {
 		if err != nil {
 			t.Errorf("err while converting to key pair: %v", err)
 		}
-		config := tls.Config{
-			Certificates: []tls.Certificate{cert},
-		}
-		config.BuildNameToCertificate()
 
-		if _, exists := config.NameToCertificate[commonName]; !exists {
-			t.Errorf("did not find our cert in PEM?: %v", config.NameToCertificate)
+		// Parse the leaf certificate if not already populated
+		if cert.Leaf == nil {
+			cert.Leaf, err = x509.ParseCertificate(cert.Certificate[0])
+			if err != nil {
+				t.Fatalf("failed to parse leaf certificate: %v", err)
+			}
+		}
+		leaf := cert.Leaf
+
+		// Check SANs first (modern TLS behavior)
+		found := false
+		for _, dns := range leaf.DNSNames {
+			if dns == commonName {
+				found = true
+				break
+			}
+		}
+
+		// Fallback to CommonName for legacy certs
+		if !found && leaf.Subject.CommonName == commonName {
+			found = true
+		}
+
+		if !found {
+			t.Errorf(
+				"expected certificate name %q not found; CN=%q, SANs=%v",
+				commonName,
+				leaf.Subject.CommonName,
+				leaf.DNSNames,
+			)
 		}
 	}
 }
@@ -184,6 +211,7 @@ func ExampleToPEM() {
 
 	config := &tls.Config{
 		Certificates: []tls.Certificate{cert},
+		MinVersion:   tls.VersionTLS12,
 	}
 
 	_ = config
