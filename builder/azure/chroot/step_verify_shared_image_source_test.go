@@ -130,8 +130,8 @@ func TestStepVerifySharedImageSource_Run(t *testing.T) {
 					if !tt.shouldCallGetVersion {
 						t.Fatalf("Expected test to not call getVersion but it did")
 					}
-					switch {
-					case id.VersionName == "1.2.3":
+					switch id.VersionName {
+					case "1.2.3":
 						return &galleryimageversions.GalleryImageVersion{
 							Id: common.StringPtr("image-version-id"),
 							Properties: &galleryimageversions.GalleryImageVersionProperties{
