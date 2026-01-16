@@ -34,8 +34,8 @@ source "azure-arm" "windows-sig" {
   image_offer     = "WindowsServer"
   image_sku       = "2022-datacenter"
 
-  location = "West US 2"
-  vm_size  = "Standard_D2s_v3"
+  location = "East US"
+  vm_size  = "Standard_B2s"
 }
 
 build {
