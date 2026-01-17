@@ -61,7 +61,7 @@ func NewTempName(p string) *TempName {
 //  4. Contains a special character
 func generatePassword() string {
 	var s string
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		s := random.AlphaNum(32)
 		if !strings.ContainsAny(s, random.PossibleNumbers) {
 			continue

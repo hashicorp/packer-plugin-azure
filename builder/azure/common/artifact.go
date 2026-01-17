@@ -100,9 +100,8 @@ func (a *Artifact) Destroy() error {
 	if len(errs) > 0 {
 		if len(errs) == 1 {
 			return errs[0]
-		} else {
-			return &packersdk.MultiError{Errors: errs}
 		}
+		return &packersdk.MultiError{Errors: errs}
 	}
 
 	return nil

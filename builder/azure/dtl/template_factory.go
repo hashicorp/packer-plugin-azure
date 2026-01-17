@@ -15,10 +15,9 @@ func newBool(val bool) *bool {
 	b := true
 	if val == b {
 		return &b
-	} else {
-		b = false
-		return &b
 	}
+	b = false
+	return &b
 }
 
 func getCustomImageId(config *Config) *string {

@@ -10,18 +10,18 @@ import (
 
 func BenchmarkEncrypt(b *testing.B) {
 	r, _ := New([]byte{0, 0, 0, 0, 0, 0, 0, 0}, 64)
-	b.ResetTimer()
+
 	var src [8]byte
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		r.Encrypt(src[:], src[:])
 	}
 }
 
 func BenchmarkDecrypt(b *testing.B) {
 	r, _ := New([]byte{0, 0, 0, 0, 0, 0, 0, 0}, 64)
-	b.ResetTimer()
+
 	var src [8]byte
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		r.Decrypt(src[:], src[:])
 	}
 }

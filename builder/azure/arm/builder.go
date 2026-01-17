@@ -782,7 +782,7 @@ func (b *Builder) getVHDArtifact(vhdArtifact *VHDArtifact) {
 	additionalDiskCount := len(b.config.AdditionalDiskSize)
 	if additionalDiskCount > 0 {
 		dataDisks := make([]AdditionalDiskArtifact, additionalDiskCount)
-		for i := 0; i < additionalDiskCount; i++ {
+		for i := range additionalDiskCount {
 			dataDisks[i].AdditionalDiskUri = fmt.Sprintf("%s%s/%s%s-%d.vhd",
 				b.config.storageAccountBlobEndpoint, b.config.CaptureContainerName, b.config.CaptureNamePrefix, b.config.tmpDataDiskName, i+1)
 		}

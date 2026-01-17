@@ -77,7 +77,7 @@ func pbkdf(hash func([]byte) []byte, u, v int, salt, password []byte, r int, ID 
 	//    1.  Construct a string, D (the "diversifier"), by concatenating v/8
 	//        copies of ID.
 	var D []byte
-	for i := 0; i < v; i++ {
+	for range v {
 		D = append(D, ID)
 	}
 
@@ -104,7 +104,7 @@ func pbkdf(hash func([]byte) []byte, u, v int, salt, password []byte, r int, ID 
 	//    6.  For i=1, 2, ..., c, do the following:
 	A := make([]byte, c*20)
 	var IjBuf []byte
-	for i := 0; i < c; i++ {
+	for i := range c {
 		//        A.  Set A2=H^r(D||I). (i.e., the r-th hash of D||1,
 		//            H(H(H(... H(D||I))))
 		Ai := hash(append(D, I...))
@@ -145,7 +145,7 @@ func pbkdf(hash func([]byte) []byte, u, v int, salt, password []byte, r int, ID 
 							IjBuf = make([]byte, v)
 						}
 						bytesShort := v - len(Ijb)
-						for i := 0; i < bytesShort; i++ {
+						for i := range bytesShort {
 							IjBuf[i] = 0
 						}
 						copy(IjBuf[bytesShort:], Ijb)

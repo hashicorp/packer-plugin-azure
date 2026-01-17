@@ -192,7 +192,7 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 				var dataDiskName = s.config.tmpDataDiskName
 				s.say(fmt.Sprintf(" -> dataDiskName              : '%s'", dataDiskName))
 
-				for i := 0; i < additionalDiskCount; i++ {
+				for i := range additionalDiskCount {
 					subDataDiskName := fmt.Sprintf("%s-%d", dataDiskName, i+1)
 
 					err = s.captureVHD(ctx, subscriptionId, resourceGroupName, subDataDiskName)

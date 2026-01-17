@@ -933,7 +933,7 @@ func TestConfigShouldAcceptTag(t *testing.T) {
 
 func TestConfigShouldRejectTagsInExcessOf50AcceptTags(t *testing.T) {
 	tooManyTags := map[string]string{}
-	for i := 0; i < 51; i++ {
+	for i := range 51 {
 		tooManyTags[fmt.Sprintf("tag%.2d", i)] = "ignored"
 	}
 
@@ -2096,7 +2096,7 @@ func TestPlanInfoPromotionCode(t *testing.T) {
 // exceeds the max tag amount, the builder should reject the configuration.
 func TestPlanInfoTooManyTagsErrors(t *testing.T) {
 	exactMaxNumberOfTags := map[string]string{}
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		exactMaxNumberOfTags[fmt.Sprintf("tag%.2d", i)] = "ignored"
 	}
 

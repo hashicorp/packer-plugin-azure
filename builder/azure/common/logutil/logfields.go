@@ -3,17 +3,20 @@
 
 package logutil
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type Fields map[string]interface{}
 
 func (f Fields) String() string {
-	var s string
+	var s strings.Builder
 	for k, v := range f {
 		if sv, ok := v.(string); ok {
 			v = fmt.Sprintf("%q", sv)
 		}
-		s += fmt.Sprintf(" %s=%v", k, v)
+		s.WriteString(fmt.Sprintf(" %s=%v", k, v))
 	}
-	return s
+	return s.String()
 }
