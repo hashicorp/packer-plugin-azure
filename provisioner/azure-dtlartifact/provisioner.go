@@ -135,7 +135,7 @@ func (p *Provisioner) Provision(ctx context.Context, ui packersdk.Ui, comm packe
 		TenantID:       p.config.ClientConfig.TenantID,
 		SubscriptionID: p.config.ClientConfig.SubscriptionID,
 	}
-	ui.Message("Creating Azure DevTestLab (DTL) client ...")
+	ui.Say("Creating Azure DevTestLab (DTL) client ...")
 	azureClient, err := dtlBuilder.NewAzureClient(
 		ctx,
 		p.config.ClientConfig.SubscriptionID,
