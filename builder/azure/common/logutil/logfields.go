@@ -3,9 +3,10 @@
 
 package logutil
 
-import "strings"
-
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type Fields map[string]interface{}
 
