@@ -23,6 +23,7 @@ type resourceResolver struct {
 	client                          *AzureClient
 	findVirtualNetworkResourceGroup func(*AzureClient, string, string) (string, error)
 	findVirtualNetworkSubnet        func(*AzureClient, string, string, string) (string, error)
+	findNetworkSecurityGroupName    func(*AzureClient, string, string, string, string) (string, string, error)
 }
 
 func newResourceResolver(client *AzureClient) *resourceResolver {
@@ -30,6 +31,7 @@ func newResourceResolver(client *AzureClient) *resourceResolver {
 		client:                          client,
 		findVirtualNetworkResourceGroup: findVirtualNetworkResourceGroup,
 		findVirtualNetworkSubnet:        findVirtualNetworkSubnet,
+		findNetworkSecurityGroupName:    findNetworkSecurityGroupName,
 	}
 }
 
@@ -58,6 +60,14 @@ func (s *resourceResolver) Resolve(c *Config) error {
 		c.customManagedImageID = *image.Id
 	}
 
+	if s.shouldResolveNetworkSecurityGroupName(c) {
+		networkSecurityGroupName, networkSecurityGroupId, err := s.findNetworkSecurityGroupName(s.client, c.ClientConfig.SubscriptionID, c.VirtualNetworkResourceGroupName, c.VirtualNetworkName, c.NetworkSecurityGroupName)
+		if err != nil {
+			return err
+		}
+		c.NetworkSecurityGroupName = networkSecurityGroupName
+		c.tmpNsgId = networkSecurityGroupId
+	}
 	return nil
 }
 
@@ -67,6 +77,10 @@ func (s *resourceResolver) shouldResolveResourceGroup(c *Config) bool {
 
 func (s *resourceResolver) shouldResolveManagedImageName(c *Config) bool {
 	return c.CustomManagedImageName != ""
+}
+
+func (s *resourceResolver) shouldResolveNetworkSecurityGroupName(c *Config) bool {
+	return c.VirtualNetworkName != "" && c.NetworkSecurityGroupName != ""
 }
 
 func getResourceGroupNameFromId(id string) string {
@@ -141,4 +155,27 @@ func findVirtualNetworkSubnet(client *AzureClient, subscriptionId string, resour
 
 	subnet := subnetList[0]
 	return *subnet.Name, nil
+}
+
+func findNetworkSecurityGroupName(client *AzureClient, subscriptionId string, resourceGroupName string, virtualNetworkName string, name string) (string, string, error) {
+
+	networkSecurityGroupListContext, cancel := context.WithTimeout(context.TODO(), client.PollingDuration)
+	defer cancel()
+	networkSecurityGroups, err := client.NetworkMetaClient.NetworkSecurityGroups.List(networkSecurityGroupListContext, commonids.NewResourceGroupID(subscriptionId, resourceGroupName))
+	if err != nil {
+		return "", "", err
+	}
+
+	networkSecurityGroupList := *networkSecurityGroups.Model
+
+	if len(networkSecurityGroupList) == 0 {
+		return "", "", fmt.Errorf("No network security groups in the resource group %q associated with the virtual network called %q", resourceGroupName, virtualNetworkName)
+	}
+
+	for _, networkSecurityGroup := range networkSecurityGroupList {
+		if networkSecurityGroup.Name != nil && *networkSecurityGroup.Name == name {
+			return *networkSecurityGroup.Name, *networkSecurityGroup.Id, nil
+		}
+	}
+	return "", "", fmt.Errorf("Cannot find a network security group %q in the resource group %q associated with the virtual network called %q", name, resourceGroupName, virtualNetworkName)
 }
