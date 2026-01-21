@@ -32,10 +32,10 @@ source "azure-arm" "windows-sig" {
   os_type         = "Windows"
   image_publisher = "MicrosoftWindowsServer"
   image_offer     = "WindowsServer"
-  image_sku       = "2022-datacenter"
+  image_sku       = "2022-datacenter-smalldisk-g2"
 
-  location = "East US"
-  vm_size  = "Standard_B2s"
+  location = "UK West"
+  vm_size  = "Standard_D2s_v3"
 }
 
 build {
