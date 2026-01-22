@@ -34,12 +34,8 @@ source "azure-arm" "windows-sig" {
   image_offer     = "WindowsServer"
   image_sku       = "2022-datacenter-smalldisk-g2"
 
-  location = "South Central US"
-  vm_size  = "Standard_D2s_v5"
-
-  secure_boot_enabled = true
-  vtpm_enabled        = true
-  security_type       = "TrustedLaunch"
+  location = "East US"
+  vm_size  = "Standard_DS2_v2"
 }
 
 build {
