@@ -32,7 +32,7 @@ resource "azurerm_shared_image" "windows-sig" {
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   os_type             = "Windows"
-  hyper_v_generation  = "V1"
+  hyper_v_generation  = "V2"
   architecture        = "x64"
   identifier {
     publisher = "MicrosoftWindowsServer"
