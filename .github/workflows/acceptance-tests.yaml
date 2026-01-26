@@ -6,6 +6,7 @@ on:
   push:
     branches:
     - main
+    - tanmay-hc-patch-1
 
 permissions:
   contents: read
