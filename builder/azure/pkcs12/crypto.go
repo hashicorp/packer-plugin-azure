@@ -18,8 +18,9 @@ import (
 )
 
 const (
-	pbeIterationCount = 2048
-	pbeSaltSizeBytes  = 8
+	pbeIterationCount       = 2048
+	pbeIterationCountModern = 100000 // OWASP 2021 baseline for PBKDF2, balances security and performance
+	pbeSaltSizeBytes        = 8
 )
 
 var (
@@ -73,6 +74,11 @@ type pbeParams struct {
 func pbDecrypterFor(algorithm pkix.AlgorithmIdentifier, password []byte) (cipher.BlockMode, int, error) {
 	var cipherType pbeCipher
 
+	var params pbeParams
+	if err := unmarshal(algorithm.Parameters.FullBytes, &params); err != nil {
+		return nil, 0, err
+	}
+
 	switch {
 	case algorithm.Algorithm.Equal(oidPBEWithSHAAnd3KeyTripleDESCBC):
 		cipherType = shaWithTripleDESCBC{}
@@ -80,11 +86,6 @@ func pbDecrypterFor(algorithm pkix.AlgorithmIdentifier, password []byte) (cipher
 		cipherType = shaWith40BitRC2CBC{}
 	default:
 		return nil, 0, NotImplementedError("algorithm " + algorithm.Algorithm.String() + " is not supported")
-	}
-
-	var params pbeParams
-	if err := unmarshal(algorithm.Parameters.FullBytes, &params); err != nil {
-		return nil, 0, err
 	}
 
 	key := cipherType.deriveKey(params.Salt, password, params.Iterations)
@@ -137,6 +138,8 @@ func pad(src []byte, blockSize int) []byte {
 	return append(src, paddingText...)
 }
 
+// pbEncrypt encrypts plainText using legacy Triple DES algorithm with low iteration count.
+// Deprecated: Use pbEncryptModern for stronger security with high iteration count instead.
 func pbEncrypt(plainText, salt, password []byte, iterations int) (cipherText []byte, err error) {
 	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
 		return nil, errors.New("pkcs12: failed to create a random salt value: " + err.Error())
@@ -149,6 +152,33 @@ func pbEncrypt(plainText, salt, password []byte, iterations int) (cipherText []b
 	block, err := cipherType.create(key)
 	if err != nil {
 		return nil, errors.New("pkcs12: failed to create a block cipher: " + err.Error())
+	}
+
+	paddedPlainText := pad(plainText, block.BlockSize())
+
+	encrypter := cipher.NewCBCEncrypter(block, iv)
+	cipherText = make([]byte, len(paddedPlainText))
+	encrypter.CryptBlocks(cipherText, paddedPlainText)
+
+	return cipherText, nil
+}
+
+// pbEncryptModern encrypts plainText using Triple DES with a high iteration count.
+// While Triple DES is older, using 100,000+ iterations provides strong security through
+// key stretching and ensures maximum compatibility with Azure Key Vault and Windows.
+// This is the recommended approach for Azure as PBES2/AES is not widely supported.
+func pbEncryptModern(plainText, salt, password []byte, iterations int) (cipherText []byte, err error) {
+	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
+		return nil, errors.New("pkcs12: failed to create a random salt value: " + err.Error())
+	}
+
+	cipherType := shaWithTripleDESCBC{}
+	key := cipherType.deriveKey(salt, password, iterations)
+	iv := cipherType.deriveIV(salt, password, iterations)
+
+	block, err := cipherType.create(key)
+	if err != nil {
+		return nil, errors.New("pkcs12: failed to create Triple DES cipher: " + err.Error())
 	}
 
 	paddedPlainText := pad(plainText, block.BlockSize())
