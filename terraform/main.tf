@@ -72,7 +72,7 @@ resource "azurerm_key_vault" "vault" {
     tenant_id = var.tenant_id
     object_id = var.object_id
 
-    secret_permissions = ["Get", "Set", "Delete"]
+    secret_permissions = ["Get", "Set", "Delete", "Purge"]
   }
 }
 
