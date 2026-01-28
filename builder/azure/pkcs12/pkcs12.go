@@ -381,7 +381,7 @@ func makeContentInfos(derBytes []byte, privateKey interface{}, password []byte) 
 	return contentInfos, nil
 }
 
-// makeShroudedKeyBagContentInfoModern creates content info using modern AES-256-CBC encryption.
+// makeShroudedKeyBagContentInfoModern creates content info using Triple DES with high iteration count.
 func makeShroudedKeyBagContentInfoModern(privateKey interface{}, password []byte) (*contentInfo, error) {
 	shroudedKeyBagBytes, err := encodePkcs8ShroudedKeyBagModern(privateKey, password)
 	if err != nil {
@@ -396,7 +396,7 @@ func makeShroudedKeyBagContentInfoModern(privateKey interface{}, password []byte
 	return makeContentInfo(safeBags)
 }
 
-// makeContentInfosModern creates content infos using modern AES-256-CBC encryption.
+// makeContentInfosModern creates content infos using Triple DES with high iteration count.
 func makeContentInfosModern(derBytes []byte, privateKey interface{}, password []byte) ([]contentInfo, error) {
 	shroudedKeyContentInfo, err := makeShroudedKeyBagContentInfoModern(privateKey, password)
 	if err != nil {
@@ -488,8 +488,10 @@ func Encode(derBytes []byte, privateKey interface{}, password string) (pfxBytes 
 }
 
 // EncodeModern converts a certificate and a private key to the PKCS#12 byte stream format
-// using modern AES-256-CBC encryption instead of the legacy Triple DES algorithm.
-// This provides much stronger security for the encoded certificate.
+// using Triple DES encryption with a high iteration count (100,000 iterations).
+// While Triple DES is older, the high iteration count provides strong security through
+// key stretching and ensures maximum compatibility with Azure Key Vault and Windows.
+// This is more compatible than PBES2/AES which is not widely supported by Azure.
 //
 // derBytes is a DER encoded certificate.
 // privateKey is an RSA or ECDSA private key.

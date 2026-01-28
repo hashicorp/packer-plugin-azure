@@ -94,7 +94,7 @@ func testPfxRoundTrip(t *testing.T, privateKey interface{}) interface{} {
 	return key
 }
 
-// TestEncodeModernRsa tests encoding with the modern AES-256-CBC encryption
+// TestEncodeModernRsa tests encoding with Triple DES and high iteration count (100,000)
 func TestEncodeModernRsa(t *testing.T) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -106,7 +106,7 @@ func TestEncodeModernRsa(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	// Test with EncodeModern (AES-256-CBC)
+	// Test with EncodeModern (Triple DES with 100,000 iterations)
 	pfxBytes, err := EncodeModern(certificateBytes, privateKey, "testpassword")
 	if err != nil {
 		t.Fatalf("EncodeModern failed: %v", err)
