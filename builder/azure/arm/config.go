@@ -1575,7 +1575,8 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	if c.LicenseType != "" {
 		// Assumes OS is case-sensitive match as it has already been
 		// normalized earlier in function
-		if c.OSType == constants.Target_Linux {
+		switch c.OSType {
+		case constants.Target_Linux:
 			if strings.EqualFold(c.LicenseType, constants.License_RHEL) {
 				c.LicenseType = constants.License_RHEL
 			} else if strings.EqualFold(c.LicenseType, constants.License_SUSE) {
@@ -1583,7 +1584,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 			} else {
 				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The license_type %q is invalid for Linux, only RHEL_BYOS or SLES_BYOS are supported", c.LicenseType))
 			}
-		} else if c.OSType == constants.Target_Windows {
+		case constants.Target_Windows:
 			if strings.EqualFold(c.LicenseType, constants.License_Windows_Client) {
 				c.LicenseType = constants.License_Windows_Client
 			} else if strings.EqualFold(c.LicenseType, constants.License_Windows_Server) {
@@ -1774,7 +1775,6 @@ func (c *Config) validateLocationZoneResiliency(say func(s string)) {
 	zones["switzerlandnorth"] = struct{}{}
 	zones["uksouth"] = struct{}{}
 	zones["usgovvirginia"] = struct{}{}
-	zones["westeurope"] = struct{}{}
 	zones["westus2"] = struct{}{}
 	zones["westus3"] = struct{}{}
 
