@@ -154,6 +154,7 @@ func TestPEM(t *testing.T) {
 		}
 		config := tls.Config{
 			Certificates: []tls.Certificate{cert},
+			MinVersion:   tls.VersionTLS12,
 		}
 		config.BuildNameToCertificate()
 
@@ -184,6 +185,7 @@ func ExampleToPEM() {
 
 	config := &tls.Config{
 		Certificates: []tls.Certificate{cert},
+		MinVersion:   tls.VersionTLS12,
 	}
 
 	_ = config

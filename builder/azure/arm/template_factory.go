@@ -40,14 +40,13 @@ func GetCommunicatorSpecificKeyVaultDeployment(config *Config) (*deployments.Dep
 		packer.LogSecretFilter.Set(secret)
 
 		return GetKeyVaultDeployment(config, secret, nil)
-	} else {
-		var exp *int64
-		if config.WinrmExpirationTime != 0 {
-			unixSeconds := time.Now().Add(config.WinrmExpirationTime).Unix()
-			exp = &unixSeconds
-		}
-		return GetKeyVaultDeployment(config, config.winrmCertificate, exp)
 	}
+	var exp *int64
+	if config.WinrmExpirationTime != 0 {
+		unixSeconds := time.Now().Add(config.WinrmExpirationTime).Unix()
+		exp = &unixSeconds
+	}
+	return GetKeyVaultDeployment(config, config.winrmCertificate, exp)
 }
 
 func GetKeyVaultDeployment(config *Config, secretValue string, exp *int64) (*deployments.Deployment, error) {

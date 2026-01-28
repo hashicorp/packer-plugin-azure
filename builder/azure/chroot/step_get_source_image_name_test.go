@@ -56,7 +56,6 @@ func TestChrootStepGetSourceImageName(t *testing.T) {
 		},
 	}
 	for _, tt := range tc {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			tt.step.Run(context.TODO(), state)
 			got := state.Get("generated_data").(map[string]interface{})
@@ -122,7 +121,6 @@ func TestChrootStepGetSourceImageName_SharedImage(t *testing.T) {
 		},
 	}
 	for _, tt := range tc {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 
 			var actualID galleryimageversions.ImageVersionId
