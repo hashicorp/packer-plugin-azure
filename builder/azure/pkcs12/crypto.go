@@ -6,18 +6,15 @@ package pkcs12
 
 import (
 	"bytes"
-	"crypto/aes"
 	"crypto/cipher"
 	"crypto/des"
 	"crypto/rand"
-	"crypto/sha256"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"errors"
 	"io"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/pkcs12/rc2"
-	"golang.org/x/crypto/pbkdf2"
 )
 
 const (
@@ -67,21 +64,6 @@ func (shaWith40BitRC2CBC) deriveKey(salt, password []byte, iterations int) []byt
 
 func (shaWith40BitRC2CBC) deriveIV(salt, password []byte, iterations int) []byte {
 	return pbkdf(sha1Sum, 20, 64, salt, password, iterations, 2, 8)
-}
-
-// Modern AES-256-CBC cipher using PBKDF2
-type aes256CBC struct{}
-
-func (aes256CBC) create(key []byte) (cipher.Block, error) {
-	return aes.NewCipher(key)
-}
-
-func (aes256CBC) deriveKey(salt, password []byte, iterations int) []byte {
-	return pbkdf2.Key(password, salt, iterations, 32, sha256.New)
-}
-
-func (aes256CBC) deriveIV(salt, password []byte, iterations int) []byte {
-	return pbkdf2.Key(password, salt, iterations, 16, sha256.New)
 }
 
 type pbeParams struct {
