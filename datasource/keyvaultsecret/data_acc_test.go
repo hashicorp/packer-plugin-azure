@@ -25,11 +25,28 @@ import (
 var testTemplate string
 
 func TestAccAzureKeyVaultSecret(t *testing.T) {
-	packerResourcePrefix := os.Getenv("ARM_RESOURCE_PREFIX")
-	if packerResourcePrefix == "" {
-		packerResourcePrefix = "packer"
+	testVaultName := os.Getenv("ARM_KEY_VAULT_NAME")
+	if testVaultName == "" {
+		resourcePrefix := os.Getenv("ARM_RESOURCE_PREFIX_BASE")
+		if resourcePrefix == "" {
+			resourcePrefix = os.Getenv("ARM_RESOURCE_PREFIX")
+		}
+		resourceSuffix := os.Getenv("ARM_RESOURCE_SUFFIX")
+		if resourcePrefix == "" {
+			resourcePrefix = "packer"
+		}
+		if resourceSuffix != "" {
+			suffixShort := resourceSuffix
+			if len(suffixShort) > 6 {
+				suffixShort = suffixShort[:6]
+			}
+			baseMax := 24 - len(suffixShort) - 2
+			base := normalizeKeyVaultBase(resourcePrefix, baseMax)
+			testVaultName = fmt.Sprintf("%skv%s", base, suffixShort)
+		} else {
+			testVaultName = fmt.Sprintf("%s-pkr-test-vault", resourcePrefix)
+		}
 	}
-	testVaultName := fmt.Sprintf("%s-pkr-test-vault", packerResourcePrefix)
 
 	cases := []struct {
 		name       string
@@ -136,6 +153,25 @@ type AzureKeyVault struct {
 	VaultName  string `mapstructure:"vault_name" required:"true"`
 	SecretName string `mapstructure:"secret_name" required:"true"`
 	Value      string `mapstructure:"value" required:"true"`
+}
+
+func normalizeKeyVaultBase(prefix string, maxLen int) string {
+	normalized := make([]rune, 0, len(prefix))
+	for _, r := range prefix {
+		if r >= 'A' && r <= 'Z' {
+			r = r + ('a' - 'A')
+		}
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			normalized = append(normalized, r)
+		}
+	}
+	if maxLen < 0 {
+		maxLen = 0
+	}
+	if len(normalized) > maxLen {
+		return string(normalized[:maxLen])
+	}
+	return string(normalized)
 }
 
 func (s *AzureKeyVault) getSecretsClient() (*azsecrets.Client, error) {

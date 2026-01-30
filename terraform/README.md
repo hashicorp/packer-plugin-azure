@@ -6,7 +6,7 @@ First you need an Azure Subscription, it is also recommended to also have an app
 
 Authenticate to Azure using the Azure CLI for a service principal
 
-The default resource group is named `packer-acceptance-test` with a storage account named `packeracctest`, however you can use variables TF `resource_group_name` and `storage_account_name` to change that to anything
+The default resource group is named `packer-acceptance-test` with a storage account named `packeracctest`, however you can use variables TF `resource_group_name` and `storage_account_name` to change that to anything. Resource names are automatically suffixed to avoid conflicts between concurrent runs; you can supply `resource_suffix` to control the suffix.
 
 For example 
 ```
