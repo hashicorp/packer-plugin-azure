@@ -8,10 +8,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	hashiNSGSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/networksecuritygroups"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/template"
 	"github.com/hashicorp/packer-plugin-sdk/packer"
@@ -339,12 +342,39 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 	// They are required when specifiying which inbound IPs are allowed to connect to the network
 	// They are also required when creating a standard sku public IP Address regardless of inbound IPs allowed.
 	// If a standard IP is set with no inbound addresses, we default to allowing all IP addresses
-	if (config.PublicIpSKU != "Basic") || (len(config.AllowedInboundIpAddresses) >= 1) {
+	var networkSecurityGroup *hashiNSGSDK.NetworkSecurityGroup
+	if config.VirtualNetworkName != "" && config.NetworkSecurityGroupName != "" {
+		networkSecurityGroup = &hashiNSGSDK.NetworkSecurityGroup{
+			Name: &config.NetworkSecurityGroupName,
+			Id:   &config.tmpNsgId,
+		}
+	} else if (config.PublicIpSKU != "Basic") || (len(config.AllowedInboundIpAddresses) >= 1) {
 		if config.VirtualNetworkName == "" {
-			err = builder.SetNetworkSecurityGroup(config.AllowedInboundIpAddresses, config.Comm.Port())
-			if err != nil {
-				return nil, err
+			securityRule := &hashiNSGSDK.SecurityRule{
+				Name: common.StringPtr("AllowIPsToSshWinRMInbound"),
+				Properties: &hashiNSGSDK.SecurityRulePropertiesFormat{
+					Description:              common.StringPtr("Allow inbound traffic from specified IP addresses"),
+					Protocol:                 hashiNSGSDK.SecurityRuleProtocolTcp,
+					Priority:                 100,
+					Access:                   hashiNSGSDK.SecurityRuleAccessAllow,
+					Direction:                hashiNSGSDK.SecurityRuleDirectionInbound,
+					SourcePortRange:          common.StringPtr("*"),
+					DestinationAddressPrefix: common.StringPtr("VirtualNetwork"),
+					DestinationPortRange:     common.StringPtr(strconv.Itoa(config.Comm.Port())),
+				},
 			}
+			networkSecurityGroup = &hashiNSGSDK.NetworkSecurityGroup{
+				Properties: &hashiNSGSDK.NetworkSecurityGroupPropertiesFormat{
+					SecurityRules: &[]hashiNSGSDK.SecurityRule{*securityRule},
+				},
+			}
+		}
+	}
+
+	if config.NetworkSecurityGroupName != "" || (len(config.AllowedInboundIpAddresses) > 0) {
+		err = builder.SetNetworkSecurityGroup(networkSecurityGroup)
+		if err != nil {
+			return nil, err
 		}
 	}
 
