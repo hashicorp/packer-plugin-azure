@@ -229,11 +229,10 @@ func TestStepDeployTemplateCleanupShouldDeleteVirtualMachineAndNetworkResourcesI
 	}
 	if mockTrackers.actualNetworkResources == nil {
 		t.Fatalf("Expected DeployTemplate to call delete network resources but it didn't")
-	} else {
-		expectedResources := map[string]string{"Microsoft.Network/publicIPAddresses": "ip", "Microsoft.Network/virtualNetworks": "vnet"}
-		if diff := cmp.Diff(expectedResources, *mockTrackers.actualNetworkResources); diff != "" {
-			t.Fatalf("Unexpected difference in expected parameter deleteNetworkResources.resources %s", diff)
-		}
+	}
+	expectedResources := map[string]string{"Microsoft.Network/publicIPAddresses": "ip", "Microsoft.Network/virtualNetworks": "vnet"}
+	if diff := cmp.Diff(expectedResources, *mockTrackers.actualNetworkResources); diff != "" {
+		t.Fatalf("Unexpected difference in expected parameter deleteNetworkResources.resources %s", diff)
 	}
 }
 func TestStepDeployTemplateCleanupShouldDeleteKeyVault(t *testing.T) {

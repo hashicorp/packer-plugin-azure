@@ -94,6 +94,46 @@ func testPfxRoundTrip(t *testing.T, privateKey interface{}) interface{} {
 	return key
 }
 
+// TestEncodeModernRsa tests encoding with Triple DES and high iteration count (100,000)
+func TestEncodeModernRsa(t *testing.T) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	certificateBytes, err := newCertificate("test.example.com", privateKey)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	// Test with EncodeModern (Triple DES with 100,000 iterations)
+	pfxBytes, err := EncodeModern(certificateBytes, privateKey, "testpassword")
+	if err != nil {
+		t.Fatalf("EncodeModern failed: %v", err)
+	}
+
+	// Verify we can decode it back
+	decodedKey, cert, err := Decode(pfxBytes, "testpassword")
+	if err != nil {
+		t.Fatalf("Failed to decode modern encoded PFX: %v", err)
+	}
+
+	// Verify the private key matches
+	actualPrivateKey, ok := decodedKey.(*rsa.PrivateKey)
+	if !ok {
+		t.Fatalf("failed to decode private key")
+	}
+
+	if privateKey.D.Cmp(actualPrivateKey.D) != 0 {
+		t.Errorf("Private key D component doesn't match")
+	}
+
+	// Verify the certificate matches
+	if cert.Subject.CommonName != "test.example.com" {
+		t.Errorf("expected common name to be %q, but found %q", "test.example.com", cert.Subject.CommonName)
+	}
+}
+
 func TestPEM(t *testing.T) {
 	for commonName, base64P12 := range testdata {
 		p12, _ := base64.StdEncoding.DecodeString(base64P12)
@@ -114,6 +154,7 @@ func TestPEM(t *testing.T) {
 		}
 		config := tls.Config{
 			Certificates: []tls.Certificate{cert},
+			MinVersion:   tls.VersionTLS12,
 		}
 		config.BuildNameToCertificate()
 
@@ -144,6 +185,7 @@ func ExampleToPEM() {
 
 	config := &tls.Config{
 		Certificates: []tls.Certificate{cert},
+		MinVersion:   tls.VersionTLS12,
 	}
 
 	_ = config

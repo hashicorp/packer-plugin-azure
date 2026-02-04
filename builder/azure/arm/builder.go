@@ -120,7 +120,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		OidcRequestToken:   b.config.ClientConfig.OidcRequestToken,
 	}
 
-	ui.Message("Creating Azure Resource Manager (ARM) client ...")
+	ui.Say("Creating Azure Resource Manager (ARM) client ...")
 	azureClient, err := NewAzureClient(
 		ctx,
 		b.config.StorageAccount,
@@ -132,7 +132,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if err != nil {
 		return nil, err
 	}
-	ui.Message("ARM Client successfully created")
+	ui.Say("ARM Client successfully created")
 
 	resolver := newResourceResolver(azureClient)
 	if err := resolver.Resolve(&b.config); err != nil {
@@ -145,7 +145,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if b.config.ClientConfig.ObjectID == "" {
 		b.config.ClientConfig.ObjectID = objectID
 	} else {
-		ui.Message("You have provided Object_ID which is no longer needed, Azure Packer ARM builder determines this automatically using the Azure Access Token")
+		ui.Say("You have provided Object_ID which is no longer needed, Azure Packer ARM builder determines this automatically using the Azure Access Token")
 	}
 
 	if b.config.ClientConfig.ObjectID == "" && b.config.OSType != constants.Target_Linux {
@@ -155,7 +155,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	// If the user is bringing their own vnet, don't warn, if its an invalid SKU it will get disabled at a different date and Microsoft will send out warings
 	if b.config.VirtualNetworkName == "" {
 		if b.config.PublicIpSKU == string(publicipaddresses.PublicIPAddressSkuNameBasic) {
-			ui.Message(publicIPWarning)
+			ui.Say(publicIPWarning)
 		}
 	}
 
@@ -422,7 +422,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		}
 
 		if b.config.SkipCreateBuildKeyVault {
-			ui.Message("Skipping build keyvault creation...")
+			ui.Say("Skipping build keyvault creation...")
 		} else if b.config.BuildKeyVaultName == "" {
 			keyVaultDeploymentName := b.stateBag.Get(constants.ArmKeyVaultDeploymentName).(string)
 			steps = append(steps,
@@ -513,12 +513,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	steps = append(steps, captureSteps...)
 
 	if b.config.PackerDebug {
-		ui.Message(fmt.Sprintf("temp admin user: '%s'", b.config.UserName))
-		ui.Message(fmt.Sprintf("temp admin password: '%s'", b.config.Password))
+		ui.Say(fmt.Sprintf("temp admin user: '%s'", b.config.UserName))
+		ui.Say(fmt.Sprintf("temp admin password: '%s'", b.config.Password))
 
 		if len(b.config.Comm.SSHPrivateKey) != 0 {
 			debugKeyPath := fmt.Sprintf("%s-%s.pem", b.config.PackerBuildName, b.config.tmpComputeName)
-			ui.Message(fmt.Sprintf("temp ssh key: %s", debugKeyPath))
+			ui.Say(fmt.Sprintf("temp ssh key: %s", debugKeyPath))
 
 			b.writeSSHPrivateKey(ui, debugKeyPath)
 		}
@@ -782,7 +782,7 @@ func (b *Builder) getVHDArtifact(vhdArtifact *VHDArtifact) {
 	additionalDiskCount := len(b.config.AdditionalDiskSize)
 	if additionalDiskCount > 0 {
 		dataDisks := make([]AdditionalDiskArtifact, additionalDiskCount)
-		for i := 0; i < additionalDiskCount; i++ {
+		for i := range additionalDiskCount {
 			dataDisks[i].AdditionalDiskUri = fmt.Sprintf("%s%s/%s%s-%d.vhd",
 				b.config.storageAccountBlobEndpoint, b.config.CaptureContainerName, b.config.CaptureNamePrefix, b.config.tmpDataDiskName, i+1)
 		}

@@ -66,7 +66,7 @@ func (s *StepGetCertificate) Run(ctx context.Context, state multistep.StateBag) 
 
 	var err error
 	var url string
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		url, err = s.get(ctx, subscriptionId, resourceGroupName, keyVaultName, keyVaultSecretName)
 		if err == nil {
 			break

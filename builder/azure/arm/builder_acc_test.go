@@ -19,6 +19,8 @@ package arm
 // ** ARM_RESOURCE_GROUP_NAME - Resource group
 // ** ARM_STORAGE_ACCOUNT - a storage account located in above resource group
 // ** ARM_RESOURCE_PREFIX - String prefix for resources unique name constraints
+// ** ARM_STORAGE_CONTAINER_NAME - storage container name for blob-based tests
+// ** ARM_TEMP_RESOURCE_GROUP_NAME - temp resource group name for CLI-based tests
 // ** For example SIG gallery names must be unique not just within the resource group, but within a subscription, and a user may not have access to all SIGs in a subscription.
 // * As well as the following misc env variables
 // ** ARM_SSH_PRIVATE_KEY_FILE - the file location of a PEM encoded RSA SSH Private Key (ed25519 is not supported by Azure),
@@ -337,7 +339,8 @@ func testBuilderUserDataLinux(userdata string) string {
 	  "client_secret": "{{env `+"`ARM_CLIENT_SECRET`"+`}}",
 	  "subscription_id": "{{env `+"`ARM_SUBSCRIPTION_ID`"+`}}",
 	  "storage_account": "{{env `+"`ARM_STORAGE_ACCOUNT`"+`}}",
-	  "resource_group_name": "{{env `+"`ARM_RESOURCE_GROUP_NAME`"+`}}"
+	  "resource_group_name": "{{env `+"`ARM_RESOURCE_GROUP_NAME`"+`}}",
+	  "capture_container_name": "{{env `+"`ARM_STORAGE_CONTAINER_NAME`"+`}}"
 	},
 	"builders": [{
 	  "type": "azure-arm",
@@ -348,7 +351,7 @@ func testBuilderUserDataLinux(userdata string) string {
 
 	  "storage_account": "{{user `+"`storage_account`"+`}}",
 	  "resource_group_name": "{{user `+"`resource_group_name`"+`}}",
-	  "capture_container_name": "packeracc",
+	  "capture_container_name": "{{user `+"`capture_container_name`"+`}}",
 	  "capture_name_prefix": "testBuilderUserDataLinux",
 
 	  "os_type": "Linux",
@@ -517,7 +520,8 @@ const testBuilderAccBlobWindows = `
 	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
 	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}",
 	  "storage_account": "{{env ` + "`ARM_STORAGE_ACCOUNT`" + `}}",
-	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}"
+	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}",
+	  "capture_container_name": "{{env ` + "`ARM_STORAGE_CONTAINER_NAME`" + `}}"
 	},
 	"builders": [{
 	  "type": "azure-arm",
@@ -528,7 +532,7 @@ const testBuilderAccBlobWindows = `
 
 	  "storage_account": "{{user ` + "`storage_account`" + `}}",
 	  "resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
-	  "capture_container_name": "packeracc",
+	  "capture_container_name": "{{user ` + "`capture_container_name`" + `}}",
 	  "capture_name_prefix": "testBuilderAccBlobWin",
 
 	  "os_type": "Windows",
@@ -555,7 +559,8 @@ const testBuilderAccBlobLinux = `
 	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}",
 	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
 	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}",
-	  "storage_account": "{{env ` + "`ARM_STORAGE_ACCOUNT`" + `}}"
+	  "storage_account": "{{env ` + "`ARM_STORAGE_ACCOUNT`" + `}}",
+	  "capture_container_name": "{{env ` + "`ARM_STORAGE_CONTAINER_NAME`" + `}}"
 	},
 	"builders": [{
 	  "type": "azure-arm",
@@ -566,7 +571,7 @@ const testBuilderAccBlobLinux = `
 
 	  "storage_account": "{{user ` + "`storage_account`" + `}}",
 	  "resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
-	  "capture_container_name": "packeracc",
+	  "capture_container_name": "{{user ` + "`capture_container_name`" + `}}",
 	  "capture_name_prefix": "testBuilderAccBlobLinux",
 
 	  "os_type": "Linux",
@@ -583,7 +588,8 @@ const testBuilderAccBlobLinux = `
 const testBuilderAccManagedDiskLinuxAzureCLI = `
 {
 	"variables": {
-	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}"
+	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}",
+	  "temp_resource_group_name": "{{env ` + "`ARM_TEMP_RESOURCE_GROUP_NAME`" + `}}"
 	},
 	"builders": [{
 	  "type": "azure-arm",
@@ -592,7 +598,7 @@ const testBuilderAccManagedDiskLinuxAzureCLI = `
 
 	  "managed_image_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
 	  "managed_image_name": "testBuilderAccManagedDiskLinuxAzureCLI-{{timestamp}}",
-	  "temp_resource_group_name": "packer-acceptance-test-managed-cli",
+	  "temp_resource_group_name": "{{user ` + "`temp_resource_group_name`" + `}}",
 
 	  "os_type": "Linux",
 	  "image_publisher": "Canonical",

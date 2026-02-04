@@ -48,7 +48,8 @@ func (s *StepCaptureImage) captureImageFromVM(ctx context.Context) error {
 
 	customImageProperties := customimages.CustomImageProperties{}
 
-	if s.config.OSType == constants.Target_Linux {
+	switch s.config.OSType {
+	case constants.Target_Linux:
 		deprovision := customimages.LinuxOsStateDeprovisionRequested
 		if s.config.SkipSysprep {
 			deprovision = customimages.LinuxOsStateDeprovisionApplied
@@ -61,7 +62,7 @@ func (s *StepCaptureImage) captureImageFromVM(ctx context.Context) error {
 				SourceVMId: &imageID,
 			},
 		}
-	} else if s.config.OSType == constants.Target_Windows {
+	case constants.Target_Windows:
 		deprovision := customimages.WindowsOsStateSysprepRequested
 		if s.config.SkipSysprep {
 			deprovision = customimages.WindowsOsStateSysprepApplied

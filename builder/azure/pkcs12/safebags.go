@@ -70,6 +70,48 @@ func encodePkcs8ShroudedKeyBag(privateKey interface{}, password []byte) (bytes [
 	return bytes, err
 }
 
+// encodePkcs8ShroudedKeyBagModern encodes a private key using Triple DES with high iteration count.
+// This provides stronger security than the legacy implementation through increased iterations (100,000)
+// while ensuring maximum compatibility with Azure Key Vault and Windows Certificate Store.
+func encodePkcs8ShroudedKeyBagModern(privateKey interface{}, password []byte) (bytes []byte, err error) {
+	privateKeyBytes, err := marshalPKCS8PrivateKey(privateKey)
+
+	if err != nil {
+		return nil, errors.New("pkcs12: error encoding PKCS#8 private key: " + err.Error())
+	}
+
+	salt, err := makeSalt(pbeSaltSizeBytes)
+	if err != nil {
+		return nil, errors.New("pkcs12: error creating PKCS#8 salt: " + err.Error())
+	}
+
+	pkData, err := pbEncryptModern(privateKeyBytes, salt, password, pbeIterationCountModern)
+	if err != nil {
+		return nil, errors.New("pkcs12: error encoding PKCS#8 shrouded key bag when encrypting cert bag: " + err.Error())
+	}
+
+	// Create parameters with high iteration count
+	params, err := getAlgorithmParams(salt, pbeIterationCountModern)
+	if err != nil {
+		return nil, errors.New("pkcs12: error encoding PKCS#8 shrouded key bag algorithm's parameters: " + err.Error())
+	}
+
+	pkinfo := encryptedPrivateKeyInfo{
+		AlgorithmIdentifier: pkix.AlgorithmIdentifier{
+			Algorithm:  oidPBEWithSHAAnd3KeyTripleDESCBC,
+			Parameters: params,
+		},
+		EncryptedData: pkData,
+	}
+
+	bytes, err = asn1.Marshal(pkinfo)
+	if err != nil {
+		return nil, errors.New("pkcs12: error encoding PKCS#8 shrouded key bag: " + err.Error())
+	}
+
+	return bytes, err
+}
+
 func decodePkcs8ShroudedKeyBag(asn1Data, password []byte) (privateKey interface{}, err error) {
 	pkinfo := new(encryptedPrivateKeyInfo)
 	if err = unmarshal(asn1Data, pkinfo); err != nil {
