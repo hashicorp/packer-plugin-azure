@@ -67,8 +67,8 @@ var (
 	reCaptureContainerName = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]{2,62}$`)
 	reManagedDiskName      = regexp.MustCompile(validManagedDiskName)
 	reResourceGroupName    = regexp.MustCompile(validResourceGroupNameRe)
-	reSnapshotName         = regexp.MustCompile(`^[A-Za-z0-9_]{1,79}$`)
-	reSnapshotPrefix       = regexp.MustCompile(`^[A-Za-z0-9_]{1,59}$`)
+	reSnapshotName         = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_\-\.]{0,78}[A-Za-z0-9_]$`)
+	reSnapshotPrefix       = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_\-\.]{0,58}[A-Za-z0-9_]$`)
 	reResourceNamePrefix   = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]{0,9}$`)
 )
 
@@ -1605,14 +1605,14 @@ func assertManagedImageName(name, setting string) (bool, error) {
 
 func assertManagedImageOSDiskSnapshotName(name, setting string) (bool, error) {
 	if !isValidAzureName(reSnapshotName, name) {
-		return false, fmt.Errorf("The setting %s must only contain characters from a-z, A-Z, 0-9 and _ and the maximum length is 80 characters", setting)
+		return false, fmt.Errorf("The setting %s must begin with a letter or number, end with a letter, number or underscore and may contain only letters, numbers, underscores, periods, or hyphens. The maximum length is 80 characters", setting)
 	}
 	return true, nil
 }
 
 func assertManagedImageDataDiskSnapshotName(name, setting string) (bool, error) {
 	if !isValidAzureName(reSnapshotPrefix, name) {
-		return false, fmt.Errorf("The setting %s must only contain characters from a-z, A-Z, 0-9 and _ and the maximum length (excluding the prefix) is 60 characters", setting)
+		return false, fmt.Errorf("The setting %s must begin with a letter or number, end with a letter, number or underscore and may contain only letters, numbers, underscores, periods, or hyphens. The maximum length is 60 characters", setting)
 	}
 	return true, nil
 }
