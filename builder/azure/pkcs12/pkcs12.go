@@ -381,6 +381,40 @@ func makeContentInfos(derBytes []byte, privateKey interface{}, password []byte) 
 	return contentInfos, nil
 }
 
+// makeShroudedKeyBagContentInfoModern creates content info using Triple DES with high iteration count.
+func makeShroudedKeyBagContentInfoModern(privateKey interface{}, password []byte) (*contentInfo, error) {
+	shroudedKeyBagBytes, err := encodePkcs8ShroudedKeyBagModern(privateKey, password)
+	if err != nil {
+		return nil, EncodeError("encode PKCS#8 shrouded key bag: " + err.Error())
+	}
+
+	safeBags, err := makeSafeBags(oidPKCS8ShroudedKeyBag, shroudedKeyBagBytes)
+	if err != nil {
+		return nil, EncodeError("safe bags: " + err.Error())
+	}
+
+	return makeContentInfo(safeBags)
+}
+
+// makeContentInfosModern creates content infos using Triple DES with high iteration count.
+func makeContentInfosModern(derBytes []byte, privateKey interface{}, password []byte) ([]contentInfo, error) {
+	shroudedKeyContentInfo, err := makeShroudedKeyBagContentInfoModern(privateKey, password)
+	if err != nil {
+		return nil, EncodeError("shrouded key content info: " + err.Error())
+	}
+
+	certBagContentInfo, err := makeCertBagContentInfo(derBytes)
+	if err != nil {
+		return nil, EncodeError("cert bag content info: " + err.Error())
+	}
+
+	contentInfos := make([]contentInfo, 2)
+	contentInfos[0] = *shroudedKeyContentInfo
+	contentInfos[1] = *certBagContentInfo
+
+	return contentInfos, nil
+}
+
 func makeSalt(saltByteCount int) ([]byte, error) {
 	salt := make([]byte, saltByteCount)
 	_, err := io.ReadFull(rand.Reader, salt)
@@ -398,6 +432,77 @@ func Encode(derBytes []byte, privateKey interface{}, password string) (pfxBytes 
 	}
 
 	contentInfos, err := makeContentInfos(derBytes, privateKey, secret)
+	if err != nil {
+		return nil, err
+	}
+
+	// Marshal []contentInfo so we can re-constitute the byte stream that will
+	// be suitable for computing the MAC
+	bytes, err := asn1.Marshal(contentInfos)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal as an asn1.RawValue so, we can compute the MAC against the .Bytes
+	var contentInfosRaw asn1.RawValue
+	err = unmarshal(bytes, &contentInfosRaw)
+	if err != nil {
+		return nil, err
+	}
+
+	authSafeContentInfo, err := makeContentInfo(contentInfosRaw)
+	if err != nil {
+		return nil, EncodeError("authSafe content info: " + err.Error())
+	}
+
+	salt, err := makeSalt(pbeSaltSizeBytes)
+	if err != nil {
+		return nil, EncodeError("salt value: " + err.Error())
+	}
+
+	// Compute the MAC for marshaled bytes of contentInfos, which includes the
+	// cert bag, and the shrouded key bag.
+	digest := computeMac(contentInfosRaw.FullBytes, pbeIterationCount, salt, secret)
+
+	pfx := pfxPdu{
+		Version:  3,
+		AuthSafe: *authSafeContentInfo,
+		MacData: macData{
+			Iterations: pbeIterationCount,
+			MacSalt:    salt,
+			Mac: digestInfo{
+				Algorithm: pkix.AlgorithmIdentifier{
+					Algorithm: oidSHA1,
+				},
+				Digest: digest,
+			},
+		},
+	}
+
+	bytes, err = asn1.Marshal(pfx)
+	if err != nil {
+		return nil, EncodeError("marshal PFX PDU: " + err.Error())
+	}
+
+	return bytes, err
+}
+
+// EncodeModern converts a certificate and a private key to the PKCS#12 byte stream format
+// using Triple DES encryption with a high iteration count (100,000 iterations).
+// While Triple DES is older, the high iteration count provides strong security through
+// key stretching and ensures maximum compatibility with Azure Key Vault and Windows.
+// This is more compatible than PBES2/AES which is not widely supported by Azure.
+//
+// derBytes is a DER encoded certificate.
+// privateKey is an RSA or ECDSA private key.
+// password is the password to encrypt the private key.
+func EncodeModern(derBytes []byte, privateKey interface{}, password string) (pfxBytes []byte, err error) {
+	secret, err := bmpString(password)
+	if err != nil {
+		return nil, ErrIncorrectPassword
+	}
+
+	contentInfos, err := makeContentInfosModern(derBytes, privateKey, secret)
 	if err != nil {
 		return nil, err
 	}

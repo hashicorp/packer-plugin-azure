@@ -84,7 +84,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		OidcRequestUrl:     b.config.ClientConfig.OidcRequestURL,
 		OidcRequestToken:   b.config.ClientConfig.OidcRequestToken,
 	}
-	ui.Message("Creating Azure DevTestLab (DTL) client ...")
+	ui.Say("Creating Azure DevTestLab (DTL) client ...")
 	azureClient, err := NewAzureClient(
 		ctx,
 		b.config.ClientConfig.SubscriptionID,
@@ -106,7 +106,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if b.config.ClientConfig.ObjectID == "" {
 		b.config.ClientConfig.ObjectID = objectId
 	} else {
-		ui.Message("You have provided Object_ID which is no longer needed, azure packer builder determines this dynamically from the authentication token")
+		ui.Say("You have provided Object_ID which is no longer needed, azure packer builder determines this dynamically from the authentication token")
 	}
 
 	if b.config.ClientConfig.ObjectID == "" && b.config.OSType != constants.Target_Linux {
@@ -191,10 +191,11 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		b.config.LabVirtualNetworkName = *virtualNetwork
 		b.config.LabSubnetName = *subnet
 
-		ui.Message(fmt.Sprintf("No lab network information provided. Using %s Virtual network and %s subnet for Virtual Machine creation", b.config.LabVirtualNetworkName, b.config.LabSubnetName))
+		ui.Say(fmt.Sprintf("No lab network information provided. Using %s Virtual network and %s subnet for Virtual Machine creation", b.config.LabVirtualNetworkName, b.config.LabSubnetName))
 	}
 
-	if b.config.OSType == constants.Target_Linux {
+	switch b.config.OSType {
+	case constants.Target_Linux:
 		steps = []multistep.Step{
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			&communicator.StepConnectSSH{
@@ -208,7 +209,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			},
 			NewStepPowerOffCompute(azureClient, ui, &b.config),
 		}
-	} else if b.config.OSType == constants.Target_Windows {
+	case constants.Target_Windows:
 		steps = []multistep.Step{
 			NewStepDeployTemplate(azureClient, ui, &b.config, deploymentName, GetVirtualMachineDeployment),
 			&StepSaveWinRMPassword{
@@ -230,7 +231,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			&commonsteps.StepProvision{},
 			NewStepPowerOffCompute(azureClient, ui, &b.config),
 		}
-	} else {
+	default:
 		return nil, fmt.Errorf("Builder does not support the os_type '%s'", b.config.OSType)
 	}
 
@@ -244,12 +245,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	steps = append(steps, NewStepDeleteVirtualMachine(azureClient, ui, &b.config))
 
 	if b.config.PackerDebug {
-		ui.Message(fmt.Sprintf("temp admin user: '%s'", b.config.UserName))
-		ui.Message(fmt.Sprintf("temp admin password: '%s'", b.config.Password))
+		ui.Say(fmt.Sprintf("temp admin user: '%s'", b.config.UserName))
+		ui.Say(fmt.Sprintf("temp admin password: '%s'", b.config.Password))
 
 		if len(b.config.Comm.SSHPrivateKey) != 0 {
 			debugKeyPath := fmt.Sprintf("%s-%s.pem", b.config.PackerBuildName, b.config.tmpComputeName)
-			ui.Message(fmt.Sprintf("temp ssh key: %s", debugKeyPath))
+			ui.Say(fmt.Sprintf("temp ssh key: %s", debugKeyPath))
 
 			b.writeSSHPrivateKey(ui, debugKeyPath)
 		}

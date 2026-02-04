@@ -25,11 +25,28 @@ import (
 var testTemplate string
 
 func TestAccAzureKeyVaultSecret(t *testing.T) {
-	packerResourcePrefix := os.Getenv("ARM_RESOURCE_PREFIX")
-	if packerResourcePrefix == "" {
-		packerResourcePrefix = "packer"
+	testVaultName := os.Getenv("ARM_KEY_VAULT_NAME")
+	if testVaultName == "" {
+		resourcePrefix := os.Getenv("ARM_RESOURCE_PREFIX_BASE")
+		if resourcePrefix == "" {
+			resourcePrefix = os.Getenv("ARM_RESOURCE_PREFIX")
+		}
+		resourceSuffix := os.Getenv("ARM_RESOURCE_SUFFIX")
+		if resourcePrefix == "" {
+			resourcePrefix = "packer"
+		}
+		if resourceSuffix != "" {
+			suffixShort := resourceSuffix
+			if len(suffixShort) > 6 {
+				suffixShort = suffixShort[:6]
+			}
+			baseMax := 24 - len(suffixShort) - 2
+			base := normalizeKeyVaultBase(resourcePrefix, baseMax)
+			testVaultName = fmt.Sprintf("%skv%s", base, suffixShort)
+		} else {
+			testVaultName = fmt.Sprintf("%s-pkr-test-vault", resourcePrefix)
+		}
 	}
-	testVaultName := fmt.Sprintf("%s-pkr-test-vault", packerResourcePrefix)
 
 	cases := []struct {
 		name       string
@@ -138,6 +155,25 @@ type AzureKeyVault struct {
 	Value      string `mapstructure:"value" required:"true"`
 }
 
+func normalizeKeyVaultBase(prefix string, maxLen int) string {
+	normalized := make([]rune, 0, len(prefix))
+	for _, r := range prefix {
+		if r >= 'A' && r <= 'Z' {
+			r = r + ('a' - 'A')
+		}
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			normalized = append(normalized, r)
+		}
+	}
+	if maxLen < 0 {
+		maxLen = 0
+	}
+	if len(normalized) > maxLen {
+		return string(normalized[:maxLen])
+	}
+	return string(normalized)
+}
+
 func (s *AzureKeyVault) getSecretsClient() (*azsecrets.Client, error) {
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
@@ -177,25 +213,63 @@ func (s *AzureKeyVault) Create() error {
 }
 
 func (s *AzureKeyVault) Delete() error {
-
 	client, err := s.getSecretsClient()
 	if err != nil {
 		return err
 	}
 
+	// 1. Initiate Soft Delete
 	_, err = client.DeleteSecret(context.TODO(), s.SecretName, nil)
 	if err != nil && !isNotFound(err) {
 		return fmt.Errorf("failed to delete secret: %w", err)
 	}
-	time.Sleep(1 * time.Second) // Wait for the secret to be deleted
 
+	// 2. Poll until the secret appears in the "Deleted" state
+	// "DeleteSecret" returns before the secret is actually ready to be purged.
+	// We must wait for it to appear in the DeletedSecrets list.
+	maxRetries := 30
+	retryInterval := 2 * time.Second
+
+	log.Printf("Waiting for secret %q to enter soft-deleted state...", s.SecretName)
+
+	secretReadyToPurge := false
+	for i := 0; i < maxRetries; i++ {
+		_, err := client.GetDeletedSecret(context.TODO(), s.SecretName, nil)
+
+		if err == nil {
+			// Success: Secret is confirmed in "Deleted" state.
+			secretReadyToPurge = true
+			break
+		}
+
+		// If error is anything other than NotFound, it's a real error
+		if !isNotFound(err) {
+			return fmt.Errorf("error checking deleted secret status: %w", err)
+		}
+
+		// If NotFound, it means it hasn't reached the "Deleted" table yet. Wait and retry.
+		time.Sleep(retryInterval)
+	}
+
+	if !secretReadyToPurge {
+		// If we timed out and still can't find it in deleted secrets,
+		// implies it was already purged or never existed.
+		log.Printf("Secret %q not found in deleted state after waiting. Assuming already cleaned.", s.SecretName)
+		return nil
+	}
+
+	// 3. Purge
+	log.Printf("Purging secret %q...", s.SecretName)
 	_, err = client.PurgeDeletedSecret(context.TODO(), s.SecretName, nil)
 	if err != nil {
+		// If it says NotFound now, it implies it was purged by a parallel process or completed instantly
+		if isNotFound(err) {
+			return nil
+		}
 		return fmt.Errorf("failed to purge deleted secret: %w", err)
 	}
 
-	log.Printf("Secret %q deleted successfully", s.SecretName)
-
+	log.Printf("Secret %q purged successfully", s.SecretName)
 	return nil
 }
 

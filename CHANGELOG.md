@@ -3,6 +3,23 @@
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-azure/releases) for the latest CHANGELOG information.
 
 ---
+## 2.5.2 (February 4, 2026)
+
+## What's Changed
+### Exciting New Features
+
+### Bug Fixes
+* BUG: Updates tests for permissions and polling [GH-572](https://github.com/hashicorp/packer-plugin-azure/pull/572)
+
+### Other Changes
+* Adds dynamic resource name suffixing for isolation of Acceptance tests [GH-575](https://github.com/hashicorp/packer-plugin-azure/pull/575)
+* Updates Go version to 1.24.12 in module file [GH-573](https://github.com/hashicorp/packer-plugin-azure/pull/573)
+* Fix various lint warnings. [GH-566](https://github.com/hashicorp/packer-plugin-azure/pull/566)
+* Staticcheck/QF1003: Replace if-else with switch-case for OSType checks. [GH-565](https://github.com/hashicorp/packer-plugin-azure/pull/565)
+* Replace deprecated ui.Message with ui.Say [GH-564](https://github.com/hashicorp/packer-plugin-azure/pull/564)
+
+**Full Changelog**: https://github.com/hashicorp/packer-plugin-azure/compare/v2.5.1...v2.5.2
+
 ## 2.5.1 (December 18, 2025)
 
 ## What's Changed

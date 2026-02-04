@@ -377,7 +377,7 @@ func (c *Config) createCertificate() (string, string, error) {
 		return "", "", err
 	}
 
-	pfxBytes, err := pkcs12.Encode(derBytes, privateKey, c.tmpCertificatePassword)
+	pfxBytes, err := pkcs12.EncodeModern(derBytes, privateKey, c.tmpCertificatePassword)
 	if err != nil {
 		err = fmt.Errorf("Failed to encode certificate as PFX: %s", err)
 		return "", "", err
@@ -639,9 +639,8 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	toInt := func(b bool) int {
 		if b {
 			return 1
-		} else {
-			return 0
 		}
+		return 0
 	}
 
 	isImageUrl := c.ImageUrl != ""
@@ -698,10 +697,8 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		if c.ManagedImageName == "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("An managed_image_name must be specified"))
 		}
-	} else {
-		if c.ImagePublisher != "" || c.ImageOffer != "" || c.ImageSku != "" || c.ImageVersion != "" {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("An image_url must not be specified if image_publisher, image_offer, image_sku, or image_version is specified"))
-		}
+	} else if c.ImagePublisher != "" || c.ImageOffer != "" || c.ImageSku != "" || c.ImageVersion != "" {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("An image_url must not be specified if image_publisher, image_offer, image_sku, or image_version is specified"))
 	}
 
 	if c.ManagedImageResourceGroupName != "" {

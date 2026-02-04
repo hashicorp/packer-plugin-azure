@@ -27,3 +27,9 @@ variable "object_id" {
 variable "resource_prefix" {
   type = string
 }
+
+// Optional suffix for resource names. If empty, a random suffix is generated.
+variable "resource_suffix" {
+  type    = string
+  default = ""
+}
