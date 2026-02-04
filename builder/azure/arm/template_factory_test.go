@@ -174,6 +174,7 @@ func TestVirtualMachineDeployment05(t *testing.T) {
 		"virtual_network_name":                "virtualNetworkName",
 		"virtual_network_resource_group_name": "virtualNetworkResourceGroupName",
 		"virtual_network_subnet_name":         "virtualNetworkSubnetName",
+		"network_security_group_name": "networkSecurityGroupName",
 	}
 
 	var c Config
