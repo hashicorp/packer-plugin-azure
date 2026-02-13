@@ -466,6 +466,11 @@ type Config struct {
 	// containing the virtual network. If the resource group cannot be found, or
 	// it cannot be disambiguated, this value should be set.
 	VirtualNetworkResourceGroupName string `mapstructure:"virtual_network_resource_group_name" required:"false"`
+	// Set to `true` to enable Accelerated Networking on the network interface
+	// created for the build VM. Accelerated Networking provides lower latency
+	// and other benefits. This requires a VM size that
+	// [supports accelerated networking](https://learn.microsoft.com/en-us/azure/virtual-network/accelerated-networking-overview?tabs=NetworkManager&tryIt=true&source=docs#supported-vm-instances). Defaults to `false`.
+	AcceleratedNetworking bool `mapstructure:"accelerated_networking" required:"false"`
 	// Specify a file containing custom data to inject into the cloud-init
 	// process. The contents of the file are read and injected into the ARM
 	// template. The custom data will be passed to cloud-init for processing at

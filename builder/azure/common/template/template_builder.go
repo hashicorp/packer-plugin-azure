@@ -521,6 +521,16 @@ func (s *TemplateBuilder) SetTags(tags *map[string]string) error {
 	return nil
 }
 
+func (s *TemplateBuilder) SetAcceleratedNetworking(enabled bool) error {
+	resource, err := s.getResourceByType(resourceNetworkInterfaces)
+	if err != nil {
+		return err
+	}
+
+	resource.Properties.EnableAcceleratedNetworking = &enabled
+	return nil
+}
+
 func (s *TemplateBuilder) SetBootDiagnostics(diagSTG string) error {
 
 	resource, err := s.getResourceByType(resourceVirtualMachine)
