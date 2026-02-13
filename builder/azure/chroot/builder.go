@@ -359,7 +359,7 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 		}
 	}
 
-	if !azcommon.StringsContains(md.Keys, "shared_image_destination") && b.config.ImageResourceID == "" {
+	if !b.config.SkipCreateImage && !azcommon.StringsContains(md.Keys, "shared_image_destination") && b.config.ImageResourceID == "" {
 		errs = packersdk.MultiErrorAppend(errs, errors.New("image_resource_id or shared_image_destination is required"))
 	}
 
