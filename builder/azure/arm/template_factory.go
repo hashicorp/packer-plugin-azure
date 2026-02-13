@@ -366,6 +366,14 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 	if err != nil {
 		return nil, err
 	}
+
+	if config.AcceleratedNetworking {
+		err = builder.SetAcceleratedNetworking(true)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return builder, nil
 }
 
