@@ -1170,7 +1170,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	/////////////////////////////////////////////
 	// Capture
-	if c.CaptureContainerName == "" && (c.ManagedImageName == "" || c.ManagedImageResourceGroupName == "") && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
+	if !c.SkipCreateImage && c.CaptureContainerName == "" && (c.ManagedImageName == "" || c.ManagedImageResourceGroupName == "") && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_container_name, managed_image_name and managed_image_resource_group_name, or shared_image_gallery_destination must be specified"))
 	}
 
@@ -1310,7 +1310,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Specify either a location to create the resource group in or an existing build_resource_group_name, but not both."))
 	}
 
-	if c.ManagedImageName == "" && c.ManagedImageResourceGroupName == "" && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
+	if !c.SkipCreateImage && c.ManagedImageName == "" && c.ManagedImageResourceGroupName == "" && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
 		if c.StorageAccount == "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A storage_account must be specified"))
 		}
