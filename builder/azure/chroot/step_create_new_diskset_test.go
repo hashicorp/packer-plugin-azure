@@ -230,6 +230,9 @@ func TestStepCreateNewDisk_Run(t *testing.T) {
 				SourceImageResourceID:      tt.fields.SourceImageResourceID,
 				SourcePlatformImage:        tt.fields.SourcePlatformImage,
 				getVersion: func(ctx context.Context, acs client.AzureClientSet, id galleryimageversions.ImageVersionId) (*galleryimageversions.GalleryImageVersion, error) {
+					if id.SubscriptionId != "ImageSubscriptionID" {
+						t.Fatalf("expected gallery image version lookup in subscription 'ImageSubscriptionID', got '%s'", id.SubscriptionId)
+					}
 					return &galleryimageversions.GalleryImageVersion{
 						Properties: &galleryimageversions.GalleryImageVersionProperties{
 							StorageProfile: galleryimageversions.GalleryImageVersionStorageProfile{
