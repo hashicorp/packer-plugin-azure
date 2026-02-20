@@ -43,6 +43,9 @@ type StepCreateNewDiskset struct {
 	// Location is needed for platform and shared images
 	Location string
 
+	// Availability zone of the VM (from IMDS). If set, disks are created in this zone.
+	Zone string
+
 	SkipCleanup bool
 
 	getVersion func(context.Context, client.AzureClientSet, galleryimageversions.ImageVersionId) (*galleryimageversions.GalleryImageVersion, error)
@@ -144,6 +147,11 @@ func (s StepCreateNewDiskset) getOSDiskDefinition(subscriptionID string) disks.D
 		},
 	}
 
+	if s.Zone != "" {
+		z := []string{s.Zone}
+		disk.Zones = &z
+	}
+
 	if s.OSDiskStorageAccountType != "" {
 		hashiDiskSkuName := disks.DiskStorageAccountTypes(s.OSDiskStorageAccountType)
 		disk.Sku = &disks.DiskSku{
@@ -189,6 +197,11 @@ func (s StepCreateNewDiskset) getDatadiskDefinitionFromImage(lun int64) disks.Di
 		Properties: &disks.DiskProperties{
 			CreationData: disks.CreationData{},
 		},
+	}
+
+	if s.Zone != "" {
+		z := []string{s.Zone}
+		disk.Zones = &z
 	}
 
 	disk.Properties.CreationData.CreateOption = disks.DiskCreateOptionFromImage

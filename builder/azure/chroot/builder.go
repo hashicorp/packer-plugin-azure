@@ -519,7 +519,8 @@ func buildsteps(
 				OSDiskSizeGB:             config.OSDiskSizeGB,
 				OSDiskStorageAccountType: config.OSDiskStorageAccountType,
 				HyperVGeneration:         config.ImageHyperVGeneration,
-				Location:                 info.Location}))
+				Location:                 info.Location,
+				Zone:                     info.Zone}))
 	} else {
 		switch config.sourceType {
 		case sourcePlatformImage:
@@ -544,8 +545,7 @@ func buildsteps(
 						OSDiskStorageAccountType: config.OSDiskStorageAccountType,
 						HyperVGeneration:         config.ImageHyperVGeneration,
 						Location:                 info.Location,
-						SourcePlatformImage:      pi,
-
+					Zone:                     info.Zone,
 						SkipCleanup: config.SkipCleanup,
 					}),
 				)
@@ -571,6 +571,7 @@ func buildsteps(
 					HyperVGeneration:         config.ImageHyperVGeneration,
 					SourceOSDiskResourceID:   config.Source,
 					Location:                 info.Location,
+					Zone:                     info.Zone,
 
 					SkipCleanup: config.SkipCleanup,
 				}),
@@ -596,6 +597,7 @@ func buildsteps(
 					DataDiskStorageAccountType: config.DataDiskStorageAccountType,
 					SourceImageResourceID:      config.Source,
 					Location:                   info.Location,
+					Zone:                       info.Zone,
 
 					SkipCleanup: config.SkipCleanup,
 				}),

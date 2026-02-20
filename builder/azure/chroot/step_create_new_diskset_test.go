@@ -214,6 +214,38 @@ func TestStepCreateNewDisk_Run(t *testing.T) {
 				9:  resource("/subscriptions/SubscriptionID/resourceGroups/ResourceGroupName/providers/Microsoft.Compute/disks/TemporaryDataDisk-9"),
 			},
 		},
+		{
+			name: "from disk with availability zone",
+			fields: StepCreateNewDiskset{
+				OSDiskID:                 "/subscriptions/SubscriptionID/resourcegroups/ResourceGroupName/providers/Microsoft.Compute/disks/TemporaryOSDiskName",
+				OSDiskSizeGB:             42,
+				OSDiskStorageAccountType: string(disks.DiskStorageAccountTypesStandardLRS),
+				HyperVGeneration:         string(disks.HyperVGenerationVOne),
+				Location:                 "westus",
+				Zone:                     "3",
+				SourceOSDiskResourceID:   "SourceDisk",
+			},
+			disks: []disks.Disk{
+				{
+					Location: "westus",
+					Zones:    &[]string{"3"},
+					Sku: &disks.DiskSku{
+						Name: &standardLRS,
+					},
+					Properties: &disks.DiskProperties{
+						HyperVGeneration: &hyperVGeneration,
+						OsType:           &osType,
+						CreationData: disks.CreationData{
+							CreateOption:     disks.DiskCreateOptionCopy,
+							SourceResourceId: common.StringPtr("SourceDisk"),
+						},
+						DiskSizeGB: common.Int64Ptr(42),
+					},
+				},
+			},
+			want:          multistep.ActionContinue,
+			verifyDiskset: &Diskset{-1: resource("/subscriptions/SubscriptionID/resourceGroups/ResourceGroupName/providers/Microsoft.Compute/disks/TemporaryOSDiskName")},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -226,6 +258,7 @@ func TestStepCreateNewDisk_Run(t *testing.T) {
 				DataDiskIDPrefix:           tt.fields.DataDiskIDPrefix,
 				HyperVGeneration:           tt.fields.HyperVGeneration,
 				Location:                   tt.fields.Location,
+				Zone:                       tt.fields.Zone,
 				SourceOSDiskResourceID:     tt.fields.SourceOSDiskResourceID,
 				SourceImageResourceID:      tt.fields.SourceImageResourceID,
 				SourcePlatformImage:        tt.fields.SourcePlatformImage,
