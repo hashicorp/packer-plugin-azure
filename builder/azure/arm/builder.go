@@ -241,10 +241,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		b.config.storageAccountBlobEndpoint = blobPrimaryEndpoint
 		// Remove trailing slash
 		azureClient.GiovanniBlobClient.Client.BaseUri = blobPrimaryEndpoint[:len(blobPrimaryEndpoint)-1]
-
-		if !equalLocation(account.Location, b.config.Location) {
-			return nil, fmt.Errorf("The storage account is located in %s, but the build will take place in %s. The locations must be identical", account.Location, b.config.Location)
-		}
 	}
 
 	endpointConnectType := PublicEndpoint
@@ -601,14 +597,6 @@ func (b *Builder) isPublicPrivateNetworkCommunication() bool {
 
 func (b *Builder) isPrivateNetworkCommunication() bool {
 	return b.config.VirtualNetworkName != ""
-}
-
-func equalLocation(location1, location2 string) bool {
-	return strings.EqualFold(canonicalizeLocation(location1), canonicalizeLocation(location2))
-}
-
-func canonicalizeLocation(location string) string {
-	return strings.Replace(location, " ", "", -1)
 }
 
 func isImageSpecialized(client *galleryimages.GalleryImagesClient, ctx context.Context, acg SharedImageGallery) (bool, error) {
