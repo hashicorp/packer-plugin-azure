@@ -139,7 +139,7 @@ func TestStepCreateNewDisk_Run(t *testing.T) {
 				DataDiskIDPrefix:           "/subscriptions/SubscriptionID/resourcegroups/ResourceGroupName/providers/Microsoft.Compute/disks/TemporaryDataDisk-",
 				HyperVGeneration:           string(disks.HyperVGenerationVOne),
 				Location:                   "westus",
-				SourceImageResourceID:      "/subscriptions/SubscriptionID/resourcegroups/imagegroup/providers/Microsoft.Compute/galleries/MyGallery/images/MyImage/versions/1.2.3",
+				SourceImageResourceID:      "/subscriptions/ImageSubscriptionID/resourcegroups/imagegroup/providers/Microsoft.Compute/galleries/MyGallery/images/MyImage/versions/1.2.3",
 			},
 
 			disks: []disks.Disk{
@@ -149,7 +149,7 @@ func TestStepCreateNewDisk_Run(t *testing.T) {
 						CreationData: disks.CreationData{
 							CreateOption: disks.DiskCreateOptionFromImage,
 							GalleryImageReference: &disks.ImageDiskReference{
-								Id: common.StringPtr("/subscriptions/SubscriptionID/resourcegroups/imagegroup/providers/Microsoft.Compute/galleries/MyGallery/images/MyImage/versions/1.2.3"),
+								Id: common.StringPtr("/subscriptions/ImageSubscriptionID/resourcegroups/imagegroup/providers/Microsoft.Compute/galleries/MyGallery/images/MyImage/versions/1.2.3"),
 							},
 						},
 						HyperVGeneration: &hyperVGeneration,
@@ -165,7 +165,7 @@ func TestStepCreateNewDisk_Run(t *testing.T) {
 						CreationData: disks.CreationData{
 							CreateOption: disks.DiskCreateOptionFromImage,
 							GalleryImageReference: &disks.ImageDiskReference{
-								Id:  common.StringPtr("/subscriptions/SubscriptionID/resourcegroups/imagegroup/providers/Microsoft.Compute/galleries/MyGallery/images/MyImage/versions/1.2.3"),
+								Id:  common.StringPtr("/subscriptions/ImageSubscriptionID/resourcegroups/imagegroup/providers/Microsoft.Compute/galleries/MyGallery/images/MyImage/versions/1.2.3"),
 								Lun: common.Int64Ptr(5),
 							},
 						},
@@ -180,7 +180,7 @@ func TestStepCreateNewDisk_Run(t *testing.T) {
 						CreationData: disks.CreationData{
 							CreateOption: disks.DiskCreateOptionFromImage,
 							GalleryImageReference: &disks.ImageDiskReference{
-								Id:  common.StringPtr("/subscriptions/SubscriptionID/resourcegroups/imagegroup/providers/Microsoft.Compute/galleries/MyGallery/images/MyImage/versions/1.2.3"),
+								Id:  common.StringPtr("/subscriptions/ImageSubscriptionID/resourcegroups/imagegroup/providers/Microsoft.Compute/galleries/MyGallery/images/MyImage/versions/1.2.3"),
 								Lun: common.Int64Ptr(9),
 							},
 						},
@@ -195,7 +195,7 @@ func TestStepCreateNewDisk_Run(t *testing.T) {
 						CreationData: disks.CreationData{
 							CreateOption: disks.DiskCreateOptionFromImage,
 							GalleryImageReference: &disks.ImageDiskReference{
-								Id:  common.StringPtr("/subscriptions/SubscriptionID/resourcegroups/imagegroup/providers/Microsoft.Compute/galleries/MyGallery/images/MyImage/versions/1.2.3"),
+								Id:  common.StringPtr("/subscriptions/ImageSubscriptionID/resourcegroups/imagegroup/providers/Microsoft.Compute/galleries/MyGallery/images/MyImage/versions/1.2.3"),
 								Lun: common.Int64Ptr(3),
 							},
 						},
