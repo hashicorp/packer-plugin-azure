@@ -102,7 +102,7 @@ func (s *StepCreateNewDiskset) Run(ctx context.Context, state multistep.StateBag
 			"Microsoft.Compute/galleries/images/versions") {
 			return errorMessage("source image id is not a shared image version %q, expected type 'Microsoft.Compute/galleries/images/versions'", imageID)
 		}
-		galleryImageVersionId := galleryimageversions.NewImageVersionID(azcli.SubscriptionID(),
+		galleryImageVersionId := galleryimageversions.NewImageVersionID(imageID.Subscription,
 			imageID.ResourceGroup, imageID.ResourceName[0], imageID.ResourceName[1], imageID.ResourceName[2])
 		image, err := s.getVersion(ctx, azcli, galleryImageVersionId)
 		if err != nil {
