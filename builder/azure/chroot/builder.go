@@ -544,9 +544,10 @@ func buildsteps(
 						OSDiskSizeGB:             config.OSDiskSizeGB,
 						OSDiskStorageAccountType: config.OSDiskStorageAccountType,
 						HyperVGeneration:         config.ImageHyperVGeneration,
+						SourcePlatformImage:      pi,
 						Location:                 info.Location,
-					Zone:                     info.Zone,
-						SkipCleanup: config.SkipCleanup,
+						Zone:                     info.Zone,
+						SkipCleanup:              config.SkipCleanup,
 					}),
 				)
 			} else {

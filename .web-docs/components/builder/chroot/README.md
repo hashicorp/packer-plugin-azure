@@ -35,6 +35,22 @@ There are some restrictions however:
 - The host system SKU has to allow for all of the specified disks to be
   attached.
 
+### Availability Zones
+
+When the host VM is placed in an availability zone, the builder automatically
+creates disks in the same zone. The zone is detected via the Azure Instance
+Metadata Service (IMDS) and is also available as a template variable via
+`{{ vm \`zone\` }}`.
+
+### Cross-Subscription Azure Compute Gallery (ACG)
+
+The `azure-chroot` builder supports sourcing images from an Azure Compute
+Gallery in a different subscription. When specifying a `source` that references
+a shared image version in another subscription, the builder will use the
+subscription ID from the image resource ID rather than the host VM's
+subscription. Ensure the identity used by the builder has the appropriate
+read permissions on the source gallery.
+
 ## Configuration Reference
 
 There are many configuration options available for the builder. We'll start
@@ -290,6 +306,7 @@ available called `vm`, which returns the following VM metadata:
 - subscription_id
 - resource_group
 - location
+- zone
 - resource_id
 
 This function can be used in the configuration templates, for example, use
@@ -308,7 +325,6 @@ The generated variables available for this builder are:
 
 - `SourceImageName` - The full name of the source image used in the deployment. When using
 shared images the resulting name will point to the actual source used to create the said version.
-  building the AMI.
 
 Usage example:
 
@@ -320,7 +336,7 @@ Usage example:
 // won't be easily resolvable until legacy json templates are deprecated:
 
 {
-source "amazon-arm" "basic-example" {
+source "azure-chroot" "basic-example" {
   source = "credativ:Debian:9:latest"
 }
 
