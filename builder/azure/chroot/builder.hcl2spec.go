@@ -53,6 +53,8 @@ type FlatConfig struct {
 	TemporaryOSDiskSnapshotID         *string                            `mapstructure:"temporary_os_disk_snapshot_id" cty:"temporary_os_disk_snapshot_id" hcl:"temporary_os_disk_snapshot_id"`
 	TemporaryDataDiskIDPrefix         *string                            `mapstructure:"temporary_data_disk_id_prefix" cty:"temporary_data_disk_id_prefix" hcl:"temporary_data_disk_id_prefix"`
 	TemporaryDataDiskSnapshotIDPrefix *string                            `mapstructure:"temporary_data_disk_snapshot_id" cty:"temporary_data_disk_snapshot_id" hcl:"temporary_data_disk_snapshot_id"`
+	LVMRootDevice                     *string                            `mapstructure:"lvm_root_device" cty:"lvm_root_device" hcl:"lvm_root_device"`
+	PreUnmountCommands                []string                           `mapstructure:"pre_unmount_commands" cty:"pre_unmount_commands" hcl:"pre_unmount_commands"`
 	SkipCleanup                       *bool                              `mapstructure:"skip_cleanup" cty:"skip_cleanup" hcl:"skip_cleanup"`
 	ImageResourceID                   *string                            `mapstructure:"image_resource_id" cty:"image_resource_id" hcl:"image_resource_id"`
 	SharedImageGalleryDestination     *FlatSharedImageGalleryDestination `mapstructure:"shared_image_destination" cty:"shared_image_destination" hcl:"shared_image_destination"`
@@ -113,6 +115,8 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"temporary_os_disk_snapshot_id":   &hcldec.AttrSpec{Name: "temporary_os_disk_snapshot_id", Type: cty.String, Required: false},
 		"temporary_data_disk_id_prefix":   &hcldec.AttrSpec{Name: "temporary_data_disk_id_prefix", Type: cty.String, Required: false},
 		"temporary_data_disk_snapshot_id": &hcldec.AttrSpec{Name: "temporary_data_disk_snapshot_id", Type: cty.String, Required: false},
+		"lvm_root_device":                 &hcldec.AttrSpec{Name: "lvm_root_device", Type: cty.String, Required: false},
+		"pre_unmount_commands":            &hcldec.AttrSpec{Name: "pre_unmount_commands", Type: cty.List(cty.String), Required: false},
 		"skip_cleanup":                    &hcldec.AttrSpec{Name: "skip_cleanup", Type: cty.Bool, Required: false},
 		"image_resource_id":               &hcldec.AttrSpec{Name: "image_resource_id", Type: cty.String, Required: false},
 		"shared_image_destination":        &hcldec.BlockSpec{TypeName: "shared_image_destination", Nested: hcldec.ObjectSpec((*FlatSharedImageGalleryDestination)(nil).HCL2Spec())},
