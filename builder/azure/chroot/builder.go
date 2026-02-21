@@ -125,6 +125,18 @@ type Config struct {
 	// The prefix for the resource ids of the temporary data disk snapshots that will be created. The snapshots will be suffixed with a number. Will be generated if not set.
 	TemporaryDataDiskSnapshotIDPrefix string `mapstructure:"temporary_data_disk_snapshot_id"`
 
+	// Explicitly specify the LVM root device path to mount (e.g., `/dev/mapper/rhel-root`).
+	// When set, LVM volume groups are activated and this device is used as the mount target
+	// instead of a partition on the raw disk. Normally, LVM is auto-detected and does not
+	// require any configuration. Use this only when auto-detection picks the wrong logical volume.
+	LVMRootDevice string `mapstructure:"lvm_root_device"`
+
+	// A series of commands to execute after provisioning but before unmounting the chroot
+	// and deactivating LVM. This is useful for flushing writes or running cleanup inside the
+	// chroot while the filesystem is still mounted. The device and mount path are provided
+	// by `{{.Device}}` and `{{.MountPath}}`.
+	PreUnmountCommands []string `mapstructure:"pre_unmount_commands"`
+
 	// If set to `true`, leaves the temporary disks and snapshots behind in the Packer VM resource group. Defaults to `false`
 	SkipCleanup bool `mapstructure:"skip_cleanup"`
 
@@ -174,6 +186,7 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 				"command_wrapper",
 				"post_mount_commands",
 				"pre_mount_commands",
+				"pre_unmount_commands",
 				"manual_mount_command",
 				"mount_path",
 			},
@@ -291,6 +304,10 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	// checks, accumulate any errors or warnings
 
 	if b.config.FromScratch {
+		if b.config.LVMRootDevice != "" {
+			errs = packersdk.MultiErrorAppend(
+				errs, errors.New("lvm_root_device cannot be specified when building from_scratch"))
+		}
 		if b.config.Source != "" {
 			errs = packersdk.MultiErrorAppend(
 				errs, errors.New("source cannot be specified when building from_scratch"))
@@ -365,6 +382,11 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 
 	if err := checkHyperVGeneration(b.config.ImageHyperVGeneration); err != nil {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("image_hyperv_generation: %v", err))
+	}
+
+	if b.config.LVMRootDevice != "" && !strings.HasPrefix(b.config.LVMRootDevice, "/dev/") {
+		errs = packersdk.MultiErrorAppend(errs,
+			fmt.Errorf("lvm_root_device: %q must be an absolute device path starting with /dev/", b.config.LVMRootDevice))
 	}
 
 	if errs != nil {
@@ -545,7 +567,9 @@ func buildsteps(
 						OSDiskStorageAccountType: config.OSDiskStorageAccountType,
 						HyperVGeneration:         config.ImageHyperVGeneration,
 						Location:                 info.Location,
-					Zone:                     info.Zone,
+						Zone:                     info.Zone,
+						SourcePlatformImage:      pi,
+
 						SkipCleanup: config.SkipCleanup,
 					}),
 				)
@@ -610,6 +634,15 @@ func buildsteps(
 
 	addSteps(
 		&StepAttachDisk{}, // uses os_disk_resource_id and sets 'device' in stateBag
+		// StepSetupLVM always runs: it auto-detects LVM on the attached disk.
+		// If LVM is found, it activates volume groups and replaces 'device' in
+		// the state bag with the root LV path. If not, it's a no-op.
+		&StepSetupLVM{
+			LVMRootDevice: config.LVMRootDevice,
+		},
+	)
+
+	addSteps(
 		&chroot.StepPreMountCommands{
 			Commands: config.PreMountCommands,
 		},
@@ -629,7 +662,12 @@ func buildsteps(
 			Files: config.CopyFiles,
 		},
 		&chroot.StepChrootProvision{},
-		&chroot.StepEarlyCleanup{},
+		&StepPreUnmountCommands{
+			Commands: config.PreUnmountCommands,
+		},
+		// Custom StepEarlyCleanup that includes LVM deactivation between
+		// unmount and disk detach (the SDK's version lacks "lvm_cleanup").
+		&StepEarlyCleanup{},
 	)
 
 	var captureSteps []multistep.Step

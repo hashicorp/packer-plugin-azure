@@ -70,12 +70,19 @@ func (s *StepMountDevice) Run(ctx context.Context, state multistep.StateBag) mul
 		}
 	}
 
+	// When LVM is active, the device is already a full LV path (e.g. /dev/mapper/rhel-root)
+	// and no partition suffix should be appended.
+	mountPartition := s.MountPartition
+	if _, ok := state.GetOk("lvm_active"); ok {
+		mountPartition = ""
+	}
+
 	var deviceMount string
 	switch runtime.GOOS {
 	case "freebsd":
-		deviceMount = fmt.Sprintf("%sp%s", device, s.MountPartition)
+		deviceMount = fmt.Sprintf("%sp%s", device, mountPartition)
 	default:
-		deviceMount = fmt.Sprintf("%s%s", device, s.MountPartition)
+		deviceMount = fmt.Sprintf("%s%s", device, mountPartition)
 	}
 
 	state.Put("deviceMount", deviceMount)
