@@ -72,10 +72,10 @@ In most cases **no configuration is required** — LVM detection and activation
 happen transparently. The builder uses a multi-stage heuristic to find the root
 logical volume:
 
-1. Examines LV attributes (skipping snapshots and virtual LVs).
+1. Examines LV attributes (skipping snapshots, thin pools, and virtual LVs).
 2. Excludes swap volumes.
-3. Prefers LVs whose names contain `root`.
-4. Falls back to the largest remaining LV.
+3. Prefers LVs whose names contain `root` (exact match first, then partial).
+4. Falls back to the first remaining candidate.
 
 If auto-detection picks the wrong logical volume, you can set `lvm_root_device`
 to the exact device path (e.g., `/dev/mapper/rhel-root`).

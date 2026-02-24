@@ -62,10 +62,10 @@ In most cases **no configuration is required** — LVM detection and activation
 happen transparently. The builder uses a multi-stage heuristic to find the root
 logical volume:
 
-1. Examines LV attributes (skipping snapshots and virtual LVs).
+1. Examines LV attributes (skipping snapshots, thin pools, and virtual LVs).
 2. Excludes swap volumes.
-3. Prefers LVs whose names contain `root`.
-4. Falls back to the largest remaining LV.
+3. Prefers LVs whose names contain `root` (exact match first, then partial).
+4. Falls back to the first remaining candidate.
 
 If auto-detection picks the wrong logical volume, you can set `lvm_root_device`
 to the exact device path (e.g., `/dev/mapper/rhel-root`).
@@ -224,10 +224,12 @@ information.
   instead of a partition on the raw disk. Normally, LVM is auto-detected and does not
   require any configuration. Use this only when auto-detection picks the wrong logical volume.
 
-- `pre_unmount_commands` ([]string) - A series of commands to execute after provisioning but before unmounting the chroot
-  and deactivating LVM. This is useful for flushing writes or running cleanup inside the
-  chroot while the filesystem is still mounted. The device and mount path are provided
-  by `{{.Device}}` and `{{.MountPath}}`.
+- `pre_unmount_commands` ([]string) - A series of commands to execute on the **host** after provisioning but before unmounting
+  the chroot and deactivating LVM. Useful for host-side operations on the still-mounted
+  filesystem such as `fstrim` or `sync`. These commands do **not** run inside the chroot;
+  to run a command inside the chroot, use a shell provisioner or prefix with
+  `chroot {{.MountPath}}`. The device and mount path are provided by `{{.Device}}` and
+  `{{.MountPath}}`.
 
 - `skip_cleanup` (bool) - If set to `true`, leaves the temporary disks and snapshots behind in the Packer VM resource group. Defaults to `false`
 
