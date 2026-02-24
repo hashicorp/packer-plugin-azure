@@ -131,10 +131,12 @@ type Config struct {
 	// require any configuration. Use this only when auto-detection picks the wrong logical volume.
 	LVMRootDevice string `mapstructure:"lvm_root_device"`
 
-	// A series of commands to execute after provisioning but before unmounting the chroot
-	// and deactivating LVM. This is useful for flushing writes or running cleanup inside the
-	// chroot while the filesystem is still mounted. The device and mount path are provided
-	// by `{{.Device}}` and `{{.MountPath}}`.
+	// A series of commands to execute on the **host** after provisioning but before unmounting
+	// the chroot and deactivating LVM. Useful for host-side operations on the still-mounted
+	// filesystem such as `fstrim` or `sync`. These commands do **not** run inside the chroot;
+	// to run a command inside the chroot, use a shell provisioner or prefix with
+	// `chroot {{.MountPath}}`. The device and mount path are provided by `{{.Device}}` and
+	// `{{.MountPath}}`.
 	PreUnmountCommands []string `mapstructure:"pre_unmount_commands"`
 
 	// If set to `true`, leaves the temporary disks and snapshots behind in the Packer VM resource group. Defaults to `false`
