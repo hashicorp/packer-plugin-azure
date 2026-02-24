@@ -43,6 +43,9 @@ type StepCreateNewDiskset struct {
 	// Location is needed for platform and shared images
 	Location string
 
+	// Availability zone of the VM (from IMDS). If set, disks are created in this zone.
+	Zone string
+
 	SkipCleanup bool
 
 	getVersion func(context.Context, client.AzureClientSet, galleryimageversions.ImageVersionId) (*galleryimageversions.GalleryImageVersion, error)
@@ -102,7 +105,7 @@ func (s *StepCreateNewDiskset) Run(ctx context.Context, state multistep.StateBag
 			"Microsoft.Compute/galleries/images/versions") {
 			return errorMessage("source image id is not a shared image version %q, expected type 'Microsoft.Compute/galleries/images/versions'", imageID)
 		}
-		galleryImageVersionId := galleryimageversions.NewImageVersionID(azcli.SubscriptionID(),
+		galleryImageVersionId := galleryimageversions.NewImageVersionID(imageID.Subscription,
 			imageID.ResourceGroup, imageID.ResourceName[0], imageID.ResourceName[1], imageID.ResourceName[2])
 		image, err := s.getVersion(ctx, azcli, galleryImageVersionId)
 		if err != nil {
@@ -142,6 +145,11 @@ func (s StepCreateNewDiskset) getOSDiskDefinition(subscriptionID string) disks.D
 			OsType:       &osType,
 			CreationData: disks.CreationData{},
 		},
+	}
+
+	if s.Zone != "" {
+		z := []string{s.Zone}
+		disk.Zones = &z
 	}
 
 	if s.OSDiskStorageAccountType != "" {
@@ -189,6 +197,11 @@ func (s StepCreateNewDiskset) getDatadiskDefinitionFromImage(lun int64) disks.Di
 		Properties: &disks.DiskProperties{
 			CreationData: disks.CreationData{},
 		},
+	}
+
+	if s.Zone != "" {
+		z := []string{s.Zone}
+		disk.Zones = &z
 	}
 
 	disk.Properties.CreationData.CreateOption = disks.DiskCreateOptionFromImage

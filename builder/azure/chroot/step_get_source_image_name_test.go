@@ -93,7 +93,7 @@ func TestChrootStepGetSourceImageName_SharedImage(t *testing.T) {
 	}{
 		{
 			name:                  "SharedImageWithManagedImageSource",
-			SourceImageResourceID: "/subscriptions/1234/resourceGroups/bar/providers/Microsoft.Compute/galleries/test/images/foo/versions/1.0.6",
+			SourceImageResourceID: "/subscriptions/5678/resourceGroups/bar/providers/Microsoft.Compute/galleries/test/images/foo/versions/1.0.6",
 			GeneratedData:         genData,
 			mockedGalleryReturn: &galleryimageversions.GalleryImageVersion{
 				Properties: &galleryimageversions.GalleryImageVersionProperties{
@@ -105,7 +105,7 @@ func TestChrootStepGetSourceImageName_SharedImage(t *testing.T) {
 				},
 			},
 			expectedImageId: galleryimageversions.ImageVersionId{
-				SubscriptionId:    "1234",
+				SubscriptionId:    "5678",
 				ResourceGroupName: "bar",
 				GalleryName:       "test",
 				ImageName:         "foo",
@@ -115,7 +115,7 @@ func TestChrootStepGetSourceImageName_SharedImage(t *testing.T) {
 		},
 		{
 			name:                  "SimulatedBadImageResponse",
-			SourceImageResourceID: "/subscriptions/1234/resourceGroups/bar/providers/Microsoft.Compute/galleries/test/images/foo/versions/0.0.0",
+			SourceImageResourceID: "/subscriptions/5678/resourceGroups/bar/providers/Microsoft.Compute/galleries/test/images/foo/versions/0.0.0",
 			GeneratedData:         genData,
 			expected:              "ERR_SOURCE_IMAGE_NAME_NOT_FOUND",
 		},
