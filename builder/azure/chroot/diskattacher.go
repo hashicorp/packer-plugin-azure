@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 
-	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2024-03-01/virtualmachines"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
@@ -194,7 +194,7 @@ func (da diskAttacher) setDisks(ctx context.Context, disks []hashiVMSDK.DataDisk
 	defer cancel()
 	vmID := hashiVMSDK.NewVirtualMachineID(da.azcli.SubscriptionID(), da.vm.ResourceGroupName, da.vm.Name)
 	// update the VM resource, attach disk
-	_, err = da.azcli.VirtualMachinesClient().CreateOrUpdate(pollingContext, vmID, vmResource)
+	_, err = da.azcli.VirtualMachinesClient().CreateOrUpdate(pollingContext, vmID, vmResource, hashiVMSDK.DefaultCreateOrUpdateOperationOptions())
 
 	return err
 }

@@ -19,8 +19,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2021-07-01/compute"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2024-03-01/images"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2024-03-01/virtualmachines"
 
 	"github.com/masterzen/winrm"
 
@@ -740,9 +740,9 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	}
 
 	switch c.ManagedImageStorageAccountType {
-	case "", string(compute.StorageAccountTypesStandardLRS):
+	case "", string(images.StorageAccountTypesStandardLRS):
 		c.managedImageStorageAccountType = virtualmachines.StorageAccountTypesStandardLRS
-	case string(compute.StorageAccountTypesPremiumLRS):
+	case string(images.StorageAccountTypesPremiumLRS):
 		c.managedImageStorageAccountType = virtualmachines.StorageAccountTypesPremiumLRS
 	default:
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The managed_image_storage_account_type %q is invalid", c.ManagedImageStorageAccountType))
