@@ -438,8 +438,8 @@ func validateLVMRootDevice(device string) error {
 		}
 	}
 
-	// Use POSIX path (not filepath) since device paths are always Linux/FreeBSD; LVM 
-	// not a Windows concept. 
+	// Use POSIX path (not filepath) since device paths are always Linux/FreeBSD; LVM
+	// not a Windows concept.
 	cleaned := posixpath.Clean(device)
 
 	// Check for path traversal: reject if any component is ".."
