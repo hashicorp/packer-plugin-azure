@@ -14,9 +14,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	posixpath "path"
 	"runtime"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 
@@ -386,9 +388,10 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("image_hyperv_generation: %v", err))
 	}
 
-	if b.config.LVMRootDevice != "" && !strings.HasPrefix(b.config.LVMRootDevice, "/dev/") {
-		errs = packersdk.MultiErrorAppend(errs,
-			fmt.Errorf("lvm_root_device: %q must be an absolute device path starting with /dev/", b.config.LVMRootDevice))
+	if b.config.LVMRootDevice != "" {
+		if err := validateLVMRootDevice(b.config.LVMRootDevice); err != nil {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("lvm_root_device: %v", err))
+		}
 	}
 
 	if errs != nil {
@@ -423,6 +426,34 @@ func checkHyperVGeneration(s string) interface{} {
 	}
 	return fmt.Errorf("%q is not a valid value %v",
 		s, virtualmachines.PossibleValuesForHyperVGenerationType())
+}
+
+// validateLVMRootDevice validates that a user-supplied lvm_root_device value is
+// a clean, safe absolute device path under /dev/.
+func validateLVMRootDevice(device string) error {
+	// Reject control characters, etc
+	for _, r := range device {
+		if unicode.IsControl(r) || (unicode.IsSpace(r) && r != ' ') {
+			return fmt.Errorf("%q contains invalid whitespace or control characters", device)
+		}
+	}
+
+	// Use POSIX path (not filepath) since device paths are always Linux/FreeBSD; LVM 
+	// not a Windows concept. 
+	cleaned := posixpath.Clean(device)
+
+	// Check for path traversal: reject if any component is ".."
+	for _, component := range strings.Split(cleaned, "/") {
+		if component == ".." {
+			return fmt.Errorf("%q must not contain path traversal (..)", device)
+		}
+	}
+
+	if !strings.HasPrefix(cleaned, "/dev/") {
+		return fmt.Errorf("%q must be an absolute device path starting with /dev/ (resolved to %q)", device, cleaned)
+	}
+
+	return nil
 }
 
 func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook) (packersdk.Artifact, error) {
