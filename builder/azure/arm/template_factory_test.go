@@ -640,6 +640,39 @@ func TestVirtualMachineDeploymentLicenseType02(t *testing.T) {
 	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
+// Ensure accelerated networking is not set when not specified in config
+func TestVirtualMachineDeploymentAcceleratedNetworking01(t *testing.T) {
+	var c Config
+	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+// Ensure accelerated networking is set when specified in config
+func TestVirtualMachineDeploymentAcceleratedNetworking02(t *testing.T) {
+	m := getArmBuilderConfiguration()
+	m["accelerated_networking"] = "true"
+
+	var c Config
+	_, err := c.Prepare(m, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
 // Ensure the KeyVault template is correct when tags are supplied.
 func TestKeyVaultDeployment03(t *testing.T) {
 	tags := map[string]interface{}{
