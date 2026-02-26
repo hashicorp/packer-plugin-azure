@@ -49,8 +49,12 @@ func (s *StepSetupLVM) Run(ctx context.Context, state multistep.StateBag) multis
 		ui.Say(fmt.Sprintf("LVM: using user-specified root device: %s", s.LVMRootDevice))
 
 		vgs, err := s.detectVolumeGroups(device)
-		if err != nil {
-			log.Printf("LVM: warning: could not detect volume groups for cleanup scoping: %v", err)
+		if err != nil || len(vgs) == 0 {
+			if err != nil {
+				log.Printf("LVM: warning: could not detect volume groups for cleanup scoping: %v", err)
+			} else {
+				log.Printf("LVM: warning: no volume groups detected on %s", device)
+			}
 			// Without VG names we cannot safely scope vgchange; try to
 			// extract the VG name from the user-specified device path.
 			if vg := vgFromDevicePath(s.LVMRootDevice); vg != "" {
@@ -136,6 +140,7 @@ func (s *StepSetupLVM) detectVolumeGroups(device string) ([]string, error) {
 
 	// Retry loop: Azure disk attachment is asynchronous — partition device nodes
 	// may not exist immediately after the disk appears.
+	var lastErr error
 	for attempt := 0; attempt < 3; attempt++ {
 		if attempt > 0 {
 			log.Printf("LVM: retry attempt %d/3, waiting for device nodes...", attempt+1)
@@ -155,6 +160,7 @@ func (s *StepSetupLVM) detectVolumeGroups(device string) ([]string, error) {
 		vgs, err := s.scanPVS(device)
 		if err != nil {
 			log.Printf("LVM: scanPVS attempt %d: %v", attempt+1, err)
+			lastErr = err
 			continue
 		}
 		if len(vgs) > 0 {
@@ -162,6 +168,9 @@ func (s *StepSetupLVM) detectVolumeGroups(device string) ([]string, error) {
 		}
 	}
 
+	if lastErr != nil {
+		return nil, fmt.Errorf("LVM: all scan attempts failed, last error: %w", lastErr)
+	}
 	return nil, nil
 }
 
@@ -326,40 +335,43 @@ func (s *StepSetupLVM) findRootLV(vgs []string, ui packersdk.Ui) (string, error)
 		nonSwap = mountable
 	}
 
+	return selectRootLV(nonSwap), nil
+}
+
+// selectRootLV picks the best root LV candidate from a pre-filtered list of
+// mountable, non-swap logical volumes. It uses name-based heuristics:
+//  1. Exact name match: "root", "lv_root", "rootlv", "lvroot"
+//  2. Partial match: name contains "root"
+//  3. Fallback: first candidate
+//
+// This function is pure (no I/O) to facilitate deterministic testing.
+func selectRootLV(candidates []lvInfo) string {
+	if len(candidates) == 0 {
+		return ""
+	}
+
 	// If exactly one candidate, return it
-	if len(nonSwap) == 1 {
-		return nonSwap[0].path, nil
+	if len(candidates) == 1 {
+		return candidates[0].path
 	}
 
 	// Multiple candidates: try exact name-based matching first
-	for _, lv := range nonSwap {
+	for _, lv := range candidates {
 		nameLower := strings.ToLower(lv.name)
 		if nameLower == "root" || nameLower == "lv_root" || nameLower == "rootlv" || nameLower == "lvroot" {
-			ui.Say(fmt.Sprintf("LVM: selected root LV by exact name match: %s (%s)", lv.name, lv.path))
-			return lv.path, nil
+			return lv.path
 		}
 	}
 
 	// Fallback: partial name match containing "root"
-	for _, lv := range nonSwap {
+	for _, lv := range candidates {
 		if strings.Contains(strings.ToLower(lv.name), "root") {
-			ui.Say(fmt.Sprintf("LVM: selected root LV by partial name match: %s (%s)", lv.name, lv.path))
-			return lv.path, nil
+			return lv.path
 		}
 	}
 
-	// No name match: warn user and return the first candidate
-	ui.Say("WARNING: LVM: multiple logical volumes found, unable to determine root by name:")
-	for _, lv := range nonSwap {
-		fsType := blkidType(lv.path)
-		if fsType == "" {
-			fsType = "unknown"
-		}
-		ui.Say(fmt.Sprintf("  - %s (%s) [fs: %s]", lv.name, lv.path, fsType))
-	}
-	ui.Say(fmt.Sprintf("LVM: selecting first candidate: %s", nonSwap[0].path))
-	ui.Say("LVM: if this is incorrect, set 'lvm_root_device' in your Packer template")
-	return nonSwap[0].path, nil
+	// No name match: return the first candidate
+	return candidates[0].path
 }
 
 // isMountableLV returns true unless the first character of lv_attr indicates
@@ -496,31 +508,38 @@ func resolveVGLV(device string) string {
 		}
 		log.Printf("LVM: dmsetup splitname failed or unavailable, falling back to heuristic for %s", basename)
 
-		// Fallback heuristic: find the last single-dash boundary
-		// LVM uses double-dashes to escape dashes in VG/LV names, so
-		// "my--vg-root" means VG="my-vg", LV="root"
-		// We look for a dash that is NOT preceded or followed by another dash.
-		lastIdx := -1
-		for i := 1; i < len(basename)-1; i++ {
-			if basename[i] == '-' && basename[i-1] != '-' && basename[i+1] != '-' {
-				lastIdx = i
-			}
-		}
-		if lastIdx > 0 {
-			vg := strings.ReplaceAll(basename[:lastIdx], "--", "-")
-			lv := strings.ReplaceAll(basename[lastIdx+1:], "--", "-")
-			return vg + "/" + lv
-		}
-		return ""
+		return resolveMapperHeuristic(basename)
 	}
 
-	// /dev/<vg>/<lv> style path
+	return resolveDevPath(device)
+}
+
+// resolveMapperHeuristic applies the heuristic VG/LV split for a /dev/mapper/
+// basename. LVM uses double-dashes to escape dashes in VG/LV names, so
+// "my--vg-root" means VG="my-vg", LV="root". We find the last single-dash
+// boundary that is NOT preceded or followed by another dash.
+func resolveMapperHeuristic(basename string) string {
+	lastIdx := -1
+	for i := 1; i < len(basename)-1; i++ {
+		if basename[i] == '-' && basename[i-1] != '-' && basename[i+1] != '-' {
+			lastIdx = i
+		}
+	}
+	if lastIdx > 0 {
+		vg := strings.ReplaceAll(basename[:lastIdx], "--", "-")
+		lv := strings.ReplaceAll(basename[lastIdx+1:], "--", "-")
+		return vg + "/" + lv
+	}
+	return ""
+}
+
+// resolveDevPath extracts VG/LV from a /dev/<vg>/<lv> style path.
+func resolveDevPath(device string) string {
 	parts := strings.Split(device, "/")
 	if len(parts) >= 4 {
 		// parts: ["", "dev", "<vg>", "<lv>"]
 		return parts[len(parts)-2] + "/" + parts[len(parts)-1]
 	}
-
 	return ""
 }
 
