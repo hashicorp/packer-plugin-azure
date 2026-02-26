@@ -210,10 +210,10 @@ func TestStepMountDevice_CleanupFunc_ManualMount_SkipsUnmount(t *testing.T) {
 	defer os.Remove(mountPath)
 
 	step := &StepMountDevice{
-		Command:        "custom-mount-script",
-		MountPath:      mountPath,
-		mountPath:      mountPath,
-		isManualMount:  true,
+		Command:       "custom-mount-script",
+		MountPath:     mountPath,
+		mountPath:     mountPath,
+		isManualMount: true,
 	}
 
 	wrapperCalled := false
