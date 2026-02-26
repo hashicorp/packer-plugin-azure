@@ -78,11 +78,15 @@ func (s *StepMountDevice) Run(ctx context.Context, state multistep.StateBag) mul
 	}
 
 	var deviceMount string
-	switch runtime.GOOS {
-	case "freebsd":
-		deviceMount = fmt.Sprintf("%sp%s", device, mountPartition)
-	default:
-		deviceMount = fmt.Sprintf("%s%s", device, mountPartition)
+	if mountPartition == "" {
+		deviceMount = device
+	} else {
+		switch runtime.GOOS {
+		case "freebsd":
+			deviceMount = fmt.Sprintf("%sp%s", device, mountPartition)
+		default:
+			deviceMount = fmt.Sprintf("%s%s", device, mountPartition)
+		}
 	}
 
 	state.Put("deviceMount", deviceMount)
