@@ -466,3 +466,53 @@ func TestLicenseType01(t *testing.T) {
 
 	approvaltests.VerifyJSONBytes(t, []byte(*doc))
 }
+
+// Test with accelerated networking explicitly disabled
+func TestAcceleratedNetworking00(t *testing.T) {
+	testSubject, err := NewTemplateBuilder(BasicTemplate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = testSubject.BuildLinux("--test-ssh-authorized-key--", true); err != nil {
+		t.Fatal(err)
+	}
+
+	f := false
+	err = testSubject.SetAcceleratedNetworking(&f)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	doc, err := testSubject.ToJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
+}
+
+// Test with accelerated networking enabled
+func TestAcceleratedNetworking01(t *testing.T) {
+	testSubject, err := NewTemplateBuilder(BasicTemplate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = testSubject.BuildLinux("--test-ssh-authorized-key--", true); err != nil {
+		t.Fatal(err)
+	}
+
+	tr := true
+	err = testSubject.SetAcceleratedNetworking(&tr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	doc, err := testSubject.ToJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
+}

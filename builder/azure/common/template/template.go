@@ -112,6 +112,7 @@ type Properties struct {
 	EnableSoftDelete             *string                                       `json:"enableSoftDelete,omitempty"`
 	HardwareProfile              *hashiVMSDK.HardwareProfile                   `json:"hardwareProfile,omitempty"`
 	IPConfigurations             *[]hashiPublicIPSDK.IPConfiguration           `json:"ipConfigurations,omitempty"`
+	EnableAcceleratedNetworking  *bool                                         `json:"enableAcceleratedNetworking,omitempty"`
 	LicenseType                  *string                                       `json:"licenseType,omitempty"`
 	NetworkProfile               *hashiVMSDK.NetworkProfile                    `json:"networkProfile,omitempty"`
 	OsProfile                    *hashiVMSDK.OSProfile                         `json:"osProfile,omitempty"`
