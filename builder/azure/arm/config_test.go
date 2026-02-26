@@ -2339,12 +2339,12 @@ func TestSharedImageGalleryWithSkipImageCreateOptions(t *testing.T) {
 
 func TestSkipCreateImageShouldNotRequireCaptureDestination(t *testing.T) {
 	config := map[string]interface{}{
-		"location":        "ignore",
-		"subscription_id": "ignore",
-		"os_type":         "linux",
-		"image_publisher": "ig",
-		"image_offer":     "ig",
-		"image_sku":       "ig",
+		"location":          "ignore",
+		"subscription_id":   "ignore",
+		"os_type":           "linux",
+		"image_publisher":   "ig",
+		"image_offer":       "ig",
+		"image_sku":         "ig",
 		"skip_create_image": true,
 	}
 

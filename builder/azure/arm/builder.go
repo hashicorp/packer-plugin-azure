@@ -160,10 +160,14 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	}
 
 	if b.config.isManagedImage() {
-		groupId := commonids.NewResourceGroupID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName)
-		_, err := azureClient.ResourceGroupsClient.Get(builderPollingContext, groupId)
-		if err != nil {
-			return nil, fmt.Errorf("Cannot locate the managed image resource group %s, received error %s", b.config.ManagedImageResourceGroupName, err)
+		// Skip the resource group existence check if the managed image resource group
+		// is the same as the temporary resource group, since it will be created during the build.
+		if b.config.ManagedImageResourceGroupName != b.config.tmpResourceGroupName {
+			groupId := commonids.NewResourceGroupID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName)
+			_, err := azureClient.ResourceGroupsClient.Get(builderPollingContext, groupId)
+			if err != nil {
+				return nil, fmt.Errorf("Cannot locate the managed image resource group %s, received error %s", b.config.ManagedImageResourceGroupName, err)
+			}
 		}
 
 		// If a managed image already exists it cannot be overwritten.
