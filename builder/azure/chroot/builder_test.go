@@ -14,6 +14,36 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
 )
 
+func Test_validateLVMRootDevice(t *testing.T) {
+	tests := []struct {
+		name    string
+		device  string
+		wantErr bool
+	}{
+		{"valid mapper path", "/dev/mapper/rhel-root", false},
+		{"valid vg/lv path", "/dev/rhel/root", false},
+		{"valid sda path", "/dev/sda1", false},
+		{"missing /dev/ prefix", "/mapper/rhel-root", true},
+		{"relative path", "dev/mapper/rhel-root", true},
+		{"path traversal with ..", "/dev/../tmp/foo", true},
+		{"path traversal resolving outside dev", "/dev/mapper/../../etc/passwd", true},
+		{"contains newline", "/dev/mapper/rhel-root\n", true},
+		{"contains tab", "/dev/mapper/rhel\troot", true},
+		{"contains carriage return", "/dev/mapper/rhel-root\r", true},
+		{"empty string", "", true},
+		{"just /dev/", "/dev/", true},
+		{"double dot in middle", "/dev/mapper/a..b", false}, // not a path traversal, just dots in name
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateLVMRootDevice(tt.device)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateLVMRootDevice(%q) error = %v, wantErr %v", tt.device, err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestBuilder_Prepare(t *testing.T) {
 	type config map[string]interface{}
 
@@ -112,6 +142,57 @@ func TestBuilder_Prepare(t *testing.T) {
 			name: "err: no output",
 			config: config{
 				"source": "/subscriptions/789/resourceGroups/testrg/providers/Microsoft.Compute/disks/diskname",
+			},
+			wantErr: true,
+		},
+		{
+			name: "valid lvm_root_device accepted",
+			config: config{
+				"source":            "/subscriptions/789/resourceGroups/testrg/providers/Microsoft.Compute/disks/diskname",
+				"image_resource_id": "/subscriptions/789/resourceGroups/otherrgname/providers/Microsoft.Compute/images/MyDebianOSImage-{{timestamp}}",
+				"lvm_root_device":   "/dev/mapper/rhel-root",
+			},
+			validate: func(c Config) {
+				if c.LVMRootDevice != "/dev/mapper/rhel-root" {
+					t.Errorf("Expected LVMRootDevice %q, got %q", "/dev/mapper/rhel-root", c.LVMRootDevice)
+				}
+			},
+		},
+		{
+			name: "lvm_root_device with path traversal rejected",
+			config: config{
+				"source":            "/subscriptions/789/resourceGroups/testrg/providers/Microsoft.Compute/disks/diskname",
+				"image_resource_id": "/subscriptions/789/resourceGroups/otherrgname/providers/Microsoft.Compute/images/MyDebianOSImage-{{timestamp}}",
+				"lvm_root_device":   "/dev/../tmp/evil",
+			},
+			wantErr: true,
+		},
+		{
+			name: "lvm_root_device with newline rejected",
+			config: config{
+				"source":            "/subscriptions/789/resourceGroups/testrg/providers/Microsoft.Compute/disks/diskname",
+				"image_resource_id": "/subscriptions/789/resourceGroups/otherrgname/providers/Microsoft.Compute/images/MyDebianOSImage-{{timestamp}}",
+				"lvm_root_device":   "/dev/mapper/rhel-root\n",
+			},
+			wantErr: true,
+		},
+		{
+			name: "lvm_root_device without /dev/ prefix rejected",
+			config: config{
+				"source":            "/subscriptions/789/resourceGroups/testrg/providers/Microsoft.Compute/disks/diskname",
+				"image_resource_id": "/subscriptions/789/resourceGroups/otherrgname/providers/Microsoft.Compute/images/MyDebianOSImage-{{timestamp}}",
+				"lvm_root_device":   "/mapper/rhel-root",
+			},
+			wantErr: true,
+		},
+		{
+			name: "from_scratch with lvm_root_device rejected",
+			config: config{
+				"from_scratch":       true,
+				"os_disk_size_gb":    30,
+				"pre_mount_commands": []string{"sgdisk ..."},
+				"image_resource_id":  "/subscriptions/789/resourceGroups/otherrgname/providers/Microsoft.Compute/images/MyDebianOSImage-{{timestamp}}",
+				"lvm_root_device":    "/dev/mapper/rhel-root",
 			},
 			wantErr: true,
 		},
