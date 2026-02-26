@@ -14,9 +14,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	posixpath "path"
 	"runtime"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 
@@ -125,6 +127,20 @@ type Config struct {
 	// The prefix for the resource ids of the temporary data disk snapshots that will be created. The snapshots will be suffixed with a number. Will be generated if not set.
 	TemporaryDataDiskSnapshotIDPrefix string `mapstructure:"temporary_data_disk_snapshot_id"`
 
+	// Explicitly specify the LVM root device path to mount (e.g., `/dev/mapper/rhel-root`).
+	// When set, LVM volume groups are activated and this device is used as the mount target
+	// instead of a partition on the raw disk. Normally, LVM is auto-detected and does not
+	// require any configuration. Use this only when auto-detection picks the wrong logical volume.
+	LVMRootDevice string `mapstructure:"lvm_root_device"`
+
+	// A series of commands to execute on the **host** after provisioning but before unmounting
+	// the chroot and deactivating LVM. Useful for host-side operations on the still-mounted
+	// filesystem such as `fstrim` or `sync`. These commands do **not** run inside the chroot;
+	// to run a command inside the chroot, use a shell provisioner or prefix with
+	// `chroot {{.MountPath}}`. The device and mount path are provided by `{{.Device}}` and
+	// `{{.MountPath}}`.
+	PreUnmountCommands []string `mapstructure:"pre_unmount_commands"`
+
 	// If set to `true`, leaves the temporary disks and snapshots behind in the Packer VM resource group. Defaults to `false`
 	SkipCleanup bool `mapstructure:"skip_cleanup"`
 
@@ -174,6 +190,7 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 				"command_wrapper",
 				"post_mount_commands",
 				"pre_mount_commands",
+				"pre_unmount_commands",
 				"manual_mount_command",
 				"mount_path",
 			},
@@ -291,6 +308,10 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	// checks, accumulate any errors or warnings
 
 	if b.config.FromScratch {
+		if b.config.LVMRootDevice != "" {
+			errs = packersdk.MultiErrorAppend(
+				errs, errors.New("lvm_root_device cannot be specified when building from_scratch"))
+		}
 		if b.config.Source != "" {
 			errs = packersdk.MultiErrorAppend(
 				errs, errors.New("source cannot be specified when building from_scratch"))
@@ -367,6 +388,12 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("image_hyperv_generation: %v", err))
 	}
 
+	if b.config.LVMRootDevice != "" {
+		if err := validateLVMRootDevice(b.config.LVMRootDevice); err != nil {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("lvm_root_device: %v", err))
+		}
+	}
+
 	if errs != nil {
 		return nil, warns, errs
 	}
@@ -399,6 +426,34 @@ func checkHyperVGeneration(s string) interface{} {
 	}
 	return fmt.Errorf("%q is not a valid value %v",
 		s, virtualmachines.PossibleValuesForHyperVGenerationType())
+}
+
+// validateLVMRootDevice validates that a user-supplied lvm_root_device value is
+// a clean, safe absolute device path under /dev/.
+func validateLVMRootDevice(device string) error {
+	// Reject control characters, etc
+	for _, r := range device {
+		if unicode.IsControl(r) || (unicode.IsSpace(r) && r != ' ') {
+			return fmt.Errorf("%q contains invalid whitespace or control characters", device)
+		}
+	}
+
+	// Use POSIX path (not filepath) since device paths are always Linux/FreeBSD; LVM
+	// not a Windows concept.
+	cleaned := posixpath.Clean(device)
+
+	// Check for path traversal: reject if any component is ".."
+	for _, component := range strings.Split(cleaned, "/") {
+		if component == ".." {
+			return fmt.Errorf("%q must not contain path traversal (..)", device)
+		}
+	}
+
+	if !strings.HasPrefix(cleaned, "/dev/") {
+		return fmt.Errorf("%q must be an absolute device path starting with /dev/ (resolved to %q)", device, cleaned)
+	}
+
+	return nil
 }
 
 func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook) (packersdk.Artifact, error) {
@@ -611,6 +666,15 @@ func buildsteps(
 
 	addSteps(
 		&StepAttachDisk{}, // uses os_disk_resource_id and sets 'device' in stateBag
+		// StepSetupLVM always runs: it auto-detects LVM on the attached disk.
+		// If LVM is found, it activates volume groups and replaces 'device' in
+		// the state bag with the root LV path. If not, it's a no-op.
+		&StepSetupLVM{
+			LVMRootDevice: config.LVMRootDevice,
+		},
+	)
+
+	addSteps(
 		&chroot.StepPreMountCommands{
 			Commands: config.PreMountCommands,
 		},
@@ -630,7 +694,12 @@ func buildsteps(
 			Files: config.CopyFiles,
 		},
 		&chroot.StepChrootProvision{},
-		&chroot.StepEarlyCleanup{},
+		&StepPreUnmountCommands{
+			Commands: config.PreUnmountCommands,
+		},
+		// Custom StepEarlyCleanup that includes LVM deactivation between
+		// unmount and disk detach (the SDK's version lacks "lvm_cleanup").
+		&StepEarlyCleanup{},
 	)
 
 	var captureSteps []multistep.Step

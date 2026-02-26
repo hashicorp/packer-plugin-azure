@@ -61,6 +61,18 @@
 
 - `temporary_data_disk_snapshot_id` (string) - The prefix for the resource ids of the temporary data disk snapshots that will be created. The snapshots will be suffixed with a number. Will be generated if not set.
 
+- `lvm_root_device` (string) - Explicitly specify the LVM root device path to mount (e.g., `/dev/mapper/rhel-root`).
+  When set, LVM volume groups are activated and this device is used as the mount target
+  instead of a partition on the raw disk. Normally, LVM is auto-detected and does not
+  require any configuration. Use this only when auto-detection picks the wrong logical volume.
+
+- `pre_unmount_commands` ([]string) - A series of commands to execute on the **host** after provisioning but before unmounting
+  the chroot and deactivating LVM. Useful for host-side operations on the still-mounted
+  filesystem such as `fstrim` or `sync`. These commands do **not** run inside the chroot;
+  to run a command inside the chroot, use a shell provisioner or prefix with
+  `chroot {{.MountPath}}`. The device and mount path are provided by `{{.Device}}` and
+  `{{.MountPath}}`.
+
 - `skip_cleanup` (bool) - If set to `true`, leaves the temporary disks and snapshots behind in the Packer VM resource group. Defaults to `false`
 
 - `image_resource_id` (string) - The managed image to create using this build.

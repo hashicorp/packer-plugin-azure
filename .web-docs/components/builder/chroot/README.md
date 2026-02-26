@@ -51,6 +51,32 @@ subscription ID from the image resource ID rather than the host VM's
 subscription. Ensure the identity used by the builder has the appropriate
 read permissions on the source gallery.
 
+### LVM Support
+
+The `azure-chroot` builder has built-in support for source disks that use LVM
+(Logical Volume Manager). After the source disk is attached, the builder
+automatically scans for LVM physical volumes, activates any volume groups found
+on the disk, and locates the root logical volume to use as the mount target.
+
+In most cases **no configuration is required** — LVM detection and activation
+happen transparently. The builder uses a multi-stage heuristic to find the root
+logical volume:
+
+1. Examines LV attributes (skipping snapshots, thin pools, and virtual LVs).
+2. Excludes swap volumes.
+3. Prefers LVs whose names contain `root` (exact match first, then partial).
+4. Falls back to the first remaining candidate.
+
+If auto-detection picks the wrong logical volume, you can set `lvm_root_device`
+to the exact device path (e.g., `/dev/mapper/rhel-root`).
+
+During cleanup the builder deactivates the volume groups before detaching the
+disk, ensuring no device-mapper references remain on the host.
+
+~> **Note:** LVM support requires the `lvm2` package (providing `pvscan`,
+`vgscan`, `vgchange`, `lvs`) to be installed on the host VM. The `partprobe`
+and `udevadm` utilities are also used for device discovery.
+
 ## Configuration Reference
 
 There are many configuration options available for the builder. We'll start
@@ -192,6 +218,18 @@ information.
 - `temporary_data_disk_id_prefix` (string) - The prefix for the resource ids of the temporary data disks that will be created. The disks will be suffixed with a number. Will be generated if not set.
 
 - `temporary_data_disk_snapshot_id` (string) - The prefix for the resource ids of the temporary data disk snapshots that will be created. The snapshots will be suffixed with a number. Will be generated if not set.
+
+- `lvm_root_device` (string) - Explicitly specify the LVM root device path to mount (e.g., `/dev/mapper/rhel-root`).
+  When set, LVM volume groups are activated and this device is used as the mount target
+  instead of a partition on the raw disk. Normally, LVM is auto-detected and does not
+  require any configuration. Use this only when auto-detection picks the wrong logical volume.
+
+- `pre_unmount_commands` ([]string) - A series of commands to execute on the **host** after provisioning but before unmounting
+  the chroot and deactivating LVM. Useful for host-side operations on the still-mounted
+  filesystem such as `fstrim` or `sync`. These commands do **not** run inside the chroot;
+  to run a command inside the chroot, use a shell provisioner or prefix with
+  `chroot {{.MountPath}}`. The device and mount path are provided by `{{.Device}}` and
+  `{{.MountPath}}`.
 
 - `skip_cleanup` (bool) - If set to `true`, leaves the temporary disks and snapshots behind in the Packer VM resource group. Defaults to `false`
 
@@ -501,6 +539,56 @@ build {
       "inline_shebang": "/bin/sh -x",
       "type": "shell"
     }
+  ]
+}
+```
+
+
+### Using an LVM-based Source Image
+
+When the source disk uses LVM, the builder automatically detects and activates
+the volume groups. No additional configuration is needed in most cases:
+
+**HCL2**
+
+```hcl
+source "azure-chroot" "lvm-example" {
+  image_resource_id = "/subscriptions/{{vm `subscription_id`}}/resourceGroups/{{vm `resource_group`}}/providers/Microsoft.Compute/images/MyRHELImage-{{timestamp}}"
+  source            = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Compute/disks/rhel-osdisk"
+}
+
+build {
+  sources = ["source.azure-chroot.lvm-example"]
+
+  provisioner "shell" {
+    inline         = ["yum update -y"]
+    inline_shebang = "/bin/sh -x"
+  }
+}
+```
+
+If auto-detection picks the wrong logical volume, set `lvm_root_device` to the
+exact path:
+
+```hcl
+source "azure-chroot" "lvm-explicit" {
+  image_resource_id = "/subscriptions/{{vm `subscription_id`}}/resourceGroups/{{vm `resource_group`}}/providers/Microsoft.Compute/images/MyRHELImage-{{timestamp}}"
+  source            = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Compute/disks/rhel-osdisk"
+  lvm_root_device   = "/dev/mapper/rhel-root"
+}
+```
+
+The `pre_unmount_commands` option lets you run commands after provisioning
+but before the filesystem is unmounted and LVM is deactivated:
+
+```hcl
+source "azure-chroot" "lvm-pre-unmount" {
+  image_resource_id = "/subscriptions/{{vm `subscription_id`}}/resourceGroups/{{vm `resource_group`}}/providers/Microsoft.Compute/images/MyRHELImage-{{timestamp}}"
+  source            = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Compute/disks/rhel-osdisk"
+
+  pre_unmount_commands = [
+    "sync",
+    "fstrim {{.MountPath}}"
   ]
 }
 ```
