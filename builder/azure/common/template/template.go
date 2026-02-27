@@ -9,6 +9,7 @@ import (
 
 	hashiSecurityRulesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/securityrules"
 
+	hashiNSGSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/networksecuritygroups"
 	hashiPublicIPSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/publicipaddresses"
 	hashiSubnetsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/subnets"
 	hashiVNETSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/virtualnetworks"
@@ -112,6 +113,7 @@ type Properties struct {
 	EnableSoftDelete             *string                                       `json:"enableSoftDelete,omitempty"`
 	HardwareProfile              *hashiVMSDK.HardwareProfile                   `json:"hardwareProfile,omitempty"`
 	IPConfigurations             *[]hashiPublicIPSDK.IPConfiguration           `json:"ipConfigurations,omitempty"`
+	NetworkSecurityGroup         *hashiNSGSDK.NetworkSecurityGroup             `json:"networkSecurityGroup,omitempty"`
 	LicenseType                  *string                                       `json:"licenseType,omitempty"`
 	NetworkProfile               *hashiVMSDK.NetworkProfile                    `json:"networkProfile,omitempty"`
 	OsProfile                    *hashiVMSDK.OSProfile                         `json:"osProfile,omitempty"`

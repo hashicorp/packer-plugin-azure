@@ -4,10 +4,13 @@
 package template
 
 import (
+	"strconv"
 	"testing"
 
 	approvaltests "github.com/approvals/go-approval-tests"
 	compute "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	hashiNSGSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/networksecuritygroups"
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 )
 
@@ -384,7 +387,28 @@ func TestNetworkSecurityGroup00(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = testSubject.SetNetworkSecurityGroup([]string{"127.0.0.1", "192.168.100.0/24"}, 123)
+	networkSecurityGroup := hashiNSGSDK.NetworkSecurityGroup{
+		Properties: &hashiNSGSDK.NetworkSecurityGroupPropertiesFormat{
+			SecurityRules: &[]hashiNSGSDK.SecurityRule{
+				{
+					Name: common.StringPtr("AllowIPsToSshWinRMInbound"),
+					Properties: &hashiNSGSDK.SecurityRulePropertiesFormat{
+						Description:              common.StringPtr("Allow inbound traffic from specified IP addresses"),
+						Protocol:                 hashiNSGSDK.SecurityRuleProtocolTcp,
+						Priority:                 100,
+						Access:                   hashiNSGSDK.SecurityRuleAccessAllow,
+						Direction:                hashiNSGSDK.SecurityRuleDirectionInbound,
+						SourceAddressPrefixes:    &[]string{"127.0.0.1", "192.168.100.0/24"},
+						SourcePortRange:          common.StringPtr("*"),
+						DestinationAddressPrefix: common.StringPtr("VirtualNetwork"),
+						DestinationPortRange:     common.StringPtr(strconv.Itoa(123)),
+					},
+				},
+			},
+		},
+	}
+
+	err = testSubject.SetNetworkSecurityGroup(&networkSecurityGroup)
 	if err != nil {
 		t.Fatal(err)
 	}

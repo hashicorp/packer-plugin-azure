@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	hashiVMSDK "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
+	hashiNSGSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/networksecuritygroups"
 	hashiSecurityRulesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/securityrules"
 	hashiSubnetsSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/subnets"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
@@ -474,8 +475,29 @@ func (s *TemplateBuilder) SetPrivateVirtualNetworkWithPublicIp(virtualNetworkRes
 	return nil
 }
 
-func (s *TemplateBuilder) SetNetworkSecurityGroup(ipAddresses []string, port int) error {
-	nsgResource, dependency, resourceId := s.createNsgResource(ipAddresses, port)
+func (s *TemplateBuilder) SetNetworkSecurityGroup(networkSecurityGroup *hashiNSGSDK.NetworkSecurityGroup) error {
+	if networkSecurityGroup.Name != nil {
+		nicResource, err := s.getResourceByType(resourceNetworkInterfaces)
+		if err != nil {
+			return err
+		}
+
+		nicResource.Properties.NetworkSecurityGroup = &hashiNSGSDK.NetworkSecurityGroup{
+			Name: common.StringPtr(*networkSecurityGroup.Name),
+			Id:   common.StringPtr(*networkSecurityGroup.Id),
+		}
+
+		return nil
+	}
+
+	srcIpAddresses := (*networkSecurityGroup.Properties.SecurityRules)[0].Properties.SourceAddressPrefixes
+	port := (*networkSecurityGroup.Properties.SecurityRules)[0].Properties.DestinationPortRange
+	intPort, err := strconv.Atoi(*port)
+	if err != nil {
+		return err
+	}
+
+	nsgResource, dependency, resourceId := s.createNsgResource(*srcIpAddresses, *common.IntPtr(intPort))
 	if err := s.addResource(nsgResource); err != nil {
 		return err
 	}

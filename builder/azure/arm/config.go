@@ -59,8 +59,9 @@ const (
 	//  -> ^[^_\W][\w-._]{0,79}(?<![-.])$
 	//
 	// This is not an exhaustive match, but it should be extremely close.
-	validResourceGroupNameRe = "^[^_\\W][\\w-._\\(\\)]{0,89}$"
-	validManagedDiskName     = "^[^_\\W][\\w-._)]{0,79}$"
+	validResourceGroupNameRe        = "^[^_\\W][\\w-._\\(\\)]{0,89}$"
+	validManagedDiskName            = "^[^_\\W][\\w-._)]{0,79}$"
+	validNetworkSecurityGroupNameRe = "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,78}[a-zA-Z0-9_]$"
 )
 
 var (
@@ -70,6 +71,7 @@ var (
 	reSnapshotName         = regexp.MustCompile(`^[A-Za-z0-9_]{1,79}$`)
 	reSnapshotPrefix       = regexp.MustCompile(`^[A-Za-z0-9_]{1,59}$`)
 	reResourceNamePrefix   = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]{0,9}$`)
+  reNetworkSecurityGroupName = regexp.MustCompile(validNetworkSecurityGroupNameRe)
 )
 
 type PlanInformation struct {
@@ -466,6 +468,14 @@ type Config struct {
 	// containing the virtual network. If the resource group cannot be found, or
 	// it cannot be disambiguated, this value should be set.
 	VirtualNetworkResourceGroupName string `mapstructure:"virtual_network_resource_group_name" required:"false"`
+	// If virtual_network_name is
+	// set, this value may also be set. If network_security_group_name is set,
+	// Packer will associate the specified network security group with the network
+	// interface Packer will create (tmpNicName). If this value is not set, Packer
+	// will create a new network security group if necessary. The specified network
+	// security group must already exist in the specified or determined resource group.
+	// Ensure that the network security group is in the same region as the VM.
+	NetworkSecurityGroupName string `mapstructure:"network_security_group_name" required:"false"`
 	// Specify a file containing custom data to inject into the cloud-init
 	// process. The contents of the file are read and injected into the ARM
 	// template. The custom data will be passed to cloud-init for processing at
@@ -672,6 +682,7 @@ type Config struct {
 	tmpSubnetName          string
 	tmpVirtualNetworkName  string
 	tmpNsgName             string
+	tmpNsgId               string
 	tmpWinRMCertificateUrl string
 
 	// Authentication with the VM via SSH
@@ -1445,11 +1456,20 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 	}
 
+	if c.NetworkSecurityGroupName != "" {
+		if ok, err := assertNetworkSecurityGroupName(c.NetworkSecurityGroupName, "network_security_group_name"); !ok {
+			errs = packersdk.MultiErrorAppend(errs, err)
+		}
+	}
+
 	if c.VirtualNetworkName == "" && c.VirtualNetworkResourceGroupName != "" {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If virtual_network_resource_group_name is specified, so must virtual_network_name"))
 	}
 	if c.VirtualNetworkName == "" && c.VirtualNetworkSubnetName != "" {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If virtual_network_subnet_name is specified, so must virtual_network_name"))
+	}
+	if c.VirtualNetworkName == "" && c.NetworkSecurityGroupName != "" {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If network_security_group_name is specified, so must virtual_network_name"))
 	}
 
 	// Validate the IP Sku and normalize the case, user input shouldn't be case sensitive
@@ -1469,6 +1489,8 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	if len(c.AllowedInboundIpAddresses) >= 1 {
 		if c.VirtualNetworkName != "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If virtual_network_name is specified, allowed_inbound_ip_addresses cannot be specified"))
+		} else if c.NetworkSecurityGroupName != "" {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If network_security_group_name is specified, allowed_inbound_ip_addresses cannot be specified. The Network Security Group will contain Inbound Addresses and only a single NSG can be attached to a subnet or network interface."))
 		} else {
 			if ok, err := assertAllowedInboundIpAddresses(c.AllowedInboundIpAddresses, "allowed_inbound_ip_addresses"); !ok {
 				errs = packersdk.MultiErrorAppend(errs, err)
@@ -1620,6 +1642,13 @@ func assertManagedImageDataDiskSnapshotName(name, setting string) (bool, error) 
 func assertResourceNamePrefix(name, setting string) (bool, error) {
 	if !reResourceNamePrefix.MatchString(name) {
 		return false, fmt.Errorf("The setting %s must only contain characters from a-z, A-Z, 0-9 and - and the maximum length is 10 characters", setting)
+	}
+	return true, nil
+}
+
+func assertNetworkSecurityGroupName(name, setting string) (bool, error) {
+	if !reNetworkSecurityGroupName.MatchString(name) {
+		return false, fmt.Errorf("The setting %s must only contain characters from a-z, A-Z, 0-9 and ._- and the maximum length is 80 characters", setting)
 	}
 	return true, nil
 }
