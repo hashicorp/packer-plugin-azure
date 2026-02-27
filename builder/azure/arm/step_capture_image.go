@@ -253,7 +253,7 @@ func (s *StepCaptureImage) grantDiskAccess(ctx context.Context, subscriptionId s
 	diskID := commonids.NewManagedDiskID(subscriptionId, resourceGroupName, diskName)
 	grantAccessData := disks.GrantAccessData{
 		Access:            disks.AccessLevelRead,
-		DurationInSeconds: 600,
+		DurationInSeconds: 86400,
 	}
 
 	opts := sdkclient.RequestOptions{

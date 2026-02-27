@@ -160,10 +160,14 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	}
 
 	if b.config.isManagedImage() {
-		groupId := commonids.NewResourceGroupID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName)
-		_, err := azureClient.ResourceGroupsClient.Get(builderPollingContext, groupId)
-		if err != nil {
-			return nil, fmt.Errorf("Cannot locate the managed image resource group %s, received error %s", b.config.ManagedImageResourceGroupName, err)
+		// Skip the resource group existence check if the managed image resource group
+		// is the same as the temporary resource group, since it will be created during the build.
+		if b.config.ManagedImageResourceGroupName != b.config.tmpResourceGroupName {
+			groupId := commonids.NewResourceGroupID(b.config.ClientConfig.SubscriptionID, b.config.ManagedImageResourceGroupName)
+			_, err := azureClient.ResourceGroupsClient.Get(builderPollingContext, groupId)
+			if err != nil {
+				return nil, fmt.Errorf("Cannot locate the managed image resource group %s, received error %s", b.config.ManagedImageResourceGroupName, err)
+			}
 		}
 
 		// If a managed image already exists it cannot be overwritten.
@@ -241,10 +245,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		b.config.storageAccountBlobEndpoint = blobPrimaryEndpoint
 		// Remove trailing slash
 		azureClient.GiovanniBlobClient.Client.BaseUri = blobPrimaryEndpoint[:len(blobPrimaryEndpoint)-1]
-
-		if !equalLocation(account.Location, b.config.Location) {
-			return nil, fmt.Errorf("The storage account is located in %s, but the build will take place in %s. The locations must be identical", account.Location, b.config.Location)
-		}
 	}
 
 	endpointConnectType := PublicEndpoint
@@ -601,14 +601,6 @@ func (b *Builder) isPublicPrivateNetworkCommunication() bool {
 
 func (b *Builder) isPrivateNetworkCommunication() bool {
 	return b.config.VirtualNetworkName != ""
-}
-
-func equalLocation(location1, location2 string) bool {
-	return strings.EqualFold(canonicalizeLocation(location1), canonicalizeLocation(location2))
-}
-
-func canonicalizeLocation(location string) string {
-	return strings.Replace(location, " ", "", -1)
 }
 
 func isImageSpecialized(client *galleryimages.GalleryImagesClient, ctx context.Context, acg SharedImageGallery) (bool, error) {

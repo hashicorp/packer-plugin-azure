@@ -592,11 +592,11 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	/////////////////////////////////////////////
 	// Capture
-	if c.CaptureContainerName == "" && c.ManagedImageName == "" {
+	if !c.SkipCreateImage && c.CaptureContainerName == "" && c.ManagedImageName == "" {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_container_name or managed_image_name must be specified"))
 	}
 
-	if c.CaptureNamePrefix == "" && c.ManagedImageResourceGroupName == "" {
+	if !c.SkipCreateImage && c.CaptureNamePrefix == "" && c.ManagedImageResourceGroupName == "" {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_name_prefix or managed_image_resource_group_name must be specified"))
 	}
 
