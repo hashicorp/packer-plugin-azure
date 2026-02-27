@@ -9,4 +9,7 @@ updates:
       interval: "daily"
     allow:
       - dependency-name: "github.com/hashicorp/packer-plugin-sdk"
-
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
