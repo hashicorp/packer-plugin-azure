@@ -55,7 +55,7 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 			return multistep.ActionContinue
 		}
 
-		imageVersionID := galleryimageversions.NewImageVersionID(azcli.SubscriptionID(), imageID.ResourceGroup, imageID.ResourceName[0], imageID.ResourceName[1], imageID.ResourceName[2])
+		imageVersionID := galleryimageversions.NewImageVersionID(imageID.Subscription, imageID.ResourceGroup, imageID.ResourceName[0], imageID.ResourceName[1], imageID.ResourceName[2])
 		image, err := s.get(ctx, azcli, imageVersionID)
 		if err != nil {
 			log.Printf("[TRACE] error retrieving managed image name for shared source image %q: %v", s.SourceImageResourceID, err)

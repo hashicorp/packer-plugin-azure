@@ -6,18 +6,18 @@ if [ -z "${AZURE_CLI_AUTH}" ]; then
     exit 1
 fi
 
-if [ -z "${ARM_RESOURCE_GROUP_NAME}" ]; then
-    echo "ARM_RESOURCE_GROUP_NAME is unset or set to the empty string"
+if [ -z "${ARM_RESOURCE_GROUP_NAME}" ] && [ -z "${ARM_RESOURCE_GROUP_NAME_BASE}" ]; then
+    echo "ARM_RESOURCE_GROUP_NAME or ARM_RESOURCE_GROUP_NAME_BASE is unset or set to the empty string"
     exit 1
 fi
 
-if [ -z "${ARM_STORAGE_ACCOUNT}" ]; then
-    echo "ARM_STORAGE_ACCOUNT is unset or set to the empty string"
+if [ -z "${ARM_STORAGE_ACCOUNT}" ] && [ -z "${ARM_STORAGE_ACCOUNT_BASE}" ]; then
+    echo "ARM_STORAGE_ACCOUNT or ARM_STORAGE_ACCOUNT_BASE is unset or set to the empty string"
     exit 1
 fi
 
-if [ -z "${ARM_RESOURCE_PREFIX}" ]; then
-    echo "ARM_RESOURCE_PREFIX is unset or set to the empty string"
+if [ -z "${ARM_RESOURCE_PREFIX}" ] && [ -z "${ARM_RESOURCE_PREFIX_BASE}" ]; then
+    echo "ARM_RESOURCE_PREFIX or ARM_RESOURCE_PREFIX_BASE is unset or set to the empty string"
     exit 1
 fi
 
@@ -36,5 +36,10 @@ then
     echo "terraform is not installed"
     exit 1
 fi
-terraform destroy -var "resource_prefix=${ARM_RESOURCE_PREFIX}" -var "resource_group_name=${ARM_RESOURCE_GROUP_NAME}" -var "storage_account_name=${ARM_STORAGE_ACCOUNT}" -var "tenant_id=${ARM_TENANT_ID}" -var "object_id=${AZURE_OBJECT_ID}" -auto-approve
+RESOURCE_GROUP_NAME_INPUT="${ARM_RESOURCE_GROUP_NAME_BASE:-${ARM_RESOURCE_GROUP_NAME}}"
+STORAGE_ACCOUNT_INPUT="${ARM_STORAGE_ACCOUNT_BASE:-${ARM_STORAGE_ACCOUNT}}"
+RESOURCE_PREFIX_INPUT="${ARM_RESOURCE_PREFIX_BASE:-${ARM_RESOURCE_PREFIX}}"
+RESOURCE_SUFFIX_INPUT="${ARM_RESOURCE_SUFFIX:-}"
+
+terraform destroy -var "resource_prefix=${RESOURCE_PREFIX_INPUT}" -var "resource_group_name=${RESOURCE_GROUP_NAME_INPUT}" -var "storage_account_name=${STORAGE_ACCOUNT_INPUT}" -var "tenant_id=${ARM_TENANT_ID}" -var "object_id=${AZURE_OBJECT_ID}" -var "resource_suffix=${RESOURCE_SUFFIX_INPUT}" -auto-approve
 

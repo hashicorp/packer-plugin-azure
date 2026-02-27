@@ -35,6 +35,7 @@ type ComputeInfo struct {
 	ResourceGroupName string
 	SubscriptionID    string
 	Location          string
+	Zone              string
 	VmScaleSetName    string
 }
 

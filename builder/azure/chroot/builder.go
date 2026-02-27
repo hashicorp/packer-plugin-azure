@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
@@ -377,30 +378,24 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 }
 
 func checkDiskCacheType(s string) interface{} {
-	for _, v := range virtualmachines.PossibleValuesForCachingTypes() {
-		if string(virtualmachines.CachingTypes(s)) == v {
-			return nil
-		}
+	if slices.Contains(virtualmachines.PossibleValuesForCachingTypes(), string(virtualmachines.CachingTypes(s))) {
+		return nil
 	}
 	return fmt.Errorf("%q is not a valid value %v",
 		s, virtualmachines.PossibleValuesForCachingTypes())
 }
 
 func checkStorageAccountType(s string) interface{} {
-	for _, v := range virtualmachines.PossibleValuesForStorageAccountTypes() {
-		if string(virtualmachines.StorageAccountTypes(s)) == v {
-			return nil
-		}
+	if slices.Contains(virtualmachines.PossibleValuesForStorageAccountTypes(), string(virtualmachines.StorageAccountTypes(s))) {
+		return nil
 	}
 	return fmt.Errorf("%q is not a valid value %v",
 		s, virtualmachines.PossibleValuesForStorageAccountTypes())
 }
 
 func checkHyperVGeneration(s string) interface{} {
-	for _, v := range virtualmachines.PossibleValuesForHyperVGenerationType() {
-		if string(virtualmachines.HyperVGenerationType(s)) == v {
-			return nil
-		}
+	if slices.Contains(virtualmachines.PossibleValuesForHyperVGenerationType(), string(virtualmachines.HyperVGenerationType(s))) {
+		return nil
 	}
 	return fmt.Errorf("%q is not a valid value %v",
 		s, virtualmachines.PossibleValuesForHyperVGenerationType())
@@ -524,7 +519,8 @@ func buildsteps(
 				OSDiskSizeGB:             config.OSDiskSizeGB,
 				OSDiskStorageAccountType: config.OSDiskStorageAccountType,
 				HyperVGeneration:         config.ImageHyperVGeneration,
-				Location:                 info.Location}))
+				Location:                 info.Location,
+				Zone:                     info.Zone}))
 	} else {
 		switch config.sourceType {
 		case sourcePlatformImage:
@@ -548,10 +544,10 @@ func buildsteps(
 						OSDiskSizeGB:             config.OSDiskSizeGB,
 						OSDiskStorageAccountType: config.OSDiskStorageAccountType,
 						HyperVGeneration:         config.ImageHyperVGeneration,
-						Location:                 info.Location,
 						SourcePlatformImage:      pi,
-
-						SkipCleanup: config.SkipCleanup,
+						Location:                 info.Location,
+						Zone:                     info.Zone,
+						SkipCleanup:              config.SkipCleanup,
 					}),
 				)
 			} else {
@@ -576,6 +572,7 @@ func buildsteps(
 					HyperVGeneration:         config.ImageHyperVGeneration,
 					SourceOSDiskResourceID:   config.Source,
 					Location:                 info.Location,
+					Zone:                     info.Zone,
 
 					SkipCleanup: config.SkipCleanup,
 				}),
@@ -601,6 +598,7 @@ func buildsteps(
 					DataDiskStorageAccountType: config.DataDiskStorageAccountType,
 					SourceImageResourceID:      config.Source,
 					Location:                   info.Location,
+					Zone:                       info.Zone,
 
 					SkipCleanup: config.SkipCleanup,
 				}),

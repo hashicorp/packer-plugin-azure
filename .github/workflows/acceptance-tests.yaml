@@ -81,10 +81,30 @@ jobs:
           echo "ARM_SUBSCRIPTION_ID=${{ secrets.ARM_SUBSCRIPTION_ID}}" >> $GITHUB_ENV
           echo "ARM_CLIENT_ID=${{ secrets.ARM_CLIENT_ID}}" >> $GITHUB_ENV
           echo "ARM_CLIENT_SECRET=${{ secrets.ARM_CLIENT_SECRET}}" >> $GITHUB_ENV
-          echo "ARM_RESOURCE_GROUP_NAME=packercigroup" >> $GITHUB_ENV
-          echo "ARM_STORAGE_ACCOUNT=packerciaccount" >> $GITHUB_ENV
-          echo "ARM_RESOURCE_PREFIX=packerci" >> $GITHUB_ENV
+          BASE_RG="packercigroup"
+          BASE_STORAGE="packerciaccount"
+          BASE_PREFIX="packerci"
+          SUFFIX=$(printf "%s" "${GITHUB_RUN_ID}" | tail -c 6)
+          STORAGE_BASE=$(echo "${BASE_STORAGE}" | tr '[:upper:]' '[:lower:]' | tr -d '-')
+          MAX_STORAGE_LEN=$((24 - ${#SUFFIX}))
+          STORAGE_BASE=${STORAGE_BASE:0:${MAX_STORAGE_LEN}}
+
+          echo "ARM_RESOURCE_GROUP_NAME_BASE=${BASE_RG}" >> $GITHUB_ENV
+          echo "ARM_STORAGE_ACCOUNT_BASE=${BASE_STORAGE}" >> $GITHUB_ENV
+          echo "ARM_RESOURCE_PREFIX_BASE=${BASE_PREFIX}" >> $GITHUB_ENV
+          echo "ARM_RESOURCE_SUFFIX=${SUFFIX}" >> $GITHUB_ENV
+
+          echo "ARM_RESOURCE_GROUP_NAME=${BASE_RG}-${SUFFIX}" >> $GITHUB_ENV
+          echo "ARM_STORAGE_ACCOUNT=${STORAGE_BASE}${SUFFIX}" >> $GITHUB_ENV
+          echo "ARM_RESOURCE_PREFIX=${BASE_PREFIX}_${SUFFIX}" >> $GITHUB_ENV
+          echo "ARM_STORAGE_CONTAINER_NAME=packeracc" >> $GITHUB_ENV
+          echo "ARM_TEMP_RESOURCE_GROUP_NAME=${BASE_PREFIX}-${SUFFIX}-acceptance-test-managed-cli" >> $GITHUB_ENV
           echo "ARM_TENANT_ID=${{ secrets.ARM_TENANT_ID }}" >> $GITHUB_ENV
+
+          KV_BASE=$(echo "${BASE_PREFIX}" | tr '[:upper:]' '[:lower:]' | tr -d '-' | tr -d '_')
+          KV_BASE_MAX=$((24 - ${#SUFFIX} - 2))
+          KV_BASE=${KV_BASE:0:${KV_BASE_MAX}}
+          echo "ARM_KEY_VAULT_NAME=${KV_BASE}kv${SUFFIX}" >> $GITHUB_ENV
 
           OBJECT_ID=$(az ad sp show --id "${{ secrets.ARM_CLIENT_ID }}" | jq -r '.id')
           echo "AZURE_OBJECT_ID=${OBJECT_ID}" >> $GITHUB_ENV

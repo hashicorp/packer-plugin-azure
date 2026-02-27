@@ -6,18 +6,15 @@ package pkcs12
 
 import (
 	"bytes"
-	"crypto/aes"
 	"crypto/cipher"
 	"crypto/des"
 	"crypto/rand"
-	"crypto/sha256"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"errors"
 	"io"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/pkcs12/rc2"
-	"golang.org/x/crypto/pbkdf2"
 )
 
 const (
@@ -69,21 +66,6 @@ func (shaWith40BitRC2CBC) deriveIV(salt, password []byte, iterations int) []byte
 	return pbkdf(sha1Sum, 20, 64, salt, password, iterations, 2, 8)
 }
 
-// Modern AES-256-CBC cipher using PBKDF2
-type aes256CBC struct{}
-
-func (aes256CBC) create(key []byte) (cipher.Block, error) {
-	return aes.NewCipher(key)
-}
-
-func (aes256CBC) deriveKey(salt, password []byte, iterations int) []byte {
-	return pbkdf2.Key(password, salt, iterations, 32, sha256.New)
-}
-
-func (aes256CBC) deriveIV(salt, password []byte, iterations int) []byte {
-	return pbkdf2.Key(password, salt, iterations, 16, sha256.New)
-}
-
 type pbeParams struct {
 	Salt       []byte
 	Iterations int
@@ -97,18 +79,13 @@ func pbDecrypterFor(algorithm pkix.AlgorithmIdentifier, password []byte) (cipher
 		return nil, 0, err
 	}
 
-	// Detect modern AES-256-CBC encryption by high iteration count
-	if params.Iterations >= pbeIterationCountModern {
-		cipherType = aes256CBC{}
-	} else {
-		switch {
-		case algorithm.Algorithm.Equal(oidPBEWithSHAAnd3KeyTripleDESCBC):
-			cipherType = shaWithTripleDESCBC{}
-		case algorithm.Algorithm.Equal(oidPBEWithSHAAnd40BitRC2CBC):
-			cipherType = shaWith40BitRC2CBC{}
-		default:
-			return nil, 0, NotImplementedError("algorithm " + algorithm.Algorithm.String() + " is not supported")
-		}
+	switch {
+	case algorithm.Algorithm.Equal(oidPBEWithSHAAnd3KeyTripleDESCBC):
+		cipherType = shaWithTripleDESCBC{}
+	case algorithm.Algorithm.Equal(oidPBEWithSHAAnd40BitRC2CBC):
+		cipherType = shaWith40BitRC2CBC{}
+	default:
+		return nil, 0, NotImplementedError("algorithm " + algorithm.Algorithm.String() + " is not supported")
 	}
 
 	key := cipherType.deriveKey(params.Salt, password, params.Iterations)
@@ -161,8 +138,8 @@ func pad(src []byte, blockSize int) []byte {
 	return append(src, paddingText...)
 }
 
-// pbEncrypt encrypts plainText using legacy Triple DES algorithm.
-// Deprecated: Use pbEncryptModern for AES-256-CBC encryption instead.
+// pbEncrypt encrypts plainText using legacy Triple DES algorithm with low iteration count.
+// Deprecated: Use pbEncryptModern for stronger security with high iteration count instead.
 func pbEncrypt(plainText, salt, password []byte, iterations int) (cipherText []byte, err error) {
 	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
 		return nil, errors.New("pkcs12: failed to create a random salt value: " + err.Error())
@@ -186,22 +163,22 @@ func pbEncrypt(plainText, salt, password []byte, iterations int) (cipherText []b
 	return cipherText, nil
 }
 
-// pbEncryptModern encrypts plainText using modern AES-256-CBC algorithm with PBKDF2.
-// This provides much stronger security than the legacy Triple DES implementation.
-// Uses 100,000 iterations (OWASP 2021 baseline), providing strong security while
-// maintaining reasonable performance for ephemeral certificates.
+// pbEncryptModern encrypts plainText using Triple DES with a high iteration count.
+// While Triple DES is older, using 100,000+ iterations provides strong security through
+// key stretching and ensures maximum compatibility with Azure Key Vault and Windows.
+// This is the recommended approach for Azure as PBES2/AES is not widely supported.
 func pbEncryptModern(plainText, salt, password []byte, iterations int) (cipherText []byte, err error) {
 	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
 		return nil, errors.New("pkcs12: failed to create a random salt value: " + err.Error())
 	}
 
-	cipherType := aes256CBC{}
+	cipherType := shaWithTripleDESCBC{}
 	key := cipherType.deriveKey(salt, password, iterations)
 	iv := cipherType.deriveIV(salt, password, iterations)
 
 	block, err := cipherType.create(key)
 	if err != nil {
-		return nil, errors.New("pkcs12: failed to create a block cipher: " + err.Error())
+		return nil, errors.New("pkcs12: failed to create Triple DES cipher: " + err.Error())
 	}
 
 	paddedPlainText := pad(plainText, block.BlockSize())

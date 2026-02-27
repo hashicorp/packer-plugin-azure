@@ -1,14 +1,36 @@
 # Copyright IBM Corp. 2013, 2025
 # SPDX-License-Identifier: MPL-2.0
 
+resource "random_id" "resource_suffix" {
+  byte_length = 3
+}
+
+locals {
+  resource_suffix = var.resource_suffix != "" ? var.resource_suffix : random_id.resource_suffix.hex
+  suffix_short    = substr(local.resource_suffix, 0, 6)
+
+  resource_group_name = "${var.resource_group_name}-${local.resource_suffix}"
+
+  storage_account_suffix = local.suffix_short
+  storage_account_base   = substr(lower(replace(var.storage_account_name, "-", "")), 0, 24 - length(local.storage_account_suffix))
+  storage_account_name   = "${local.storage_account_base}${local.storage_account_suffix}"
+
+  resource_prefix = "${replace(var.resource_prefix, "-", "_")}_${local.suffix_short}"
+
+  key_vault_suffix   = local.suffix_short
+  key_vault_base_max = 24 - length(local.key_vault_suffix) - 2
+  key_vault_base     = substr(lower(replace(replace(var.resource_prefix, "-", ""), "_", "")), 0, local.key_vault_base_max)
+  key_vault_name     = "${local.key_vault_base}kv${local.key_vault_suffix}"
+}
+
 resource "azurerm_resource_group" "rg" {
   location = var.resource_group_location
-  name     = var.resource_group_name
+  name     = local.resource_group_name
 }
 
 ## ARM Builder Resources
 resource "azurerm_storage_account" "storage-account" {
-  name                     = var.storage_account_name
+  name                     = local.storage_account_name
   resource_group_name      = azurerm_resource_group.rg.name
   location                 = azurerm_resource_group.rg.location
   account_tier             = "Standard"
@@ -21,13 +43,13 @@ resource "azurerm_storage_container" "example" {
 }
 
 resource "azurerm_shared_image_gallery" "gallery" {
-  name                = "${var.resource_prefix}_acctestgallery"
+  name                = "${local.resource_prefix}_acctestgallery"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
 }
 
 resource "azurerm_shared_image" "windows-sig" {
-  name                = "${var.resource_prefix}-windows-sig"
+  name                = "${local.resource_prefix}-windows-sig"
   gallery_name        = azurerm_shared_image_gallery.gallery.name
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
@@ -42,7 +64,7 @@ resource "azurerm_shared_image" "windows-sig" {
 }
 
 resource "azurerm_shared_image" "linux-sig" {
-  name                = "${var.resource_prefix}-arm-linux-specialized-sig"
+  name                = "${local.resource_prefix}-arm-linux-specialized-sig"
   gallery_name        = azurerm_shared_image_gallery.gallery.name
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
@@ -58,7 +80,7 @@ resource "azurerm_shared_image" "linux-sig" {
 }
 
 resource "azurerm_key_vault" "vault" {
-  name                        = "${var.resource_prefix}-pkr-test-vault"
+  name                        = local.key_vault_name
   location                    = azurerm_resource_group.rg.location
   resource_group_name         = azurerm_resource_group.rg.name
   enabled_for_disk_encryption = true
@@ -72,7 +94,7 @@ resource "azurerm_key_vault" "vault" {
     tenant_id = var.tenant_id
     object_id = var.object_id
 
-    secret_permissions = ["Get", "Set", "Delete"]
+    secret_permissions = ["Get", "Set", "Delete", "Purge"]
   }
 }
 

@@ -31,10 +31,12 @@ func CreateVMMetadataTemplateFunc() func(string) (string, error) {
 			return data.ResourceGroupName, nil
 		case "location":
 			return data.Location, nil
+		case "zone":
+			return data.Zone, nil
 		case "resource_id":
 			return data.GetResourceID(), nil
 		default:
-			return "", fmt.Errorf("unknown metadata key: %s (supported: name, subscription_id, resource_group, location, resource_id)", key)
+			return "", fmt.Errorf("unknown metadata key: %s (supported: name, subscription_id, resource_group, location, zone, resource_id)", key)
 		}
 	}
 }
