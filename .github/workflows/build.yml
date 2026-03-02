@@ -75,7 +75,7 @@ jobs:
           version: ${{ needs.set-product-version.outputs.product-version }}
           product: ${{ env.REPO_NAME }}
 
-      - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: metadata.json
           path: ${{ steps.generate-metadata-file.outputs.filepath }}
@@ -230,7 +230,7 @@ jobs:
           sed -e "s/PLACEHOLDER_PROTOCOL_VERSION/${CLEAN_API_VERSION}/g" \
             manifest.json > ${{ env.REPO_NAME }}_${{ needs.set-product-version.outputs.product-version }}_manifest.json
       - name: Upload manifest json
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: packer-plugin-manifest.json
           path: ${{ env.REPO_NAME }}_${{ needs.set-product-version.outputs.product-version }}_manifest.json
