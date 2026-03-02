@@ -56,7 +56,7 @@ jobs:
           go-version: ${{ needs.get-go-version.outputs.go-version }} 
 
       - name: Setup `terraform`
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v4
 
       - name: Run `terraform init` to download Azure Provider
         run: terraform init
