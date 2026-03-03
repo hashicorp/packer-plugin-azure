@@ -253,9 +253,7 @@ func (s *StepCaptureImage) grantDiskAccess(ctx context.Context, subscriptionId s
 	diskID := commonids.NewManagedDiskID(subscriptionId, resourceGroupName, diskName)
 	grantAccessData := disks.GrantAccessData{
 		Access:            disks.AccessLevelRead,
-		// Worst-case-scenario Standard HDD S50 (w/ 4TiB storage and 60MB/s throughput) would take around 19.5 hours to copy,
-		// so 24 hours is a safe duration to grant access for
-		DurationInSeconds: 86400,
+		DurationInSeconds: int64(s.config.SASTokenDuration.Seconds()),
 	}
 
 	opts := sdkclient.RequestOptions{
