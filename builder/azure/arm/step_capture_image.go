@@ -230,9 +230,10 @@ func (s *StepCaptureImage) captureVHD(ctx context.Context, subscriptionId string
 		err = fmt.Errorf("failed to grant access with err : %s", err)
 		return err
 	}
+	// Register the SAS URI as a secret to prevent it from leaking in logs
+	packersdk.LogSecretFilter.Set(accessUri)
 	// If the code is canceled or fails after this point, we must call to cleanup this granted access, otherwise delete operations will fail
 	s.diskNameToRevokeAccessTo = s.config.tmpOSDiskName
-	s.say(fmt.Sprintf(" -> accessUri                 : '%s'", accessUri))
 
 	var storageContainerName = s.config.CaptureContainerName
 	var captureNamePrefix = s.config.CaptureNamePrefix
