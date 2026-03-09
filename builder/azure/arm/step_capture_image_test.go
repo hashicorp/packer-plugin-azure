@@ -131,12 +131,12 @@ func TestStepCaptureImageShouldRevokeAccessOnCleanup(t *testing.T) {
 
 	testSubject.Cleanup(stateBag)
 	if *revokeAccessPtr {
-		t.Fatal("Revoke Access should not be called on TestCaptureImage.Cleanup when a tmpOSDiskName is set, but was")
+		t.Fatal("Revoke Access should not be called on TestCaptureImage.Cleanup when no disk names are tracked, but was")
 	}
-	testSubject.diskNameToRevokeAccessTo = "tmpOSDiskName"
+	testSubject.diskNamesToRevokeAccessTo = []string{"tmpOSDiskName"}
 	testSubject.Cleanup(stateBag)
 	if !*revokeAccessPtr {
-		t.Fatal("Revoke Access should be called on TestCaptureImage.Cleanup when a tmpOSDiskName is set, but wasn't")
+		t.Fatal("Revoke Access should be called on TestCaptureImage.Cleanup when disk names are tracked, but wasn't")
 	}
 }
 
