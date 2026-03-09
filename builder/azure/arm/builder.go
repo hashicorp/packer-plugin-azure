@@ -243,6 +243,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 		blobPrimaryEndpoint := *account.Properties.PrimaryEndpoints.Blob
 		b.config.storageAccountBlobEndpoint = blobPrimaryEndpoint
+		b.stateBag.Put(constants.ArmStorageAccountLocation, account.Location)
 		// Remove trailing slash
 		azureClient.GiovanniBlobClient.Client.BaseUri = blobPrimaryEndpoint[:len(blobPrimaryEndpoint)-1]
 	}
@@ -781,6 +782,6 @@ func (b *Builder) getVHDArtifact(vhdArtifact *VHDArtifact) {
 		vhdArtifact.AdditionalDisks = &dataDisks
 	}
 
-	vhdArtifact.StorageAccountLocation = b.config.Location
+	vhdArtifact.StorageAccountLocation = b.stateBag.Get(constants.ArmStorageAccountLocation).(string)
 	vhdArtifact.OSDiskUri = vhdUri
 }
