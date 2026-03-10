@@ -92,9 +92,15 @@ type DataDiskUnion struct {
 
 // Union of the StorageProfile and ImageStorageProfile types.
 type StorageProfileUnion struct {
-	ImageReference *hashiVMSDK.ImageReference `json:"imageReference,omitempty"`
-	OsDisk         *OSDiskUnion               `json:"osDisk,omitempty"`
-	DataDisks      *[]DataDiskUnion           `json:"dataDisks,omitempty"`
+	ImageReference     *hashiVMSDK.ImageReference `json:"imageReference,omitempty"`
+	OsDisk             *OSDiskUnion               `json:"osDisk,omitempty"`
+	DataDisks          *[]DataDiskUnion           `json:"dataDisks,omitempty"`
+	// DiskControllerType is a raw string because the Go SDK uses compute API
+	// version 2022-03-01, whose StorageProfile struct does not include this
+	// field (it was added in 2022-08-01). However, the ARM template itself
+	// deploys with apiVersion 2023-03-01 (see BasicTemplate in
+	// template_builder.go), so the field is fully supported at deployment time.
+	DiskControllerType *string                    `json:"diskControllerType,omitempty"`
 }
 
 type BillingProfile struct {

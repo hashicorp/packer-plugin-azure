@@ -531,6 +531,16 @@ func (s *TemplateBuilder) SetAcceleratedNetworking(enabled *bool) error {
 	return nil
 }
 
+func (s *TemplateBuilder) SetDiskControllerType(diskControllerType string) error {
+	resource, err := s.getResourceByType(resourceVirtualMachine)
+	if err != nil {
+		return err
+	}
+
+	resource.Properties.StorageProfile.DiskControllerType = common.StringPtr(diskControllerType)
+	return nil
+}
+
 func (s *TemplateBuilder) SetBootDiagnostics(diagSTG string) error {
 
 	resource, err := s.getResourceByType(resourceVirtualMachine)

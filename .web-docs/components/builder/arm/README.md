@@ -391,6 +391,11 @@ Providing `temp_resource_group_name` or `location` in combination with
   [supports accelerated networking](https://learn.microsoft.com/en-us/azure/virtual-network/accelerated-networking-overview?tabs=NetworkManager&tryIt=true&source=docs#supported-vm-instances).
   Set to `false` to explicitly disable it. Defaults to unset (Azure decides).
 
+- `disk_controller_type` (string) - Set the disk controller type for the build VM. Valid values are `SCSI`
+  and `NVMe`. `NVMe` requires a VM size that
+  [supports NVMe](https://learn.microsoft.com/en-us/azure/virtual-machines/nvme-overview).
+  Defaults to unset (Azure decides based on VM size).
+
 - `custom_data_file` (string) - Specify a file containing custom data to inject into the cloud-init
   process. The contents of the file are read and injected into the ARM
   template. The custom data will be passed to cloud-init for processing at
