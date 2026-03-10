@@ -1180,6 +1180,10 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_container_name, managed_image_name and managed_image_resource_group_name, or shared_image_gallery_destination must be specified"))
 	}
 
+	if (c.ManagedImageName == "") != (c.ManagedImageResourceGroupName == "") {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("managed_image_name and managed_image_resource_group_name must be specified together"))
+	}
+
 	if c.CaptureContainerName != "" {
 		if !reCaptureContainerName.MatchString(c.CaptureContainerName) {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_container_name must satisfy the regular expression %q.", reCaptureContainerName.String()))
