@@ -1325,6 +1325,10 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 	}
 
+	if (c.StorageAccount == "") != (c.ResourceGroupName == "") {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("storage_account and resource_group_name must be specified together; resource_group_name is the resource group of the storage account"))
+	}
+
 	if c.TempResourceGroupName != "" {
 		if ok, err := assertResourceGroupName(c.TempResourceGroupName, "temp_resource_group_name"); !ok {
 			errs = packersdk.MultiErrorAppend(errs, err)
