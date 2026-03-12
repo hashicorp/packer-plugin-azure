@@ -226,7 +226,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		buildGroupId := commonids.NewResourceGroupID(b.config.ClientConfig.SubscriptionID, b.config.BuildResourceGroupName)
 		group, err := azureClient.ResourceGroupsClient.Get(builderPollingContext, buildGroupId)
 		if err != nil {
-			return nil, fmt.Errorf("Cannot locate the existing build resource resource group %s.", b.config.BuildResourceGroupName)
+			return nil, fmt.Errorf("Cannot locate the existing build resource group %s.", b.config.BuildResourceGroupName)
 		}
 
 		b.config.Location = group.Model.Location
@@ -336,7 +336,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 				normalizedRegions = append(normalizedRegions, TargetRegion{Name: region, ReplicaCount: b.config.SharedGalleryImageVersionReplicaCount})
 			}
 			// SIG requires that replication regions include the region in which the created image version resides
-			if foundMandatoryReplicationRegion == false {
+			if !foundMandatoryReplicationRegion {
 				normalizedRegions = append(normalizedRegions, TargetRegion{
 					Name:                buildLocation,
 					DiskEncryptionSetId: b.config.DiskEncryptionSetId,
@@ -393,7 +393,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	}
 	generatedData := &packerbuilderdata.GeneratedData{State: b.stateBag}
 	var steps []multistep.Step
-	if b.config.OSType == constants.Target_Linux {
+	switch b.config.OSType {
+	case constants.Target_Linux:
 		steps = []multistep.Step{
 			NewStepGetSourceImageName(azureClient, ui, &b.config, generatedData),
 			NewStepCreateResourceGroup(azureClient, ui),
@@ -415,7 +416,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			NewStepSnapshotOSDisk(azureClient, ui, &b.config),
 			NewStepSnapshotDataDisks(azureClient, ui, &b.config),
 		}
-	} else if b.config.OSType == constants.Target_Windows {
+	case constants.Target_Windows:
 		steps = []multistep.Step{
 			NewStepGetSourceImageName(azureClient, ui, &b.config, generatedData),
 			NewStepCreateResourceGroup(azureClient, ui),
@@ -495,7 +496,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			NewStepSnapshotOSDisk(azureClient, ui, &b.config),
 			NewStepSnapshotDataDisks(azureClient, ui, &b.config),
 		)
-	} else {
+	default:
 		return nil, fmt.Errorf("Builder does not support the os_type '%s'", b.config.OSType)
 	}
 
@@ -574,6 +575,7 @@ func (b *Builder) writeSSHPrivateKey(ui packersdk.Ui, debugKeyPath string) {
 	if err != nil {
 		ui.Say(fmt.Sprintf("Error saving debug key: %s", err))
 	}
+	//nolint:errcheck
 	defer f.Close()
 
 	// Write the key out
@@ -706,7 +708,7 @@ func (b *Builder) setImageParameters(stateBag multistep.StateBag) {
 }
 
 func normalizeAzureRegion(name string) string {
-	return strings.ToLower(strings.Replace(name, " ", "", -1))
+	return strings.ToLower(strings.ReplaceAll(name, " ", ""))
 }
 
 func (b *Builder) enhanceStateData(stateData map[string]interface{}) {

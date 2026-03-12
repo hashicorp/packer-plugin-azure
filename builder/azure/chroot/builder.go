@@ -551,7 +551,7 @@ func buildsteps(
 					}),
 				)
 			} else {
-				panic("Couldn't parse platfrom image urn: " + config.Source + " err: " + err.Error())
+				panic("Couldn't parse platform image urn: " + config.Source + " err: " + err.Error())
 			}
 
 		case sourceDisk:

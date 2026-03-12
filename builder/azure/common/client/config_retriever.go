@@ -28,6 +28,7 @@ func _getSubscriptionFromIMDS() (string, error) {
 		return "", err
 	}
 
+	//nolint:errcheck
 	defer resp.Body.Close()
 	resp_body, _ := io.ReadAll(resp.Body)
 	result := map[string]string{}

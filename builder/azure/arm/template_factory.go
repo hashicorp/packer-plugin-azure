@@ -336,7 +336,7 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 	}
 
 	// In Azure Network Security Groups define the access controls for the network
-	// They are required when specifiying which inbound IPs are allowed to connect to the network
+	// They are required when specifying which inbound IPs are allowed to connect to the network
 	// They are also required when creating a standard sku public IP Address regardless of inbound IPs allowed.
 	// If a standard IP is set with no inbound addresses, we default to allowing all IP addresses
 	if (config.PublicIpSKU != "Basic") || (len(config.AllowedInboundIpAddresses) >= 1) {

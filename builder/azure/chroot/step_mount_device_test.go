@@ -68,6 +68,9 @@ func TestStepMountDevice_Run(t *testing.T) {
 		t.Errorf("Expected '%v', but got '%v'", expectedCommand, gotCommand)
 	}
 
-	os.Remove(mountPath)
+	err = os.Remove(mountPath)
+	if err != nil {
+		t.Fatal(err)
+	}
 	_ = getErrs
 }
