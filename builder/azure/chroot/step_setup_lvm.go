@@ -19,6 +19,13 @@ import (
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
+const (
+	lvmDetectMaxRetries  = 3
+	lvmDetectRetryDelay  = 2 * time.Second
+	lvmUdevSettleTimeout = "10" // seconds, passed to udevadm settle --timeout
+	lvmDeviceVerifyDelay = 1 * time.Second
+)
+
 var _ multistep.Step = &StepSetupLVM{}
 
 // StepSetupLVM detects and activates LVM volume groups on the attached disk,
@@ -126,7 +133,7 @@ func (s *StepSetupLVM) detectVolumeGroups(device string) ([]string, error) {
 	}
 
 	// Wait for udev to settle
-	if out, err := exec.Command("udevadm", "settle", "--timeout=10").CombinedOutput(); err != nil {
+	if out, err := exec.Command("udevadm", "settle", "--timeout="+lvmUdevSettleTimeout).CombinedOutput(); err != nil {
 		log.Printf("LVM: udevadm settle: %v (output: %s)", err, strings.TrimSpace(string(out)))
 	}
 
@@ -138,15 +145,15 @@ func (s *StepSetupLVM) detectVolumeGroups(device string) ([]string, error) {
 	// Retry loop: Azure disk attachment is asynchronous — partition device nodes
 	// may not exist immediately after the disk appears.
 	var lastErr error
-	for attempt := 0; attempt < 3; attempt++ {
+	for attempt := 0; attempt < lvmDetectMaxRetries; attempt++ {
 		if attempt > 0 {
-			log.Printf("LVM: retry attempt %d/3, waiting for device nodes...", attempt+1)
-			time.Sleep(2 * time.Second)
+			log.Printf("LVM: retry attempt %d/%d, waiting for device nodes...", attempt+1, lvmDetectMaxRetries)
+			time.Sleep(lvmDetectRetryDelay)
 
 			if out, err := exec.Command("partprobe", device).CombinedOutput(); err != nil {
 				log.Printf("LVM: partprobe %s (retry): %v (output: %s)", device, err, strings.TrimSpace(string(out)))
 			}
-			if out, err := exec.Command("udevadm", "settle", "--timeout=5").CombinedOutput(); err != nil {
+			if out, err := exec.Command("udevadm", "settle", "--timeout="+lvmUdevSettleTimeout).CombinedOutput(); err != nil {
 				log.Printf("LVM: udevadm settle (retry): %v (output: %s)", err, strings.TrimSpace(string(out)))
 			}
 			if out, err := exec.Command("pvscan", "--cache").CombinedOutput(); err != nil {
@@ -243,7 +250,7 @@ func (s *StepSetupLVM) activateVolumeGroups(ui packersdk.Ui) error {
 	}
 
 	// Wait for udev to settle
-	if out, err := exec.Command("udevadm", "settle", "--timeout=10").CombinedOutput(); err != nil {
+	if out, err := exec.Command("udevadm", "settle", "--timeout="+lvmUdevSettleTimeout).CombinedOutput(); err != nil {
 		log.Printf("LVM: udevadm settle: %v (output: %s)", err, strings.TrimSpace(string(out)))
 	}
 
@@ -456,10 +463,10 @@ func (s *StepSetupLVM) verifyDevice(ui packersdk.Ui, device string) {
 	}
 
 	// Wait for udev and retry
-	if out, err := exec.Command("udevadm", "settle", "--timeout=10").CombinedOutput(); err != nil {
+	if out, err := exec.Command("udevadm", "settle", "--timeout="+lvmUdevSettleTimeout).CombinedOutput(); err != nil {
 		log.Printf("LVM: udevadm settle: %v (output: %s)", err, strings.TrimSpace(string(out)))
 	}
-	time.Sleep(1 * time.Second)
+	time.Sleep(lvmDeviceVerifyDelay)
 
 	fsType = blkidType(device)
 	if fsType != "" {
