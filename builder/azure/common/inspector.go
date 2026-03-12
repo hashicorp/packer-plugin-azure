@@ -27,6 +27,7 @@ func HandleBody(body io.ReadCloser, maxlen int64) (io.ReadCloser, string) {
 		return nil, ""
 	}
 
+	//nolint:errcheck
 	defer body.Close()
 
 	b, err := io.ReadAll(body)

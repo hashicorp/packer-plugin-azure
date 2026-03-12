@@ -65,7 +65,7 @@ func (sigd *SharedImageGalleryDestination) Validate(prefix string) (errs []error
 		warns = append(warns,
 			fmt.Sprintf("%s.target_regions is empty; image will only be available in the region of the gallery", prefix))
 	}
-	if sigd.ExcludeFromLatestTypo == true && sigd.ExcludeFromLatest == false {
+	if sigd.ExcludeFromLatestTypo && !sigd.ExcludeFromLatest {
 		warns = append(warns,
 			fmt.Sprintf("%s.exlude_from_latest is being deprecated, please use exclude_from_latest", prefix))
 		sigd.ExcludeFromLatest = sigd.ExcludeFromLatestTypo

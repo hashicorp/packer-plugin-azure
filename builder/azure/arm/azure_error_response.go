@@ -45,18 +45,18 @@ func (e *azureErrorResponse) Error() string {
 //
 // Errors may contain nested errors, which are JSON documents that have been
 // serialized and escaped.  Keep following this nesting all the way down...
-func formatAzureErrorResponse(error azureErrorDetails, buf *bytes.Buffer, indent string) {
-	if error.isEmpty() {
+func formatAzureErrorResponse(err azureErrorDetails, buf *bytes.Buffer, indent string) {
+	if err.isEmpty() {
 		return
 	}
 
-	buf.WriteString(fmt.Sprintf("ERROR: %s-> %s : %s\n", indent, error.Code, error.Message))
-	for _, x := range error.Details {
+	buf.WriteString(fmt.Sprintf("ERROR: %s-> %s : %s\n", indent, err.Code, err.Message))
+	for _, x := range err.Details {
 		newIndent := fmt.Sprintf("%s  ", indent)
 
 		var aer azureErrorResponse
-		err := json.Unmarshal([]byte(x.Message), &aer)
-		if err == nil {
+		errJson := json.Unmarshal([]byte(x.Message), &aer)
+		if errJson == nil {
 			buf.WriteString(fmt.Sprintf("ERROR: %s-> %s\n", newIndent, x.Code))
 			formatAzureErrorResponse(aer.ErrorDetails, buf, newIndent)
 		} else {
