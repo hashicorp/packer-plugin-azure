@@ -55,7 +55,7 @@ func (s *StepSetupLVM) Run(ctx context.Context, state multistep.StateBag) multis
 		// Manual override path
 		ui.Say(fmt.Sprintf("LVM: using user-specified root device: %s", s.LVMRootDevice))
 
-		vgs, err := s.detectVolumeGroups(device)
+		vgs, err := s.detectVolumeGroups(ctx, device)
 		if err != nil || len(vgs) == 0 {
 			if err != nil {
 				log.Printf("LVM: warning: could not detect volume groups for cleanup scoping: %v", err)
@@ -79,7 +79,7 @@ func (s *StepSetupLVM) Run(ctx context.Context, state multistep.StateBag) multis
 				device, s.LVMRootDevice))
 		}
 
-		if err := s.activateVolumeGroups(ui); err != nil {
+		if err := s.activateVolumeGroups(ctx, ui); err != nil {
 			return s.halt(state, ui, fmt.Errorf("LVM: error activating volume groups: %v", err))
 		}
 
@@ -89,7 +89,7 @@ func (s *StepSetupLVM) Run(ctx context.Context, state multistep.StateBag) multis
 		return multistep.ActionContinue
 	}
 
-	vgs, err := s.detectVolumeGroups(device)
+	vgs, err := s.detectVolumeGroups(ctx, device)
 	if err != nil {
 		log.Printf("LVM: warning: error detecting volume groups: %v", err)
 		ui.Say("LVM: could not detect volume groups, continuing without LVM support")
@@ -106,7 +106,7 @@ func (s *StepSetupLVM) Run(ctx context.Context, state multistep.StateBag) multis
 	s.volumeGroups = vgs
 	ui.Say(fmt.Sprintf("LVM: found volume group(s): %s", strings.Join(vgs, ", ")))
 
-	if err := s.activateVolumeGroups(ui); err != nil {
+	if err := s.activateVolumeGroups(ctx, ui); err != nil {
 		return s.halt(state, ui, fmt.Errorf("LVM: error activating volume groups: %v", err))
 	}
 
@@ -126,19 +126,19 @@ func (s *StepSetupLVM) Run(ctx context.Context, state multistep.StateBag) multis
 
 // detectVolumeGroups ensures partition device nodes are visible, then scans for
 // LVM physical volumes on the attached disk.
-func (s *StepSetupLVM) detectVolumeGroups(device string) ([]string, error) {
+func (s *StepSetupLVM) detectVolumeGroups(ctx context.Context, device string) ([]string, error) {
 	// Run partprobe to ensure partition device nodes exist
-	if out, err := exec.Command("partprobe", device).CombinedOutput(); err != nil {
+	if out, err := exec.CommandContext(ctx, "partprobe", device).CombinedOutput(); err != nil {
 		log.Printf("LVM: partprobe %s: %v (output: %s)", device, err, strings.TrimSpace(string(out)))
 	}
 
 	// Wait for udev to settle
-	if out, err := exec.Command("udevadm", "settle", "--timeout="+lvmUdevSettleTimeout).CombinedOutput(); err != nil {
+	if out, err := exec.CommandContext(ctx, "udevadm", "settle", "--timeout="+lvmUdevSettleTimeout).CombinedOutput(); err != nil {
 		log.Printf("LVM: udevadm settle: %v (output: %s)", err, strings.TrimSpace(string(out)))
 	}
 
 	// Refresh PV cache
-	if out, err := exec.Command("pvscan", "--cache").CombinedOutput(); err != nil {
+	if out, err := exec.CommandContext(ctx, "pvscan", "--cache").CombinedOutput(); err != nil {
 		log.Printf("LVM: pvscan --cache: %v (output: %s)", err, strings.TrimSpace(string(out)))
 	}
 
@@ -146,22 +146,28 @@ func (s *StepSetupLVM) detectVolumeGroups(device string) ([]string, error) {
 	// may not exist immediately after the disk appears.
 	var lastErr error
 	for attempt := 0; attempt < lvmDetectMaxRetries; attempt++ {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
 		if attempt > 0 {
 			log.Printf("LVM: retry attempt %d/%d, waiting for device nodes...", attempt+1, lvmDetectMaxRetries)
 			time.Sleep(lvmDetectRetryDelay)
 
-			if out, err := exec.Command("partprobe", device).CombinedOutput(); err != nil {
+			if out, err := exec.CommandContext(ctx, "partprobe", device).CombinedOutput(); err != nil {
 				log.Printf("LVM: partprobe %s (retry): %v (output: %s)", device, err, strings.TrimSpace(string(out)))
 			}
-			if out, err := exec.Command("udevadm", "settle", "--timeout="+lvmUdevSettleTimeout).CombinedOutput(); err != nil {
+			if out, err := exec.CommandContext(ctx, "udevadm", "settle", "--timeout="+lvmUdevSettleTimeout).CombinedOutput(); err != nil {
 				log.Printf("LVM: udevadm settle (retry): %v (output: %s)", err, strings.TrimSpace(string(out)))
 			}
-			if out, err := exec.Command("pvscan", "--cache").CombinedOutput(); err != nil {
+			if out, err := exec.CommandContext(ctx, "pvscan", "--cache").CombinedOutput(); err != nil {
 				log.Printf("LVM: pvscan --cache (retry): %v (output: %s)", err, strings.TrimSpace(string(out)))
 			}
 		}
 
-		vgs, err := s.scanPVS(device)
+		vgs, err := s.scanPVS(ctx, device)
 		if err != nil {
 			log.Printf("LVM: scanPVS attempt %d: %v", attempt+1, err)
 			lastErr = err
@@ -179,8 +185,8 @@ func (s *StepSetupLVM) detectVolumeGroups(device string) ([]string, error) {
 }
 
 // scanPVS runs `pvs` and returns VG names for PVs that belong to the specified device.
-func (s *StepSetupLVM) scanPVS(device string) ([]string, error) {
-	cmd := exec.Command("pvs", "--noheadings", "--nosuffix", "-o", "pv_name,vg_name", "--separator", ",")
+func (s *StepSetupLVM) scanPVS(ctx context.Context, device string) ([]string, error) {
+	cmd := exec.CommandContext(ctx, "pvs", "--noheadings", "--nosuffix", "-o", "pv_name,vg_name", "--separator", ",")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -219,9 +225,9 @@ func (s *StepSetupLVM) scanPVS(device string) ([]string, error) {
 }
 
 // activateVolumeGroups activates the discovered volume groups.
-func (s *StepSetupLVM) activateVolumeGroups(ui packersdk.Ui) error {
+func (s *StepSetupLVM) activateVolumeGroups(ctx context.Context, ui packersdk.Ui) error {
 	// Scan for VGs first
-	if out, err := exec.Command("vgscan").CombinedOutput(); err != nil {
+	if out, err := exec.CommandContext(ctx, "vgscan").CombinedOutput(); err != nil {
 		log.Printf("LVM: vgscan: %v (output: %s)", err, strings.TrimSpace(string(out)))
 	}
 
@@ -231,7 +237,7 @@ func (s *StepSetupLVM) activateVolumeGroups(ui packersdk.Ui) error {
 		args = append(args, s.volumeGroups...)
 	}
 
-	cmd := exec.Command("vgchange", args...)
+	cmd := exec.CommandContext(ctx, "vgchange", args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -245,12 +251,12 @@ func (s *StepSetupLVM) activateVolumeGroups(ui packersdk.Ui) error {
 	s.activated = true
 
 	// Ensure /dev/mapper/ nodes exist
-	if out, err := exec.Command("vgmknodes").CombinedOutput(); err != nil {
+	if out, err := exec.CommandContext(ctx, "vgmknodes").CombinedOutput(); err != nil {
 		log.Printf("LVM: vgmknodes: %v (output: %s)", err, strings.TrimSpace(string(out)))
 	}
 
 	// Wait for udev to settle
-	if out, err := exec.Command("udevadm", "settle", "--timeout="+lvmUdevSettleTimeout).CombinedOutput(); err != nil {
+	if out, err := exec.CommandContext(ctx, "udevadm", "settle", "--timeout="+lvmUdevSettleTimeout).CombinedOutput(); err != nil {
 		log.Printf("LVM: udevadm settle: %v (output: %s)", err, strings.TrimSpace(string(out)))
 	}
 
