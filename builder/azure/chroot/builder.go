@@ -443,10 +443,8 @@ func validateLVMRootDevice(device string) error {
 	cleaned := posixpath.Clean(device)
 
 	// Check for path traversal: reject if any component is ".."
-	for _, component := range strings.Split(cleaned, "/") {
-		if component == ".." {
-			return fmt.Errorf("%q must not contain path traversal (..)", device)
-		}
+	if slices.Contains(strings.Split(cleaned, "/"), "..") {
+		return fmt.Errorf("%q must not contain path traversal (..)", device)
 	}
 
 	if !strings.HasPrefix(cleaned, "/dev/") {
