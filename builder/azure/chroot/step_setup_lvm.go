@@ -82,9 +82,6 @@ func (s *StepSetupLVM) Run(ctx context.Context, state multistep.StateBag) multis
 		return multistep.ActionContinue
 	}
 
-	// Auto-detection path
-	ui.Say("LVM: scanning attached disk for LVM physical volumes...")
-
 	vgs, err := s.detectVolumeGroups(device)
 	if err != nil {
 		log.Printf("LVM: warning: error detecting volume groups: %v", err)
