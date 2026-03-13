@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/random"
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
@@ -970,7 +969,7 @@ func setWinRMCertificate(c *Config) error {
 	cert, err := c.createCertificate()
 
 	// Hide the generated certificate from logs
-	packer.LogSecretFilter.Set(cert)
+	packersdk.LogSecretFilter.Set(cert)
 
 	c.winrmCertificate = cert
 
@@ -1166,7 +1165,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 			if err != nil {
 				err := fmt.Errorf("Error parsing resource ID from `user_assigned_managed_identities`; please make sure"+
 					" that this value follows the full resource id format: "+
-					"/subscriptions/<SUBSCRIPTON_ID>/resourcegroups/<RESOURCE_GROUP>/providers/Microsoft.ManagedIdentity/userAssignedIdentities/<USER_ASSIGNED_IDENTITY_NAME>.\n"+
+					"/subscriptions/<SUBSCRIPTION_ID>/resourcegroups/<RESOURCE_GROUP>/providers/Microsoft.ManagedIdentity/userAssignedIdentities/<USER_ASSIGNED_IDENTITY_NAME>.\n"+
 					" Original error: %s", err)
 				errs = packersdk.MultiErrorAppend(errs, err)
 			} else {
@@ -1313,7 +1312,7 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	}
 
 	if c.SkipCreateBuildKeyVault && !strings.EqualFold(c.Comm.Type, "winrm") {
-		errs = packer.MultiErrorAppend(errs, fmt.Errorf("Communicator type must be winrm when skip_create_build_key_vault is set"))
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Communicator type must be winrm when skip_create_build_key_vault is set"))
 	}
 
 	/////////////////////////////////////////////
