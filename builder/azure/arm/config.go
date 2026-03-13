@@ -366,7 +366,7 @@ type Config struct {
 	// learn more about managed images.
 	ManagedImageName string `mapstructure:"managed_image_name"`
 	// Specify the storage account
-	// type for a managed image. Valid values are Standard_LRS and Premium_LRS.
+	// type for a managed image. Valid values are Standard_LRS, StandardSSD_LRS, and Premium_LRS.
 	// The default is Standard_LRS.
 	ManagedImageStorageAccountType string `mapstructure:"managed_image_storage_account_type" required:"false"`
 	managedImageStorageAccountType virtualmachines.StorageAccountTypes
@@ -1575,6 +1575,8 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	switch c.ManagedImageStorageAccountType {
 	case "", string(virtualmachines.StorageAccountTypesStandardLRS):
 		c.managedImageStorageAccountType = virtualmachines.StorageAccountTypesStandardLRS
+	case string(virtualmachines.StorageAccountTypesStandardSSDLRS):
+		c.managedImageStorageAccountType = virtualmachines.StorageAccountTypesStandardSSDLRS
 	case string(virtualmachines.StorageAccountTypesPremiumLRS):
 		c.managedImageStorageAccountType = virtualmachines.StorageAccountTypesPremiumLRS
 	default:
