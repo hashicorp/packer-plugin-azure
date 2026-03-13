@@ -290,7 +290,7 @@ Providing `temp_resource_group_name` or `location` in combination with
   learn more about managed images.
 
 - `managed_image_storage_account_type` (string) - Specify the storage account
-  type for a managed image. Valid values are Standard_LRS and Premium_LRS.
+  type for a managed image. Valid values are Standard_LRS, StandardSSD_LRS, and Premium_LRS.
   The default is Standard_LRS.
 
 - `managed_image_os_disk_snapshot_name` (string) - If
