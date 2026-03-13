@@ -558,6 +558,29 @@ func getDtlBuilderConfiguration() map[string]string {
 	return m
 }
 
+func TestSkipCreateImageShouldNotRequireCaptureDestination(t *testing.T) {
+	config_map := map[string]interface{}{
+		"client_id":                "ignore",
+		"client_secret":            "ignore",
+		"subscription_id":          "ignore",
+		"location":                 "ignore",
+		"os_type":                  "linux",
+		"image_publisher":          "ignore",
+		"image_offer":              "ignore",
+		"image_sku":                "ignore",
+		"lab_resource_group_name":  "ignore",
+		"lab_virtual_network_name": "ignore",
+		"skip_create_image":        true,
+		"communicator":             "none",
+	}
+
+	config := Config{}
+	_, err := config.Prepare(config_map, getPackerConfiguration())
+	if err != nil {
+		t.Errorf("expected config to accept skip_create_image without any capture destination, but got: %q", err)
+	}
+}
+
 func getPackerConfiguration() interface{} {
 	config := map[string]interface{}{
 		"packer_build_name":    "azure-arm-vm",

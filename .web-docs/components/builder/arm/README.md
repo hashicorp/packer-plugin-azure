@@ -526,6 +526,11 @@ Providing `temp_resource_group_name` or `location` in combination with
   once the build is completed, it has to be removed manually.
   see [here](https://docs.microsoft.com/en-us/azure/virtual-machines/troubleshooting/boot-diagnostics) for more info
 
+- `sas_token_duration` (duration string | ex: "1h5m2s") - Specify the duration for which the SAS token is granted for VHD copy operations.
+  This is used when granting disk access to copy the VHD to a storage account.
+  The default is "24h". Increase this if you are copying large disks that may
+  take longer than 24 hours to complete.
+
 - `custom_resource_build_prefix` (string) - specify custom azure resource names during build limited to max 10 characters
   this will set the prefix for the resources. The actual resource names will be
   `custom_resource_build_prefix` + resourcetype + 5 character random alphanumeric string

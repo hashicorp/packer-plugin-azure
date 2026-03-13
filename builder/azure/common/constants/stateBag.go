@@ -40,6 +40,7 @@ const (
 	ArmIsResourceGroupCreated                                         string = "arm.IsResourceGroupCreated"
 	ArmDoubleResourceGroupNameSet                                     string = "arm.DoubleResourceGroupNameSet"
 	ArmStorageAccountName                                             string = "arm.StorageAccountName"
+	ArmStorageAccountLocation                                         string = "arm.StorageAccountLocation"
 	ArmTags                                                           string = "arm.Tags"
 	ArmVirtualMachineCaptureParameters                                string = "arm.VirtualMachineCaptureParameters"
 	ArmIsExistingResourceGroup                                        string = "arm.IsExistingResourceGroup"
