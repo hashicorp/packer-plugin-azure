@@ -5,6 +5,7 @@ package arm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -24,17 +25,17 @@ import (
 )
 
 type StepCaptureImage struct {
-	client                   *AzureClient
-	config                   *Config
-	generalizeVM             func(ctx context.Context, vmId virtualmachines.VirtualMachineId) error
-	getVMInternalID          func(ctx context.Context, vmId virtualmachines.VirtualMachineId) (string, error)
-	captureManagedImage      func(ctx context.Context, subscriptionId string, resourceGroupName string, imageName string, parameters *images.Image) error
-	grantAccess              func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) (string, error)
-	revokeAccess             func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) error
-	copyToStorage            func(ctx context.Context, storageContainerName string, captureNamePrefix string, osDiskName string, accessUri string) error
-	say                      func(message string)
-	error                    func(e error)
-	diskNameToRevokeAccessTo string
+	client                    *AzureClient
+	config                    *Config
+	generalizeVM              func(ctx context.Context, vmId virtualmachines.VirtualMachineId) error
+	getVMInternalID           func(ctx context.Context, vmId virtualmachines.VirtualMachineId) (string, error)
+	captureManagedImage       func(ctx context.Context, subscriptionId string, resourceGroupName string, imageName string, parameters *images.Image) error
+	grantAccess               func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) (string, error)
+	revokeAccess              func(ctx context.Context, subscriptionId string, resourceGroupName string, osDiskName string) error
+	copyToStorage             func(ctx context.Context, storageContainerName string, captureNamePrefix string, osDiskName string, accessUri string) error
+	say                       func(message string)
+	error                     func(e error)
+	diskNamesToRevokeAccessTo []string
 }
 
 type GrantAccessOperationResponse struct {
@@ -214,12 +215,18 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 }
 
 func (s *StepCaptureImage) Cleanup(state multistep.StateBag) {
-	if s.diskNameToRevokeAccessTo != "" {
+	if len(s.diskNamesToRevokeAccessTo) > 0 {
 		var subscriptionId = state.Get(constants.ArmSubscription).(string)
 		var resourceGroupName = state.Get(constants.ArmResourceGroupName).(string)
-		err := s.revokeAccess(context.Background(), subscriptionId, resourceGroupName, s.diskNameToRevokeAccessTo)
-		if err != nil {
-			state.Get("ui").(packersdk.Ui).Errorf("Failed to revoke access to disk, this will lead to failures cleaning up resources. Err: %s", err.Error())
+		var errs []error
+		for _, diskName := range s.diskNamesToRevokeAccessTo {
+			err := s.revokeAccess(context.Background(), subscriptionId, resourceGroupName, diskName)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("disk %s: %w", diskName, err))
+			}
+		}
+		if err := errors.Join(errs...); err != nil {
+			state.Get("ui").(packersdk.Ui).Errorf("Failed to revoke access to disk(s), this will lead to failures cleaning up resources. Err: %s", err.Error())
 		}
 	}
 }
@@ -230,9 +237,10 @@ func (s *StepCaptureImage) captureVHD(ctx context.Context, subscriptionId string
 		err = fmt.Errorf("failed to grant access with err : %s", err)
 		return err
 	}
+	// Register the SAS URI as a secret to prevent it from leaking in logs
+	packersdk.LogSecretFilter.Set(accessUri)
 	// If the code is canceled or fails after this point, we must call to cleanup this granted access, otherwise delete operations will fail
-	s.diskNameToRevokeAccessTo = s.config.tmpOSDiskName
-	s.say(fmt.Sprintf(" -> accessUri                 : '%s'", accessUri))
+	s.diskNamesToRevokeAccessTo = append(s.diskNamesToRevokeAccessTo, diskName)
 
 	var storageContainerName = s.config.CaptureContainerName
 	var captureNamePrefix = s.config.CaptureNamePrefix
@@ -253,7 +261,7 @@ func (s *StepCaptureImage) grantDiskAccess(ctx context.Context, subscriptionId s
 	diskID := commonids.NewManagedDiskID(subscriptionId, resourceGroupName, diskName)
 	grantAccessData := disks.GrantAccessData{
 		Access:            disks.AccessLevelRead,
-		DurationInSeconds: 600,
+		DurationInSeconds: int64(s.config.SASTokenDuration.Seconds()),
 	}
 
 	opts := sdkclient.RequestOptions{

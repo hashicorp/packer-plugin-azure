@@ -115,6 +115,14 @@ func TestBuilder_Prepare(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "skip_create_image should not require capture destination",
+			config: config{
+				"source":            "/subscriptions/789/resourceGroups/testrg/providers/Microsoft.Compute/disks/diskname",
+				"skip_create_image": true,
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

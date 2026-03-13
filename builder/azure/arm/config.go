@@ -622,6 +622,12 @@ type Config struct {
 	// see [here](https://docs.microsoft.com/en-us/azure/virtual-machines/troubleshooting/boot-diagnostics) for more info
 	BootDiagSTGAccount string `mapstructure:"boot_diag_storage_account" required:"false"`
 
+	// Specify the duration for which the SAS token is granted for VHD copy operations.
+	// This is used when granting disk access to copy the VHD to a storage account.
+	// The default is "24h". Increase this if you are copying large disks that may
+	// take longer than 24 hours to complete.
+	SASTokenDuration time.Duration `mapstructure:"sas_token_duration" required:"false"`
+
 	// specify custom azure resource names during build limited to max 10 characters
 	// this will set the prefix for the resources. The actual resource names will be
 	// `custom_resource_build_prefix` + resourcetype + 5 character random alphanumeric string
@@ -1181,8 +1187,12 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	/////////////////////////////////////////////
 	// Capture
-	if c.CaptureContainerName == "" && (c.ManagedImageName == "" || c.ManagedImageResourceGroupName == "") && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
+	if !c.SkipCreateImage && c.CaptureContainerName == "" && (c.ManagedImageName == "" || c.ManagedImageResourceGroupName == "") && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A capture_container_name, managed_image_name and managed_image_resource_group_name, or shared_image_gallery_destination must be specified"))
+	}
+
+	if (c.ManagedImageName == "") != (c.ManagedImageResourceGroupName == "") {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("managed_image_name and managed_image_resource_group_name must be specified together"))
 	}
 
 	if c.CaptureContainerName != "" {
@@ -1321,13 +1331,17 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Specify either a location to create the resource group in or an existing build_resource_group_name, but not both."))
 	}
 
-	if c.ManagedImageName == "" && c.ManagedImageResourceGroupName == "" && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
+	if !c.SkipCreateImage && c.ManagedImageName == "" && c.ManagedImageResourceGroupName == "" && c.SharedGalleryDestination.SigDestinationGalleryName == "" {
 		if c.StorageAccount == "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A storage_account must be specified"))
 		}
 		if c.ResourceGroupName == "" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("A resource_group_name must be specified"))
 		}
+	}
+
+	if (c.StorageAccount == "") != (c.ResourceGroupName == "") {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("storage_account and resource_group_name must be specified together; resource_group_name is the resource group of the storage account"))
 	}
 
 	if c.TempResourceGroupName != "" {
@@ -1529,6 +1543,12 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	if c.PollingDurationTimeout == 0 {
 		// In the sdk, the default is 15 m.
 		c.PollingDurationTimeout = 15 * time.Minute
+	}
+
+	/////////////////////////////////////////////
+	// SAS Token Duration
+	if c.SASTokenDuration == 0 {
+		c.SASTokenDuration = 24 * time.Hour
 	}
 
 	/////////////////////////////////////////////
