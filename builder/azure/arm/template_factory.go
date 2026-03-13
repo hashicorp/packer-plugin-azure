@@ -348,6 +348,13 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 		}
 	}
 
+	if config.DiskControllerType != "" {
+		err = builder.SetDiskControllerType(config.DiskControllerType)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if config.BootDiagSTGAccount != "" {
 		err = builder.SetBootDiagnostics(config.BootDiagSTGAccount)
 		if err != nil {

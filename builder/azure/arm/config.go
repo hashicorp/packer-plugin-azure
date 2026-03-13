@@ -472,6 +472,11 @@ type Config struct {
 	// [supports accelerated networking](https://learn.microsoft.com/en-us/azure/virtual-network/accelerated-networking-overview?tabs=NetworkManager&tryIt=true&source=docs#supported-vm-instances).
 	// Set to `false` to explicitly disable it. Defaults to unset (Azure decides).
 	AcceleratedNetworking *bool `mapstructure:"accelerated_networking" required:"false"`
+	// Set the disk controller type for the build VM. Valid values are `SCSI`
+	// and `NVMe`. `NVMe` requires a VM size that
+	// [supports NVMe](https://learn.microsoft.com/en-us/azure/virtual-machines/nvme-overview).
+	// Defaults to unset (Azure decides based on VM size).
+	DiskControllerType string `mapstructure:"disk_controller_type" required:"false"`
 	// Specify a file containing custom data to inject into the cloud-init
 	// process. The contents of the file are read and injected into the ARM
 	// template. The custom data will be passed to cloud-init for processing at
@@ -1594,6 +1599,12 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		c.diskCachingType = virtualmachines.CachingTypesReadWrite
 	default:
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The disk_caching_type %q is invalid", c.DiskCachingType))
+	}
+
+	if c.DiskControllerType != "" {
+		if !strings.EqualFold(c.DiskControllerType, "SCSI") && !strings.EqualFold(c.DiskControllerType, "NVMe") {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The disk_controller_type %q is invalid, the valid values are SCSI and NVMe", c.DiskControllerType))
+		}
 	}
 
 	/////////////////////////////////////////////
