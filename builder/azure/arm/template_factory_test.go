@@ -674,7 +674,7 @@ func TestVirtualMachineDeploymentAcceleratedNetworking02(t *testing.T) {
 }
 
 // Ensure disk controller type is not set when not specified in config
-func TestVirtualMachineDeploymentDiskControllerType01(t *testing.T) {
+func TestVirtualMachineDeploymentDiskControllerTypeDefault(t *testing.T) {
 	var c Config
 	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
 	if err != nil {
@@ -689,7 +689,7 @@ func TestVirtualMachineDeploymentDiskControllerType01(t *testing.T) {
 }
 
 // Ensure disk controller type is set when specified in config
-func TestVirtualMachineDeploymentDiskControllerType02(t *testing.T) {
+func TestVirtualMachineDeploymentDiskControllerTypeNVMe(t *testing.T) {
 	var c Config
 	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
 	if err != nil {

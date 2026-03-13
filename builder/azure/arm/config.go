@@ -1601,6 +1601,12 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The disk_caching_type %q is invalid", c.DiskCachingType))
 	}
 
+	if c.DiskControllerType != "" {
+		if !strings.EqualFold(c.DiskControllerType, "SCSI") && !strings.EqualFold(c.DiskControllerType, "NVMe") {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The disk_controller_type %q is invalid, the valid values are SCSI and NVMe", c.DiskControllerType))
+		}
+	}
+
 	/////////////////////////////////////////////
 	// License Type (Azure Hybrid Benefit)
 	if c.LicenseType != "" {
