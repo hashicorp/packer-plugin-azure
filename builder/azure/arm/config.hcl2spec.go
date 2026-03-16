@@ -78,6 +78,7 @@ type FlatConfig struct {
 	VirtualNetworkSubnetName                   *string                            `mapstructure:"virtual_network_subnet_name" required:"false" cty:"virtual_network_subnet_name" hcl:"virtual_network_subnet_name"`
 	VirtualNetworkResourceGroupName            *string                            `mapstructure:"virtual_network_resource_group_name" required:"false" cty:"virtual_network_resource_group_name" hcl:"virtual_network_resource_group_name"`
 	AcceleratedNetworking                      *bool                              `mapstructure:"accelerated_networking" required:"false" cty:"accelerated_networking" hcl:"accelerated_networking"`
+	DiskControllerType                         *string                            `mapstructure:"disk_controller_type" required:"false" cty:"disk_controller_type" hcl:"disk_controller_type"`
 	CustomDataFile                             *string                            `mapstructure:"custom_data_file" required:"false" cty:"custom_data_file" hcl:"custom_data_file"`
 	CustomData                                 *string                            `mapstructure:"custom_data" required:"false" cty:"custom_data" hcl:"custom_data"`
 	UserDataFile                               *string                            `mapstructure:"user_data_file" required:"false" cty:"user_data_file" hcl:"user_data_file"`
@@ -232,6 +233,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"virtual_network_subnet_name":             &hcldec.AttrSpec{Name: "virtual_network_subnet_name", Type: cty.String, Required: false},
 		"virtual_network_resource_group_name":     &hcldec.AttrSpec{Name: "virtual_network_resource_group_name", Type: cty.String, Required: false},
 		"accelerated_networking":                  &hcldec.AttrSpec{Name: "accelerated_networking", Type: cty.Bool, Required: false},
+		"disk_controller_type":                    &hcldec.AttrSpec{Name: "disk_controller_type", Type: cty.String, Required: false},
 		"custom_data_file":                        &hcldec.AttrSpec{Name: "custom_data_file", Type: cty.String, Required: false},
 		"custom_data":                             &hcldec.AttrSpec{Name: "custom_data", Type: cty.String, Required: false},
 		"user_data_file":                          &hcldec.AttrSpec{Name: "user_data_file", Type: cty.String, Required: false},
