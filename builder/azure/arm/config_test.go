@@ -1747,7 +1747,7 @@ func TestConfigShouldAcceptManagedImageStorageAccountTypes(t *testing.T) {
 		"os_type": constants.Target_Linux,
 	}
 
-	storage_account_types := []string{"Premium_LRS", "Standard_LRS"}
+	storage_account_types := []string{"Premium_LRS", "StandardSSD_LRS", "Standard_LRS"}
 
 	for _, x := range storage_account_types {
 		config["managed_image_storage_account_type"] = x
