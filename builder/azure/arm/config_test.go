@@ -2683,6 +2683,9 @@ func TestConfigShouldRejectUserDataAndUserDataFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed creating tempfile: %s", err)
 	}
+	//nolint:errcheck
+	defer os.Remove(tmpfile.Name())
+
 	config := map[string]interface{}{
 		"capture_container_name": "ignore",
 		"capture_name_prefix":    "ignore",
@@ -2703,7 +2706,6 @@ func TestConfigShouldRejectUserDataAndUserDataFile(t *testing.T) {
 	var c Config
 	_, err = c.Prepare(config, getPackerConfiguration())
 
-	defer os.Remove(tmpfile.Name())
 	if err == nil {
 		t.Fatal("expected config to reject the use of both user_data and user_data_file")
 	}
@@ -2714,6 +2716,9 @@ func TestConfigShouldRejectCustomDataAndCustomDataFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed creating tempfile: %s", err)
 	}
+	//nolint:errcheck
+	defer os.Remove(tmpfile.Name())
+
 	config := map[string]interface{}{
 		"capture_container_name": "ignore",
 		"capture_name_prefix":    "ignore",
@@ -2734,7 +2739,6 @@ func TestConfigShouldRejectCustomDataAndCustomDataFile(t *testing.T) {
 	var c Config
 	_, err = c.Prepare(config, getPackerConfiguration())
 
-	defer os.Remove(tmpfile.Name())
 	if err == nil {
 		t.Fatal("expected config to reject the use of both custom_data and custom_data_file")
 	}

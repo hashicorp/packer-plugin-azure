@@ -285,6 +285,7 @@ func (b *Builder) writeSSHPrivateKey(ui packersdk.Ui, debugKeyPath string) {
 	if err != nil {
 		ui.Say(fmt.Sprintf("Error saving debug key: %s", err))
 	}
+	//nolint:errcheck
 	defer f.Close()
 
 	// Write the key out
@@ -367,7 +368,7 @@ func (b *Builder) getSubnetInformation(ctx context.Context, ui packersdk.Ui, azC
 }
 
 func normalizeAzureRegion(name string) string {
-	return strings.ToLower(strings.Replace(name, " ", "", -1))
+	return strings.ToLower(strings.ReplaceAll(name, " ", ""))
 }
 
 func (b *Builder) managedImageArtifactWithSIGAsDestination(managedImageID string) (*Artifact, error) {

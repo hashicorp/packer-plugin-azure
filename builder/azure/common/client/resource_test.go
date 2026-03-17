@@ -162,7 +162,7 @@ func TestResource_Parent(t *testing.T) {
 			want:       "/subscriptions/17c60680-0e49-465b-aa54-ece043ce5571/resourceGroups/rg/providers/Microsoft.Resources/resources/resource",
 		},
 		{
-			name:       "sub sub",
+			name:       "sub subscription",
 			resourceID: "/subscriptions/17c60680-0e49-465b-aa54-ece043ce5571/resourceGroups/rg/providers/Microsoft.Resources/resources/resource/sub/child/subsub/grandchild",
 			want:       "/subscriptions/17c60680-0e49-465b-aa54-ece043ce5571/resourceGroups/rg/providers/Microsoft.Resources/resources/resource/sub/child",
 		},

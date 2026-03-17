@@ -15,6 +15,7 @@ func TestIsAzure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	//nolint:errcheck
 	defer os.Remove(f.Name())
 
 	_, err = f.Seek(0, 0)
