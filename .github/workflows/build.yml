@@ -51,7 +51,7 @@ jobs:
           persist-credentials: false
       - name: set product version
         id: set-product-version
-        uses: hashicorp/actions-set-product-version@v1
+        uses: hashicorp/actions-set-product-version@v2
       - name: set-ld-flags
         id: set-ld-flags
         run: |
