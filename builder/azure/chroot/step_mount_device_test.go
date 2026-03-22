@@ -27,7 +27,7 @@ func TestStepMountDevice_Run(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to create a temporary directory: %q", err)
 	}
-	defer os.Remove(mountPath)
+	defer func() { _ = os.Remove(mountPath) }()
 
 	step := &StepMountDevice{
 		MountOptions:   []string{"foo"},
@@ -89,7 +89,7 @@ func TestStepMountDevice_Run_LVMActive(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to create a temporary directory: %q", err)
 	}
-	defer os.Remove(mountPath)
+	defer func() { _ = os.Remove(mountPath) }()
 
 	step := &StepMountDevice{
 		MountOptions:   []string{"nouuid"},
@@ -146,7 +146,7 @@ func TestStepMountDevice_CleanupFunc_Unmount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to create a temporary directory: %q", err)
 	}
-	defer os.Remove(mountPath)
+	defer func() { _ = os.Remove(mountPath) }()
 
 	step := &StepMountDevice{
 		MountPath: mountPath,
