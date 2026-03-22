@@ -14,10 +14,7 @@ import (
 var _ multistep.Step = &StepSetupLVM{}
 
 type StepSetupLVM struct {
-	device        string
-	volumeGroups  []string
 	LVMRootDevice string
-	activated     bool
 }
 
 func (s *StepSetupLVM) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
