@@ -3,6 +3,30 @@
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-azure/releases) for the latest CHANGELOG information.
 
 ---
+## 2.6.0 (March 23, 2026)
+
+## What's Changed
+### Exciting New Features
+* Add built-in LVM support to the `azure-chroot` builder, including the optional `lvm_root_device` override [GH-583](https://github.com/hashicorp/packer-plugin-azure/pull/583)
+* Support sourcing Azure Compute Gallery images across subscriptions and preserve host availability zones for `azure-chroot` disks [GH-582](https://github.com/hashicorp/packer-plugin-azure/pull/582)
+* Add `accelerated_networking` and `sas_token_duration` options to the `azure-arm` builder [GH-580](https://github.com/hashicorp/packer-plugin-azure/pull/580)
+* Add `disk_controller_type` support to the `azure-arm` builder [GH-592](https://github.com/hashicorp/packer-plugin-azure/pull/592)
+* Add `StandardSSD_LRS` support for `managed_image_storage_account_type` [GH-596](https://github.com/hashicorp/packer-plugin-azure/pull/596)
+
+### Bug Fixes
+* Allow `skip_create_image` without requiring capture destinations in the ARM and chroot builders [GH-579](https://github.com/hashicorp/packer-plugin-azure/pull/579)
+* Relax resource group validation and VHD copy duration handling to avoid false failures [GH-567](https://github.com/hashicorp/packer-plugin-azure/pull/567)
+
+### Other Changes
+* Update dependencies to latest compatible versions [GH-599](https://github.com/hashicorp/packer-plugin-azure/pull/599)
+* Bump `github.com/hashicorp/packer-plugin-sdk` from `0.6.4` to `0.6.6` [GH-570](https://github.com/hashicorp/packer-plugin-azure/pull/570), [GH-597](https://github.com/hashicorp/packer-plugin-azure/pull/597)
+* Upgrade CI dependencies and release automation actions [GH-586](https://github.com/hashicorp/packer-plugin-azure/pull/586), [GH-587](https://github.com/hashicorp/packer-plugin-azure/pull/587), [GH-589](https://github.com/hashicorp/packer-plugin-azure/pull/589), [GH-590](https://github.com/hashicorp/packer-plugin-azure/pull/590), [GH-595](https://github.com/hashicorp/packer-plugin-azure/pull/595), [GH-598](https://github.com/hashicorp/packer-plugin-azure/pull/598)
+* Prevent credential persistence in CI checkouts [GH-593](https://github.com/hashicorp/packer-plugin-azure/pull/593)
+* Update `golangci-lint` to v2 [GH-594](https://github.com/hashicorp/packer-plugin-azure/pull/594)
+* Improve Dependabot support for GitHub Actions updates [GH-569](https://github.com/hashicorp/packer-plugin-azure/pull/569)
+
+**Full Changelog**: https://github.com/hashicorp/packer-plugin-azure/compare/v2.5.2...v2.6.0
+
 ## 2.5.2 (February 4, 2026)
 
 ## What's Changed
