@@ -3,6 +3,18 @@
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-azure/releases) for the latest CHANGELOG information.
 
 ---
+## 2.6.1 (April 28, 2026)
+
+## What's Changed
+### Bug Fixes
+* Align OIDC option names (`OIDCTokenRequestURL`, `OIDCTokenRequestToken`) with latest `hashicorp/go-azure-helpers` SDK [GH-608](https://github.com/hashicorp/packer-plugin-azure/pull/608)
+
+### Other Changes
+* Update Go to 1.25.9 and refresh module dependencies [GH-608](https://github.com/hashicorp/packer-plugin-azure/pull/608)
+* Update `go-ntlmssp` to v0.1.1 for stability and security improvements [GH-609](https://github.com/hashicorp/packer-plugin-azure/pull/609)
+
+**Full Changelog**: https://github.com/hashicorp/packer-plugin-azure/compare/v2.6.0...v2.6.1
+
 ## 2.6.0 (March 23, 2026)
 
 ## What's Changed
