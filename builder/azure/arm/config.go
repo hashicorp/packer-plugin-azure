@@ -966,10 +966,12 @@ func setSshValues(c *Config) error {
 }
 
 func setWinRMCertificate(c *Config) error {
-	c.Comm.WinRMTransportDecorator =
-		func() winrm.Transporter {
-			return &winrm.ClientNTLM{}
-		}
+	if c.Comm.WinRMUseNTLM {
+		c.Comm.WinRMTransportDecorator =
+			func() winrm.Transporter {
+				return &winrm.ClientNTLM{}
+			}
+	}
 
 	cert, err := c.createCertificate()
 

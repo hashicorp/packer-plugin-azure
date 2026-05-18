@@ -189,7 +189,25 @@ func TestConfigShouldSupportPackersConfigElements(t *testing.T) {
 	}
 }
 
-func TestWinRMConfigShouldSetRoundTripDecorator(t *testing.T) {
+func TestWinRMConfigShouldSetRoundTripDecoratorWhenNTLMEnabled(t *testing.T) {
+	config_dtl := getDtlBuilderConfiguration()
+	config_dtl["communicator"] = "winrm"
+	config_dtl["winrm_username"] = "username"
+	config_dtl["winrm_password"] = "password"
+	config_dtl["winrm_use_ntlm"] = "true"
+
+	config := Config{}
+	_, err := config.Prepare(config_dtl, getPackerConfiguration())
+	if err != nil {
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
+	}
+
+	if config.Comm.WinRMTransportDecorator == nil {
+		t.Error("Expected WinRMTransportDecorator to be set when winrm_use_ntlm is true, but it was nil")
+	}
+}
+
+func TestWinRMConfigShouldNotSetRoundTripDecoratorWhenNTLMDisabled(t *testing.T) {
 	config_dtl := getDtlBuilderConfiguration()
 	config_dtl["communicator"] = "winrm"
 	config_dtl["winrm_username"] = "username"
@@ -201,8 +219,8 @@ func TestWinRMConfigShouldSetRoundTripDecorator(t *testing.T) {
 		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
 	}
 
-	if config.Comm.WinRMTransportDecorator == nil {
-		t.Error("Expected WinRMTransportDecorator to be set, but it was nil")
+	if config.Comm.WinRMTransportDecorator != nil {
+		t.Error("Expected WinRMTransportDecorator to be nil when winrm_use_ntlm is not set, but it was set")
 	}
 }
 

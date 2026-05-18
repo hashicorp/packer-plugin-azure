@@ -665,7 +665,25 @@ func TestConfigShouldSupportPackersConfigElements(t *testing.T) {
 	}
 }
 
-func TestWinRMConfigShouldSetRoundTripDecorator(t *testing.T) {
+func TestWinRMConfigShouldSetRoundTripDecoratorWhenNTLMEnabled(t *testing.T) {
+	config := getArmBuilderConfiguration()
+	config["communicator"] = "winrm"
+	config["winrm_username"] = "username"
+	config["winrm_password"] = "Password123"
+	config["winrm_use_ntlm"] = true
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if c.Comm.WinRMTransportDecorator == nil {
+		t.Error("Expected WinRMTransportDecorator to be set when winrm_use_ntlm is true, but it was nil")
+	}
+}
+
+func TestWinRMConfigShouldNotSetRoundTripDecoratorWhenNTLMDisabled(t *testing.T) {
 	config := getArmBuilderConfiguration()
 	config["communicator"] = "winrm"
 	config["winrm_username"] = "username"
@@ -677,8 +695,8 @@ func TestWinRMConfigShouldSetRoundTripDecorator(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if c.Comm.WinRMTransportDecorator == nil {
-		t.Error("Expected WinRMTransportDecorator to be set, but it was nil")
+	if c.Comm.WinRMTransportDecorator != nil {
+		t.Error("Expected WinRMTransportDecorator to be nil when winrm_use_ntlm is not set, but it was set")
 	}
 }
 
