@@ -1,13 +1,13 @@
 module github.com/hashicorp/packer-plugin-azure
 
-go 1.25.9
+go 1.25.10
 
 require (
 	github.com/approvals/go-approval-tests v0.0.0-20210131072903-38d0b0ec12b1
 	github.com/google/go-cmp v0.7.0
 	github.com/hashicorp/go-azure-helpers v0.76.2
 	github.com/hashicorp/hcl/v2 v2.24.0
-	github.com/hashicorp/packer-plugin-sdk v0.6.7
+	github.com/hashicorp/packer-plugin-sdk v0.6.8
 	github.com/masterzen/winrm v0.0.0-20250927112105-5f8e6c707321
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mitchellh/reflectwalk v1.0.2
