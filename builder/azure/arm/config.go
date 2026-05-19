@@ -966,7 +966,9 @@ func setSshValues(c *Config) error {
 }
 
 func setWinRMCertificate(c *Config) error {
-	if c.Comm.WinRMUseNTLM {
+	// Azure VMs use Negotiate/NTLM auth for WinRM by default.
+	// Enable NTLM unless the user explicitly set winrm_use_ntlm = false.
+	if !c.Comm.WinRMUseNTLM.False() {
 		c.Comm.WinRMTransportDecorator =
 			func() winrm.Transporter {
 				return &winrm.ClientNTLM{}

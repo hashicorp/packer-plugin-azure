@@ -246,6 +246,18 @@ In addition to the builder options, a communicator may also be defined:
 
 @include 'packer-plugin-sdk/communicator/SSH-Private-Key-File-not-required.mdx'
 
+#### WinRM NTLM (Azure-specific default)
+
+~> **Note:** Unlike the generic SDK default, this plugin enables NTLM authentication
+for WinRM automatically when `winrm_use_ntlm` is not set. Azure Windows VMs use
+Negotiate/NTLM auth by default, and Basic auth is typically rejected.
+
+- **unset** (default) — NTLM is used. No action required for standard Azure Windows images.
+- **`true`** — NTLM is used (same as unset).
+- **`false`** — NTLM is disabled. Use this for STIG/FIPS-hardened images that enforce
+  Extended Protection for Authentication (EPA) with Channel Binding Tokens, which
+  are incompatible with the NTLM client.
+
 ## Basic Example
 
 Here is a basic example for Azure.
