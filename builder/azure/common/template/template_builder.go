@@ -474,10 +474,34 @@ func (s *TemplateBuilder) SetPrivateVirtualNetworkWithPublicIp(virtualNetworkRes
 	return nil
 }
 
-func (s *TemplateBuilder) SetNetworkSecurityGroup(ipAddresses []string, port int) error {
+func (s *TemplateBuilder) SetNetworkSecurityGroup(ipAddresses []string, port int, useNic bool) error {
 	nsgResource, dependency, resourceId := s.createNsgResource(ipAddresses, port)
 	if err := s.addResource(nsgResource); err != nil {
 		return err
+	}
+
+	if useNic {
+		nicResource, err := s.getResourceByType(resourceNetworkInterfaces)
+		if err != nil {
+			return err
+		}
+
+		if nicResource.DependsOn == nil {
+			nicResource.DependsOn = &[]string{}
+		}
+		*nicResource.DependsOn = append(*nicResource.DependsOn, dependency)
+
+		if nicResource.Properties == nil {
+			nicResource.Properties = &Properties{}
+		}
+		if nicResource.Properties.NetworkSecurityGroup != nil {
+			return fmt.Errorf("template: nic already has an associated network security group")
+		}
+		nicResource.Properties.NetworkSecurityGroup = &NetworkSecurityGroupReference{
+			ID: common.StringPtr(resourceId),
+		}
+
+		return nil
 	}
 
 	vnetResource, err := s.getResourceByType(resourceVirtualNetworks)
