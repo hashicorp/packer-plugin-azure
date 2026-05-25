@@ -467,7 +467,7 @@ func TestConfigShouldRejectIncorrectInboundIpAddresses(t *testing.T) {
 	}
 }
 
-func TestConfigShouldRejectInboundIpAddressesWithVirtualNetwork(t *testing.T) {
+func TestConfigShouldAllowInboundIpAddressesWithExistingVirtualNetwork(t *testing.T) {
 	config := map[string]interface{}{
 		"capture_name_prefix":          "ignore",
 		"capture_container_name":       "ignore",
@@ -489,8 +489,49 @@ func TestConfigShouldRejectInboundIpAddressesWithVirtualNetwork(t *testing.T) {
 
 	config["virtual_network_name"] = "some_vnet_name"
 	_, err = c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("Expected configuration creation to succeed, but it failed with allowed_inbound_ip_addresses and virtual_network_name both specified: %v", err)
+	}
+}
+
+func TestConfigShouldRejectMalformedInboundIpAddressesWhenUsingExistingVirtualNetwork(t *testing.T) {
+	config := map[string]interface{}{
+		"capture_name_prefix":                 "ignore",
+		"capture_container_name":              "ignore",
+		"location":                            "ignore",
+		"image_url":                           "ignore",
+		"storage_account":                     "ignore",
+		"resource_group_name":                 "ignore",
+		"subscription_id":                     "ignore",
+		"os_type":                             constants.Target_Linux,
+		"communicator":                        "none",
+		"allowed_inbound_ip_addresses":        []string{"not-an-ip"},
+		"virtual_network_name":                "vnet",
+		"virtual_network_subnet_name":         "subnet",
+		"virtual_network_resource_group_name": "rg",
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
 	if err == nil {
-		t.Errorf("Expected configuration creation to fail, but it succeeded with allowed_inbound_ip_addresses and virtual_network_name both specified")
+		t.Fatal("Expected configuration creation to fail with malformed allowed_inbound_ip_addresses and existing VNet, but it succeeded")
+	}
+}
+
+func TestConfigExistingVirtualNetworkChangeDoesNotAlterBuilderManagedValidation(t *testing.T) {
+	config := getArmBuilderConfiguration()
+	config["allowed_inbound_ip_addresses"] = []string{"127.0.0.1"}
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("Builder-managed allowlist should still be valid: %v", err)
+	}
+
+	config = getArmBuilderConfiguration()
+	config["allowed_inbound_ip_addresses"] = []string{"not-an-ip"}
+	_, err = c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("Builder-managed config with malformed allowlist should still be invalid")
 	}
 }
 
