@@ -535,6 +535,52 @@ func TestConfigExistingVirtualNetworkChangeDoesNotAlterBuilderManagedValidation(
 	}
 }
 
+func TestConfigShouldAllowMixedInboundIpAndHostnameValues(t *testing.T) {
+	config := getArmBuilderConfiguration()
+	config["allowed_inbound_ip_addresses"] = []string{"127.0.0.1", "192.168.100.0/24", "ci.example.com"}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("expected mixed inbound IP and hostname values to pass validation, got: %v", err)
+	}
+
+	want := []string{"127.0.0.1", "192.168.100.0/24", "ci.example.com"}
+	if diff := cmp.Diff(want, c.AllowedInboundIpAddresses); diff != "" {
+		t.Fatalf("unexpected allowlist (-want +got):\n%s", diff)
+	}
+}
+
+func TestConfigShouldRejectInvalidInboundHostnameValue(t *testing.T) {
+	config := getArmBuilderConfiguration()
+	config["allowed_inbound_ip_addresses"] = []string{"*.example.com"}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("expected invalid hostname to fail validation")
+	}
+	if !strings.Contains(err.Error(), "allowed_inbound_ip_addresses") {
+		t.Fatalf("expected setting name in error, got %v", err)
+	}
+}
+
+func TestConfigLiteralInboundIpBehaviorRemainsUnchanged(t *testing.T) {
+	config := getArmBuilderConfiguration()
+	config["allowed_inbound_ip_addresses"] = []string{"127.0.0.1", "192.168.100.0/24"}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("expected literal allowlist to remain valid, got: %v", err)
+	}
+
+	want := []string{"127.0.0.1", "192.168.100.0/24"}
+	if diff := cmp.Diff(want, c.AllowedInboundIpAddresses); diff != "" {
+		t.Fatalf("unexpected allowlist (-want +got):\n%s", diff)
+	}
+}
+
 func TestConfigShouldDefaultToPublicCloud(t *testing.T) {
 	var c Config
 	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())
