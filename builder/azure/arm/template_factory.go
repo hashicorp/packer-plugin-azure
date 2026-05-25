@@ -133,6 +133,14 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 	if err != nil {
 		return nil, err
 	}
+
+	expandedAllowedInboundIpAddresses := config.AllowedInboundIpAddresses
+	if len(config.AllowedInboundIpAddresses) >= 1 {
+		expandedAllowedInboundIpAddresses, err = expandMixedAddressList(config.AllowedInboundIpAddresses, nil)
+		if err != nil {
+			return nil, err
+		}
+	}
 	osType := hashiVMSDK.OperatingSystemTypesLinux
 
 	switch config.OSType {
@@ -341,12 +349,12 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 	// If a standard IP is set with no inbound addresses, we default to allowing all IP addresses
 	if (config.PublicIpSKU != "Basic") || (len(config.AllowedInboundIpAddresses) >= 1) {
 		if config.VirtualNetworkName == "" {
-			err = builder.SetNetworkSecurityGroup(config.AllowedInboundIpAddresses, config.Comm.Port(), false)
+			err = builder.SetNetworkSecurityGroup(expandedAllowedInboundIpAddresses, config.Comm.Port(), false)
 			if err != nil {
 				return nil, err
 			}
 		} else if len(config.AllowedInboundIpAddresses) >= 1 {
-			err = builder.SetNetworkSecurityGroup(config.AllowedInboundIpAddresses, config.Comm.Port(), true)
+			err = builder.SetNetworkSecurityGroup(expandedAllowedInboundIpAddresses, config.Comm.Port(), true)
 			if err != nil {
 				return nil, err
 			}
