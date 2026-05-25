@@ -107,6 +107,11 @@ type BillingProfile struct {
 	MaxPrice float32 `json:"maxPrice,omitempty"`
 }
 
+// NetworkSecurityGroupReference references an NSG by ID (used for NIC attachment)
+type NetworkSecurityGroupReference struct {
+	ID *string `json:"id,omitempty"`
+}
+
 // Template > Resource > Properties
 type Properties struct {
 	AccessPolicies               *[]AccessPolicies                             `json:"accessPolicies,omitempty"`
@@ -129,6 +134,7 @@ type Properties struct {
 	SecurityProfile              *hashiVMSDK.SecurityProfile                   `json:"securityProfile,omitempty"`
 	Subnets                      *[]hashiSubnetsSDK.Subnet                     `json:"subnets,omitempty"`
 	SecurityRules                *[]hashiSecurityRulesSDK.SecurityRule         `json:"securityRules,omitempty"`
+	NetworkSecurityGroup         *NetworkSecurityGroupReference                `json:"networkSecurityGroup,omitempty"`
 	TenantId                     *string                                       `json:"tenantId,omitempty"`
 	Value                        *string                                       `json:"value,omitempty"`
 	Priority                     *string                                       `json:"priority,omitempty"`
