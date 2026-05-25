@@ -522,9 +522,9 @@ Providing `temp_resource_group_name` or `location` in combination with
 - `allowed_inbound_ip_addresses` ([]string) - Specify the list of IP addresses and CIDR blocks that should be
   allowed access to the VM. If provided, an Azure Network Security
   Group will be created with corresponding rules and be bound to
-  the subnet of the VM.
-  Providing `allowed_inbound_ip_addresses` in combination with
-  `virtual_network_name` is not allowed.
+  the subnet (builder VNet) or NIC (existing VNet).
+  Builder-managed VNet behavior is unchanged for backward compatibility.
+  The temporary NSG is removed during cleanup.
 
 - `boot_diag_storage_account` (string) - Specify storage to store Boot Diagnostics -- Enabling this option
   will create 2 Files in the specified storage account. (serial console log & screenshot file)
