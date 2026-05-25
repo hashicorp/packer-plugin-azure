@@ -6,6 +6,8 @@ package arm
 import (
 	"encoding/base64"
 	"encoding/json"
+	"net"
+	"strings"
 	"testing"
 
 	approvaltests "github.com/approvals/go-approval-tests"
@@ -634,6 +636,182 @@ func TestVirtualMachineDeployment15(t *testing.T) {
 	deployment, err := GetVirtualMachineDeployment(&c)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+func TestVirtualMachineDeployment_WithInboundHostnameAllowlist_ExpandsToLiteralAddresses(t *testing.T) {
+	defaultAddressResolver = &fakeAddressResolver{
+		lookupIPs: map[string][]net.IPAddr{
+			"ci.example.com": {{IP: net.ParseIP("203.0.113.10")}, {IP: net.ParseIP("203.0.113.11")}},
+		},
+	}
+	defer func() { defaultAddressResolver = netResolver{} }()
+
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           constants.Target_Windows,
+		"communicator":                      "winrm",
+		"winrm_username":                    "ignore",
+		"object_id":                         "ignored00",
+		"tenant_id":                         "ignored00",
+		"use_azure_cli_auth":                true,
+		"image_publisher":                   "--image-publisher--",
+		"image_offer":                       "--image-offer--",
+		"image_sku":                         "--image-sku--",
+		"image_version":                     "--version--",
+		"managed_image_name":                "ManagedImageName",
+		"managed_image_resource_group_name": "ManagedImageResourceGroupName",
+		"allowed_inbound_ip_addresses":      []string{"ci.example.com"},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.tmpKeyVaultName = "--keyvault-name--"
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bs, err := json.Marshal(deployment.Properties.Template)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(bs), "ci.example.com") {
+		t.Fatal("expected expanded literal addresses only, found raw hostname in template")
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+func TestVirtualMachineDeployment_WithInboundHostnameAllowlist_ProducesDeterministicOutput(t *testing.T) {
+	defaultAddressResolver = &fakeAddressResolver{
+		lookupIPs: map[string][]net.IPAddr{
+			"ci.example.com": {{IP: net.ParseIP("203.0.113.11")}, {IP: net.ParseIP("203.0.113.10")}},
+		},
+	}
+	defer func() { defaultAddressResolver = netResolver{} }()
+
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           constants.Target_Windows,
+		"communicator":                      "winrm",
+		"winrm_username":                    "ignore",
+		"object_id":                         "ignored00",
+		"tenant_id":                         "ignored00",
+		"use_azure_cli_auth":                true,
+		"image_publisher":                   "--image-publisher--",
+		"image_offer":                       "--image-offer--",
+		"image_sku":                         "--image-sku--",
+		"image_version":                     "--version--",
+		"managed_image_name":                "ManagedImageName",
+		"managed_image_resource_group_name": "ManagedImageResourceGroupName",
+		"allowed_inbound_ip_addresses":      []string{"ci.example.com"},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.tmpKeyVaultName = "--keyvault-name--"
+
+	deploymentA, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deploymentB, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	jsonA, err := json.Marshal(deploymentA.Properties.Template)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jsonB, err := json.Marshal(deploymentB.Properties.Template)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(jsonA) != string(jsonB) {
+		t.Fatal("expected deterministic template output for same logical DNS answers")
+	}
+
+	approvaltests.VerifyJSONStruct(t, deploymentA.Properties.Template)
+}
+
+func TestVirtualMachineDeployment_LiteralInboundAllowlist_OutputRemainsUnchanged(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           constants.Target_Windows,
+		"communicator":                      "winrm",
+		"winrm_username":                    "ignore",
+		"image_publisher":                   "--image-publisher--",
+		"image_offer":                       "--image-offer--",
+		"image_sku":                         "--image-sku--",
+		"image_version":                     "--version--",
+		"managed_image_name":                "ManagedImageName",
+		"managed_image_resource_group_name": "ManagedImageResourceGroupName",
+		"allowed_inbound_ip_addresses":      []string{"127.0.0.1", "192.168.100.0/24"},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.tmpKeyVaultName = "--keyvault-name--"
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	baselineConfig := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           constants.Target_Windows,
+		"communicator":                      "winrm",
+		"winrm_username":                    "ignore",
+		"image_publisher":                   "--image-publisher--",
+		"image_offer":                       "--image-offer--",
+		"image_sku":                         "--image-sku--",
+		"image_version":                     "--version--",
+		"managed_image_name":                "ManagedImageName",
+		"managed_image_resource_group_name": "ManagedImageResourceGroupName",
+		"allowed_inbound_ip_addresses":      []string{"127.0.0.1", "192.168.100.0/24"},
+	}
+
+	var baseline Config
+	_, err = baseline.Prepare(baselineConfig, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	baseline.tmpKeyVaultName = "--keyvault-name--"
+
+	baselineDeployment, err := GetVirtualMachineDeployment(&baseline)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := json.Marshal(deployment.Properties.Template)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := json.Marshal(baselineDeployment.Properties.Template)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(want) {
+		t.Fatal("expected literal-only template output to remain unchanged")
 	}
 
 	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)

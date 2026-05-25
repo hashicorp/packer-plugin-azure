@@ -757,3 +757,37 @@ func TestBuilderAcc_ExistingVNetWithPublicIP_AllowedInboundIpAddresses(t *testin
 		},
 	})
 }
+
+func TestBuilderAcc_AllowedInboundIpAddresses_Fqdn(t *testing.T) {
+	t.Skip("acceptance environment does not provide deterministic hostname control for FQDN allowlist expansion")
+}
+
+func TestBuilderAcc_AllowedInboundIpAddresses_LiteralRegression(t *testing.T) {
+	t.Parallel()
+	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{
+		CheckAzureCLI:          true,
+		CheckSSHPrivateKeyFile: true,
+	})
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-azure-allowed-inbound-ip-literal-regression",
+		Type:     "azure-arm",
+		Template: testBuilderAccExistingVNetAllowedInboundIP,
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil && buildCommand.ProcessState.ExitCode() != 0 {
+				return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+			}
+			logBytes, readErr := os.ReadFile(logfile)
+			if readErr != nil {
+				return fmt.Errorf("cannot read logfile %s: %w", logfile, readErr)
+			}
+			logStr := string(logBytes)
+			if !strings.Contains(logStr, "Deleting Virtual Machine deployment") {
+				return fmt.Errorf("cleanup-start marker missing in log. Logfile: %s", logfile)
+			}
+			if strings.Contains(logStr, "Error deleting resource. Please delete manually.") {
+				return fmt.Errorf("cleanup-failure marker present in log. Logfile: %s", logfile)
+			}
+			return nil
+		},
+	})
+}
