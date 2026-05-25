@@ -610,9 +610,9 @@ type Config struct {
 	// Specify the list of IP addresses and CIDR blocks that should be
 	// allowed access to the VM. If provided, an Azure Network Security
 	// Group will be created with corresponding rules and be bound to
-	// the subnet of the VM.
-	// Providing `allowed_inbound_ip_addresses` in combination with
-	// `virtual_network_name` is not allowed.
+	// the subnet (builder VNet) or NIC (existing VNet).
+	// Builder-managed VNet behavior is unchanged for backward compatibility.
+	// The temporary NSG is removed during cleanup.
 	AllowedInboundIpAddresses []string `mapstructure:"allowed_inbound_ip_addresses"`
 
 	// Specify storage to store Boot Diagnostics -- Enabling this option
@@ -1495,12 +1495,8 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 	}
 	if len(c.AllowedInboundIpAddresses) >= 1 {
-		if c.VirtualNetworkName != "" {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If virtual_network_name is specified, allowed_inbound_ip_addresses cannot be specified"))
-		} else {
-			if ok, err := assertAllowedInboundIpAddresses(c.AllowedInboundIpAddresses, "allowed_inbound_ip_addresses"); !ok {
-				errs = packersdk.MultiErrorAppend(errs, err)
-			}
+		if ok, err := assertAllowedInboundIpAddresses(c.AllowedInboundIpAddresses, "allowed_inbound_ip_addresses"); !ok {
+			errs = packersdk.MultiErrorAppend(errs, err)
 		}
 	}
 
