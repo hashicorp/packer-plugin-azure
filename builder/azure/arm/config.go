@@ -1666,7 +1666,61 @@ func assertAllowedInboundIpAddresses(ipAddresses []string, setting string) (bool
 	for _, ipAddress := range ipAddresses {
 		if net.ParseIP(ipAddress) == nil {
 			if _, _, err := net.ParseCIDR(ipAddress); err != nil {
-				return false, fmt.Errorf("The setting %s must only contain valid IP addresses or CIDR blocks", setting)
+				normalized := normalizeHostname(ipAddress)
+				if normalized == "" || strings.Contains(normalized, "*") || strings.Contains(normalized, "..") || !strings.Contains(normalized, ".") {
+					return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
+				}
+
+				labels := strings.Split(normalized, ".")
+				numericLabels := 0
+				for _, label := range labels {
+					if label == "" || len(label) > 63 || strings.HasPrefix(label, "-") || strings.HasSuffix(label, "-") {
+						return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
+					}
+
+					labelIsNumeric := true
+					for _, r := range label {
+						if r >= 'a' && r <= 'z' {
+							labelIsNumeric = false
+							continue
+						}
+						if (r >= '0' && r <= '9') || r == '-' {
+							if r == '-' {
+								labelIsNumeric = false
+							}
+							continue
+						}
+						return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
+					}
+					if labelIsNumeric {
+						numericLabels++
+					}
+				}
+
+				lastLabel := labels[len(labels)-1]
+				if numericLabels == len(labels)-1 {
+					lastIsAlpha := true
+					for _, r := range lastLabel {
+						if r < 'a' || r > 'z' {
+							lastIsAlpha = false
+							break
+						}
+					}
+					if lastIsAlpha {
+						return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
+					}
+				}
+
+				hasLetterInLastLabel := false
+				for _, r := range lastLabel {
+					if r >= 'a' && r <= 'z' {
+						hasLetterInLastLabel = true
+						break
+					}
+				}
+				if !hasLetterInLastLabel {
+					return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
+				}
 			}
 		}
 	}
