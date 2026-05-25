@@ -357,6 +357,141 @@ func TestVirtualMachineDeployment10(t *testing.T) {
 	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
+// TestVirtualMachineDeployment_ExistingVNet_WithAllowedInboundIpAddresses_AttachesNsgToNic
+// tests that when using an existing VNet with an allowlist, a NSG is attached to the NIC.
+func TestVirtualMachineDeployment_ExistingVNet_WithAllowedInboundIpAddresses_AttachesNsgToNic(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                           "ignore",
+		"subscription_id":                    "ignore",
+		"os_type":                            constants.Target_Linux,
+		"communicator":                       "none",
+		"image_publisher":                    "--image-publisher--",
+		"image_offer":                        "--image-offer--",
+		"image_sku":                          "--image-sku--",
+		"image_version":                      "--version--",
+		"virtual_network_resource_group_name": "--virtual_network_resource_group_name--",
+		"virtual_network_name":                "--virtual_network_name--",
+		"virtual_network_subnet_name":         "--virtual_network_subnet_name--",
+		"allowed_inbound_ip_addresses":        []string{"127.0.0.1", "192.168.100.0/24"},
+		"managed_image_name":                  "ManagedImageName",
+		"managed_image_resource_group_name":    "ManagedImageResourceGroupName",
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+// TestVirtualMachineDeployment_ExistingVNetWithPublicIP_WithAllowedInboundIpAddresses_AttachesNsgToNic
+// tests that when using an existing VNet with public IP and allowlist, a NSG is attached to the NIC.
+func TestVirtualMachineDeployment_ExistingVNetWithPublicIP_WithAllowedInboundIpAddresses_AttachesNsgToNic(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                           "ignore",
+		"subscription_id":                    "ignore",
+		"os_type":                            constants.Target_Linux,
+		"communicator":                       "none",
+		"image_publisher":                    "--image-publisher--",
+		"image_offer":                        "--image-offer--",
+		"image_sku":                          "--image-sku--",
+		"image_version":                      "--version--",
+		"virtual_network_resource_group_name": "--virtual_network_resource_group_name--",
+		"virtual_network_name":                "--virtual_network_name--",
+		"virtual_network_subnet_name":         "--virtual_network_subnet_name--",
+		"private_virtual_network_with_public_ip": true,
+		"allowed_inbound_ip_addresses":          []string{"127.0.0.1", "192.168.100.0/24"},
+		"managed_image_name":                    "ManagedImageName",
+		"managed_image_resource_group_name":      "ManagedImageResourceGroupName",
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+// TestVirtualMachineDeployment_BuilderManagedVNet_WithAllowedInboundIpAddresses_KeepsSubnetAssociation
+// tests that when using a builder-managed VNet with an allowlist, the subnet association is preserved.
+func TestVirtualMachineDeployment_BuilderManagedVNet_WithAllowedInboundIpAddresses_KeepsSubnetAssociation(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           constants.Target_Windows,
+		"communicator":                      "winrm",
+		"winrm_username":                    "ignore",
+		"image_publisher":                   "--image-publisher--",
+		"image_offer":                       "--image-offer--",
+		"image_sku":                         "--image-sku--",
+		"image_version":                     "--version--",
+		"managed_image_name":                "ManagedImageName",
+		"managed_image_resource_group_name": "ManagedImageResourceGroupName",
+		"allowed_inbound_ip_addresses":      []string{"127.0.0.1", "192.168.100.0/24"},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.tmpKeyVaultName = "--keyvault-name--"
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+// TestVirtualMachineDeployment_ExistingVNet_WithoutAllowedInboundIpAddresses_DoesNotCreateExtraNsg
+// tests that when using an existing VNet without an allowlist, no extra NSG is created.
+func TestVirtualMachineDeployment_ExistingVNet_WithoutAllowedInboundIpAddresses_DoesNotCreateExtraNsg(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                           "ignore",
+		"subscription_id":                    "ignore",
+		"os_type":                            constants.Target_Linux,
+		"communicator":                       "none",
+		"image_publisher":                    "--image-publisher--",
+		"image_offer":                        "--image-offer--",
+		"image_sku":                          "--image-sku--",
+		"image_version":                      "--version--",
+		"virtual_network_resource_group_name": "--virtual_network_resource_group_name--",
+		"virtual_network_name":                "--virtual_network_name--",
+		"virtual_network_subnet_name":         "--virtual_network_subnet_name--",
+		"managed_image_name":                  "ManagedImageName",
+		"managed_image_resource_group_name":    "ManagedImageResourceGroupName",
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
 // Ensure the VM template is correct when building with additional unmanaged disks
 func TestVirtualMachineDeployment11(t *testing.T) {
 	config := map[string]interface{}{
