@@ -614,6 +614,9 @@ type Config struct {
 	// Builder-managed VNet behavior is unchanged for backward compatibility.
 	// The temporary NSG is removed during cleanup.
 	AllowedInboundIpAddresses []string `mapstructure:"allowed_inbound_ip_addresses"`
+	// Specify list of IP addresses, CIDR blocks, and hostnames that the temporary
+	// build VM must not reach over outbound traffic during image creation.
+	DenyOutboundIpAddresses []string `mapstructure:"deny_outbound_ip_addresses"`
 
 	// Specify storage to store Boot Diagnostics -- Enabling this option
 	// will create 2 Files in the specified storage account. (serial console log & screenshot file)
@@ -1496,6 +1499,11 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	}
 	if len(c.AllowedInboundIpAddresses) >= 1 {
 		if ok, err := assertAllowedInboundIpAddresses(c.AllowedInboundIpAddresses, "allowed_inbound_ip_addresses"); !ok {
+			errs = packersdk.MultiErrorAppend(errs, err)
+		}
+	}
+	if len(c.DenyOutboundIpAddresses) >= 1 {
+		if ok, err := assertAllowedInboundIpAddresses(c.DenyOutboundIpAddresses, "deny_outbound_ip_addresses"); !ok {
 			errs = packersdk.MultiErrorAppend(errs, err)
 		}
 	}

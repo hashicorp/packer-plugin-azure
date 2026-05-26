@@ -93,6 +93,7 @@ type FlatConfig struct {
 	AdditionalDiskSize                         []int32                            `mapstructure:"disk_additional_size" required:"false" cty:"disk_additional_size" hcl:"disk_additional_size"`
 	DiskCachingType                            *string                            `mapstructure:"disk_caching_type" required:"false" cty:"disk_caching_type" hcl:"disk_caching_type"`
 	AllowedInboundIpAddresses                  []string                           `mapstructure:"allowed_inbound_ip_addresses" cty:"allowed_inbound_ip_addresses" hcl:"allowed_inbound_ip_addresses"`
+	DenyOutboundIpAddresses                    []string                           `mapstructure:"deny_outbound_ip_addresses" cty:"deny_outbound_ip_addresses" hcl:"deny_outbound_ip_addresses"`
 	BootDiagSTGAccount                         *string                            `mapstructure:"boot_diag_storage_account" required:"false" cty:"boot_diag_storage_account" hcl:"boot_diag_storage_account"`
 	SASTokenDuration                           *string                            `mapstructure:"sas_token_duration" required:"false" cty:"sas_token_duration" hcl:"sas_token_duration"`
 	CustomResourcePrefix                       *string                            `mapstructure:"custom_resource_build_prefix" required:"false" cty:"custom_resource_build_prefix" hcl:"custom_resource_build_prefix"`
@@ -248,6 +249,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"disk_additional_size":                    &hcldec.AttrSpec{Name: "disk_additional_size", Type: cty.List(cty.Number), Required: false},
 		"disk_caching_type":                       &hcldec.AttrSpec{Name: "disk_caching_type", Type: cty.String, Required: false},
 		"allowed_inbound_ip_addresses":            &hcldec.AttrSpec{Name: "allowed_inbound_ip_addresses", Type: cty.List(cty.String), Required: false},
+		"deny_outbound_ip_addresses":              &hcldec.AttrSpec{Name: "deny_outbound_ip_addresses", Type: cty.List(cty.String), Required: false},
 		"boot_diag_storage_account":               &hcldec.AttrSpec{Name: "boot_diag_storage_account", Type: cty.String, Required: false},
 		"sas_token_duration":                      &hcldec.AttrSpec{Name: "sas_token_duration", Type: cty.String, Required: false},
 		"custom_resource_build_prefix":            &hcldec.AttrSpec{Name: "custom_resource_build_prefix", Type: cty.String, Required: false},
