@@ -694,6 +694,78 @@ const testBuilderAccExistingVNetWithPublicIPAllowedInboundIP = `
 }
 `
 
+const testBuilderAccDenyOutboundIP = `
+{
+	"variables": {
+	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
+	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
+	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}",
+	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}"
+	},
+	"builders": [{
+	  "type": "azure-arm",
+
+	  "client_id": "{{user ` + "`client_id`" + `}}",
+	  "client_secret": "{{user ` + "`client_secret`" + `}}",
+	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
+
+	  "managed_image_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
+	  "managed_image_name": "testBuilderAccDenyOutboundIP-{{timestamp}}",
+
+	  "os_type": "Linux",
+	  "image_publisher": "Canonical",
+	  "image_offer": "UbuntuServer",
+	  "image_sku": "16.04-LTS",
+	  "deny_outbound_ip_addresses": ["198.51.100.10/32"],
+
+	  "location": "South Central US",
+	  "vm_size": "Standard_DS2_v2",
+	  "azure_tags": {
+	    "env": "testing",
+	    "builder": "packer"
+	   }
+	}]
+}
+`
+
+const testBuilderAccExistingVNetDenyOutboundIP = `
+{
+	"variables": {
+	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
+	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
+	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}",
+	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}"
+	},
+	"builders": [{
+	  "type": "azure-arm",
+
+	  "client_id": "{{user ` + "`client_id`" + `}}",
+	  "client_secret": "{{user ` + "`client_secret`" + `}}",
+	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
+
+	  "managed_image_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
+	  "managed_image_name": "testBuilderAccExistingVNetDenyOutboundIP-{{timestamp}}",
+
+	  "os_type": "Linux",
+	  "image_publisher": "Canonical",
+	  "image_offer": "UbuntuServer",
+	  "image_sku": "16.04-LTS",
+
+	  "virtual_network_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
+	  "virtual_network_name": "{{env ` + "`ARM_VIRTUAL_NETWORK_NAME`" + `}}",
+	  "virtual_network_subnet_name": "{{env ` + "`ARM_VIRTUAL_NETWORK_SUBNET_NAME`" + `}}",
+	  "deny_outbound_ip_addresses": ["198.51.100.10/32"],
+
+	  "location": "South Central US",
+	  "vm_size": "Standard_DS2_v2",
+	  "azure_tags": {
+	    "env": "testing",
+	    "builder": "packer"
+	   }
+	}]
+}
+`
+
 func TestBuilderAcc_ExistingVNet_AllowedInboundIpAddresses(t *testing.T) {
 	t.Parallel()
 	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{
@@ -770,6 +842,96 @@ func TestBuilderAcc_AllowedInboundIpAddresses_LiteralRegression(t *testing.T) {
 	})
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-allowed-inbound-ip-literal-regression",
+		Type:     "azure-arm",
+		Template: testBuilderAccExistingVNetAllowedInboundIP,
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil && buildCommand.ProcessState.ExitCode() != 0 {
+				return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+			}
+			logBytes, readErr := os.ReadFile(logfile)
+			if readErr != nil {
+				return fmt.Errorf("cannot read logfile %s: %w", logfile, readErr)
+			}
+			logStr := string(logBytes)
+			if !strings.Contains(logStr, "Deleting Virtual Machine deployment") {
+				return fmt.Errorf("cleanup-start marker missing in log. Logfile: %s", logfile)
+			}
+			if strings.Contains(logStr, "Error deleting resource. Please delete manually.") {
+				return fmt.Errorf("cleanup-failure marker present in log. Logfile: %s", logfile)
+			}
+			return nil
+		},
+	})
+}
+
+func TestBuilderAcc_DenyOutboundIpAddresses(t *testing.T) {
+	t.Parallel()
+	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{
+		CheckAzureCLI:          true,
+		CheckSSHPrivateKeyFile: true,
+	})
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-azure-deny-outbound-ip",
+		Type:     "azure-arm",
+		Template: testBuilderAccDenyOutboundIP,
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil && buildCommand.ProcessState.ExitCode() != 0 {
+				return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+			}
+			logBytes, readErr := os.ReadFile(logfile)
+			if readErr != nil {
+				return fmt.Errorf("cannot read logfile %s: %w", logfile, readErr)
+			}
+			logStr := string(logBytes)
+			if !strings.Contains(logStr, "Deleting Virtual Machine deployment") {
+				return fmt.Errorf("cleanup-start marker missing in log. Logfile: %s", logfile)
+			}
+			if strings.Contains(logStr, "Error deleting resource. Please delete manually.") {
+				return fmt.Errorf("cleanup-failure marker present in log. Logfile: %s", logfile)
+			}
+			return nil
+		},
+	})
+}
+
+func TestBuilderAcc_DenyOutboundIpAddresses_ExistingVNet(t *testing.T) {
+	t.Parallel()
+	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{
+		CheckAzureCLI:          true,
+		CheckSSHPrivateKeyFile: true,
+	})
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-azure-existing-vnet-deny-outbound-ip",
+		Type:     "azure-arm",
+		Template: testBuilderAccExistingVNetDenyOutboundIP,
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil && buildCommand.ProcessState.ExitCode() != 0 {
+				return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+			}
+			logBytes, readErr := os.ReadFile(logfile)
+			if readErr != nil {
+				return fmt.Errorf("cannot read logfile %s: %w", logfile, readErr)
+			}
+			logStr := string(logBytes)
+			if !strings.Contains(logStr, "Deleting Virtual Machine deployment") {
+				return fmt.Errorf("cleanup-start marker missing in log. Logfile: %s", logfile)
+			}
+			if strings.Contains(logStr, "Error deleting resource. Please delete manually.") {
+				return fmt.Errorf("cleanup-failure marker present in log. Logfile: %s", logfile)
+			}
+			return nil
+		},
+	})
+}
+
+func TestBuilderAcc_DenyOutboundIpAddresses_RegressionWithoutField(t *testing.T) {
+	t.Parallel()
+	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{
+		CheckAzureCLI:          true,
+		CheckSSHPrivateKeyFile: true,
+	})
+	acctest.TestPlugin(t, &acctest.PluginTestCase{
+		Name:     "test-azure-deny-outbound-ip-regression-without-field",
 		Type:     "azure-arm",
 		Template: testBuilderAccExistingVNetAllowedInboundIP,
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
