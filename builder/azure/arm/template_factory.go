@@ -141,6 +141,13 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 			return nil, err
 		}
 	}
+	expandedDeniedOutboundIpAddresses := config.DenyOutboundIpAddresses
+	if len(config.DenyOutboundIpAddresses) >= 1 {
+		expandedDeniedOutboundIpAddresses, err = expandMixedAddressList(config.DenyOutboundIpAddresses, nil)
+		if err != nil {
+			return nil, err
+		}
+	}
 	osType := hashiVMSDK.OperatingSystemTypesLinux
 
 	switch config.OSType {
@@ -347,14 +354,14 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 	// They are required when specifying which inbound IPs are allowed to connect to the network
 	// They are also required when creating a standard sku public IP Address regardless of inbound IPs allowed.
 	// If a standard IP is set with no inbound addresses, we default to allowing all IP addresses
-	if (config.PublicIpSKU != "Basic") || (len(config.AllowedInboundIpAddresses) >= 1) {
+	if (config.PublicIpSKU != "Basic") || (len(config.AllowedInboundIpAddresses) >= 1) || (len(config.DenyOutboundIpAddresses) >= 1) {
 		if config.VirtualNetworkName == "" {
-			err = builder.SetNetworkSecurityGroup(expandedAllowedInboundIpAddresses, config.Comm.Port(), false)
+			err = builder.SetNetworkSecurityGroup(expandedAllowedInboundIpAddresses, expandedDeniedOutboundIpAddresses, config.Comm.Port(), false)
 			if err != nil {
 				return nil, err
 			}
-		} else if len(config.AllowedInboundIpAddresses) >= 1 {
-			err = builder.SetNetworkSecurityGroup(expandedAllowedInboundIpAddresses, config.Comm.Port(), true)
+		} else if (len(config.AllowedInboundIpAddresses) >= 1) || (len(config.DenyOutboundIpAddresses) >= 1) {
+			err = builder.SetNetworkSecurityGroup(expandedAllowedInboundIpAddresses, expandedDeniedOutboundIpAddresses, config.Comm.Port(), true)
 			if err != nil {
 				return nil, err
 			}
