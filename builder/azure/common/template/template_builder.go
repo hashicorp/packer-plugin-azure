@@ -527,8 +527,8 @@ func (s *TemplateBuilder) SetPrivateVirtualNetworkWithPublicIp(virtualNetworkRes
 	return nil
 }
 
-func (s *TemplateBuilder) SetNetworkSecurityGroup(ipAddresses []string, port int, useNic bool) error {
-	nsgResource, dependency, resourceId := s.createNsgResource(ipAddresses, port)
+func (s *TemplateBuilder) SetNetworkSecurityGroup(inboundIPAddresses []string, outboundIPAddresses []string, port int, useNic bool) error {
+	nsgResource, dependency, resourceId := s.createNsgResource(inboundIPAddresses, outboundIPAddresses, port)
 	if err := s.addResource(nsgResource); err != nil {
 		return err
 	}
@@ -774,7 +774,7 @@ func (s *TemplateBuilder) deleteResourceDependency(resource *Resource, predicate
 	*resource.DependsOn = deps
 }
 
-func (s *TemplateBuilder) createNsgResource(srcIpAddresses []string, port int) (*Resource, string, string) {
+func (s *TemplateBuilder) createNsgResource(srcIpAddresses []string, dstIpAddresses []string, port int) (*Resource, string, string) {
 	resource := &Resource{
 		ApiVersion: common.StringPtr("[variables('networkApiVersion')]"),
 		Name:       common.StringPtr("[parameters('nsgName')]"),
@@ -802,6 +802,23 @@ func (s *TemplateBuilder) createNsgResource(srcIpAddresses []string, port int) (
 		(*resource.Properties.SecurityRules)[0].Properties.SourceAddressPrefixes = &srcIpAddresses
 	} else {
 		(*resource.Properties.SecurityRules)[0].Properties.SourceAddressPrefix = common.StringPtr("*")
+	}
+	if len(dstIpAddresses) > 0 {
+		(*resource.Properties.SecurityRules)[0].Properties.Priority = 200
+		*resource.Properties.SecurityRules = append(*resource.Properties.SecurityRules, hashiSecurityRulesSDK.SecurityRule{
+			Name: common.StringPtr("DenySpecifiedOutboundDestinations"),
+			Properties: &hashiSecurityRulesSDK.SecurityRulePropertiesFormat{
+				Description:                common.StringPtr("Deny outbound traffic to specified destinations"),
+				Protocol:                   "*",
+				Priority:                   100,
+				Access:                     hashiSecurityRulesSDK.SecurityRuleAccessDeny,
+				Direction:                  hashiSecurityRulesSDK.SecurityRuleDirectionOutbound,
+				SourcePortRange:            common.StringPtr("*"),
+				SourceAddressPrefix:        common.StringPtr("*"),
+				DestinationPortRange:       common.StringPtr("*"),
+				DestinationAddressPrefixes: &dstIpAddresses,
+			},
+		})
 	}
 	dependency := fmt.Sprintf("[concat('%s/', parameters('nsgName'))]", resourceNetworkSecurityGroups)
 	resourceId := fmt.Sprintf("[resourceId('%s', parameters('nsgName'))]", resourceNetworkSecurityGroups)
