@@ -526,6 +526,9 @@ Providing `temp_resource_group_name` or `location` in combination with
   Builder-managed VNet behavior is unchanged for backward compatibility.
   The temporary NSG is removed during cleanup.
 
+- `deny_outbound_ip_addresses` ([]string) - Specify list of IP addresses, CIDR blocks, and hostnames that the temporary
+  build VM must not reach over outbound traffic during image creation.
+
 - `boot_diag_storage_account` (string) - Specify storage to store Boot Diagnostics -- Enabling this option
   will create 2 Files in the specified storage account. (serial console log & screenshot file)
   once the build is completed, it has to be removed manually.
