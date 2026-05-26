@@ -581,6 +581,44 @@ func TestConfigLiteralInboundIpBehaviorRemainsUnchanged(t *testing.T) {
 	}
 }
 
+func TestConfigShouldAllowMixedOutboundDenyIpAndHostnameValues(t *testing.T) {
+	config := getArmBuilderConfiguration()
+	config["deny_outbound_ip_addresses"] = []string{"198.51.100.10/32", "backend.example.com"}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("expected mixed outbound deny IP and hostname values to pass validation, got: %v", err)
+	}
+}
+
+func TestConfigShouldRejectInvalidOutboundDenyValue(t *testing.T) {
+	config := getArmBuilderConfiguration()
+	config["deny_outbound_ip_addresses"] = []string{"*.example.com"}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("expected invalid outbound deny value to fail validation")
+	}
+	if !strings.Contains(err.Error(), "deny_outbound_ip_addresses") {
+		t.Fatalf("expected setting name in error, got %v", err)
+	}
+}
+
+func TestConfigWithoutOutboundDenyField_RemainsUnchanged(t *testing.T) {
+	config := getArmBuilderConfiguration()
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("expected config without outbound deny field to remain valid, got: %v", err)
+	}
+	if c.AllowedInboundIpAddresses != nil {
+		t.Fatalf("expected allowed_inbound_ip_addresses to remain nil, got %v", c.AllowedInboundIpAddresses)
+	}
+}
+
 func TestConfigShouldDefaultToPublicCloud(t *testing.T) {
 	var c Config
 	_, err := c.Prepare(getArmBuilderConfiguration(), getPackerConfiguration())

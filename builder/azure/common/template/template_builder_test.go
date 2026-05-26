@@ -384,7 +384,7 @@ func TestNetworkSecurityGroup00(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = testSubject.SetNetworkSecurityGroup([]string{"127.0.0.1", "192.168.100.0/24"}, 123, false)
+	err = testSubject.SetNetworkSecurityGroup([]string{"127.0.0.1", "192.168.100.0/24"}, nil, 123, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -419,7 +419,7 @@ func TestNetworkSecurityGroupOnNic00(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = testSubject.SetNetworkSecurityGroup([]string{"127.0.0.1", "192.168.100.0/24"}, 123, true)
+	err = testSubject.SetNetworkSecurityGroup([]string{"127.0.0.1", "192.168.100.0/24"}, nil, 123, true)
 	if err != nil {
 		t.Fatal(err)
 	}
