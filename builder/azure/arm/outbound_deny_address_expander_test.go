@@ -4,8 +4,8 @@
 package arm
 
 import (
-	"errors"
 	"encoding/json"
+	"errors"
 	"net"
 	"strings"
 	"testing"
@@ -58,7 +58,7 @@ func TestOutboundDenyAddressExpansion_ReusesSharedMixedAddressHelper(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	jsonText := string(*bs)
+	jsonText := *bs
 	for _, want := range []string{"198.51.100.10", "198.51.100.11", "203.0.113.0/24"} {
 		if !strings.Contains(jsonText, want) {
 			t.Fatalf("expected expanded destination %q in template", want)
@@ -165,7 +165,7 @@ func TestOutboundDenyAddressExpansion_FollowsCnameChain(t *testing.T) {
 	if err := json.Unmarshal([]byte(*bs), &parsed); err != nil {
 		t.Fatal(err)
 	}
-	jsonText := string(*bs)
+	jsonText := *bs
 	if strings.Contains(jsonText, "agent-bootstrap.example.com") || strings.Contains(jsonText, "backend-lb.example.net") {
 		t.Fatal("expected only final literal destinations in template")
 	}

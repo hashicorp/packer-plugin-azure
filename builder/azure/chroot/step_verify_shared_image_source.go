@@ -128,7 +128,7 @@ func (s *StepVerifySharedImageSource) Run(ctx context.Context, state multistep.S
 
 	if image.Properties.OsType != galleryimages.OperatingSystemTypesLinux {
 		return errorMessage("The shared image (%q) is not a Linux image (found %q). Currently only Linux images are supported.",
-			&image.Id,
+			*image.Id,
 			image.Properties.OsType)
 	}
 

@@ -76,7 +76,7 @@ func DetectPackerPublicIP(t *testing.T) string {
 			"Ensure outbound HTTP access to api.ipify.org is available.",
 			err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("api.ipify.org returned status %d. "+
