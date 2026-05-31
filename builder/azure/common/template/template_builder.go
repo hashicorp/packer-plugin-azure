@@ -984,7 +984,7 @@ const BasicTemplate = `{
     "virtualNetworkName": "[parameters('virtualNetworkName')]",
     "virtualNetworkResourceGroup": "[resourceGroup().name]",
     "vmStorageAccountContainerName": "images",
-    "vnetID": "[resourceId(subscription().subscriptionId, variables('virtualNetworkResourceGroup'), 'Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
+    "vnetID": "[resourceId(variables('virtualNetworkResourceGroup'), 'Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
   },
   "resources": [
     {
