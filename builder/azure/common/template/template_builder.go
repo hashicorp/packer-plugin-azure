@@ -722,55 +722,129 @@ func (s *TemplateBuilder) deleteResourceDependency(resource *Resource, predicate
 }
 
 func (s *TemplateBuilder) createNsgResource(srcIpAddresses []string, dstIpAddresses []string, port int) (*Resource, string, string) {
+	denyRuleCount := addressFamilyRuleCount(dstIpAddresses)
+	inboundStartingPriority := int64(100)
+	if denyRuleCount > 0 {
+		inboundStartingPriority = 200
+	}
+	inboundRules := makeIngressSecurityRules(srcIpAddresses, port, inboundStartingPriority)
 	resource := &Resource{
 		ApiVersion: common.StringPtr("[variables('networkApiVersion')]"),
 		Name:       common.StringPtr("[parameters('nsgName')]"),
 		Type:       common.StringPtr(resourceNetworkSecurityGroups),
 		Location:   common.StringPtr("[variables('location')]"),
 		Properties: &Properties{
-			SecurityRules: &[]hashiSecurityRulesSDK.SecurityRule{
-				{
-					Name: common.StringPtr("AllowIPsToSshWinRMInbound"),
-					Properties: &hashiSecurityRulesSDK.SecurityRulePropertiesFormat{
-						Description:              common.StringPtr("Allow inbound traffic from specified IP addresses"),
-						Protocol:                 hashiSecurityRulesSDK.SecurityRuleProtocolTcp,
-						Priority:                 100,
-						Access:                   hashiSecurityRulesSDK.SecurityRuleAccessAllow,
-						Direction:                hashiSecurityRulesSDK.SecurityRuleDirectionInbound,
-						SourcePortRange:          common.StringPtr("*"),
-						DestinationAddressPrefix: common.StringPtr("VirtualNetwork"),
-						DestinationPortRange:     common.StringPtr(strconv.Itoa(port)),
-					},
-				},
-			},
+			SecurityRules: &inboundRules,
 		},
 	}
-	if len(srcIpAddresses) > 0 {
-		(*resource.Properties.SecurityRules)[0].Properties.SourceAddressPrefixes = &srcIpAddresses
-	} else {
-		(*resource.Properties.SecurityRules)[0].Properties.SourceAddressPrefix = common.StringPtr("*")
-	}
 	if len(dstIpAddresses) > 0 {
-		(*resource.Properties.SecurityRules)[0].Properties.Priority = 200
-		*resource.Properties.SecurityRules = append(*resource.Properties.SecurityRules, hashiSecurityRulesSDK.SecurityRule{
-			Name: common.StringPtr("DenySpecifiedOutboundDestinations"),
-			Properties: &hashiSecurityRulesSDK.SecurityRulePropertiesFormat{
-				Description:                common.StringPtr("Deny outbound traffic to specified destinations"),
-				Protocol:                   "*",
-				Priority:                   100,
-				Access:                     hashiSecurityRulesSDK.SecurityRuleAccessDeny,
-				Direction:                  hashiSecurityRulesSDK.SecurityRuleDirectionOutbound,
-				SourcePortRange:            common.StringPtr("*"),
-				SourceAddressPrefix:        common.StringPtr("*"),
-				DestinationPortRange:       common.StringPtr("*"),
-				DestinationAddressPrefixes: &dstIpAddresses,
-			},
-		})
+		outboundRules := makeOutboundSecurityRules(dstIpAddresses, 100)
+		if len(outboundRules) == 1 && len(*resource.Properties.SecurityRules) == 1 {
+			*resource.Properties.SecurityRules = append(*resource.Properties.SecurityRules, outboundRules...)
+		} else {
+			*resource.Properties.SecurityRules = append(outboundRules, *resource.Properties.SecurityRules...)
+		}
 	}
 	dependency := fmt.Sprintf("[concat('%s/', parameters('nsgName'))]", resourceNetworkSecurityGroups)
 	resourceId := fmt.Sprintf("[resourceId('%s', parameters('nsgName'))]", resourceNetworkSecurityGroups)
 
 	return resource, dependency, resourceId
+}
+
+func makeIngressSecurityRules(srcIPAddresses []string, port int, startingPriority int64) []hashiSecurityRulesSDK.SecurityRule {
+	families := splitAddressesByFamily(srcIPAddresses)
+	if len(families) == 0 {
+		return []hashiSecurityRulesSDK.SecurityRule{newIngressSecurityRule("AllowIPsToSshWinRMInbound", startingPriority, nil, port)}
+	}
+
+	rules := make([]hashiSecurityRulesSDK.SecurityRule, 0, len(families))
+	priority := startingPriority
+	for _, family := range []string{"ipv4", "ipv6"} {
+		addresses := families[family]
+		if len(addresses) == 0 {
+			continue
+		}
+		rules = append(rules, newIngressSecurityRule(ruleNameForFamily("AllowIPsToSshWinRMInbound", family, len(rules) > 0), priority, addresses, port))
+		priority++
+	}
+	return rules
+}
+
+func makeOutboundSecurityRules(dstIPAddresses []string, startingPriority int64) []hashiSecurityRulesSDK.SecurityRule {
+	families := splitAddressesByFamily(dstIPAddresses)
+	rules := make([]hashiSecurityRulesSDK.SecurityRule, 0, len(families))
+	priority := startingPriority
+	for _, family := range []string{"ipv4", "ipv6"} {
+		addresses := families[family]
+		if len(addresses) == 0 {
+			continue
+		}
+		rules = append(rules, newOutboundSecurityRule(ruleNameForFamily("DenySpecifiedOutboundDestinations", family, len(rules) > 0), priority, addresses))
+		priority++
+	}
+	return rules
+}
+
+func newIngressSecurityRule(name string, priority int64, sourcePrefixes []string, port int) hashiSecurityRulesSDK.SecurityRule {
+	rule := hashiSecurityRulesSDK.SecurityRule{
+		Name: common.StringPtr(name),
+		Properties: &hashiSecurityRulesSDK.SecurityRulePropertiesFormat{
+			Description:              common.StringPtr("Allow inbound traffic from specified IP addresses"),
+			Protocol:                 hashiSecurityRulesSDK.SecurityRuleProtocolTcp,
+			Priority:                 priority,
+			Access:                   hashiSecurityRulesSDK.SecurityRuleAccessAllow,
+			Direction:                hashiSecurityRulesSDK.SecurityRuleDirectionInbound,
+			SourcePortRange:          common.StringPtr("*"),
+			DestinationAddressPrefix: common.StringPtr("VirtualNetwork"),
+			DestinationPortRange:     common.StringPtr(strconv.Itoa(port)),
+		},
+	}
+	if len(sourcePrefixes) > 0 {
+		rule.Properties.SourceAddressPrefixes = &sourcePrefixes
+	} else {
+		rule.Properties.SourceAddressPrefix = common.StringPtr("*")
+	}
+	return rule
+}
+
+func newOutboundSecurityRule(name string, priority int64, destinationPrefixes []string) hashiSecurityRulesSDK.SecurityRule {
+	return hashiSecurityRulesSDK.SecurityRule{
+		Name: common.StringPtr(name),
+		Properties: &hashiSecurityRulesSDK.SecurityRulePropertiesFormat{
+			Description:                common.StringPtr("Deny outbound traffic to specified destinations"),
+			Protocol:                   "*",
+			Priority:                   priority,
+			Access:                     hashiSecurityRulesSDK.SecurityRuleAccessDeny,
+			Direction:                  hashiSecurityRulesSDK.SecurityRuleDirectionOutbound,
+			SourcePortRange:            common.StringPtr("*"),
+			SourceAddressPrefix:        common.StringPtr("*"),
+			DestinationPortRange:       common.StringPtr("*"),
+			DestinationAddressPrefixes: &destinationPrefixes,
+		},
+	}
+}
+
+func splitAddressesByFamily(addresses []string) map[string][]string {
+	families := map[string][]string{}
+	for _, address := range addresses {
+		family := "ipv6"
+		if strings.Contains(address, ".") {
+			family = "ipv4"
+		}
+		families[family] = append(families[family], address)
+	}
+	return families
+}
+
+func addressFamilyRuleCount(addresses []string) int {
+	return len(splitAddressesByFamily(addresses))
+}
+
+func ruleNameForFamily(baseName, family string, split bool) string {
+	if !split {
+		return baseName
+	}
+	return fmt.Sprintf("%s%s", baseName, strings.ToUpper(family))
 }
 
 // See https://github.com/Azure/azure-quickstart-templates for a extensive list of templates.
@@ -910,7 +984,7 @@ const BasicTemplate = `{
     "virtualNetworkName": "[parameters('virtualNetworkName')]",
     "virtualNetworkResourceGroup": "[resourceGroup().name]",
     "vmStorageAccountContainerName": "images",
-    "vnetID": "[resourceId(variables('virtualNetworkResourceGroup'), 'Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
+    "vnetID": "[resourceId(subscription().subscriptionId, variables('virtualNetworkResourceGroup'), 'Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
   },
   "resources": [
     {
