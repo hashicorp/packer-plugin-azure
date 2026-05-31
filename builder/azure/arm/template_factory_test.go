@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -968,6 +969,53 @@ func TestVirtualMachineDeployment_WithOutboundDenyRule_DoesNotChangeInboundCommu
 	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
+func TestVirtualMachineDeployment_WithMixedFamilyAddresses_SplitsNsgRulesByFamily(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           constants.Target_Windows,
+		"communicator":                      "winrm",
+		"winrm_username":                    "ignore",
+		"image_publisher":                   "--image-publisher--",
+		"image_offer":                       "--image-offer--",
+		"image_sku":                         "--image-sku--",
+		"image_version":                     "--version--",
+		"managed_image_name":                "ManagedImageName",
+		"managed_image_resource_group_name": "ManagedImageResourceGroupName",
+		"allowed_inbound_ip_addresses":      []string{"198.51.100.10/32", "2001:db8::10"},
+		"deny_outbound_ip_addresses":        []string{"203.0.113.0/24", "2001:db8::/64"},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.tmpKeyVaultName = "--keyvault-name--"
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rules := getSecurityRulesFromDeploymentTemplate(t, deployment.Properties.Template)
+	if len(rules) != 4 {
+		t.Fatalf("expected 4 NSG rules, got %d", len(rules))
+	}
+
+	assertRuleHasPrefixes(t, rules, "AllowIPsToSshWinRMInbound", []string{"198.51.100.10/32"})
+	assertRuleHasPrefixes(t, rules, "AllowIPsToSshWinRMInboundIPV6", []string{"2001:db8::10"})
+	assertRuleHasPrefixes(t, rules, "DenySpecifiedOutboundDestinations", []string{"203.0.113.0/24"})
+	assertRuleHasPrefixes(t, rules, "DenySpecifiedOutboundDestinationsIPV6", []string{"2001:db8::/64"})
+
+	if getRulePriority(t, rules, "DenySpecifiedOutboundDestinations") != 100 ||
+		getRulePriority(t, rules, "DenySpecifiedOutboundDestinationsIPV6") != 101 ||
+		getRulePriority(t, rules, "AllowIPsToSshWinRMInbound") != 200 ||
+		getRulePriority(t, rules, "AllowIPsToSshWinRMInboundIPV6") != 201 {
+		t.Fatal("unexpected priorities for split NSG rules")
+	}
+}
+
 func TestVirtualMachineDeployment_WithoutOutboundDenyRule_OutputRemainsUnchanged(t *testing.T) {
 	config := map[string]interface{}{
 		"location":                          "ignore",
@@ -1071,6 +1119,32 @@ func getRulePriority(t *testing.T, rules []hashiSecurityRulesSDK.SecurityRule, n
 
 	t.Fatalf("expected rule %q in NSG", name)
 	return 0
+}
+
+func assertRuleHasPrefixes(t *testing.T, rules []hashiSecurityRulesSDK.SecurityRule, name string, want []string) {
+	t.Helper()
+
+	for _, rule := range rules {
+		if rule.Name == nil || *rule.Name != name {
+			continue
+		}
+
+		if rule.Properties.SourceAddressPrefixes != nil {
+			if !reflect.DeepEqual(*rule.Properties.SourceAddressPrefixes, want) {
+				t.Fatalf("expected source prefixes %v for %s, got %v", want, name, *rule.Properties.SourceAddressPrefixes)
+			}
+			return
+		}
+		if rule.Properties.DestinationAddressPrefixes != nil {
+			if !reflect.DeepEqual(*rule.Properties.DestinationAddressPrefixes, want) {
+				t.Fatalf("expected destination prefixes %v for %s, got %v", want, name, *rule.Properties.DestinationAddressPrefixes)
+			}
+			return
+		}
+		break
+	}
+
+	t.Fatalf("expected prefixes for rule %q", name)
 }
 
 // Ensure Specialized VMs don't set OsProfile}
