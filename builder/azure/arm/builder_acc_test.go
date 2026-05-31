@@ -25,6 +25,8 @@ package arm
 // * As well as the following misc env variables
 // ** ARM_SSH_PRIVATE_KEY_FILE - the file location of a PEM encoded RSA SSH Private Key (ed25519 is not supported by Azure),
 // ** PACKER_ACC - set to any non 0 value
+// * Env Variables for Existing VNet tests
+// ** ARM_VIRTUAL_NETWORK_NAME - name of the pre-existing virtual network
 //
 // It is recommended to run the tests with the options "-v -timeout 90m"
 // command, e.g.:
@@ -36,12 +38,27 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 )
+
+const runnerIPPlaceholder = "RUNNER_IP_PLACEHOLDER"
+
+func injectRunnerIP(t *testing.T, template string) string {
+	t.Helper()
+
+	runnerIP := common.DetectPackerPublicIP(t)
+	quotedPlaceholder := strconv.Quote(runnerIPPlaceholder)
+	if !strings.Contains(template, quotedPlaceholder) {
+		t.Fatalf("template missing %q placeholder", runnerIPPlaceholder)
+	}
+
+	return strings.Replace(template, quotedPlaceholder, strconv.Quote(runnerIP), 1)
+}
 
 // This test builds two images,
 // First a parent Specialized ARM 64 Linux VM to a Shared Image Gallery/Compute Gallery
@@ -623,7 +640,8 @@ const testBuilderAccExistingVNetAllowedInboundIP = `
 	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
 	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
 	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}",
-	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}"
+	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}",
+	  "virtual_network_name": "{{env ` + "`ARM_VIRTUAL_NETWORK_NAME`" + `}}"
 	},
 	"builders": [{
 	  "type": "azure-arm",
@@ -641,9 +659,10 @@ const testBuilderAccExistingVNetAllowedInboundIP = `
 	  "image_sku": "16.04-LTS",
 
 	  "virtual_network_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
-	  "virtual_network_name": "{{env ` + "`ARM_VIRTUAL_NETWORK_NAME`" + `}}",
-	  "virtual_network_subnet_name": "{{env ` + "`ARM_VIRTUAL_NETWORK_SUBNET_NAME`" + `}}",
-	  "allowed_inbound_ip_addresses": ["{{env ` + "`ARM_ALLOWED_INBOUND_IP`" + `}}"],
+	  "virtual_network_name": "{{user ` + "`virtual_network_name`" + `}}",
+	  "virtual_network_subnet_name": "subnet",
+	  "private_virtual_network_with_public_ip": true,
+	  "allowed_inbound_ip_addresses": ["RUNNER_IP_PLACEHOLDER", "172.16.0.16/32"],
 
 	  "location": "South Central US",
 	  "vm_size": "Standard_DS2_v2",
@@ -655,13 +674,14 @@ const testBuilderAccExistingVNetAllowedInboundIP = `
 }
 `
 
-const testBuilderAccExistingVNetWithPublicIPAllowedInboundIP = `
+const testBuilderAccAllowedInboundIpAddressesLiteral = `
 {
 	"variables": {
 	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
 	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
 	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}",
-	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}"
+	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}",
+	  "virtual_network_name": "{{env ` + "`ARM_VIRTUAL_NETWORK_NAME`" + `}}"
 	},
 	"builders": [{
 	  "type": "azure-arm",
@@ -671,7 +691,7 @@ const testBuilderAccExistingVNetWithPublicIPAllowedInboundIP = `
 	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
 
 	  "managed_image_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
-	  "managed_image_name": "testBuilderAccExistingVNetPubIPAllowInboundIP-{{timestamp}}",
+	  "managed_image_name": "testBuilderAccAllowedInboundIpLiteral-{{timestamp}}",
 
 	  "os_type": "Linux",
 	  "image_publisher": "Canonical",
@@ -679,10 +699,10 @@ const testBuilderAccExistingVNetWithPublicIPAllowedInboundIP = `
 	  "image_sku": "16.04-LTS",
 
 	  "virtual_network_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
-	  "virtual_network_name": "{{env ` + "`ARM_VIRTUAL_NETWORK_NAME`" + `}}",
-	  "virtual_network_subnet_name": "{{env ` + "`ARM_VIRTUAL_NETWORK_SUBNET_NAME`" + `}}",
+	  "virtual_network_name": "{{user ` + "`virtual_network_name`" + `}}",
+	  "virtual_network_subnet_name": "subnet",
 	  "private_virtual_network_with_public_ip": true,
-	  "allowed_inbound_ip_addresses": ["{{env ` + "`ARM_ALLOWED_INBOUND_IP`" + `}}"],
+	  "allowed_inbound_ip_addresses": ["RUNNER_IP_PLACEHOLDER", "172.16.0.16/32"],
 
 	  "location": "South Central US",
 	  "vm_size": "Standard_DS2_v2",
@@ -728,13 +748,46 @@ const testBuilderAccDenyOutboundIP = `
 }
 `
 
-const testBuilderAccExistingVNetDenyOutboundIP = `
+const testBuilderAccBuildSucceedsWithoutDenyOutboundIpAddresses = `
 {
 	"variables": {
 	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
 	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
 	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}",
 	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}"
+	},
+	"builders": [{
+	  "type": "azure-arm",
+
+	  "client_id": "{{user ` + "`client_id`" + `}}",
+	  "client_secret": "{{user ` + "`client_secret`" + `}}",
+	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
+
+	  "managed_image_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
+	  "managed_image_name": "testBuilderAccBuildSucceedsWithoutDenyOutboundIpAddresses-{{timestamp}}",
+
+	  "os_type": "Linux",
+	  "image_publisher": "Canonical",
+	  "image_offer": "UbuntuServer",
+	  "image_sku": "16.04-LTS",
+	  "location": "South Central US",
+	  "vm_size": "Standard_DS2_v2",
+	  "azure_tags": {
+	    "env": "testing",
+	    "builder": "packer"
+	   }
+	}]
+}
+`
+
+const testBuilderAccExistingVNetDenyOutboundIP = `
+{
+	"variables": {
+	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
+	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
+	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}",
+	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}",
+	  "virtual_network_name": "{{env ` + "`ARM_VIRTUAL_NETWORK_NAME`" + `}}"
 	},
 	"builders": [{
 	  "type": "azure-arm",
@@ -752,8 +805,9 @@ const testBuilderAccExistingVNetDenyOutboundIP = `
 	  "image_sku": "16.04-LTS",
 
 	  "virtual_network_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
-	  "virtual_network_name": "{{env ` + "`ARM_VIRTUAL_NETWORK_NAME`" + `}}",
-	  "virtual_network_subnet_name": "{{env ` + "`ARM_VIRTUAL_NETWORK_SUBNET_NAME`" + `}}",
+	  "virtual_network_name": "{{user ` + "`virtual_network_name`" + `}}",
+	  "virtual_network_subnet_name": "subnet",
+	  "private_virtual_network_with_public_ip": true,
 	  "deny_outbound_ip_addresses": ["198.51.100.10/32"],
 
 	  "location": "South Central US",
@@ -765,17 +819,59 @@ const testBuilderAccExistingVNetDenyOutboundIP = `
 	}]
 }
 `
+const testBuilderAccFqdnIngressAndOutboundRules = `
+{
+	"variables": {
+	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
+	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
+	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}",
+	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}"
+	},
+	"builders": [{
+	  "type": "azure-arm",
+
+	  "client_id": "{{user ` + "`client_id`" + `}}",
+	  "client_secret": "{{user ` + "`client_secret`" + `}}",
+	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
+
+	  "managed_image_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
+	  "managed_image_name": "testBuilderAccFqdnIngressAndOutboundRules-{{timestamp}}",
+
+	  "os_type": "Linux",
+	  "image_publisher": "Canonical",
+	  "image_offer": "UbuntuServer",
+	  "image_sku": "16.04-LTS",
+	  "allowed_inbound_ip_addresses": ["RUNNER_IP_PLACEHOLDER", "example.com"],
+	  "deny_outbound_ip_addresses": ["example.com"],
+
+	  "location": "South Central US",
+	  "vm_size": "Standard_DS2_v2",
+	  "azure_tags": {
+	    "env": "testing",
+	    "builder": "packer"
+	   }
+	}],
+	"provisioners": [{
+	  "type": "shell",
+	  "inline": [
+	    "sudo apt-get update",
+	    "sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y",
+	    "sudo DEBIAN_FRONTEND=noninteractive apt-get install curl -y",
+	    "if ! getent hosts example.com >/dev/null 2>&1; then echo 'example.com did not resolve; cannot prove outbound deny'; exit 1; fi",
+	    "if curl -fsS --connect-timeout 10 --max-time 20 https://example.com >/dev/null 2>&1; then echo 'example.com was reachable but should have been denied'; exit 1; fi",
+	    "echo 'example.com resolved but HTTPS connection was blocked as expected'"
+	  ]
+	}]
+}
+`
 
 func TestBuilderAcc_ExistingVNet_AllowedInboundIpAddresses(t *testing.T) {
 	t.Parallel()
-	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{
-		CheckAzureCLI:          true,
-		CheckSSHPrivateKeyFile: true,
-	})
+	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{})
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-existing-vnet-allowed-inbound-ip",
 		Type:     "azure-arm",
-		Template: testBuilderAccExistingVNetAllowedInboundIP,
+		Template: injectRunnerIP(t, testBuilderAccExistingVNetAllowedInboundIP),
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
 			if buildCommand.ProcessState != nil {
 				if buildCommand.ProcessState.ExitCode() != 0 {
@@ -798,21 +894,16 @@ func TestBuilderAcc_ExistingVNet_AllowedInboundIpAddresses(t *testing.T) {
 	})
 }
 
-func TestBuilderAcc_ExistingVNetWithPublicIP_AllowedInboundIpAddresses(t *testing.T) {
+func TestBuilderAcc_AllowedInboundAndDenyOutboundIpAddresses_Fqdn(t *testing.T) {
 	t.Parallel()
-	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{
-		CheckAzureCLI:          true,
-		CheckSSHPrivateKeyFile: true,
-	})
+	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{})
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
-		Name:     "test-azure-existing-vnet-publicip-allowed-inbound-ip",
+		Name:     "test-azure-fqdn-ingress-and-outbound-rules",
 		Type:     "azure-arm",
-		Template: testBuilderAccExistingVNetWithPublicIPAllowedInboundIP,
+		Template: injectRunnerIP(t, testBuilderAccFqdnIngressAndOutboundRules),
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
-			if buildCommand.ProcessState != nil {
-				if buildCommand.ProcessState.ExitCode() != 0 {
-					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
-				}
+			if buildCommand.ProcessState != nil && buildCommand.ProcessState.ExitCode() != 0 {
+				return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
 			}
 			logBytes, readErr := os.ReadFile(logfile)
 			if readErr != nil {
@@ -830,20 +921,13 @@ func TestBuilderAcc_ExistingVNetWithPublicIP_AllowedInboundIpAddresses(t *testin
 	})
 }
 
-func TestBuilderAcc_AllowedInboundIpAddresses_Fqdn(t *testing.T) {
-	t.Skip("acceptance environment does not provide deterministic hostname control for FQDN allowlist expansion")
-}
-
-func TestBuilderAcc_AllowedInboundIpAddresses_LiteralRegression(t *testing.T) {
+func TestBuilderAcc_AllowedInboundIpAddresses_Literal(t *testing.T) {
 	t.Parallel()
-	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{
-		CheckAzureCLI:          true,
-		CheckSSHPrivateKeyFile: true,
-	})
+	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{})
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
-		Name:     "test-azure-allowed-inbound-ip-literal-regression",
+		Name:     "test-azure-allowed-inbound-ip-literal",
 		Type:     "azure-arm",
-		Template: testBuilderAccExistingVNetAllowedInboundIP,
+		Template: injectRunnerIP(t, testBuilderAccAllowedInboundIpAddressesLiteral),
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
 			if buildCommand.ProcessState != nil && buildCommand.ProcessState.ExitCode() != 0 {
 				return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
@@ -866,10 +950,7 @@ func TestBuilderAcc_AllowedInboundIpAddresses_LiteralRegression(t *testing.T) {
 
 func TestBuilderAcc_DenyOutboundIpAddresses(t *testing.T) {
 	t.Parallel()
-	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{
-		CheckAzureCLI:          true,
-		CheckSSHPrivateKeyFile: true,
-	})
+	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{})
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-deny-outbound-ip",
 		Type:     "azure-arm",
@@ -896,10 +977,7 @@ func TestBuilderAcc_DenyOutboundIpAddresses(t *testing.T) {
 
 func TestBuilderAcc_DenyOutboundIpAddresses_ExistingVNet(t *testing.T) {
 	t.Parallel()
-	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{
-		CheckAzureCLI:          true,
-		CheckSSHPrivateKeyFile: true,
-	})
+	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{})
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-existing-vnet-deny-outbound-ip",
 		Type:     "azure-arm",
@@ -924,16 +1002,13 @@ func TestBuilderAcc_DenyOutboundIpAddresses_ExistingVNet(t *testing.T) {
 	})
 }
 
-func TestBuilderAcc_DenyOutboundIpAddresses_RegressionWithoutField(t *testing.T) {
+func TestBuilderAcc_BuildSucceedsWithoutDenyOutboundIpAddresses(t *testing.T) {
 	t.Parallel()
-	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{
-		CheckAzureCLI:          true,
-		CheckSSHPrivateKeyFile: true,
-	})
+	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{})
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
-		Name:     "test-azure-deny-outbound-ip-regression-without-field",
+		Name:     "test-azure-build-succeeds-without-deny-outbound-ip-addresses",
 		Type:     "azure-arm",
-		Template: testBuilderAccExistingVNetAllowedInboundIP,
+		Template: testBuilderAccBuildSucceedsWithoutDenyOutboundIpAddresses,
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
 			if buildCommand.ProcessState != nil && buildCommand.ProcessState.ExitCode() != 0 {
 				return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
