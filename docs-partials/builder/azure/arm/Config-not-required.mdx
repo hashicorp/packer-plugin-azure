@@ -381,14 +381,15 @@
 - `disk_caching_type` (string) - Specify the disk caching type. Valid values
   are None, ReadOnly, and ReadWrite. The default value is ReadWrite.
 
-- `allowed_inbound_ip_addresses` ([]string) - Specify the list of IP addresses, CIDR blocks, and hostnames that should be
-  allowed access to the VM. Hostnames are resolved to literal IP addresses at build time and all resolved addresses are used.
-  If provided, a temporary Azure Network Security Group is created and attached to the subnet for builder-managed VNets or to the NIC for existing VNets.
-  Builder-managed VNet behavior is unchanged for backward compatibility. The temporary NSG is removed during cleanup.
+- `allowed_inbound_ip_addresses` ([]string) - Specify the list of IP addresses and CIDR blocks that should be
+  allowed access to the VM. If provided, an Azure Network Security
+  Group will be created with corresponding rules and be bound to
+  the subnet (builder VNet) or NIC (existing VNet).
+  Builder-managed VNet behavior is unchanged for backward compatibility.
+  The temporary NSG is removed during cleanup.
 
-- `deny_outbound_ip_addresses` ([]string) - Specify the list of IP addresses, CIDR blocks, and hostnames that the temporary
-  build VM must not reach over outbound traffic during image creation. Hostnames are resolved to literal IP addresses at build time and the deny list is a build-time snapshot.
-  This applies only to the temporary build VM and does not change the networking of VMs created later from the image.
+- `deny_outbound_ip_addresses` ([]string) - Specify list of IP addresses, CIDR blocks, and hostnames that the temporary
+  build VM must not reach over outbound traffic during image creation.
 
 - `boot_diag_storage_account` (string) - Specify storage to store Boot Diagnostics -- Enabling this option
   will create 2 Files in the specified storage account. (serial console log & screenshot file)
