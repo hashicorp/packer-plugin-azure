@@ -13,11 +13,11 @@ import (
 
 type fakeAddressResolver struct {
 	lookupCNAMECalls []string
-	lookupIPCalls []string
-	lookupCNAME     map[string]string
-	lookupCNAMEErrs map[string]error
-	lookupIPs     map[string][]net.IPAddr
-	lookupIPErrs  map[string]error
+	lookupIPCalls    []string
+	lookupCNAME      map[string]string
+	lookupCNAMEErrs  map[string]error
+	lookupIPs        map[string][]net.IPAddr
+	lookupIPErrs     map[string]error
 }
 
 func (f *fakeAddressResolver) LookupCNAME(host string) (string, error) {

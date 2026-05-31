@@ -73,7 +73,7 @@ func (s *StepVerifySharedImageDestination) Run(ctx context.Context, state multis
 		return errorMessage("Error retrieving shared image %q: ID field in response is empty", imageURI)
 	}
 	if image.Properties == nil {
-		return errorMessage("Could not retrieve shared image properties for image %q.", image.Id)
+		return errorMessage("Could not retrieve shared image properties for image %q.", *image.Id)
 	}
 
 	location := image.Location
@@ -122,7 +122,7 @@ func (s *StepVerifySharedImageDestination) Run(ctx context.Context, state multis
 
 	for _, version := range versions {
 		if version.Name == nil {
-			return errorMessage("Could not retrieve versions for image %q: unexpected nil name", image.Id)
+			return errorMessage("Could not retrieve versions for image %q: unexpected nil name", *image.Id)
 		}
 		if *version.Name == s.Image.ImageVersion {
 			return errorMessage("Shared image version %q already exists for image %q.", s.Image.ImageVersion, *image.Id)
