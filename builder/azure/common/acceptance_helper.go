@@ -15,8 +15,9 @@ import (
 )
 
 type CheckAcceptanceTestEnvVarsParams struct {
-	CheckAzureCLI          bool
-	CheckSSHPrivateKeyFile bool
+	CheckAzureCLI           bool
+	CheckSSHPrivateKeyFile  bool
+	CheckVirtualNetworkName bool
 }
 
 func CheckAcceptanceTestEnvVars(t *testing.T, params CheckAcceptanceTestEnvVarsParams) {
@@ -41,15 +42,15 @@ func CheckAcceptanceTestEnvVars(t *testing.T, params CheckAcceptanceTestEnvVarsP
 	if os.Getenv("ARM_SUBSCRIPTION_ID") == "" {
 		t.Fatalf("Test %s requires environment variable ARM_SUBSCRIPTION_ID is set", t.Name())
 	}
-	if os.Getenv("ARM_VIRTUAL_NETWORK_NAME") == "" {
-		t.Fatalf("Test %s requires environment variable ARM_VIRTUAL_NETWORK_NAME is set", t.Name())
-	}
 
 	if params.CheckAzureCLI && !loggedIntoAzureCLI(t) {
 		t.Fatalf("Test %s requires CLI authentication, install the Azure CLI and log in", t.Name())
 	}
 	if params.CheckSSHPrivateKeyFile && os.Getenv("ARM_SSH_PRIVATE_KEY_FILE") == "" {
 		t.Fatalf("Test %s requires environment variable ARM_SSH_PRIVATE_KEY_FILE is set", t.Name())
+	}
+	if params.CheckVirtualNetworkName && os.Getenv("ARM_VIRTUAL_NETWORK_NAME") == "" {
+		t.Fatalf("Test %s requires environment variable ARM_VIRTUAL_NETWORK_NAME is set", t.Name())
 	}
 }
 
