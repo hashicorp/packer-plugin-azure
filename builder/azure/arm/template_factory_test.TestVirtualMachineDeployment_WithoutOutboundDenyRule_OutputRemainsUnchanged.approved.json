@@ -66,7 +66,7 @@
       "apiVersion": "[variables('networkApiVersion')]",
       "dependsOn": [
         "[concat('Microsoft.Network/publicIPAddresses/', parameters('publicIPAddressName'))]",
-        "[concat('Microsoft.Network/networkSecurityGroups/', parameters('nsgName'))]"
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
       ],
       "location": "[variables('location')]",
       "name": "[parameters('nicName')]",
@@ -84,10 +84,7 @@
               }
             }
           }
-        ],
-        "networkSecurityGroup": {
-          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('nsgName'))]"
-        }
+        ]
       },
       "type": "Microsoft.Network/networkInterfaces"
     },
@@ -115,15 +112,29 @@
           ]
         },
         "osProfile": {
+          "adminPassword": "[parameters('adminPassword')]",
           "adminUsername": "[parameters('adminUsername')]",
           "computerName": "[parameters('vmName')]",
-          "linuxConfiguration": {
-            "disablePasswordAuthentication": true,
-            "ssh": {
-              "publicKeys": [
+          "secrets": [
+            {
+              "sourceVault": {
+                "id": "[resourceId(resourceGroup().name, 'Microsoft.KeyVault/vaults', '--keyvault-name--')]"
+              },
+              "vaultCertificates": [
                 {
-                  "keyData": "",
-                  "path": "[variables('sshKeyPath')]"
+                  "certificateStore": "My",
+                  "certificateUrl": ""
+                }
+              ]
+            }
+          ],
+          "windowsConfiguration": {
+            "provisionVMAgent": true,
+            "winRM": {
+              "listeners": [
+                {
+                  "certificateUrl": "",
+                  "protocol": "Https"
                 }
               ]
             }
@@ -143,7 +154,7 @@
               "storageAccountType": "Standard_LRS"
             },
             "name": "[parameters('osDiskName')]",
-            "osType": "Linux"
+            "osType": "Windows"
           }
         }
       },
@@ -180,7 +191,7 @@
               "access": "Allow",
               "description": "Allow inbound traffic from specified IP addresses",
               "destinationAddressPrefix": "VirtualNetwork",
-              "destinationPortRange": "0",
+              "destinationPortRange": "5985",
               "direction": "Inbound",
               "priority": 100,
               "protocol": "Tcp",
@@ -191,6 +202,33 @@
         ]
       },
       "type": "Microsoft.Network/networkSecurityGroups"
+    },
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkSecurityGroups/', parameters('nsgName'))]"
+      ],
+      "location": "[variables('location')]",
+      "name": "[variables('virtualNetworkName')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('addressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('subnetAddressPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('nsgName'))]"
+              }
+            }
+          }
+        ]
+      },
+      "type": "Microsoft.Network/virtualNetworks"
     }
   ],
   "variables": {
@@ -201,10 +239,10 @@
     "publicIPAddressType": "Static",
     "sshKeyPath": "[concat('/home/',parameters('adminUsername'),'/.ssh/authorized_keys')]",
     "subnetAddressPrefix": "10.0.0.0/24",
-    "subnetName": "--virtual_network_subnet_name--",
+    "subnetName": "[parameters('subnetName')]",
     "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnetName'))]",
-    "virtualNetworkName": "--virtual_network_name--",
-    "virtualNetworkResourceGroup": "--virtual_network_resource_group_name--",
+    "virtualNetworkName": "[parameters('virtualNetworkName')]",
+    "virtualNetworkResourceGroup": "[resourceGroup().name]",
     "vmStorageAccountContainerName": "images",
     "vnetID": "[resourceId(variables('virtualNetworkResourceGroup'), 'Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
   }

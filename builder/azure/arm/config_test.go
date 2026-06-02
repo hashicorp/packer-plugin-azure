@@ -452,7 +452,7 @@ func TestConfigShouldRejectIncorrectInboundIpAddresses(t *testing.T) {
 		"communicator":           "none",
 	}
 
-	config["allowed_inbound_ip_addresses"] = []string{"127.0.0.1", "127.0.0.two"}
+	config["allowed_inbound_ip_addresses"] = []string{"127.0.0.1", "not..a..valid..hostname"}
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
 	if err == nil {
@@ -467,7 +467,7 @@ func TestConfigShouldRejectIncorrectInboundIpAddresses(t *testing.T) {
 	}
 }
 
-func TestConfigShouldRejectInboundIpAddressesWithVirtualNetwork(t *testing.T) {
+func TestConfigShouldAllowInboundIpAddressesWithExistingVirtualNetwork(t *testing.T) {
 	config := map[string]interface{}{
 		"capture_name_prefix":          "ignore",
 		"capture_container_name":       "ignore",
@@ -489,8 +489,156 @@ func TestConfigShouldRejectInboundIpAddressesWithVirtualNetwork(t *testing.T) {
 
 	config["virtual_network_name"] = "some_vnet_name"
 	_, err = c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("Expected configuration creation to succeed, but it failed with allowed_inbound_ip_addresses and virtual_network_name both specified: %v", err)
+	}
+}
+
+func TestConfigShouldRejectMalformedInboundIpAddressesWhenUsingExistingVirtualNetwork(t *testing.T) {
+	config := map[string]interface{}{
+		"capture_name_prefix":                 "ignore",
+		"capture_container_name":              "ignore",
+		"location":                            "ignore",
+		"image_url":                           "ignore",
+		"storage_account":                     "ignore",
+		"resource_group_name":                 "ignore",
+		"subscription_id":                     "ignore",
+		"os_type":                             constants.Target_Linux,
+		"communicator":                        "none",
+		"allowed_inbound_ip_addresses":        []string{"not-an-ip"},
+		"virtual_network_name":                "vnet",
+		"virtual_network_subnet_name":         "subnet",
+		"virtual_network_resource_group_name": "rg",
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
 	if err == nil {
-		t.Errorf("Expected configuration creation to fail, but it succeeded with allowed_inbound_ip_addresses and virtual_network_name both specified")
+		t.Fatal("Expected configuration creation to fail with malformed allowed_inbound_ip_addresses and existing VNet, but it succeeded")
+	}
+}
+
+func TestConfigExistingVirtualNetworkChangeDoesNotAlterBuilderManagedValidation(t *testing.T) {
+	config := getArmBuilderConfiguration()
+	config["allowed_inbound_ip_addresses"] = []string{"127.0.0.1"}
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("Builder-managed allowlist should still be valid: %v", err)
+	}
+
+	config = getArmBuilderConfiguration()
+	config["allowed_inbound_ip_addresses"] = []string{"not-an-ip"}
+	_, err = c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("Builder-managed config with malformed allowlist should still be invalid")
+	}
+}
+
+func TestConfigShouldAllowMixedInboundIpAndHostnameValues(t *testing.T) {
+	config := getArmBuilderConfiguration()
+	config["allowed_inbound_ip_addresses"] = []string{"127.0.0.1", "192.168.100.0/24", "ci.example.com"}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("expected mixed inbound IP and hostname values to pass validation, got: %v", err)
+	}
+
+	want := []string{"127.0.0.1", "192.168.100.0/24", "ci.example.com"}
+	if diff := cmp.Diff(want, c.AllowedInboundIpAddresses); diff != "" {
+		t.Fatalf("unexpected allowlist (-want +got):\n%s", diff)
+	}
+}
+
+func TestConfigShouldRejectInvalidInboundHostnameValue(t *testing.T) {
+	config := getArmBuilderConfiguration()
+	config["allowed_inbound_ip_addresses"] = []string{"*.example.com"}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("expected invalid hostname to fail validation")
+	}
+	if !strings.Contains(err.Error(), "allowed_inbound_ip_addresses") {
+		t.Fatalf("expected setting name in error, got %v", err)
+	}
+}
+
+func TestConfigShouldAllowHostnamesWithNumericLabels(t *testing.T) {
+	cases := []string{
+		"1.2.3.example",
+		"1.example",
+		"host-1.example",
+	}
+	for _, host := range cases {
+		t.Run(host, func(t *testing.T) {
+			config := getArmBuilderConfiguration()
+			config["allowed_inbound_ip_addresses"] = []string{host}
+
+			var c Config
+			_, err := c.Prepare(config, getPackerConfiguration())
+			if err != nil {
+				t.Fatalf("expected hostname %q to pass validation, got: %v", host, err)
+			}
+			if len(c.AllowedInboundIpAddresses) != 1 || c.AllowedInboundIpAddresses[0] != host {
+				t.Fatalf("unexpected allowlist, got %v", c.AllowedInboundIpAddresses)
+			}
+		})
+	}
+}
+
+func TestConfigLiteralInboundIpBehaviorRemainsUnchanged(t *testing.T) {
+	config := getArmBuilderConfiguration()
+	config["allowed_inbound_ip_addresses"] = []string{"127.0.0.1", "192.168.100.0/24"}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("expected literal allowlist to remain valid, got: %v", err)
+	}
+
+	want := []string{"127.0.0.1", "192.168.100.0/24"}
+	if diff := cmp.Diff(want, c.AllowedInboundIpAddresses); diff != "" {
+		t.Fatalf("unexpected allowlist (-want +got):\n%s", diff)
+	}
+}
+
+func TestConfigShouldAllowMixedOutboundDenyIpAndHostnameValues(t *testing.T) {
+	config := getArmBuilderConfiguration()
+	config["deny_outbound_ip_addresses"] = []string{"198.51.100.10/32", "backend.example.com"}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("expected mixed outbound deny IP and hostname values to pass validation, got: %v", err)
+	}
+}
+
+func TestConfigShouldRejectInvalidOutboundDenyValue(t *testing.T) {
+	config := getArmBuilderConfiguration()
+	config["deny_outbound_ip_addresses"] = []string{"*.example.com"}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("expected invalid outbound deny value to fail validation")
+	}
+	if !strings.Contains(err.Error(), "deny_outbound_ip_addresses") {
+		t.Fatalf("expected setting name in error, got %v", err)
+	}
+}
+
+func TestConfigWithoutOutboundDenyField_RemainsUnchanged(t *testing.T) {
+	config := getArmBuilderConfiguration()
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatalf("expected config without outbound deny field to remain valid, got: %v", err)
+	}
+	if c.AllowedInboundIpAddresses != nil {
+		t.Fatalf("expected allowed_inbound_ip_addresses to remain nil, got %v", c.AllowedInboundIpAddresses)
 	}
 }
 

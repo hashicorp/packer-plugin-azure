@@ -48,24 +48,7 @@
   "resources": [
     {
       "apiVersion": "[variables('networkApiVersion')]",
-      "location": "[variables('location')]",
-      "name": "[parameters('publicIPAddressName')]",
-      "properties": {
-        "dnsSettings": {
-          "domainNameLabel": "[parameters('dnsNameForPublicIP')]"
-        },
-        "publicIPAllocationMethod": "[variables('publicIPAddressType')]"
-      },
-      "sku": {
-        "name": "Standard",
-        "tier": "Regional"
-      },
-      "type": "Microsoft.Network/publicIPAddresses"
-    },
-    {
-      "apiVersion": "[variables('networkApiVersion')]",
       "dependsOn": [
-        "[concat('Microsoft.Network/publicIPAddresses/', parameters('publicIPAddressName'))]",
         "[concat('Microsoft.Network/networkSecurityGroups/', parameters('nsgName'))]"
       ],
       "location": "[variables('location')]",
@@ -76,9 +59,6 @@
             "name": "ipconfig",
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
-              "publicIPAddress": {
-                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddressName'))]"
-              },
               "subnet": {
                 "id": "[variables('subnetRef')]"
               }
@@ -184,7 +164,10 @@
               "direction": "Inbound",
               "priority": 100,
               "protocol": "Tcp",
-              "sourceAddressPrefix": "*",
+              "sourceAddressPrefixes": [
+                "127.0.0.1",
+                "192.168.100.0/24"
+              ],
               "sourcePortRange": "*"
             }
           }

@@ -607,13 +607,17 @@ type Config struct {
 	// are None, ReadOnly, and ReadWrite. The default value is ReadWrite.
 	DiskCachingType string `mapstructure:"disk_caching_type" required:"false"`
 	diskCachingType virtualmachines.CachingTypes
-	// Specify the list of IP addresses and CIDR blocks that should be
-	// allowed access to the VM. If provided, an Azure Network Security
+	// Specify the list of IP addresses, CIDR blocks, and hostnames that should
+	// be allowed access to the VM. Hostnames are resolved to literal IP
+	// addresses at build time. If provided, an Azure Network Security
 	// Group will be created with corresponding rules and be bound to
-	// the subnet of the VM.
-	// Providing `allowed_inbound_ip_addresses` in combination with
-	// `virtual_network_name` is not allowed.
+	// the subnet (builder VNet) or NIC (existing VNet).
+	// Builder-managed VNet behavior is unchanged for backward compatibility.
+	// The temporary NSG is removed during cleanup.
 	AllowedInboundIpAddresses []string `mapstructure:"allowed_inbound_ip_addresses"`
+	// Specify list of IP addresses, CIDR blocks, and hostnames that the temporary
+	// build VM must not reach over outbound traffic during image creation.
+	DenyOutboundIpAddresses []string `mapstructure:"deny_outbound_ip_addresses"`
 
 	// Specify storage to store Boot Diagnostics -- Enabling this option
 	// will create 2 Files in the specified storage account. (serial console log & screenshot file)
@@ -1495,12 +1499,13 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 	}
 	if len(c.AllowedInboundIpAddresses) >= 1 {
-		if c.VirtualNetworkName != "" {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If virtual_network_name is specified, allowed_inbound_ip_addresses cannot be specified"))
-		} else {
-			if ok, err := assertAllowedInboundIpAddresses(c.AllowedInboundIpAddresses, "allowed_inbound_ip_addresses"); !ok {
-				errs = packersdk.MultiErrorAppend(errs, err)
-			}
+		if ok, err := assertAllowedInboundIpAddresses(c.AllowedInboundIpAddresses, "allowed_inbound_ip_addresses"); !ok {
+			errs = packersdk.MultiErrorAppend(errs, err)
+		}
+	}
+	if len(c.DenyOutboundIpAddresses) >= 1 {
+		if ok, err := assertAllowedInboundIpAddresses(c.DenyOutboundIpAddresses, "deny_outbound_ip_addresses"); !ok {
+			errs = packersdk.MultiErrorAppend(errs, err)
 		}
 	}
 
@@ -1670,7 +1675,42 @@ func assertAllowedInboundIpAddresses(ipAddresses []string, setting string) (bool
 	for _, ipAddress := range ipAddresses {
 		if net.ParseIP(ipAddress) == nil {
 			if _, _, err := net.ParseCIDR(ipAddress); err != nil {
-				return false, fmt.Errorf("The setting %s must only contain valid IP addresses or CIDR blocks", setting)
+				normalized := normalizeHostname(ipAddress)
+				if normalized == "" || strings.Contains(normalized, "*") || strings.Contains(normalized, "..") || !strings.Contains(normalized, ".") {
+					return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
+				}
+
+				labels := strings.Split(normalized, ".")
+				for _, label := range labels {
+					if label == "" || len(label) > 63 || strings.HasPrefix(label, "-") || strings.HasSuffix(label, "-") {
+						return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
+					}
+
+					for _, r := range label {
+						if r >= 'a' && r <= 'z' {
+							continue
+						}
+						if r >= '0' && r <= '9' {
+							continue
+						}
+						if r == '-' {
+							continue
+						}
+						return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
+					}
+				}
+
+				lastLabel := labels[len(labels)-1]
+				hasLetterInLastLabel := false
+				for _, r := range lastLabel {
+					if r >= 'a' && r <= 'z' {
+						hasLetterInLastLabel = true
+						break
+					}
+				}
+				if !hasLetterInLastLabel {
+					return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
+				}
 			}
 		}
 	}

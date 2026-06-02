@@ -6,9 +6,13 @@ package arm
 import (
 	"encoding/base64"
 	"encoding/json"
+	"net"
+	"reflect"
+	"strings"
 	"testing"
 
 	approvaltests "github.com/approvals/go-approval-tests"
+	hashiSecurityRulesSDK "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01/securityrules"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/deployments"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/constants"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/template"
@@ -357,6 +361,176 @@ func TestVirtualMachineDeployment10(t *testing.T) {
 	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
+// TestVirtualMachineDeployment_ExistingVNet_WithAllowedInboundIpAddresses_AttachesNsgToNic
+// tests that when using an existing VNet with an allowlist, a NSG is attached to the NIC.
+func TestVirtualMachineDeployment_ExistingVNet_WithAllowedInboundIpAddresses_AttachesNsgToNic(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                            "ignore",
+		"subscription_id":                     "ignore",
+		"os_type":                             constants.Target_Linux,
+		"communicator":                        "none",
+		"image_publisher":                     "--image-publisher--",
+		"image_offer":                         "--image-offer--",
+		"image_sku":                           "--image-sku--",
+		"image_version":                       "--version--",
+		"virtual_network_resource_group_name": "--virtual_network_resource_group_name--",
+		"virtual_network_name":                "--virtual_network_name--",
+		"virtual_network_subnet_name":         "--virtual_network_subnet_name--",
+		"allowed_inbound_ip_addresses":        []string{"127.0.0.1", "192.168.100.0/24"},
+		"managed_image_name":                  "ManagedImageName",
+		"managed_image_resource_group_name":   "ManagedImageResourceGroupName",
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+// TestVirtualMachineDeployment_ExistingVNetWithPublicIP_WithAllowedInboundIpAddresses_AttachesNsgToNic
+// tests that when using an existing VNet with public IP and allowlist, a NSG is attached to the NIC.
+func TestVirtualMachineDeployment_ExistingVNetWithPublicIP_WithAllowedInboundIpAddresses_AttachesNsgToNic(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                               "ignore",
+		"subscription_id":                        "ignore",
+		"os_type":                                constants.Target_Linux,
+		"communicator":                           "none",
+		"image_publisher":                        "--image-publisher--",
+		"image_offer":                            "--image-offer--",
+		"image_sku":                              "--image-sku--",
+		"image_version":                          "--version--",
+		"virtual_network_resource_group_name":    "--virtual_network_resource_group_name--",
+		"virtual_network_name":                   "--virtual_network_name--",
+		"virtual_network_subnet_name":            "--virtual_network_subnet_name--",
+		"private_virtual_network_with_public_ip": true,
+		"allowed_inbound_ip_addresses":           []string{"127.0.0.1", "192.168.100.0/24"},
+		"managed_image_name":                     "ManagedImageName",
+		"managed_image_resource_group_name":      "ManagedImageResourceGroupName",
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+// TestVirtualMachineDeployment_BuilderManagedVNet_WithAllowedInboundIpAddresses_KeepsSubnetAssociation
+// tests that when using a builder-managed VNet with an allowlist, the subnet association is preserved.
+func TestVirtualMachineDeployment_BuilderManagedVNet_WithAllowedInboundIpAddresses_KeepsSubnetAssociation(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           constants.Target_Windows,
+		"communicator":                      "winrm",
+		"winrm_username":                    "ignore",
+		"image_publisher":                   "--image-publisher--",
+		"image_offer":                       "--image-offer--",
+		"image_sku":                         "--image-sku--",
+		"image_version":                     "--version--",
+		"managed_image_name":                "ManagedImageName",
+		"managed_image_resource_group_name": "ManagedImageResourceGroupName",
+		"allowed_inbound_ip_addresses":      []string{"127.0.0.1", "192.168.100.0/24"},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.tmpKeyVaultName = "--keyvault-name--"
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+// TestVirtualMachineDeployment_ExistingVNet_WithoutAllowedInboundIpAddresses_DoesNotCreateExtraNsg
+// tests that when using an existing VNet without an allowlist, no extra NSG is created.
+func TestVirtualMachineDeployment_ExistingVNet_WithoutAllowedInboundIpAddresses_DoesNotCreateExtraNsg(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                            "ignore",
+		"subscription_id":                     "ignore",
+		"os_type":                             constants.Target_Linux,
+		"communicator":                        "none",
+		"image_publisher":                     "--image-publisher--",
+		"image_offer":                         "--image-offer--",
+		"image_sku":                           "--image-sku--",
+		"image_version":                       "--version--",
+		"virtual_network_resource_group_name": "--virtual_network_resource_group_name--",
+		"virtual_network_name":                "--virtual_network_name--",
+		"virtual_network_subnet_name":         "--virtual_network_subnet_name--",
+		"managed_image_name":                  "ManagedImageName",
+		"managed_image_resource_group_name":   "ManagedImageResourceGroupName",
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+// TestVirtualMachineDeployment_ExistingVNetPublicIP_AttachesNsgToNic
+// tests that when using an existing VNet with a public IP and no allowlist, an NSG is attached to the
+// NIC so that Standard public IP inbound restrictions don't block the communicator.
+func TestVirtualMachineDeployment_ExistingVNetPublicIP_AttachesNsgToNic(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                               "ignore",
+		"subscription_id":                        "ignore",
+		"os_type":                                constants.Target_Linux,
+		"communicator":                           "none",
+		"image_publisher":                        "--image-publisher--",
+		"image_offer":                            "--image-offer--",
+		"image_sku":                              "--image-sku--",
+		"image_version":                          "--version--",
+		"virtual_network_resource_group_name":    "--virtual_network_resource_group_name--",
+		"virtual_network_name":                   "--virtual_network_name--",
+		"virtual_network_subnet_name":            "--virtual_network_subnet_name--",
+		"private_virtual_network_with_public_ip": true,
+		"managed_image_name":                     "ManagedImageName",
+		"managed_image_resource_group_name":      "ManagedImageResourceGroupName",
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
 // Ensure the VM template is correct when building with additional unmanaged disks
 func TestVirtualMachineDeployment11(t *testing.T) {
 	config := map[string]interface{}{
@@ -502,6 +676,513 @@ func TestVirtualMachineDeployment15(t *testing.T) {
 	}
 
 	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+func TestVirtualMachineDeployment_WithInboundHostnameAllowlist_ExpandsToLiteralAddresses(t *testing.T) {
+	defaultAddressLookup = fakeLookup(
+		map[string][]net.IPAddr{
+			"ci.example.com": {{IP: net.ParseIP("203.0.113.10")}, {IP: net.ParseIP("203.0.113.11")}},
+		},
+		nil,
+	)
+	defer func() { defaultAddressLookup = net.DefaultResolver.LookupIPAddr }()
+
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           constants.Target_Windows,
+		"communicator":                      "winrm",
+		"winrm_username":                    "ignore",
+		"object_id":                         "ignored00",
+		"tenant_id":                         "ignored00",
+		"use_azure_cli_auth":                true,
+		"image_publisher":                   "--image-publisher--",
+		"image_offer":                       "--image-offer--",
+		"image_sku":                         "--image-sku--",
+		"image_version":                     "--version--",
+		"managed_image_name":                "ManagedImageName",
+		"managed_image_resource_group_name": "ManagedImageResourceGroupName",
+		"allowed_inbound_ip_addresses":      []string{"ci.example.com"},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.tmpKeyVaultName = "--keyvault-name--"
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bs, err := json.Marshal(deployment.Properties.Template)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(bs), "ci.example.com") {
+		t.Fatal("expected expanded literal addresses only, found raw hostname in template")
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+func TestVirtualMachineDeployment_WithInboundHostnameAllowlist_ProducesDeterministicOutput(t *testing.T) {
+	defaultAddressLookup = fakeLookup(
+		map[string][]net.IPAddr{
+			"ci.example.com": {{IP: net.ParseIP("203.0.113.11")}, {IP: net.ParseIP("203.0.113.10")}},
+		},
+		nil,
+	)
+	defer func() { defaultAddressLookup = net.DefaultResolver.LookupIPAddr }()
+
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           constants.Target_Windows,
+		"communicator":                      "winrm",
+		"winrm_username":                    "ignore",
+		"object_id":                         "ignored00",
+		"tenant_id":                         "ignored00",
+		"use_azure_cli_auth":                true,
+		"image_publisher":                   "--image-publisher--",
+		"image_offer":                       "--image-offer--",
+		"image_sku":                         "--image-sku--",
+		"image_version":                     "--version--",
+		"managed_image_name":                "ManagedImageName",
+		"managed_image_resource_group_name": "ManagedImageResourceGroupName",
+		"allowed_inbound_ip_addresses":      []string{"ci.example.com"},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.tmpKeyVaultName = "--keyvault-name--"
+
+	deploymentA, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deploymentB, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	jsonA, err := json.Marshal(deploymentA.Properties.Template)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jsonB, err := json.Marshal(deploymentB.Properties.Template)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(jsonA) != string(jsonB) {
+		t.Fatal("expected deterministic template output for same logical DNS answers")
+	}
+
+	approvaltests.VerifyJSONStruct(t, deploymentA.Properties.Template)
+}
+
+func TestVirtualMachineDeployment_LiteralInboundAllowlist_OutputRemainsUnchanged(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           constants.Target_Windows,
+		"communicator":                      "winrm",
+		"winrm_username":                    "ignore",
+		"image_publisher":                   "--image-publisher--",
+		"image_offer":                       "--image-offer--",
+		"image_sku":                         "--image-sku--",
+		"image_version":                     "--version--",
+		"managed_image_name":                "ManagedImageName",
+		"managed_image_resource_group_name": "ManagedImageResourceGroupName",
+		"allowed_inbound_ip_addresses":      []string{"127.0.0.1", "192.168.100.0/24"},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.tmpKeyVaultName = "--keyvault-name--"
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	baselineConfig := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           constants.Target_Windows,
+		"communicator":                      "winrm",
+		"winrm_username":                    "ignore",
+		"image_publisher":                   "--image-publisher--",
+		"image_offer":                       "--image-offer--",
+		"image_sku":                         "--image-sku--",
+		"image_version":                     "--version--",
+		"managed_image_name":                "ManagedImageName",
+		"managed_image_resource_group_name": "ManagedImageResourceGroupName",
+		"allowed_inbound_ip_addresses":      []string{"127.0.0.1", "192.168.100.0/24"},
+	}
+
+	var baseline Config
+	_, err = baseline.Prepare(baselineConfig, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	baseline.tmpKeyVaultName = "--keyvault-name--"
+
+	baselineDeployment, err := GetVirtualMachineDeployment(&baseline)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := json.Marshal(deployment.Properties.Template)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := json.Marshal(baselineDeployment.Properties.Template)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(want) {
+		t.Fatal("expected literal-only template output to remain unchanged")
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+func TestVirtualMachineDeployment_WithOutboundDenyLiteralDestinations_AddsOutboundDenyRule(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           constants.Target_Windows,
+		"communicator":                      "winrm",
+		"winrm_username":                    "ignore",
+		"image_publisher":                   "--image-publisher--",
+		"image_offer":                       "--image-offer--",
+		"image_sku":                         "--image-sku--",
+		"image_version":                     "--version--",
+		"managed_image_name":                "ManagedImageName",
+		"managed_image_resource_group_name": "ManagedImageResourceGroupName",
+		"deny_outbound_ip_addresses":        []string{"198.51.100.10/32", "203.0.113.0/24"},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.tmpKeyVaultName = "--keyvault-name--"
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+func TestVirtualMachineDeployment_WithOutboundDenyHostnameDestinations_ExpandsToLiteralAddresses(t *testing.T) {
+	defaultAddressLookup = fakeLookup(
+		map[string][]net.IPAddr{
+			"backend.example.com": {{IP: net.ParseIP("198.51.100.10")}, {IP: net.ParseIP("198.51.100.11")}},
+		},
+		nil,
+	)
+	defer func() { defaultAddressLookup = net.DefaultResolver.LookupIPAddr }()
+
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           constants.Target_Windows,
+		"communicator":                      "winrm",
+		"winrm_username":                    "ignore",
+		"object_id":                         "ignored00",
+		"tenant_id":                         "ignored00",
+		"use_azure_cli_auth":                true,
+		"image_publisher":                   "--image-publisher--",
+		"image_offer":                       "--image-offer--",
+		"image_sku":                         "--image-sku--",
+		"image_version":                     "--version--",
+		"managed_image_name":                "ManagedImageName",
+		"managed_image_resource_group_name": "ManagedImageResourceGroupName",
+		"deny_outbound_ip_addresses":        []string{"backend.example.com"},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.tmpKeyVaultName = "--keyvault-name--"
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bs, err := json.Marshal(deployment.Properties.Template)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(bs), "backend.example.com") {
+		t.Fatal("expected expanded literal addresses only, found raw hostname in template")
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+func TestVirtualMachineDeployment_WithOutboundDenyRule_UsesHigherPrecedenceThanBroadAllow(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           constants.Target_Windows,
+		"communicator":                      "winrm",
+		"winrm_username":                    "ignore",
+		"image_publisher":                   "--image-publisher--",
+		"image_offer":                       "--image-offer--",
+		"image_sku":                         "--image-sku--",
+		"image_version":                     "--version--",
+		"managed_image_name":                "ManagedImageName",
+		"managed_image_resource_group_name": "ManagedImageResourceGroupName",
+		"deny_outbound_ip_addresses":        []string{"198.51.100.10/32"},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.tmpKeyVaultName = "--keyvault-name--"
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rules := getSecurityRulesFromDeploymentTemplate(t, deployment.Properties.Template)
+	denyPriority := getRulePriority(t, rules, "DenySpecifiedOutboundDestinations")
+	inboundPriority := getRulePriority(t, rules, "AllowIPsToSshWinRMInbound")
+	if denyPriority >= inboundPriority {
+		t.Fatalf("expected outbound deny rule priority %d to have higher precedence than inbound allow priority %d", denyPriority, inboundPriority)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+func TestVirtualMachineDeployment_WithOutboundDenyRule_DoesNotChangeInboundCommunicatorRule(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           constants.Target_Windows,
+		"communicator":                      "winrm",
+		"winrm_username":                    "ignore",
+		"image_publisher":                   "--image-publisher--",
+		"image_offer":                       "--image-offer--",
+		"image_sku":                         "--image-sku--",
+		"image_version":                     "--version--",
+		"managed_image_name":                "ManagedImageName",
+		"managed_image_resource_group_name": "ManagedImageResourceGroupName",
+		"allowed_inbound_ip_addresses":      []string{"127.0.0.1", "192.168.100.0/24"},
+		"deny_outbound_ip_addresses":        []string{"198.51.100.10/32"},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.tmpKeyVaultName = "--keyvault-name--"
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+func TestVirtualMachineDeployment_WithMixedFamilyAddresses_SplitsNsgRulesByFamily(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           constants.Target_Windows,
+		"communicator":                      "winrm",
+		"winrm_username":                    "ignore",
+		"image_publisher":                   "--image-publisher--",
+		"image_offer":                       "--image-offer--",
+		"image_sku":                         "--image-sku--",
+		"image_version":                     "--version--",
+		"managed_image_name":                "ManagedImageName",
+		"managed_image_resource_group_name": "ManagedImageResourceGroupName",
+		"allowed_inbound_ip_addresses":      []string{"198.51.100.10/32", "2001:db8::10"},
+		"deny_outbound_ip_addresses":        []string{"203.0.113.0/24", "2001:db8::/64"},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.tmpKeyVaultName = "--keyvault-name--"
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rules := getSecurityRulesFromDeploymentTemplate(t, deployment.Properties.Template)
+	if len(rules) != 4 {
+		t.Fatalf("expected 4 NSG rules, got %d", len(rules))
+	}
+
+	assertRuleHasPrefixes(t, rules, "AllowIPsToSshWinRMInbound", []string{"198.51.100.10/32"})
+	assertRuleHasPrefixes(t, rules, "AllowIPsToSshWinRMInboundIPV6", []string{"2001:db8::10"})
+	assertRuleHasPrefixes(t, rules, "DenySpecifiedOutboundDestinations", []string{"203.0.113.0/24"})
+	assertRuleHasPrefixes(t, rules, "DenySpecifiedOutboundDestinationsIPV6", []string{"2001:db8::/64"})
+
+	if getRulePriority(t, rules, "DenySpecifiedOutboundDestinations") != 100 ||
+		getRulePriority(t, rules, "DenySpecifiedOutboundDestinationsIPV6") != 101 ||
+		getRulePriority(t, rules, "AllowIPsToSshWinRMInbound") != 200 ||
+		getRulePriority(t, rules, "AllowIPsToSshWinRMInboundIPV6") != 201 {
+		t.Fatal("unexpected priorities for split NSG rules")
+	}
+}
+
+func TestVirtualMachineDeployment_WithoutOutboundDenyRule_OutputRemainsUnchanged(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                          "ignore",
+		"subscription_id":                   "ignore",
+		"os_type":                           constants.Target_Windows,
+		"communicator":                      "winrm",
+		"winrm_username":                    "ignore",
+		"image_publisher":                   "--image-publisher--",
+		"image_offer":                       "--image-offer--",
+		"image_sku":                         "--image-sku--",
+		"image_version":                     "--version--",
+		"managed_image_name":                "ManagedImageName",
+		"managed_image_resource_group_name": "ManagedImageResourceGroupName",
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.tmpKeyVaultName = "--keyvault-name--"
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+func TestVirtualMachineDeployment_ExistingVNet_WithOutboundDenyRule_KeepsSameUserFacingSemantics(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                            "ignore",
+		"subscription_id":                     "ignore",
+		"os_type":                             constants.Target_Linux,
+		"communicator":                        "none",
+		"image_publisher":                     "--image-publisher--",
+		"image_offer":                         "--image-offer--",
+		"image_sku":                           "--image-sku--",
+		"image_version":                       "--version--",
+		"virtual_network_resource_group_name": "--virtual_network_resource_group_name--",
+		"virtual_network_name":                "--virtual_network_name--",
+		"virtual_network_subnet_name":         "--virtual_network_subnet_name--",
+		"managed_image_name":                  "ManagedImageName",
+		"managed_image_resource_group_name":   "ManagedImageResourceGroupName",
+		"deny_outbound_ip_addresses":          []string{"198.51.100.10/32", "203.0.113.0/24"},
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
+func getSecurityRulesFromDeploymentTemplate(t *testing.T, deploymentTemplate any) []hashiSecurityRulesSDK.SecurityRule {
+	t.Helper()
+
+	bs, err := json.Marshal(deploymentTemplate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var parsed struct {
+		Resources []struct {
+			Type       string `json:"type"`
+			Properties struct {
+				SecurityRules []hashiSecurityRulesSDK.SecurityRule `json:"securityRules"`
+			} `json:"properties"`
+		} `json:"resources"`
+	}
+	if err := json.Unmarshal(bs, &parsed); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, resource := range parsed.Resources {
+		if resource.Type == "Microsoft.Network/networkSecurityGroups" {
+			return resource.Properties.SecurityRules
+		}
+	}
+
+	t.Fatal("expected network security group resource in template")
+	return nil
+}
+
+func getRulePriority(t *testing.T, rules []hashiSecurityRulesSDK.SecurityRule, name string) int64 {
+	t.Helper()
+
+	for _, rule := range rules {
+		if rule.Name != nil && *rule.Name == name {
+			return rule.Properties.Priority
+		}
+	}
+
+	t.Fatalf("expected rule %q in NSG", name)
+	return 0
+}
+
+func assertRuleHasPrefixes(t *testing.T, rules []hashiSecurityRulesSDK.SecurityRule, name string, want []string) {
+	t.Helper()
+
+	for _, rule := range rules {
+		if rule.Name == nil || *rule.Name != name {
+			continue
+		}
+
+		if rule.Properties.SourceAddressPrefixes != nil {
+			if !reflect.DeepEqual(*rule.Properties.SourceAddressPrefixes, want) {
+				t.Fatalf("expected source prefixes %v for %s, got %v", want, name, *rule.Properties.SourceAddressPrefixes)
+			}
+			return
+		}
+		if rule.Properties.DestinationAddressPrefixes != nil {
+			if !reflect.DeepEqual(*rule.Properties.DestinationAddressPrefixes, want) {
+				t.Fatalf("expected destination prefixes %v for %s, got %v", want, name, *rule.Properties.DestinationAddressPrefixes)
+			}
+			return
+		}
+		break
+	}
+
+	t.Fatalf("expected prefixes for rule %q", name)
 }
 
 // Ensure Specialized VMs don't set OsProfile}

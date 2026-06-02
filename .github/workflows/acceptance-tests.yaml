@@ -42,18 +42,18 @@ jobs:
 
   acceptance-tests:
     runs-on: ubuntu-latest
-    needs: 
+    needs:
       - secrets-check
-      - get-go-version 
+      - get-go-version
     if: needs.secrets-check.outputs.available == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-     
+
       - name: Set up Go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: ${{ needs.get-go-version.outputs.go-version }} 
+          go-version: ${{ needs.get-go-version.outputs.go-version }}
 
       - name: Setup `terraform`
         uses: hashicorp/setup-terraform@v4
@@ -61,17 +61,17 @@ jobs:
       - name: Run `terraform init` to download Azure Provider
         run: terraform init
         working-directory: ./terraform
-     
+
       - name: Setup `packer`
         uses: hashicorp/setup-packer@main
         id: setup
 
       - name: Build the plugin
         run:  make
-      
+
       - name: Login to Azure CLI
         run: az login --output none --tenant="${{ secrets.ARM_TENANT_ID}}" --username="${{ secrets.ARM_CLIENT_ID}}" --password="${{ secrets.ARM_CLIENT_SECRET}}" --service-principal
-        
+
       - name: Create SSH Certificate and set envrionment variable for it # Used for Linux specialized ancestry test, so parent and child have to share the same login method
         run: ssh-keygen -m PEM -t rsa -b 4096 -f example.pem -N '' && echo "ARM_SSH_PRIVATE_KEY_FILE=$(pwd)/example.pem" >> $GITHUB_ENV
 
@@ -106,6 +106,8 @@ jobs:
           KV_BASE=${KV_BASE:0:${KV_BASE_MAX}}
           echo "ARM_KEY_VAULT_NAME=${KV_BASE}kv${SUFFIX}" >> $GITHUB_ENV
 
+          echo "ARM_VIRTUAL_NETWORK_NAME=${BASE_PREFIX}_${SUFFIX}_vnet" >> $GITHUB_ENV
+
           OBJECT_ID=$(az ad sp show --id "${{ secrets.ARM_CLIENT_ID }}" | jq -r '.id')
           echo "AZURE_OBJECT_ID=${OBJECT_ID}" >> $GITHUB_ENV
 
@@ -120,7 +122,7 @@ jobs:
         working-directory: ./terraform
         if: ${{ always() }} # Regardless of failure or cancelation, run terraform destroy
         run: ./run_terraform_destroy_with_expected_env_vars.sh
-     
+
       # Try and upload logs
       - run: zip arm_failure_logs.zip builder/azure/arm/packer_*txt
         if: ${{ failure() }}
@@ -139,4 +141,3 @@ jobs:
           name: "dtl_failure_logs.zip"
           path: "dtl_failure_logs.zip"
           retention-days: 1
-
