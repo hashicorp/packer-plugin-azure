@@ -607,8 +607,9 @@ type Config struct {
 	// are None, ReadOnly, and ReadWrite. The default value is ReadWrite.
 	DiskCachingType string `mapstructure:"disk_caching_type" required:"false"`
 	diskCachingType virtualmachines.CachingTypes
-	// Specify the list of IP addresses and CIDR blocks that should be
-	// allowed access to the VM. If provided, an Azure Network Security
+	// Specify the list of IP addresses, CIDR blocks, and hostnames that should
+	// be allowed access to the VM. Hostnames are resolved to literal IP
+	// addresses at build time. If provided, an Azure Network Security
 	// Group will be created with corresponding rules and be bound to
 	// the subnet (builder VNet) or NIC (existing VNet).
 	// Builder-managed VNet behavior is unchanged for backward compatibility.
@@ -1680,45 +1681,26 @@ func assertAllowedInboundIpAddresses(ipAddresses []string, setting string) (bool
 				}
 
 				labels := strings.Split(normalized, ".")
-				numericLabels := 0
 				for _, label := range labels {
 					if label == "" || len(label) > 63 || strings.HasPrefix(label, "-") || strings.HasSuffix(label, "-") {
 						return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
 					}
 
-					labelIsNumeric := true
 					for _, r := range label {
 						if r >= 'a' && r <= 'z' {
-							labelIsNumeric = false
 							continue
 						}
-						if (r >= '0' && r <= '9') || r == '-' {
-							if r == '-' {
-								labelIsNumeric = false
-							}
+						if r >= '0' && r <= '9' {
+							continue
+						}
+						if r == '-' {
 							continue
 						}
 						return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
-					}
-					if labelIsNumeric {
-						numericLabels++
 					}
 				}
 
 				lastLabel := labels[len(labels)-1]
-				if numericLabels == len(labels)-1 {
-					lastIsAlpha := true
-					for _, r := range lastLabel {
-						if r < 'a' || r > 'z' {
-							lastIsAlpha = false
-							break
-						}
-					}
-					if lastIsAlpha {
-						return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
-					}
-				}
-
 				hasLetterInLastLabel := false
 				for _, r := range lastLabel {
 					if r >= 'a' && r <= 'z' {
