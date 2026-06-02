@@ -360,7 +360,7 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 			if err != nil {
 				return nil, err
 			}
-		} else if (len(config.AllowedInboundIpAddresses) >= 1) || (len(config.DenyOutboundIpAddresses) >= 1) {
+		} else if config.PrivateVirtualNetworkWithPublicIp || (len(config.AllowedInboundIpAddresses) >= 1) || (len(config.DenyOutboundIpAddresses) >= 1) {
 			err = builder.SetNetworkSecurityGroup(expandedAllowedInboundIpAddresses, expandedDeniedOutboundIpAddresses, config.Comm.Port(), true)
 			if err != nil {
 				return nil, err
