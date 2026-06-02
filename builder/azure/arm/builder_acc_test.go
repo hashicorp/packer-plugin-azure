@@ -867,7 +867,9 @@ const testBuilderAccFqdnIngressAndOutboundRules = `
 
 func TestBuilderAcc_ExistingVNet_AllowedInboundIpAddresses(t *testing.T) {
 	t.Parallel()
-	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{})
+	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{
+		CheckVirtualNetworkName: true,
+	})
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-existing-vnet-allowed-inbound-ip",
 		Type:     "azure-arm",
@@ -923,7 +925,9 @@ func TestBuilderAcc_AllowedInboundAndDenyOutboundIpAddresses_Fqdn(t *testing.T) 
 
 func TestBuilderAcc_AllowedInboundIpAddresses_Literal(t *testing.T) {
 	t.Parallel()
-	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{})
+	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{
+		CheckVirtualNetworkName: true,
+	})
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-allowed-inbound-ip-literal",
 		Type:     "azure-arm",
@@ -977,7 +981,9 @@ func TestBuilderAcc_DenyOutboundIpAddresses(t *testing.T) {
 
 func TestBuilderAcc_DenyOutboundIpAddresses_ExistingVNet(t *testing.T) {
 	t.Parallel()
-	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{})
+	common.CheckAcceptanceTestEnvVars(t, common.CheckAcceptanceTestEnvVarsParams{
+		CheckVirtualNetworkName: true,
+	})
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-existing-vnet-deny-outbound-ip",
 		Type:     "azure-arm",
