@@ -496,6 +496,41 @@ func TestVirtualMachineDeployment_ExistingVNet_WithoutAllowedInboundIpAddresses_
 	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
 }
 
+// TestVirtualMachineDeployment_ExistingVNetPublicIP_AttachesNsgToNic
+// tests that when using an existing VNet with a public IP and no allowlist, an NSG is attached to the
+// NIC so that Standard public IP inbound restrictions don't block the communicator.
+func TestVirtualMachineDeployment_ExistingVNetPublicIP_AttachesNsgToNic(t *testing.T) {
+	config := map[string]interface{}{
+		"location":                               "ignore",
+		"subscription_id":                        "ignore",
+		"os_type":                                constants.Target_Linux,
+		"communicator":                           "none",
+		"image_publisher":                        "--image-publisher--",
+		"image_offer":                            "--image-offer--",
+		"image_sku":                              "--image-sku--",
+		"image_version":                          "--version--",
+		"virtual_network_resource_group_name":    "--virtual_network_resource_group_name--",
+		"virtual_network_name":                   "--virtual_network_name--",
+		"virtual_network_subnet_name":            "--virtual_network_subnet_name--",
+		"private_virtual_network_with_public_ip": true,
+		"managed_image_name":                     "ManagedImageName",
+		"managed_image_resource_group_name":      "ManagedImageResourceGroupName",
+	}
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployment, err := GetVirtualMachineDeployment(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONStruct(t, deployment.Properties.Template)
+}
+
 // Ensure the VM template is correct when building with additional unmanaged disks
 func TestVirtualMachineDeployment11(t *testing.T) {
 	config := map[string]interface{}{
@@ -644,12 +679,13 @@ func TestVirtualMachineDeployment15(t *testing.T) {
 }
 
 func TestVirtualMachineDeployment_WithInboundHostnameAllowlist_ExpandsToLiteralAddresses(t *testing.T) {
-	defaultAddressResolver = &fakeAddressResolver{
-		lookupIPs: map[string][]net.IPAddr{
+	defaultAddressLookup = fakeLookup(
+		map[string][]net.IPAddr{
 			"ci.example.com": {{IP: net.ParseIP("203.0.113.10")}, {IP: net.ParseIP("203.0.113.11")}},
 		},
-	}
-	defer func() { defaultAddressResolver = netResolver{} }()
+		nil,
+	)
+	defer func() { defaultAddressLookup = net.DefaultResolver.LookupIPAddr }()
 
 	config := map[string]interface{}{
 		"location":                          "ignore",
@@ -693,12 +729,13 @@ func TestVirtualMachineDeployment_WithInboundHostnameAllowlist_ExpandsToLiteralA
 }
 
 func TestVirtualMachineDeployment_WithInboundHostnameAllowlist_ProducesDeterministicOutput(t *testing.T) {
-	defaultAddressResolver = &fakeAddressResolver{
-		lookupIPs: map[string][]net.IPAddr{
+	defaultAddressLookup = fakeLookup(
+		map[string][]net.IPAddr{
 			"ci.example.com": {{IP: net.ParseIP("203.0.113.11")}, {IP: net.ParseIP("203.0.113.10")}},
 		},
-	}
-	defer func() { defaultAddressResolver = netResolver{} }()
+		nil,
+	)
+	defer func() { defaultAddressLookup = net.DefaultResolver.LookupIPAddr }()
 
 	config := map[string]interface{}{
 		"location":                          "ignore",
@@ -851,12 +888,13 @@ func TestVirtualMachineDeployment_WithOutboundDenyLiteralDestinations_AddsOutbou
 }
 
 func TestVirtualMachineDeployment_WithOutboundDenyHostnameDestinations_ExpandsToLiteralAddresses(t *testing.T) {
-	defaultAddressResolver = &fakeAddressResolver{
-		lookupIPs: map[string][]net.IPAddr{
+	defaultAddressLookup = fakeLookup(
+		map[string][]net.IPAddr{
 			"backend.example.com": {{IP: net.ParseIP("198.51.100.10")}, {IP: net.ParseIP("198.51.100.11")}},
 		},
-	}
-	defer func() { defaultAddressResolver = netResolver{} }()
+		nil,
+	)
+	defer func() { defaultAddressLookup = net.DefaultResolver.LookupIPAddr }()
 
 	config := map[string]interface{}{
 		"location":                          "ignore",
