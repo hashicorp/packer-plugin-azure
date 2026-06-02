@@ -583,7 +583,8 @@ func TestDiskControllerType01(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = testSubject.BuildLinux("--test-ssh-authorized-key--", true); err != nil {
+	err = testSubject.BuildLinux("--test-ssh-authorized-key--", true)
+	if err != nil {
 		t.Fatal(err)
 	}
 
@@ -599,3 +600,67 @@ func TestDiskControllerType01(t *testing.T) {
 
 	approvaltests.VerifyJSONBytes(t, []byte(*doc))
 }
+
+func TestSplitAddressesByFamily(t *testing.T) {
+	tests := []struct {
+		name string
+		in   []string
+		want map[string][]string
+	}{
+		{
+			name: "mixed IPv4 and IPv6",
+			in:   []string{"127.0.0.1", "192.168.100.0/24", "2001:db8::1"},
+			want: map[string][]string{
+				"ipv4": {"127.0.0.1", "192.168.100.0/24"},
+				"ipv6": {"2001:db8::1"},
+			},
+		},
+		{
+			name: "IPv4-mapped IPv6 stays IPv6",
+			in:   []string{"::ffff:192.0.2.1"},
+			want: map[string][]string{
+				"ipv6": {"::ffff:192.0.2.1"},
+			},
+		},
+		{
+			name: "IPv4 CIDR with IPv4-mapped IPv6 mixed",
+			in:   []string{"192.0.2.0/24", "::ffff:192.0.2.1"},
+			want: map[string][]string{
+				"ipv4": {"192.0.2.0/24"},
+				"ipv6": {"::ffff:192.0.2.1"},
+			},
+		},
+		{
+			name: "IPv6 CIDR",
+			in:   []string{"2001:db8::/64"},
+			want: map[string][]string{
+				"ipv6": {"2001:db8::/64"},
+			},
+		},
+		{
+			name: "empty",
+			in:   nil,
+			want: map[string][]string{},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := splitAddressesByFamily(tc.in)
+			if len(got) != len(tc.want) {
+				t.Fatalf("family count mismatch: got %d want %d (got=%v)", len(got), len(tc.want), got)
+			}
+			for family, wantAddrs := range tc.want {
+				gotAddrs := got[family]
+				if len(gotAddrs) != len(wantAddrs) {
+					t.Fatalf("family %q: got %v want %v", family, gotAddrs, wantAddrs)
+				}
+				for i, want := range wantAddrs {
+					if gotAddrs[i] != want {
+						t.Fatalf("family %q[%d]: got %q want %q", family, i, gotAddrs[i], want)
+					}
+				}
+			}
+		})
+	}
+}
+

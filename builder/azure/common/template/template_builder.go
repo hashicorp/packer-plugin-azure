@@ -827,11 +827,11 @@ func newOutboundSecurityRule(name string, priority int64, destinationPrefixes []
 func splitAddressesByFamily(addresses []string) map[string][]string {
 	families := map[string][]string{}
 	for _, address := range addresses {
-		family := "ipv6"
-		if strings.Contains(address, ".") {
-			family = "ipv4"
+		if strings.Contains(address, ":") {
+			families["ipv6"] = append(families["ipv6"], address)
+			continue
 		}
-		families[family] = append(families[family], address)
+		families["ipv4"] = append(families["ipv4"], address)
 	}
 	return families
 }
