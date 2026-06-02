@@ -452,7 +452,7 @@ func TestConfigShouldRejectIncorrectInboundIpAddresses(t *testing.T) {
 		"communicator":           "none",
 	}
 
-	config["allowed_inbound_ip_addresses"] = []string{"127.0.0.1", "127.0.0.two"}
+	config["allowed_inbound_ip_addresses"] = []string{"127.0.0.1", "not..a..valid..hostname"}
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
 	if err == nil {
@@ -562,6 +562,29 @@ func TestConfigShouldRejectInvalidInboundHostnameValue(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "allowed_inbound_ip_addresses") {
 		t.Fatalf("expected setting name in error, got %v", err)
+	}
+}
+
+func TestConfigShouldAllowHostnamesWithNumericLabels(t *testing.T) {
+	cases := []string{
+		"1.2.3.example",
+		"1.example",
+		"host-1.example",
+	}
+	for _, host := range cases {
+		t.Run(host, func(t *testing.T) {
+			config := getArmBuilderConfiguration()
+			config["allowed_inbound_ip_addresses"] = []string{host}
+
+			var c Config
+			_, err := c.Prepare(config, getPackerConfiguration())
+			if err != nil {
+				t.Fatalf("expected hostname %q to pass validation, got: %v", host, err)
+			}
+			if len(c.AllowedInboundIpAddresses) != 1 || c.AllowedInboundIpAddresses[0] != host {
+				t.Fatalf("unexpected allowlist, got %v", c.AllowedInboundIpAddresses)
+			}
+		})
 	}
 }
 
