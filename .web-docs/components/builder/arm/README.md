@@ -519,8 +519,9 @@ Providing `temp_resource_group_name` or `location` in combination with
 - `disk_caching_type` (string) - Specify the disk caching type. Valid values
   are None, ReadOnly, and ReadWrite. The default value is ReadWrite.
 
-- `allowed_inbound_ip_addresses` ([]string) - Specify the list of IP addresses and CIDR blocks that should be
-  allowed access to the VM. If provided, an Azure Network Security
+- `allowed_inbound_ip_addresses` ([]string) - Specify the list of IP addresses, CIDR blocks, and hostnames that should
+  be allowed access to the VM. Hostnames are resolved to literal IP
+  addresses at build time. If provided, an Azure Network Security
   Group will be created with corresponding rules and be bound to
   the subnet (builder VNet) or NIC (existing VNet).
   Builder-managed VNet behavior is unchanged for backward compatibility.
