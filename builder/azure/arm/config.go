@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2013, 2025
+// Copyright IBM Corp. 2013, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 //go:generate packer-sdc struct-markdown
@@ -966,10 +966,14 @@ func setSshValues(c *Config) error {
 }
 
 func setWinRMCertificate(c *Config) error {
-	c.Comm.WinRMTransportDecorator =
-		func() winrm.Transporter {
-			return &winrm.ClientNTLM{}
-		}
+	// Azure VMs use Negotiate/NTLM auth for WinRM by default.
+	// Enable NTLM unless the user explicitly set winrm_use_ntlm = false.
+	if !c.Comm.WinRMUseNTLM.False() {
+		c.Comm.WinRMTransportDecorator =
+			func() winrm.Transporter {
+				return &winrm.ClientNTLM{}
+			}
+	}
 
 	cert, err := c.createCertificate()
 

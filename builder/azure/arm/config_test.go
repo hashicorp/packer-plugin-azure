@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2013, 2025
+// Copyright IBM Corp. 2013, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package arm
@@ -665,7 +665,25 @@ func TestConfigShouldSupportPackersConfigElements(t *testing.T) {
 	}
 }
 
-func TestWinRMConfigShouldSetRoundTripDecorator(t *testing.T) {
+func TestWinRMConfigShouldSetRoundTripDecoratorWhenNTLMEnabled(t *testing.T) {
+	config := getArmBuilderConfiguration()
+	config["communicator"] = "winrm"
+	config["winrm_username"] = "username"
+	config["winrm_password"] = "Password123"
+	config["winrm_use_ntlm"] = true
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if c.Comm.WinRMTransportDecorator == nil {
+		t.Error("Expected WinRMTransportDecorator to be set when winrm_use_ntlm is true, but it was nil")
+	}
+}
+
+func TestWinRMConfigShouldSetRoundTripDecoratorWhenNTLMUnset(t *testing.T) {
 	config := getArmBuilderConfiguration()
 	config["communicator"] = "winrm"
 	config["winrm_username"] = "username"
@@ -678,7 +696,25 @@ func TestWinRMConfigShouldSetRoundTripDecorator(t *testing.T) {
 	}
 
 	if c.Comm.WinRMTransportDecorator == nil {
-		t.Error("Expected WinRMTransportDecorator to be set, but it was nil")
+		t.Error("Expected WinRMTransportDecorator to be set when winrm_use_ntlm is unset (Azure defaults to NTLM), but it was nil")
+	}
+}
+
+func TestWinRMConfigShouldNotSetRoundTripDecoratorWhenNTLMDisabled(t *testing.T) {
+	config := getArmBuilderConfiguration()
+	config["communicator"] = "winrm"
+	config["winrm_username"] = "username"
+	config["winrm_password"] = "Password123"
+	config["winrm_use_ntlm"] = false
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if c.Comm.WinRMTransportDecorator != nil {
+		t.Error("Expected WinRMTransportDecorator to be nil when winrm_use_ntlm is false, but it was set")
 	}
 }
 

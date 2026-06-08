@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2013, 2025
+// Copyright IBM Corp. 2013, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package dtl
@@ -189,7 +189,25 @@ func TestConfigShouldSupportPackersConfigElements(t *testing.T) {
 	}
 }
 
-func TestWinRMConfigShouldSetRoundTripDecorator(t *testing.T) {
+func TestWinRMConfigShouldSetRoundTripDecoratorWhenNTLMEnabled(t *testing.T) {
+	config_dtl := getDtlBuilderConfiguration()
+	config_dtl["communicator"] = "winrm"
+	config_dtl["winrm_username"] = "username"
+	config_dtl["winrm_password"] = "password"
+	config_dtl["winrm_use_ntlm"] = "true"
+
+	config := Config{}
+	_, err := config.Prepare(config_dtl, getPackerConfiguration())
+	if err != nil {
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
+	}
+
+	if config.Comm.WinRMTransportDecorator == nil {
+		t.Error("Expected WinRMTransportDecorator to be set when winrm_use_ntlm is true, but it was nil")
+	}
+}
+
+func TestWinRMConfigShouldSetRoundTripDecoratorWhenNTLMUnset(t *testing.T) {
 	config_dtl := getDtlBuilderConfiguration()
 	config_dtl["communicator"] = "winrm"
 	config_dtl["winrm_username"] = "username"
@@ -202,7 +220,25 @@ func TestWinRMConfigShouldSetRoundTripDecorator(t *testing.T) {
 	}
 
 	if config.Comm.WinRMTransportDecorator == nil {
-		t.Error("Expected WinRMTransportDecorator to be set, but it was nil")
+		t.Error("Expected WinRMTransportDecorator to be set when winrm_use_ntlm is unset (Azure defaults to NTLM), but it was nil")
+	}
+}
+
+func TestWinRMConfigShouldNotSetRoundTripDecoratorWhenNTLMDisabled(t *testing.T) {
+	config_dtl := getDtlBuilderConfiguration()
+	config_dtl["communicator"] = "winrm"
+	config_dtl["winrm_username"] = "username"
+	config_dtl["winrm_password"] = "password"
+	config_dtl["winrm_use_ntlm"] = "false"
+
+	config := Config{}
+	_, err := config.Prepare(config_dtl, getPackerConfiguration())
+	if err != nil {
+		t.Errorf("Expected configuration creation to succeed, but it failed (%s)!\n", err)
+	}
+
+	if config.Comm.WinRMTransportDecorator != nil {
+		t.Error("Expected WinRMTransportDecorator to be nil when winrm_use_ntlm is false, but it was set")
 	}
 }
 
