@@ -3,6 +3,19 @@
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-azure/releases) for the latest CHANGELOG information.
 
 ---
+## 2.6.2 (June 8, 2026)
+
+## What's Changed
+### Bug Fixes
+* Default Azure WinRM communicators to NTLM when `winrm_use_ntlm` is unset, while still honoring `winrm_use_ntlm = false` for hardened images [GH-616](https://github.com/hashicorp/packer-plugin-azure/pull/616), [GH-618](https://github.com/hashicorp/packer-plugin-azure/pull/618)
+
+### Other Changes
+* Update Go to 1.25.11 and refresh module dependencies [GH-628](https://github.com/hashicorp/packer-plugin-azure/pull/618)
+* Upgrade CI automation dependencies, including `actions/setup-go` to `v6.4.0`, `actions/github-script` to `v9.0.0`, and `actions/upload-artifact` to `v7.0.1` [GH-605](https://github.com/hashicorp/packer-plugin-azure/pull/605), [GH-606](https://github.com/hashicorp/packer-plugin-azure/pull/606), [GH-607](https://github.com/hashicorp/packer-plugin-azure/pull/607)
+* Update copyright headers for 2026 compliance [GH-615](https://github.com/hashicorp/packer-plugin-azure/pull/615)
+
+**Full Changelog**: https://github.com/hashicorp/packer-plugin-azure/compare/v2.6.1...v2.6.2
+
 ## 2.6.1 (April 28, 2026)
 
 ## What's Changed

@@ -18,6 +18,11 @@ There are many configuration options available for the builder. We'll start
 with authentication parameters, then go over the Azure ARM builder specific
 options. In addition to the options listed here, a [communicator](/packer/docs/templates/legacy_json_templates/communicator) can be configured for this builder.
 
+~> **Note:** Unlike the generic SDK default, this plugin enables NTLM authentication
+for WinRM automatically when `winrm_use_ntlm` is not set. Azure Windows VMs use
+Negotiate/NTLM auth by default, and Basic auth is typically rejected. Set
+`winrm_use_ntlm = false` only for STIG/FIPS-hardened images that require disabling NTLM.
+
 ## Azure DevTest Labs builder specific options
 
 ### Required:
