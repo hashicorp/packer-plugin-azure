@@ -13,12 +13,12 @@ import (
 
 	"net/http"
 
-	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/snapshots"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-04-02/disks"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-04-02/snapshots"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-07-03/galleryimages"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-07-03/galleryimageversions"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2024-03-01/images"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2024-03-01/virtualmachines"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-07-01/secrets"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-07-01/vaults"
 	networks "github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-09-01"
