@@ -99,9 +99,56 @@ func TestStepGetAdditionalDiskShouldTakeValidateArgumentsFromStateBag(t *testing
 		t.Fatalf("Expected the state bag to have a value for '%s', but it did not.", constants.ArmAdditionalDiskVhds)
 	}
 
-	expectedAdditionalDiskVhd := expectedAdditionalDiskVhds.([]string)
-	if expectedAdditionalDiskVhd[0] != "test.vhd" {
-		t.Fatalf("Expected the value of stateBag[%s] to be 'test.vhd', but got '%s'.", constants.ArmAdditionalDiskVhds, expectedAdditionalDiskVhd[0])
+	diskInfos := expectedAdditionalDiskVhds.([]DataDiskInfo)
+	if diskInfos[0].ManagedDiskID != "test.vhd" {
+		t.Fatalf("Expected the value of stateBag[%s][0].ManagedDiskID to be 'test.vhd', but got '%s'.", constants.ArmAdditionalDiskVhds, diskInfos[0].ManagedDiskID)
+	}
+}
+
+func TestStepGetAdditionalDiskShouldCaptureLunAndManagedDiskID(t *testing.T) {
+	lun0 := "disk-lun-0"
+	lun5 := "disk-lun-5"
+	vm := virtualmachines.VirtualMachine{
+		Properties: &virtualmachines.VirtualMachineProperties{
+			StorageProfile: &virtualmachines.StorageProfile{
+				DataDisks: &[]virtualmachines.DataDisk{
+					{Lun: 0, ManagedDisk: &virtualmachines.ManagedDiskParameters{Id: &lun0}},
+					{Lun: 5, ManagedDisk: &virtualmachines.ManagedDiskParameters{Id: &lun5}},
+				},
+			},
+		},
+	}
+
+	var testSubject = &StepGetDataDisk{
+		query: func(context.Context, string, string, string) (*virtualmachines.VirtualMachine, error) {
+			return &vm, nil
+		},
+		say:   func(message string) {},
+		error: func(e error) {},
+	}
+
+	stateBag := createTestStateBagStepGetAdditionalDisks()
+	if result := testSubject.Run(context.Background(), stateBag); result != multistep.ActionContinue {
+		t.Fatalf("Expected the step to return 'ActionContinue', but got '%d'.", result)
+	}
+
+	raw, ok := stateBag.GetOk(constants.ArmAdditionalDiskVhds)
+	if !ok {
+		t.Fatalf("Expected the state bag to have a value for '%s', but it did not.", constants.ArmAdditionalDiskVhds)
+	}
+
+	diskInfos := raw.([]DataDiskInfo)
+	expected := []DataDiskInfo{
+		{Lun: 0, ManagedDiskID: "disk-lun-0"},
+		{Lun: 5, ManagedDiskID: "disk-lun-5"},
+	}
+	if len(diskInfos) != len(expected) {
+		t.Fatalf("Expected %d data disks, but got %d.", len(expected), len(diskInfos))
+	}
+	for i, want := range expected {
+		if diskInfos[i] != want {
+			t.Fatalf("Expected data disk %d to be %+v, but got %+v.", i, want, diskInfos[i])
+		}
 	}
 }
 
@@ -126,6 +173,7 @@ func createVirtualMachineWithDataDisksFromUri(ManagedDiskUri string) *virtualmac
 				},
 				DataDisks: &[]virtualmachines.DataDisk{
 					{
+						Lun: 0,
 						ManagedDisk: &virtualmachines.ManagedDiskParameters{
 							Id: &ManagedDiskUri,
 						},

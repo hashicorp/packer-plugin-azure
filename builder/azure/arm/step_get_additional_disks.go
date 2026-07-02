@@ -22,6 +22,13 @@ type StepGetDataDisk struct {
 	error  func(e error)
 }
 
+// DataDiskInfo holds information about a data disk attached to the VM,
+// including its LUN and managed disk resource ID.
+type DataDiskInfo struct {
+	Lun           int64
+	ManagedDiskID string
+}
+
 func NewStepGetAdditionalDisks(client *AzureClient, ui packersdk.Ui) *StepGetDataDisk {
 	var step = &StepGetDataDisk{
 		client: client,
@@ -65,14 +72,17 @@ func (s *StepGetDataDisk) Run(ctx context.Context, state multistep.StateBag) mul
 	}
 
 	if vm.Properties.StorageProfile.DataDisks != nil {
-		var vhdUri string
-		additionalDisks := make([]string, len(*vm.Properties.StorageProfile.DataDisks))
-		for i, additionalDisk := range *vm.Properties.StorageProfile.DataDisks {
-			vhdUri = *additionalDisk.ManagedDisk.Id
-			s.say(fmt.Sprintf(" -> Managed Additional Disk %d  : '%s'", i+1, vhdUri))
-			additionalDisks[i] = vhdUri
+		dataDisks := make([]DataDiskInfo, len(*vm.Properties.StorageProfile.DataDisks))
+		for i, disk := range *vm.Properties.StorageProfile.DataDisks {
+			managedDiskID := *disk.ManagedDisk.Id
+			lun := int64(disk.Lun)
+			s.say(fmt.Sprintf(" -> Managed Data Disk (LUN %d) : '%s'", lun, managedDiskID))
+			dataDisks[i] = DataDiskInfo{
+				Lun:           lun,
+				ManagedDiskID: managedDiskID,
+			}
 		}
-		state.Put(constants.ArmAdditionalDiskVhds, additionalDisks)
+		state.Put(constants.ArmAdditionalDiskVhds, dataDisks)
 	}
 
 	return multistep.ActionContinue
