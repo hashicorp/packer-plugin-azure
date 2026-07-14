@@ -116,16 +116,16 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 		s.config.ImageOffer,
 		s.config.ImageSku,
 		s.config.ImageVersion)
-	
-	if s.config.AdditionalDiskSize != nil {
+
+	if len(s.config.sourceImageDataDiskLuns) > 0 {
 		// Fetch PIR image details to extract source data disk LUNs
 		skuVersionId := virtualmachineimages.NewSkuVersionID(
-		s.config.ClientConfig.SubscriptionID,
-		s.config.Location,
-		s.config.ImagePublisher,
-		s.config.ImageOffer,
-		s.config.ImageSku,
-		s.config.ImageVersion,
+			s.config.ClientConfig.SubscriptionID,
+			s.config.Location,
+			s.config.ImagePublisher,
+			s.config.ImageOffer,
+			s.config.ImageSku,
+			s.config.ImageVersion,
 		)
 		pirImage, err := s.getPIRImage(ctx, skuVersionId)
 		if err != nil {
