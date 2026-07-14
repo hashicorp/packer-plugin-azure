@@ -3783,3 +3783,75 @@ func TestConfigShouldntParseInvalidSigIDs(t *testing.T) {
 		t.Fatalf("getSharedImageGalleryObjectFromId unexpectedly parsed invalid ID")
 	}
 }
+
+func TestConfigAdditionalDiskLunsValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		luns        []int32
+		sizes       []int32
+		expectError string
+	}{
+		{
+			name:        "luns without sizes should fail",
+			luns:        []int32{0, 1},
+			sizes:       nil,
+			expectError: "disk_additional_luns requires disk_additional_size to be specified",
+		},
+		{
+			name:        "luns and sizes length mismatch should fail",
+			luns:        []int32{0, 1, 2},
+			sizes:       []int32{32, 64},
+			expectError: "disk_additional_luns must have the same number of entries as disk_additional_size",
+		},
+		{
+			name:        "negative lun should fail",
+			luns:        []int32{0, -1},
+			sizes:       []int32{32, 64},
+			expectError: "disk_additional_luns values must be non-negative",
+		},
+		{
+			name:        "duplicate luns should fail",
+			luns:        []int32{1, 1},
+			sizes:       []int32{32, 64},
+			expectError: "disk_additional_luns contains duplicate LUN 1",
+		},
+		{
+			name:  "valid luns should pass",
+			luns:  []int32{0, 2},
+			sizes: []int32{32, 64},
+		},
+		{
+			name:  "no luns should pass",
+			luns:  nil,
+			sizes: []int32{32, 64},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := getArmBuilderConfiguration()
+			if tt.sizes != nil {
+				config["disk_additional_size"] = tt.sizes
+			}
+			if tt.luns != nil {
+				config["disk_additional_luns"] = tt.luns
+			}
+
+			var c Config
+			_, err := c.Prepare(config, getPackerConfiguration())
+
+			if tt.expectError != "" {
+				if err == nil {
+					t.Fatalf("Expected error containing %q, but got nil", tt.expectError)
+				}
+				if !strings.Contains(err.Error(), tt.expectError) {
+					t.Fatalf("Expected error containing %q, but got: %s", tt.expectError, err)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("Expected no error, but got: %s", err)
+				}
+			}
+		})
+	}
+}
