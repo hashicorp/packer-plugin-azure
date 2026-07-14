@@ -14,6 +14,7 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/images"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachineimages"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachines"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/disks"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-02/snapshots"
@@ -54,6 +55,7 @@ type AzureClient struct {
 	snapshots.SnapshotsClient
 	galleryimageversions.GalleryImageVersionsClient
 	galleryimages.GalleryImagesClient
+	virtualmachineimages.VirtualMachineImagesClient
 	GiovanniBlobClient giovanniBlobStorageSDK.Client
 	InspectorMaxLength int
 	LastError          azureErrorResponse
@@ -228,6 +230,16 @@ func NewAzureClient(ctx context.Context, storageAccountName string, cloud *envir
 	galleryImagesClient.Client.RequestMiddlewares = &requestMiddleware
 	galleryImagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), galleryImagesClient.Client.UserAgent)
 	azureClient.GalleryImagesClient = *galleryImagesClient
+
+	vmImagesClient, err := virtualmachineimages.NewVirtualMachineImagesClientWithBaseURI(cloud.ResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	vmImagesClient.Client.Authorizer = resourceManagerAuthorizer
+	vmImagesClient.Client.ResponseMiddlewares = &responseMiddleware
+	vmImagesClient.Client.RequestMiddlewares = &requestMiddleware
+	vmImagesClient.Client.UserAgent = fmt.Sprintf("%s %s", useragent.String(version.AzurePluginVersion.FormattedVersion()), vmImagesClient.Client.UserAgent)
+	azureClient.VirtualMachineImagesClient = *vmImagesClient
 
 	// We only need the Blob Client to delete the OS VHD during VHD builds
 	if storageAccountName != "" {
