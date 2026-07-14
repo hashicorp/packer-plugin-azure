@@ -385,6 +385,7 @@ func (s *TemplateBuilder) SetSourceImageDataDisks(luns []int32) error {
 		lunVal := int(lun)
 		sourceDisks[i].Lun = &lunVal
 		sourceDisks[i].CreateOption = hashiVMSDK.DiskCreateOptionTypesFromImage
+		sourceDisks[i].ManagedDisk = profile.OsDisk.ManagedDisk
 	}
 	profile.DataDisks = &sourceDisks
 	return nil
