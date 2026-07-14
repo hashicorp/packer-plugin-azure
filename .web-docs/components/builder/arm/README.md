@@ -247,6 +247,9 @@ Providing `temp_resource_group_name` or `location` in combination with
   CLI example
   `az vm image list --location westus --publisher Canonical --offer UbuntuServer --sku 16.04.0-LTS --all`
 
+- `disk_additional_luns` ([]int32) - The LUN numbers to assign to the additional data disks. This must be
+  an array of integers with the same length as `disk_additional_size`.
+
 - `location` (string) - Azure datacenter in which your VM will build.
 
 - `vm_size` (string) - Size of the VM used for building. This can be changed when you deploy a

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachineimages"
 	galleryimageversions "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-07-03/galleryimageversions"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -145,6 +146,9 @@ func TestStepGetSourceImageName(t *testing.T) {
 				GeneratedData: &genData,
 				say:           ui.Say,
 				error:         func(e error) {},
+				getPIRImage: func(ctx context.Context, id virtualmachineimages.SkuVersionId) (*virtualmachineimages.VirtualMachineImage, error) {
+					return nil, nil
+				},
 			}
 			if tt.mockedGalleryImage != nil {
 				step = StepGetSourceImageName{
@@ -152,6 +156,9 @@ func TestStepGetSourceImageName(t *testing.T) {
 					GeneratedData: &genData,
 					say:           ui.Say,
 					error:         func(e error) {},
+					getPIRImage: func(ctx context.Context, id virtualmachineimages.SkuVersionId) (*virtualmachineimages.VirtualMachineImage, error) {
+						return nil, nil
+					},
 					getGalleryVersion: func(ctx context.Context, sig SharedImageGallery) (*galleryimageversions.GalleryImageVersion, error) {
 						if diff := cmp.Diff(sig, *tt.expectedSharedImageGallery); diff != "" {
 							return nil, fmt.Errorf("%s", diff)

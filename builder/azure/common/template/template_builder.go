@@ -372,27 +372,62 @@ func (s *TemplateBuilder) SetDiskEncryptionWithPaaSKey(securityType *hashiVMSDK.
 	return nil
 }
 
-func (s *TemplateBuilder) SetAdditionalDisks(diskSizeGB []int32, dataDiskname string, cachingType hashiVMSDK.CachingTypes) error {
+func (s *TemplateBuilder) SetSourceImageDataDisks(luns []int32) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
 	}
 
 	profile := resource.Properties.StorageProfile
-	dataDisks := make([]DataDiskUnion, len(diskSizeGB))
+	sourceDisks := make([]DataDiskUnion, len(luns))
 
-	for i, additionalSize := range diskSizeGB {
-		dataDisks[i].DiskSizeGB = common.Int32Ptr(additionalSize)
-		dataDisks[i].Lun = common.IntPtr(i)
-		// dataDisks[i].Name = to.StringPtr(fmt.Sprintf("%s-%d", dataDiskname, i+1))
-		dataDisks[i].Name = common.StringPtr(fmt.Sprintf("[concat(parameters('dataDiskName'),'-%d')]", i+1))
-		dataDisks[i].CreateOption = "Empty"
-		dataDisks[i].Caching = cachingType
-
-		dataDisks[i].Vhd = nil
-		dataDisks[i].ManagedDisk = profile.OsDisk.ManagedDisk
+	for i, lun := range luns {
+		lunVal := int(lun)
+		sourceDisks[i].Lun = &lunVal
+		sourceDisks[i].CreateOption = hashiVMSDK.DiskCreateOptionTypesFromImage
 	}
-	profile.DataDisks = &dataDisks
+	profile.DataDisks = &sourceDisks
+	return nil
+}
+
+func (s *TemplateBuilder) SetAdditionalDisks(diskSizeGB []int32, luns []int32, dataDiskname string, cachingType hashiVMSDK.CachingTypes) error {
+	resource, err := s.getResourceByType(resourceVirtualMachine)
+	if err != nil {
+		return err
+	}
+
+	profile := resource.Properties.StorageProfile
+
+	// Collect existing LUNs (e.g. from source image data disks) for conflict validation
+	var existingSourceDataDisks []DataDiskUnion
+	if profile.DataDisks != nil {
+		existingSourceDataDisks = *profile.DataDisks
+	}
+
+	additionalDataDisks := make([]DataDiskUnion, len(diskSizeGB))
+	for i, additionalSize := range diskSizeGB {
+		additionalDataDisks[i].DiskSizeGB = common.Int32Ptr(additionalSize)
+		if luns != nil && i < len(luns) {
+			// Validate that the explicit LUN doesn't conflict with source image data disk LUNs
+			for _, d := range existingSourceDataDisks {
+				if d.Lun != nil && *d.Lun == int(luns[i]) {
+					return fmt.Errorf("disk_additional_luns value %d conflicts with source image data disk LUN %d", luns[i], *d.Lun)
+				}
+			}
+			additionalDataDisks[i].Lun = common.IntPtr(int(luns[i]))
+		} else {
+			additionalDataDisks[i].Lun = common.IntPtr(i)
+		}
+		additionalDataDisks[i].Name = common.StringPtr(fmt.Sprintf("[concat(parameters('dataDiskName'),'-%d')]", i+1))
+		additionalDataDisks[i].CreateOption = "Empty"
+		additionalDataDisks[i].Caching = cachingType
+
+		additionalDataDisks[i].Vhd = nil
+		additionalDataDisks[i].ManagedDisk = profile.OsDisk.ManagedDisk
+	}
+
+	allDisks := append(existingSourceDataDisks, additionalDataDisks...)
+	profile.DataDisks = &allDisks
 	return nil
 }
 

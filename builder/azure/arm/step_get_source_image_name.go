@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachineimages"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-07-03/galleryimageversions"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -21,6 +22,7 @@ type StepGetSourceImageName struct {
 	config            *Config
 	GeneratedData     *packerbuilderdata.GeneratedData
 	getGalleryVersion func(context.Context, SharedImageGallery) (*galleryimageversions.GalleryImageVersion, error)
+	getPIRImage       func(context.Context, virtualmachineimages.SkuVersionId) (*virtualmachineimages.VirtualMachineImage, error)
 	say               func(message string)
 	error             func(e error)
 }
@@ -34,6 +36,7 @@ func NewStepGetSourceImageName(client *AzureClient, ui packersdk.Ui, config *Con
 		GeneratedData: GeneratedData,
 	}
 	step.getGalleryVersion = step.GetGalleryImageVersion
+	step.getPIRImage = step.GetPIRImage
 	return step
 }
 
@@ -67,6 +70,13 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 			s.say(fmt.Sprintf("Failed to fetch source gallery image from Azure API, HCP Packer will not be able to track the ancestry of this build: %s", err.Error()))
 			s.GeneratedData.Put("SourceImageName", "ERR_SOURCE_IMAGE_NAME_NOT_FOUND")
 			return multistep.ActionContinue
+		}
+
+		// Extract source image data disk LUNs for template building
+		if image.Properties != nil && image.Properties.StorageProfile.DataDiskImages != nil {
+			for _, dd := range *image.Properties.StorageProfile.DataDiskImages {
+				s.config.sourceImageDataDiskLuns = append(s.config.sourceImageDataDiskLuns, int32(dd.Lun))
+			}
 		}
 
 		if image.Properties != nil &&
@@ -107,6 +117,26 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 		s.config.ImageSku,
 		s.config.ImageVersion)
 
+	// Fetch PIR image details to extract source data disk LUNs
+	skuVersionId := virtualmachineimages.NewSkuVersionID(
+		s.config.ClientConfig.SubscriptionID,
+		s.config.Location,
+		s.config.ImagePublisher,
+		s.config.ImageOffer,
+		s.config.ImageSku,
+		s.config.ImageVersion,
+	)
+	pirImage, err := s.getPIRImage(ctx, skuVersionId)
+	if err != nil {
+		s.say(fmt.Sprintf("Warning: Failed to fetch PIR image details for data disk LUN extraction: %s", err.Error()))
+	} else if pirImage != nil && pirImage.Properties != nil && pirImage.Properties.DataDiskImages != nil {
+		for _, dd := range *pirImage.Properties.DataDiskImages {
+			if dd.Lun != nil {
+				s.config.sourceImageDataDiskLuns = append(s.config.sourceImageDataDiskLuns, int32(*dd.Lun))
+			}
+		}
+	}
+
 	s.say(fmt.Sprintf(" -> SourceImageName: '%s'", imageID))
 	s.GeneratedData.Put("SourceImageName", imageID)
 	return multistep.ActionContinue
@@ -118,6 +148,16 @@ func (s *StepGetSourceImageName) GetGalleryImageVersion(ctx context.Context, acg
 	defer cancel()
 	galleryVersionId := galleryimageversions.NewImageVersionID(acg.Subscription, acg.ResourceGroup, acg.GalleryName, acg.ImageName, acg.ImageVersion)
 	result, err := client.Get(pollingContext, galleryVersionId, galleryimageversions.DefaultGetOperationOptions())
+	if err != nil {
+		return nil, err
+	}
+	return result.Model, nil
+}
+
+func (s *StepGetSourceImageName) GetPIRImage(ctx context.Context, skuVersionId virtualmachineimages.SkuVersionId) (*virtualmachineimages.VirtualMachineImage, error) {
+	pollingContext, cancel := context.WithTimeout(ctx, s.client.PollingDuration)
+	defer cancel()
+	result, err := s.client.VirtualMachineImagesClient.Get(pollingContext, skuVersionId)
 	if err != nil {
 		return nil, err
 	}

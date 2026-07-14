@@ -271,8 +271,15 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 		}
 	}
 
+	if len(config.sourceImageDataDiskLuns) > 0 {
+		err = builder.SetSourceImageDataDisks(config.sourceImageDataDiskLuns)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if len(config.AdditionalDiskSize) > 0 {
-		err = builder.SetAdditionalDisks(config.AdditionalDiskSize, config.tmpDataDiskName, config.diskCachingType)
+		err = builder.SetAdditionalDisks(config.AdditionalDiskSize, config.AdditionalDiskLuns, config.tmpDataDiskName, config.diskCachingType)
 		if err != nil {
 			return nil, err
 		}
