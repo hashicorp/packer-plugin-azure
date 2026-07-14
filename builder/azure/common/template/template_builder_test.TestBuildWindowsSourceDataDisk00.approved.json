@@ -161,7 +161,10 @@
           "dataDisks": [
             {
               "createOption": "FromImage",
-              "lun": 0
+              "lun": 0,
+              "managedDisk": {
+                "storageAccountType": "Premium_LRS"
+              }
             },
             {
               "caching": "ReadWrite",
