@@ -4,6 +4,7 @@
 package template
 
 import (
+	"reflect"
 	"testing"
 
 	approvaltests "github.com/approvals/go-approval-tests"
@@ -165,6 +166,39 @@ func TestBuildWindows02(t *testing.T) {
 	}
 
 	err = testSubject.SetAdditionalDisks([]int32{32, 64}, nil, nil, "datadisk", compute.CachingTypesReadWrite)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	doc, err := testSubject.ToJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	approvaltests.VerifyJSONBytes(t, []byte(*doc))
+}
+
+// Windows build where the source image already contains a data disk (LUN 0) and
+// the user supplies additional disks without explicit LUNs. The additional disks
+// must skip the source-image LUN and land on LUN 1 and 2, while the source disk
+// stays on LUN 0.
+func TestBuildWindowsSourceDataDisk00(t *testing.T) {
+	testSubject, err := NewTemplateBuilder(BasicTemplate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = testSubject.BuildWindows("winrm", "--test-key-vault-name", "--test-winrm-certificate-url--", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = testSubject.SetManagedMarketplaceImage("WindowsServer", "2012-R2-Datacenter", "latest", "2015-1", "Premium_LRS", compute.CachingTypesReadWrite)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = testSubject.SetAdditionalDisks([]int32{32, 64}, nil, []int32{0}, "datadisk", compute.CachingTypesReadWrite)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -563,4 +597,137 @@ func TestDiskControllerType01(t *testing.T) {
 	}
 
 	approvaltests.VerifyJSONBytes(t, []byte(*doc))
+}
+
+// dataDiskLuns is a test helper that returns the LUNs of the configured data
+// disks, in order, for the virtual machine resource of the given builder.
+func dataDiskLuns(t *testing.T, b *TemplateBuilder) []int {
+	t.Helper()
+
+	resource, err := b.getResourceByType(resourceVirtualMachine)
+	if err != nil {
+		t.Fatalf("could not find virtual machine resource: %s", err)
+	}
+	if resource.Properties.StorageProfile.DataDisks == nil {
+		return nil
+	}
+
+	luns := make([]int, 0, len(*resource.Properties.StorageProfile.DataDisks))
+	for _, d := range *resource.Properties.StorageProfile.DataDisks {
+		if d.Lun == nil {
+			t.Fatalf("expected every data disk to have a LUN, found one with a nil LUN")
+		}
+		luns = append(luns, *d.Lun)
+	}
+	return luns
+}
+
+// SetSourceImageDataDisks should create one FromImage data disk per requested
+// LUN, preserving the requested LUN values.
+func TestSetSourceImageDataDisks(t *testing.T) {
+	testSubject, err := NewTemplateBuilder(BasicTemplate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = testSubject.BuildWindows("winrm", "--test-key-vault-name", "--test-winrm-certificate-url--", false); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = testSubject.SetSourceImageDataDisks([]int32{0, 2}); err != nil {
+		t.Fatal(err)
+	}
+
+	resource, err := testSubject.getResourceByType(resourceVirtualMachine)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	disks := *resource.Properties.StorageProfile.DataDisks
+	if len(disks) != 2 {
+		t.Fatalf("expected 2 source data disks, got %d", len(disks))
+	}
+	for i, wantLun := range []int{0, 2} {
+		if disks[i].Lun == nil || *disks[i].Lun != wantLun {
+			t.Errorf("disk %d: expected LUN %d, got %v", i, wantLun, disks[i].Lun)
+		}
+		if disks[i].CreateOption != compute.DiskCreateOptionTypesFromImage {
+			t.Errorf("disk %d: expected createOption FromImage, got %q", i, disks[i].CreateOption)
+		}
+	}
+}
+
+// SetAdditionalDisks assigns LUNs to the additional data disks, taking the
+// source-image data disk LUNs into account. The cases below exercise both
+// implicit LUN assignment (which must skip LUNs already used by the source
+// image and fill the gaps starting from 0) and explicit LUN assignment
+// (honoured verbatim, but rejected when it collides with a source LUN).
+func TestSetAdditionalDisks_LunAssignment(t *testing.T) {
+	tests := []struct {
+		name                    string
+		diskSizeGB              []int32
+		additionalDataDiskLuns  []int32
+		sourceImageDataDiskLuns []int32
+		wantLuns                []int
+		wantErr                 bool
+	}{
+		{
+			// Source disks on LUN 1 and 3, three implicit additional disks fill
+			// the gaps and land on 0, 2 and 4.
+			name:                    "implicit luns fill non-contiguous gaps",
+			diskSizeGB:              []int32{32, 64, 128},
+			sourceImageDataDiskLuns: []int32{1, 3},
+			wantLuns:                []int{1, 3, 0, 2, 4},
+		},
+		{
+			// Explicit, non-conflicting LUNs are honoured verbatim.
+			name:                    "explicit luns are honoured",
+			diskSizeGB:              []int32{32, 64},
+			additionalDataDiskLuns:  []int32{3, 4},
+			sourceImageDataDiskLuns: []int32{0},
+			wantLuns:                []int{0, 3, 4},
+		},
+		{
+			// An explicit LUN that collides with a source LUN is an error.
+			name:                    "explicit lun conflicting with source lun errors",
+			diskSizeGB:              []int32{32},
+			additionalDataDiskLuns:  []int32{0},
+			sourceImageDataDiskLuns: []int32{0},
+			wantErr:                 true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			testSubject, err := NewTemplateBuilder(BasicTemplate)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if err = testSubject.BuildWindows("winrm", "--test-key-vault-name", "--test-winrm-certificate-url--", false); err != nil {
+				t.Fatal(err)
+			}
+			if err = testSubject.SetManagedMarketplaceImage("WindowsServer", "2012-R2-Datacenter", "latest", "2015-1", "Premium_LRS", compute.CachingTypesReadWrite); err != nil {
+				t.Fatal(err)
+			}
+
+			// SetAdditionalDisks configures the source-image data disks itself
+			// when passed a non-empty sourceImageDataDiskLuns, so we do not need
+			// to call SetSourceImageDataDisks separately here.
+			err = testSubject.SetAdditionalDisks(tc.diskSizeGB, tc.additionalDataDiskLuns, tc.sourceImageDataDiskLuns, "datadisk", compute.CachingTypesReadWrite)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected an error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if got := dataDiskLuns(t, testSubject); !reflect.DeepEqual(got, tc.wantLuns) {
+				t.Fatalf("expected LUNs %v, got %v", tc.wantLuns, got)
+			}
+		})
+	}
 }
