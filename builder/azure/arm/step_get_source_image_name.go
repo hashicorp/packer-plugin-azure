@@ -116,23 +116,25 @@ func (s *StepGetSourceImageName) Run(ctx context.Context, state multistep.StateB
 		s.config.ImageOffer,
 		s.config.ImageSku,
 		s.config.ImageVersion)
-
-	// Fetch PIR image details to extract source data disk LUNs
-	skuVersionId := virtualmachineimages.NewSkuVersionID(
+	
+	if s.config.AdditionalDiskSize != nil {
+		// Fetch PIR image details to extract source data disk LUNs
+		skuVersionId := virtualmachineimages.NewSkuVersionID(
 		s.config.ClientConfig.SubscriptionID,
 		s.config.Location,
 		s.config.ImagePublisher,
 		s.config.ImageOffer,
 		s.config.ImageSku,
 		s.config.ImageVersion,
-	)
-	pirImage, err := s.getPIRImage(ctx, skuVersionId)
-	if err != nil {
-		s.say(fmt.Sprintf("Warning: Failed to fetch PIR image details for data disk LUN extraction: %s", err.Error()))
-	} else if pirImage != nil && pirImage.Properties != nil && pirImage.Properties.DataDiskImages != nil {
-		for _, dd := range *pirImage.Properties.DataDiskImages {
-			if dd.Lun != nil {
-				s.config.sourceImageDataDiskLuns = append(s.config.sourceImageDataDiskLuns, int32(*dd.Lun))
+		)
+		pirImage, err := s.getPIRImage(ctx, skuVersionId)
+		if err != nil {
+			s.say(fmt.Sprintf("Warning: Failed to fetch PIR image details for data disk LUN extraction: %s, the output image will not contain source data disks", err.Error()))
+		} else if pirImage != nil && pirImage.Properties != nil && pirImage.Properties.DataDiskImages != nil {
+			for _, dd := range *pirImage.Properties.DataDiskImages {
+				if dd.Lun != nil {
+					s.config.sourceImageDataDiskLuns = append(s.config.sourceImageDataDiskLuns, int32(*dd.Lun))
+				}
 			}
 		}
 	}

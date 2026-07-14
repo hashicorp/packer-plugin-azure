@@ -390,33 +390,50 @@ func (s *TemplateBuilder) SetSourceImageDataDisks(luns []int32) error {
 	return nil
 }
 
-func (s *TemplateBuilder) SetAdditionalDisks(diskSizeGB []int32, luns []int32, dataDiskname string, cachingType hashiVMSDK.CachingTypes) error {
+func (s *TemplateBuilder) SetAdditionalDisks(diskSizeGB []int32, additionalDataDiskLuns []int32, sourceImageDataDiskLuns []int32, dataDiskname string, cachingType hashiVMSDK.CachingTypes) error {
 	resource, err := s.getResourceByType(resourceVirtualMachine)
 	if err != nil {
 		return err
 	}
 
+	if len(sourceImageDataDiskLuns) > 0 {
+		err = s.SetSourceImageDataDisks(sourceImageDataDiskLuns)
+		if err != nil {
+			return err
+		}
+	}
+
 	profile := resource.Properties.StorageProfile
 
 	// Collect existing LUNs (e.g. from source image data disks) for conflict validation
-	var existingSourceDataDisks []DataDiskUnion
+	existingSourceDataDisks := []DataDiskUnion{}
+	existingDataDiskLuns := make(map[int]bool)
 	if profile.DataDisks != nil {
 		existingSourceDataDisks = *profile.DataDisks
+		for _, d := range *profile.DataDisks {
+			if d.Lun != nil {
+				existingDataDiskLuns[*d.Lun] = true
+			}
+		}
 	}
 
 	additionalDataDisks := make([]DataDiskUnion, len(diskSizeGB))
+	nextLun := 0
 	for i, additionalSize := range diskSizeGB {
 		additionalDataDisks[i].DiskSizeGB = common.Int32Ptr(additionalSize)
-		if luns != nil && i < len(luns) {
+		if additionalDataDiskLuns != nil && i < len(additionalDataDiskLuns) {
 			// Validate that the explicit LUN doesn't conflict with source image data disk LUNs
-			for _, d := range existingSourceDataDisks {
-				if d.Lun != nil && *d.Lun == int(luns[i]) {
-					return fmt.Errorf("disk_additional_luns value %d conflicts with source image data disk LUN %d", luns[i], *d.Lun)
-				}
+			if existingDataDiskLuns[int(additionalDataDiskLuns[i])] {
+				return fmt.Errorf("disk_additional_luns value %d conflicts with source image data disk LUN", additionalDataDiskLuns[i])
 			}
-			additionalDataDisks[i].Lun = common.IntPtr(int(luns[i]))
+			additionalDataDisks[i].Lun = common.IntPtr(int(additionalDataDiskLuns[i]))
 		} else {
-			additionalDataDisks[i].Lun = common.IntPtr(i)
+			for existingDataDiskLuns[nextLun] {
+				nextLun++
+			}
+			additionalDataDisks[i].Lun = common.IntPtr(nextLun)
+			existingDataDiskLuns[nextLun] = true
+			nextLun++
 		}
 		additionalDataDisks[i].Name = common.StringPtr(fmt.Sprintf("[concat(parameters('dataDiskName'),'-%d')]", i+1))
 		additionalDataDisks[i].CreateOption = "Empty"
