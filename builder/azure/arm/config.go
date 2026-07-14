@@ -320,7 +320,7 @@ type Config struct {
 	CustomManagedImageResourceGroupName string `mapstructure:"custom_managed_image_resource_group_name" required:"true"`
 	customManagedImageID                string
 	// sourceImageDataDiskLuns stores the LUN numbers of data disks from the source image,
-	// populated during resource resolution for managed images and SIG images.
+	// populated during resource resolution for managed images and build time for ACG and Platform images.
 	sourceImageDataDiskLuns []int32
 
 	// The LUN numbers to assign to the additional data disks. This must be
