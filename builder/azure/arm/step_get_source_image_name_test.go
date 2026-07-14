@@ -59,6 +59,21 @@ func TestStepGetSourceImageName(t *testing.T) {
 		},
 	}
 
+	sigImageWithDataDisks := &galleryimageversions.GalleryImageVersion{
+		Id: &sigArtifactID,
+		Properties: &galleryimageversions.GalleryImageVersionProperties{
+			StorageProfile: galleryimageversions.GalleryImageVersionStorageProfile{
+				Source: &galleryimageversions.GalleryArtifactVersionFullSource{
+					Id: &vmSourcedSigID,
+				},
+				DataDiskImages: &[]galleryimageversions.GalleryDataDiskImage{
+					{Lun: 0},
+					{Lun: 1},
+				},
+			},
+		},
+	}
+
 	tc := []struct {
 		name                       string
 		config                     *Config
@@ -127,6 +142,25 @@ func TestStepGetSourceImageName(t *testing.T) {
 			},
 			mockedGalleryImage: vmSourcedSigImageVersion,
 			expected:           sigArtifactID,
+		},
+		{
+			name: "SharedImageGallery - VM Sourced Captures Source Data Disk LUNs",
+			config: &Config{
+				ClientConfig: client.Config{SubscriptionID: "1234"},
+				SharedGallery: SharedImageGallery{
+					Subscription:  "1234",
+					ResourceGroup: "blorp",
+					ImageName:     "blorp",
+				},
+			},
+			expectedSharedImageGallery: &SharedImageGallery{
+				Subscription:  "1234",
+				ResourceGroup: "blorp",
+				ImageName:     "blorp",
+			},
+			mockedGalleryImage:   sigImageWithDataDisks,
+			expectedDataDiskLuns: []int32{0, 1},
+			expected:             sigArtifactID,
 		},
 		{
 			name: "SharedImageGallery - Managed Image Sourced",
