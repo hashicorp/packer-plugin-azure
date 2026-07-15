@@ -26,7 +26,7 @@ jobs:
     outputs:
       go-version: ${{ steps.get-go-version.outputs.go-version }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - name: 'Determine Go version'
@@ -46,7 +46,7 @@ jobs:
       product-prerelease-version: ${{ steps.set-product-version.outputs.prerelease-product-version }}
       set-ld-flags: ${{ steps.set-ld-flags.outputs.set-ld-flags }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - name: set product version
@@ -71,7 +71,7 @@ jobs:
       filepath: ${{ steps.generate-metadata-file.outputs.filepath }}
     steps:
       - name: 'Checkout directory'
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - name: Generate metadata file
@@ -92,7 +92,7 @@ jobs:
     outputs:
       api_version: ${{ steps.plugin_describe.outputs.api_version }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - name: Unshallow
@@ -132,7 +132,7 @@ jobs:
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - name: Go Build
@@ -170,7 +170,7 @@ jobs:
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - name: Go Build
@@ -207,7 +207,7 @@ jobs:
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - name: Go Build
@@ -235,7 +235,7 @@ jobs:
       - plugin-check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - name: create-manifest-json
