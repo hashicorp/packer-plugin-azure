@@ -3,6 +3,19 @@
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-azure/releases) for the latest CHANGELOG information.
 
 ---
+## 2.6.3
+
+## What's Changed
+### Other Changes
+* Add support for source image data disks and custom LUN assignment via `disk_additional_luns` parameter [GH-626](https://github.com/hashicorp/packer-plugin-azure/pull/626)
+* Suppress false positive for GO-2026-5932 security scan [GH-638](https://github.com/hashicorp/packer-plugin-azure/pull/638)
+* Bump github.com/hashicorp/packer-plugin-sdk from 0.6.9 to 0.6.10 [GH-638](https://github.com/hashicorp/packer-plugin-azure/pull/638)
+* build(deps): bump golangci/golangci-lint-action from 9.2.1 to 9.3.0 [GH-637](https://github.com/hashicorp/packer-plugin-azure/pull/637)
+* build(deps): bump actions/checkout from 6.0.3 to 7.0.0 [GH-634](https://github.com/hashicorp/packer-plugin-azure/pull/634)
+* build(deps): bump actions/setup-go from 6.4.0 to 6.5.0 [GH-635](https://github.com/hashicorp/packer-plugin-azure/pull/635)
+
+**Full Changelog**: https://github.com/hashicorp/packer-plugin-azure/compare/v2.6.2...v2.6.3
+
 ## 2.6.2 (June 8, 2026)
 
 ## What's Changed
