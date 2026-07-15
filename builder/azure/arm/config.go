@@ -319,6 +319,13 @@ type Config struct {
 	// to learn more about managed images.
 	CustomManagedImageResourceGroupName string `mapstructure:"custom_managed_image_resource_group_name" required:"true"`
 	customManagedImageID                string
+	// sourceImageDataDiskLuns stores the LUN numbers of data disks from the source image,
+	// populated during resource resolution for managed images and build time for ACG and Platform images.
+	sourceImageDataDiskLuns []int32
+
+	// The LUN numbers to assign to the additional data disks. This must be
+	// an array of integers with the same length as `disk_additional_size`.
+	AdditionalDiskLuns []int32 `mapstructure:"disk_additional_luns" required:"false"`
 
 	// Azure datacenter in which your VM will build.
 	Location string `mapstructure:"location"`
@@ -1510,6 +1517,25 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 
 	if c.CustomData != "" && c.CustomDataFile != "" {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Only one of custom_data or custom_data_file can be specified."))
+	}
+
+	// Additional disk LUN validation
+	if len(c.AdditionalDiskLuns) > 0 {
+		if len(c.AdditionalDiskSize) == 0 {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("disk_additional_luns requires disk_additional_size to be specified"))
+		} else if len(c.AdditionalDiskLuns) != len(c.AdditionalDiskSize) {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("disk_additional_luns must have the same number of entries as disk_additional_size (disk_additional_luns = %d, disk_additional_size = %d)", len(c.AdditionalDiskLuns), len(c.AdditionalDiskSize)))
+		}
+		seen := make(map[int32]bool)
+		for _, lun := range c.AdditionalDiskLuns {
+			if lun < 0 {
+				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("disk_additional_luns values must be non-negative, got %d", lun))
+			}
+			if seen[lun] {
+				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("disk_additional_luns contains duplicate LUN %d", lun))
+			}
+			seen[lun] = true
+		}
 	}
 
 	// Validate that the security encryption type is not set if the security type is not set to ConfidentialVM
