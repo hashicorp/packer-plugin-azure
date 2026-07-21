@@ -75,7 +75,7 @@ func (s *StepGetDataDisk) Run(ctx context.Context, state multistep.StateBag) mul
 		dataDisks := make([]DataDiskInfo, len(*vm.Properties.StorageProfile.DataDisks))
 		for i, disk := range *vm.Properties.StorageProfile.DataDisks {
 			managedDiskID := *disk.ManagedDisk.Id
-			lun := int64(disk.Lun)
+			lun := disk.Lun
 			s.say(fmt.Sprintf(" -> Managed Data Disk (LUN %d) : '%s'", lun, managedDiskID))
 			dataDisks[i] = DataDiskInfo{
 				Lun:           lun,
