@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/compute/2022-03-01/virtualmachineimages"
 	galleryimageversions "github.com/hashicorp/go-azure-sdk/resource-manager/compute/2023-07-03/galleryimageversions"
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/client"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -47,12 +48,40 @@ func TestStepGetSourceImageName(t *testing.T) {
 		},
 	}
 
+	pirDataDiskLun0 := int64(0)
+	pirDataDiskLun1 := int64(1)
+	pirImageWithDataDisks := &virtualmachineimages.VirtualMachineImage{
+		Properties: &virtualmachineimages.VirtualMachineImageProperties{
+			DataDiskImages: &[]virtualmachineimages.DataDiskImage{
+				{Lun: &pirDataDiskLun0},
+				{Lun: &pirDataDiskLun1},
+			},
+		},
+	}
+
+	sigImageWithDataDisks := &galleryimageversions.GalleryImageVersion{
+		Id: &sigArtifactID,
+		Properties: &galleryimageversions.GalleryImageVersionProperties{
+			StorageProfile: galleryimageversions.GalleryImageVersionStorageProfile{
+				Source: &galleryimageversions.GalleryArtifactVersionFullSource{
+					Id: &vmSourcedSigID,
+				},
+				DataDiskImages: &[]galleryimageversions.GalleryDataDiskImage{
+					{Lun: 0},
+					{Lun: 1},
+				},
+			},
+		},
+	}
+
 	tc := []struct {
 		name                       string
 		config                     *Config
 		expected                   string
 		expectedSharedImageGallery *SharedImageGallery
 		mockedGalleryImage         *galleryimageversions.GalleryImageVersion
+		mockedPIRImage             *virtualmachineimages.VirtualMachineImage
+		expectedDataDiskLuns       []int32
 	}{
 		{
 			name:     "ImageUrl",
@@ -82,6 +111,21 @@ func TestStepGetSourceImageName(t *testing.T) {
 			expected: "/subscriptions/1234/providers/Microsoft.Compute/locations/west/publishers/Microsoft/ArtifactTypes/vmimage/offers/Server/skus/0/versions/2019",
 		},
 		{
+			name: "MarketPlaceImage - With Additional Disks Captures Source Data Disk LUNs",
+			config: &Config{
+				ClientConfig:       client.Config{SubscriptionID: "1234"},
+				Location:           "west",
+				ImagePublisher:     "Microsoft",
+				ImageOffer:         "Server",
+				ImageSku:           "0",
+				ImageVersion:       "2019",
+				AdditionalDiskSize: []int32{32},
+			},
+			mockedPIRImage:       pirImageWithDataDisks,
+			expectedDataDiskLuns: []int32{0, 1},
+			expected:             "/subscriptions/1234/providers/Microsoft.Compute/locations/west/publishers/Microsoft/ArtifactTypes/vmimage/offers/Server/skus/0/versions/2019",
+		},
+		{
 			name: "SharedImageGallery - VM Sourced (direct publish to SIG)",
 			config: &Config{
 				ClientConfig: client.Config{SubscriptionID: "1234"},
@@ -98,6 +142,25 @@ func TestStepGetSourceImageName(t *testing.T) {
 			},
 			mockedGalleryImage: vmSourcedSigImageVersion,
 			expected:           sigArtifactID,
+		},
+		{
+			name: "SharedImageGallery - VM Sourced Captures Source Data Disk LUNs",
+			config: &Config{
+				ClientConfig: client.Config{SubscriptionID: "1234"},
+				SharedGallery: SharedImageGallery{
+					Subscription:  "1234",
+					ResourceGroup: "blorp",
+					ImageName:     "blorp",
+				},
+			},
+			expectedSharedImageGallery: &SharedImageGallery{
+				Subscription:  "1234",
+				ResourceGroup: "blorp",
+				ImageName:     "blorp",
+			},
+			mockedGalleryImage:   sigImageWithDataDisks,
+			expectedDataDiskLuns: []int32{0, 1},
+			expected:             sigArtifactID,
 		},
 		{
 			name: "SharedImageGallery - Managed Image Sourced",
@@ -145,6 +208,9 @@ func TestStepGetSourceImageName(t *testing.T) {
 				GeneratedData: &genData,
 				say:           ui.Say,
 				error:         func(e error) {},
+				getPIRImage: func(ctx context.Context, id virtualmachineimages.SkuVersionId) (*virtualmachineimages.VirtualMachineImage, error) {
+					return tt.mockedPIRImage, nil
+				},
 			}
 			if tt.mockedGalleryImage != nil {
 				step = StepGetSourceImageName{
@@ -152,6 +218,9 @@ func TestStepGetSourceImageName(t *testing.T) {
 					GeneratedData: &genData,
 					say:           ui.Say,
 					error:         func(e error) {},
+					getPIRImage: func(ctx context.Context, id virtualmachineimages.SkuVersionId) (*virtualmachineimages.VirtualMachineImage, error) {
+						return tt.mockedPIRImage, nil
+					},
 					getGalleryVersion: func(ctx context.Context, sig SharedImageGallery) (*galleryimageversions.GalleryImageVersion, error) {
 						if diff := cmp.Diff(sig, *tt.expectedSharedImageGallery); diff != "" {
 							return nil, fmt.Errorf("%s", diff)
@@ -169,6 +238,10 @@ func TestStepGetSourceImageName(t *testing.T) {
 
 			if v != tt.expected {
 				t.Errorf("expected SourceImageName to be set to %q but got %q", tt.expected, v)
+			}
+
+			if diff := cmp.Diff(tt.config.sourceImageDataDiskLuns, tt.expectedDataDiskLuns); diff != "" {
+				t.Errorf("unexpected source image data disk LUNs: %s", diff)
 			}
 		})
 	}

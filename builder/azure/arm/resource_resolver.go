@@ -56,6 +56,13 @@ func (s *resourceResolver) Resolve(c *Config) error {
 		}
 
 		c.customManagedImageID = *image.Id
+
+		// Extract source image data disk LUNs for template building
+		if image.Properties != nil && image.Properties.StorageProfile != nil && image.Properties.StorageProfile.DataDisks != nil {
+			for _, dd := range *image.Properties.StorageProfile.DataDisks {
+				c.sourceImageDataDiskLuns = append(c.sourceImageDataDiskLuns, int32(dd.Lun))
+			}
+		}
 	}
 
 	return nil
