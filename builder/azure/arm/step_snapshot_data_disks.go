@@ -74,21 +74,26 @@ func (s *StepSnapshotDataDisks) Run(ctx context.Context, stateBag multistep.Stat
 	var resourceGroupName = stateBag.Get(constants.ArmManagedImageResourceGroupName).(string)
 	var location = stateBag.Get(constants.ArmLocation).(string)
 	var tags = stateBag.Get(constants.ArmTags).(map[string]string)
-	var additionalDisks = stateBag.Get(constants.ArmAdditionalDiskVhds).([]DataDiskInfo)
 	var dstSnapshotPrefix = stateBag.Get(constants.ArmManagedImageDataDiskSnapshotPrefix).(string)
 	var subscriptionId = stateBag.Get(constants.ArmSubscription).(string)
+
+	var additionalDisks []DataDiskInfo
+	if disks := stateBag.Get(constants.ArmAdditionalDiskVhds); disks != nil {
+		additionalDisks = disks.([]DataDiskInfo)
+	}
 
 	s.say("Snapshotting data disk(s) ...")
 
 	for i, disk := range additionalDisks {
 		s.say(fmt.Sprintf(" -> Data Disk (LUN %d) : '%s'", disk.Lun, disk.ManagedDiskID))
 
-		// Clone tags and add LUN number
+		// Clone tags and add LUN number using a namespaced key to avoid
+		// colliding with any user-defined tags in azure_tags.
 		snapshotTags := make(map[string]string, len(tags)+1)
 		for k, v := range tags {
 			snapshotTags[k] = v
 		}
-		snapshotTags["lun"] = strconv.Itoa(int(disk.Lun))
+		snapshotTags["packer:lun"] = strconv.Itoa(int(disk.Lun))
 
 		dstSnapshotName := dstSnapshotPrefix + strconv.Itoa(i)
 		err := s.create(ctx, subscriptionId, resourceGroupName, disk.ManagedDiskID, location, snapshotTags, dstSnapshotName)

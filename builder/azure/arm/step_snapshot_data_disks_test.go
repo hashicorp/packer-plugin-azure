@@ -114,8 +114,8 @@ func TestStepSnapshotDataDisksShouldAddLunTagAndPreserveOriginalTags(t *testing.
 		if !ok {
 			t.Fatalf("Expected create to be called for disk '%s', but it was not.", diskID)
 		}
-		if tags["lun"] != wantLun {
-			t.Fatalf("Expected 'lun' tag for disk '%s' to be '%s', but got '%s'.", diskID, wantLun, tags["lun"])
+		if tags["packer:lun"] != wantLun {
+			t.Fatalf("Expected 'packer:lun' tag for disk '%s' to be '%s', but got '%s'.", diskID, wantLun, tags["packer:lun"])
 		}
 		if tags["env"] != "test" {
 			t.Fatalf("Expected original tag 'env=test' to be preserved for disk '%s', but got '%s'.", diskID, tags["env"])
@@ -123,8 +123,8 @@ func TestStepSnapshotDataDisksShouldAddLunTagAndPreserveOriginalTags(t *testing.
 	}
 
 	// The shared tags map from the state bag must not be mutated with per-disk LUN values.
-	if _, ok := originalTags["lun"]; ok {
-		t.Fatalf("Expected the original tags map to not be mutated with a 'lun' key, but it was.")
+	if _, ok := originalTags["packer:lun"]; ok {
+		t.Fatalf("Expected the original tags map to not be mutated with a 'packer:lun' key, but it was.")
 	}
 	if len(originalTags) != 1 {
 		t.Fatalf("Expected the original tags map to remain unchanged with 1 entry, but it had %d.", len(originalTags))
