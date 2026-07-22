@@ -575,8 +575,13 @@ func (b *Builder) writeSSHPrivateKey(ui packersdk.Ui, debugKeyPath string) {
 	if err != nil {
 		ui.Say(fmt.Sprintf("Error saving debug key: %s", err))
 	}
-	//nolint:errcheck
-	defer f.Close()
+
+	defer func() {
+		err := f.Close()
+		if err != nil {
+			ui.Say(fmt.Sprintf("Error closing the file: %v", err))
+		}
+	}()
 
 	// Write the key out
 	if _, err := f.Write(b.config.Comm.SSHPrivateKey); err != nil {

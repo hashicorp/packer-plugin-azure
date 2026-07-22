@@ -257,8 +257,12 @@ func TestBuilderUserData_Linux(t *testing.T) {
 		t.Fatalf("failed creating tempfile: %s", err)
 	}
 
-	//nolint:errcheck
-	defer os.Remove(tmpfile.Name())
+	defer func() {
+		err := os.Remove(tmpfile.Name())
+		if err != nil {
+			t.Fatalf("failed deleting tempfile: %v", err)
+		}
+	}()
 
 	if _, err := tmpfile.WriteString(testBuilderCustomDataLinux); err != nil {
 		t.Fatalf("failed writing userdata: %s", err)
