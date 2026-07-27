@@ -4,6 +4,7 @@
 package arm
 
 import (
+	"context"
 	"errors"
 	"net"
 	"strings"
@@ -49,7 +50,7 @@ func TestOutboundDenyAddressExpansion_ReusesSharedMixedAddressHelper(t *testing.
 	}
 	c.tmpKeyVaultName = "--keyvault-name--"
 
-	builder, err := GetVirtualMachineTemplateBuilder(&c)
+	builder, err := GetVirtualMachineTemplateBuilder(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +103,7 @@ func TestOutboundDenyAddressExpansion_FailsWholeInputOnMixedGoodAndBadEntries(t 
 	}
 	c.tmpKeyVaultName = "--keyvault-name--"
 
-	_, err = GetVirtualMachineTemplateBuilder(&c)
+	_, err = GetVirtualMachineTemplateBuilder(context.Background(), &c)
 	if err == nil {
 		t.Fatal("expected outbound deny expansion to fail whole input")
 	}

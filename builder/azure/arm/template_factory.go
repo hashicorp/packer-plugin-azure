@@ -4,6 +4,7 @@
 package arm
 
 import (
+	"context"
 	"crypto/rsa"
 	"encoding/json"
 	"errors"
@@ -18,9 +19,9 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type templateFactoryFunc func(*Config) (*deployments.Deployment, error)
+type templateFactoryFunc func(ctx context.Context, config *Config) (*deployments.Deployment, error)
 
-func GetCommunicatorSpecificKeyVaultDeployment(config *Config) (*deployments.Deployment, error) {
+func GetCommunicatorSpecificKeyVaultDeployment(ctx context.Context, config *Config) (*deployments.Deployment, error) {
 	if config.Comm.Type == "ssh" {
 		privateKey, err := ssh.ParseRawPrivateKey(config.Comm.SSHPrivateKey)
 		if err != nil {
@@ -39,17 +40,17 @@ func GetCommunicatorSpecificKeyVaultDeployment(config *Config) (*deployments.Dep
 		// Hide the secret key pair blob from logs
 		packer.LogSecretFilter.Set(secret)
 
-		return GetKeyVaultDeployment(config, secret, nil)
+		return GetKeyVaultDeployment(ctx, config, secret, nil)
 	}
 	var exp *int64
 	if config.WinrmExpirationTime != 0 {
 		unixSeconds := time.Now().Add(config.WinrmExpirationTime).Unix()
 		exp = &unixSeconds
 	}
-	return GetKeyVaultDeployment(config, config.winrmCertificate, exp)
+	return GetKeyVaultDeployment(ctx, config, config.winrmCertificate, exp)
 }
 
-func GetKeyVaultDeployment(config *Config, secretValue string, exp *int64) (*deployments.Deployment, error) {
+func GetKeyVaultDeployment(ctx context.Context, config *Config, secretValue string, exp *int64) (*deployments.Deployment, error) {
 	params := &template.TemplateParameters{
 		KeyVaultName:        &template.TemplateParameter{Value: config.tmpKeyVaultName},
 		KeyVaultSKU:         &template.TemplateParameter{Value: config.BuildKeyVaultSKU},
@@ -72,8 +73,8 @@ func GetKeyVaultDeployment(config *Config, secretValue string, exp *int64) (*dep
 	return createDeploymentParameters(*doc, params)
 }
 
-func GetSpecializedVirtualMachineDeployment(config *Config) (*deployments.Deployment, error) {
-	builder, err := GetVirtualMachineTemplateBuilder(config)
+func GetSpecializedVirtualMachineDeployment(ctx context.Context, config *Config) (*deployments.Deployment, error) {
+	builder, err := GetVirtualMachineTemplateBuilder(ctx, config)
 	if err != nil {
 		return nil, err
 	}
@@ -102,8 +103,8 @@ func GetSpecializedVirtualMachineDeployment(config *Config) (*deployments.Deploy
 	return createDeploymentParameters(*doc, params)
 }
 
-func GetVirtualMachineDeployment(config *Config) (*deployments.Deployment, error) {
-	builder, err := GetVirtualMachineTemplateBuilder(config)
+func GetVirtualMachineDeployment(ctx context.Context, config *Config) (*deployments.Deployment, error) {
+	builder, err := GetVirtualMachineTemplateBuilder(ctx, config)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +129,7 @@ func GetVirtualMachineDeployment(config *Config) (*deployments.Deployment, error
 	return createDeploymentParameters(*doc, params)
 }
 
-func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder, error) {
+func GetVirtualMachineTemplateBuilder(ctx context.Context, config *Config) (*template.TemplateBuilder, error) {
 	builder, err := template.NewTemplateBuilder(template.BasicTemplate)
 	if err != nil {
 		return nil, err
@@ -136,14 +137,14 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 
 	expandedAllowedInboundIpAddresses := config.AllowedInboundIpAddresses
 	if len(config.AllowedInboundIpAddresses) >= 1 {
-		expandedAllowedInboundIpAddresses, err = expandMixedAddressList(config.AllowedInboundIpAddresses, nil)
+		expandedAllowedInboundIpAddresses, err = expandMixedAddressList(ctx, config.AllowedInboundIpAddresses, nil)
 		if err != nil {
 			return nil, err
 		}
 	}
 	expandedDeniedOutboundIpAddresses := config.DenyOutboundIpAddresses
 	if len(config.DenyOutboundIpAddresses) >= 1 {
-		expandedDeniedOutboundIpAddresses, err = expandMixedAddressList(config.DenyOutboundIpAddresses, nil)
+		expandedDeniedOutboundIpAddresses, err = expandMixedAddressList(ctx, config.DenyOutboundIpAddresses, nil)
 		if err != nil {
 			return nil, err
 		}

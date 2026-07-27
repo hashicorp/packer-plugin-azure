@@ -4,6 +4,7 @@
 package arm
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"net"
@@ -25,7 +26,7 @@ func TestVirtualMachineDeployment00(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,7 +59,7 @@ func TestVirtualMachineDeployment01(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +77,7 @@ func TestVirtualMachineDeployment02(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +129,7 @@ func TestVirtualMachineDeployment03(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +157,7 @@ func TestVirtualMachineDeployment04(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +187,7 @@ func TestVirtualMachineDeployment05(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +220,7 @@ func TestVirtualMachineDeployment06(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,7 +263,7 @@ growpart:
 	base64CustomData := base64.StdEncoding.EncodeToString([]byte(customData))
 	c.customData = base64CustomData
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -289,7 +290,7 @@ func TestVirtualMachineDeployment08(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,7 +319,7 @@ func TestVirtualMachineDeployment09(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -353,7 +354,7 @@ func TestVirtualMachineDeployment10(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -387,7 +388,7 @@ func TestVirtualMachineDeployment_ExistingVNet_WithAllowedInboundIpAddresses_Att
 		t.Fatal(err)
 	}
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -422,7 +423,7 @@ func TestVirtualMachineDeployment_ExistingVNetWithPublicIP_WithAllowedInboundIpA
 		t.Fatal(err)
 	}
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -455,7 +456,7 @@ func TestVirtualMachineDeployment_BuilderManagedVNet_WithAllowedInboundIpAddress
 	}
 	c.tmpKeyVaultName = "--keyvault-name--"
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -488,7 +489,7 @@ func TestVirtualMachineDeployment_ExistingVNet_WithoutAllowedInboundIpAddresses_
 		t.Fatal(err)
 	}
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -523,7 +524,7 @@ func TestVirtualMachineDeployment_ExistingVNetPublicIP_AttachesNsgToNic(t *testi
 		t.Fatal(err)
 	}
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -557,7 +558,7 @@ func TestVirtualMachineDeployment11(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -589,7 +590,7 @@ func TestVirtualMachineDeployment12(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -621,7 +622,7 @@ func TestVirtualMachineDeployment13(t *testing.T) {
 	}
 	c.tmpKeyVaultName = "--keyvault-name--"
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -649,7 +650,7 @@ func TestVirtualMachineDeployment14(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -670,7 +671,7 @@ func TestVirtualMachineDeployment15(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -712,7 +713,7 @@ func TestVirtualMachineDeployment_WithInboundHostnameAllowlist_ExpandsToLiteralA
 	}
 	c.tmpKeyVaultName = "--keyvault-name--"
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -762,11 +763,11 @@ func TestVirtualMachineDeployment_WithInboundHostnameAllowlist_ProducesDetermini
 	}
 	c.tmpKeyVaultName = "--keyvault-name--"
 
-	deploymentA, err := GetVirtualMachineDeployment(&c)
+	deploymentA, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
-	deploymentB, err := GetVirtualMachineDeployment(&c)
+	deploymentB, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -809,7 +810,7 @@ func TestVirtualMachineDeployment_LiteralInboundAllowlist_OutputRemainsUnchanged
 	}
 	c.tmpKeyVaultName = "--keyvault-name--"
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -836,7 +837,7 @@ func TestVirtualMachineDeployment_LiteralInboundAllowlist_OutputRemainsUnchanged
 	}
 	baseline.tmpKeyVaultName = "--keyvault-name--"
 
-	baselineDeployment, err := GetVirtualMachineDeployment(&baseline)
+	baselineDeployment, err := GetVirtualMachineDeployment(context.Background(), &baseline)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -879,7 +880,7 @@ func TestVirtualMachineDeployment_WithOutboundDenyLiteralDestinations_AddsOutbou
 	}
 	c.tmpKeyVaultName = "--keyvault-name--"
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -921,7 +922,7 @@ func TestVirtualMachineDeployment_WithOutboundDenyHostnameDestinations_ExpandsTo
 	}
 	c.tmpKeyVaultName = "--keyvault-name--"
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -960,7 +961,7 @@ func TestVirtualMachineDeployment_WithOutboundDenyRule_UsesHigherPrecedenceThanB
 	}
 	c.tmpKeyVaultName = "--keyvault-name--"
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -999,7 +1000,7 @@ func TestVirtualMachineDeployment_WithOutboundDenyRule_DoesNotChangeInboundCommu
 	}
 	c.tmpKeyVaultName = "--keyvault-name--"
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1031,7 +1032,7 @@ func TestVirtualMachineDeployment_WithMixedFamilyAddresses_SplitsNsgRulesByFamil
 	}
 	c.tmpKeyVaultName = "--keyvault-name--"
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1076,7 +1077,7 @@ func TestVirtualMachineDeployment_WithoutOutboundDenyRule_OutputRemainsUnchanged
 	}
 	c.tmpKeyVaultName = "--keyvault-name--"
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1108,7 +1109,7 @@ func TestVirtualMachineDeployment_ExistingVNet_WithOutboundDenyRule_KeepsSameUse
 		t.Fatal(err)
 	}
 
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1194,7 +1195,7 @@ func TestVirtualMachineDeployment16(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetSpecializedVirtualMachineDeployment(&c)
+	deployment, err := GetSpecializedVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1209,7 +1210,7 @@ func TestKeyVaultDeployment00(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetKeyVaultDeployment(&c, "secret", nil)
+	deployment, err := GetKeyVaultDeployment(context.Background(), &c, "secret", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1242,7 +1243,7 @@ func TestKeyVaultDeployment01(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetKeyVaultDeployment(&c, "secret", nil)
+	deployment, err := GetKeyVaultDeployment(context.Background(), &c, "secret", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1260,7 +1261,7 @@ func TestKeyVaultDeployment02(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetKeyVaultDeployment(&c, c.winrmCertificate, nil)
+	deployment, err := GetKeyVaultDeployment(context.Background(), &c, c.winrmCertificate, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1297,7 +1298,7 @@ func TestVirtualMachineDeploymentLicenseType01(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1313,7 +1314,7 @@ func TestVirtualMachineDeploymentLicenseType02(t *testing.T) {
 		t.Fatal(err)
 	}
 	c.LicenseType = constants.License_Windows_Server
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1328,7 +1329,7 @@ func TestVirtualMachineDeploymentAcceleratedNetworking01(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1346,7 +1347,7 @@ func TestVirtualMachineDeploymentAcceleratedNetworking02(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1361,7 +1362,7 @@ func TestVirtualMachineDeploymentDiskControllerTypeDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1377,7 +1378,7 @@ func TestVirtualMachineDeploymentDiskControllerTypeNVMe(t *testing.T) {
 		t.Fatal(err)
 	}
 	c.DiskControllerType = "NVMe"
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1400,7 +1401,7 @@ func TestKeyVaultDeployment03(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetKeyVaultDeployment(&c, c.winrmCertificate, nil)
+	deployment, err := GetKeyVaultDeployment(context.Background(), &c, c.winrmCertificate, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1418,7 +1419,7 @@ func TestKeyVaultDeployment04(t *testing.T) {
 	}
 	// January 1st 2100
 	expiry := int64(4102444800)
-	deployment, err := GetKeyVaultDeployment(&c, c.winrmCertificate, &expiry)
+	deployment, err := GetKeyVaultDeployment(context.Background(), &c, c.winrmCertificate, &expiry)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1440,7 +1441,7 @@ func TestPlanInfo01(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1466,7 +1467,7 @@ func TestPlanInfo02(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1484,7 +1485,7 @@ func TestBasicSkuPublicIPVMDeployment(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1503,7 +1504,7 @@ func TestTrustedLaunch01(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1538,7 +1539,7 @@ func TestSigSourcedWithDiskEncryptionSet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1573,7 +1574,7 @@ func TestConfidentialVM01(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1606,7 +1607,7 @@ func TestConfidentialVM02(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1643,7 +1644,7 @@ func TestConfidentialVM03(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1660,7 +1661,7 @@ func TestEncryptionAtHost01(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1677,7 +1678,7 @@ func TestEncryptionAtHost02(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployment, err := GetVirtualMachineDeployment(&c)
+	deployment, err := GetVirtualMachineDeployment(context.Background(), &c)
 	if err != nil {
 		t.Fatal(err)
 	}

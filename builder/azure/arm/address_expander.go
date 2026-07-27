@@ -18,12 +18,12 @@ type lookupIPAddrFunc func(ctx context.Context, host string) ([]net.IPAddr, erro
 
 var defaultAddressLookup lookupIPAddrFunc = net.DefaultResolver.LookupIPAddr
 
-func expandMixedAddressList(entries []string, lookup lookupIPAddrFunc) ([]string, error) {
+func expandMixedAddressList(ctx context.Context, entries []string, lookup lookupIPAddrFunc) ([]string, error) {
 	if lookup == nil {
 		lookup = defaultAddressLookup
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultLookupTTL)
+	ctx, cancel := context.WithTimeout(ctx, defaultLookupTTL)
 	defer cancel()
 
 	cache := map[string][]string{}
@@ -88,4 +88,30 @@ func appendUniqueAddress(dst []string, seen map[string]struct{}, value string) [
 	}
 	seen[value] = struct{}{}
 	return append(dst, value)
+}
+
+// validateHostnamesResolve performs a pre-flight DNS check on address list
+// entries during Config.Prepare so that unresolvable hostnames surface as
+// warnings before the build starts, rather than as confusing
+// template-construction failures at build time. Returns warning strings for
+// each hostname that could not be resolved; an empty slice means all
+// hostnames resolved successfully.
+func validateHostnamesResolve(entries []string) []string {
+	var warnings []string
+	for _, entry := range entries {
+		if net.ParseIP(entry) != nil {
+			continue
+		}
+		if _, _, err := net.ParseCIDR(entry); err == nil {
+			continue
+		}
+		host := normalizeHostname(entry)
+		ctx, cancel := context.WithTimeout(context.Background(), defaultLookupTTL)
+		_, err := defaultAddressLookup(ctx, host)
+		cancel()
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("hostname %q could not be resolved: %v; build may fail if this hostname is still unresolvable at build time", host, err))
+		}
+	}
+	return warnings
 }

@@ -938,7 +938,15 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		return nil, errs
 	}
 
-	return nil, nil
+	var warnings []string
+	if w := validateHostnamesResolve(c.AllowedInboundIpAddresses); len(w) > 0 {
+		warnings = append(warnings, w...)
+	}
+	if w := validateHostnamesResolve(c.DenyOutboundIpAddresses); len(w) > 0 {
+		warnings = append(warnings, w...)
+	}
+
+	return warnings, nil
 }
 
 func setSshValues(c *Config) error {

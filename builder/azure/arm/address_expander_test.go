@@ -43,7 +43,7 @@ func TestExpandMixedAddressList_ResolvesSingleHostname(t *testing.T) {
 		nil,
 	)
 
-	got, err := expandMixedAddressList([]string{"ci.example.com"}, lookup)
+	got, err := expandMixedAddressList(context.Background(), []string{"ci.example.com"}, lookup)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestExpandMixedAddressList_ResolvesMultipleAddresses(t *testing.T) {
 		nil,
 	)
 
-	got, err := expandMixedAddressList([]string{"ci.example.com"}, lookup)
+	got, err := expandMixedAddressList(context.Background(), []string{"ci.example.com"}, lookup)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestExpandMixedAddressList_NormalizesEquivalentHostnames(t *testing.T) {
 		},
 	}
 
-	got, err := expandMixedAddressList([]string{"ci.example.com", "CI.EXAMPLE.COM", "ci.example.com."}, tracker.lookup)
+	got, err := expandMixedAddressList(context.Background(), []string{"ci.example.com", "CI.EXAMPLE.COM", "ci.example.com."}, tracker.lookup)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +102,7 @@ func TestExpandMixedAddressList_KeepsLiteralIpAndCidrInputs(t *testing.T) {
 		nil,
 	)
 
-	got, err := expandMixedAddressList([]string{"203.0.113.10/32", "198.51.100.0/24", "ci.example.com"}, lookup)
+	got, err := expandMixedAddressList(context.Background(), []string{"203.0.113.10/32", "198.51.100.0/24", "ci.example.com"}, lookup)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +122,7 @@ func TestExpandMixedAddressList_DeduplicatesAddresses(t *testing.T) {
 		nil,
 	)
 
-	got, err := expandMixedAddressList([]string{"ci-a.example.com", "ci-b.example.com"}, lookup)
+	got, err := expandMixedAddressList(context.Background(), []string{"ci-a.example.com", "ci-b.example.com"}, lookup)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +139,7 @@ func TestExpandMixedAddressList_FailsOnEmptyAnswerSet(t *testing.T) {
 		nil,
 	)
 
-	_, err := expandMixedAddressList([]string{"ci.example.com"}, lookup)
+	_, err := expandMixedAddressList(context.Background(), []string{"ci.example.com"}, lookup)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -154,7 +154,7 @@ func TestExpandMixedAddressList_FailsOnLookupError(t *testing.T) {
 		map[string]error{"ci.example.com": errors.New("lookup failed")},
 	)
 
-	_, err := expandMixedAddressList([]string{"ci.example.com"}, lookup)
+	_, err := expandMixedAddressList(context.Background(), []string{"ci.example.com"}, lookup)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -169,7 +169,7 @@ func TestExpandMixedAddressList_PropagatesContextDeadline(t *testing.T) {
 		map[string]error{"ci.example.com": context.DeadlineExceeded},
 	)
 
-	_, err := expandMixedAddressList([]string{"ci.example.com"}, lookup)
+	_, err := expandMixedAddressList(context.Background(), []string{"ci.example.com"}, lookup)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -188,7 +188,7 @@ func TestExpandMixedAddressList_FailsWholeInputOnMixedGoodAndBadEntries(t *testi
 		},
 	)
 
-	got, err := expandMixedAddressList([]string{"203.0.113.10/32", "ci.example.com", "proxy.example.com"}, lookup)
+	got, err := expandMixedAddressList(context.Background(), []string{"203.0.113.10/32", "ci.example.com", "proxy.example.com"}, lookup)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -208,7 +208,7 @@ func TestExpandMixedAddressList_HandlesIpv6AccordingToPolicy(t *testing.T) {
 		nil,
 	)
 
-	got, err := expandMixedAddressList([]string{"ci.example.com"}, lookup)
+	got, err := expandMixedAddressList(context.Background(), []string{"ci.example.com"}, lookup)
 	if err != nil {
 		t.Fatal(err)
 	}
