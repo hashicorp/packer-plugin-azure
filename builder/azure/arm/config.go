@@ -1523,12 +1523,12 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 	}
 	if len(c.AllowedInboundIpAddresses) >= 1 {
-		if ok, err := assertAllowedInboundIpAddresses(c.AllowedInboundIpAddresses, "allowed_inbound_ip_addresses"); !ok {
+		if ok, err := assertAddressList(c.AllowedInboundIpAddresses, "allowed_inbound_ip_addresses"); !ok {
 			errs = packersdk.MultiErrorAppend(errs, err)
 		}
 	}
 	if len(c.DenyOutboundIpAddresses) >= 1 {
-		if ok, err := assertAllowedInboundIpAddresses(c.DenyOutboundIpAddresses, "deny_outbound_ip_addresses"); !ok {
+		if ok, err := assertAddressList(c.DenyOutboundIpAddresses, "deny_outbound_ip_addresses"); !ok {
 			errs = packersdk.MultiErrorAppend(errs, err)
 		}
 	}
@@ -1714,47 +1714,50 @@ func assertResourceNamePrefix(name, setting string) (bool, error) {
 	return true, nil
 }
 
-func assertAllowedInboundIpAddresses(ipAddresses []string, setting string) (bool, error) {
-	for _, ipAddress := range ipAddresses {
-		if net.ParseIP(ipAddress) == nil {
-			if _, _, err := net.ParseCIDR(ipAddress); err != nil {
-				normalized := normalizeHostname(ipAddress)
-				if normalized == "" || strings.Contains(normalized, "*") || strings.Contains(normalized, "..") || !strings.Contains(normalized, ".") {
-					return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
-				}
+func assertAddressList(addresses []string, setting string) (bool, error) {
+	for _, address := range addresses {
+		normalized := normalizeHostname(address)
 
-				labels := strings.Split(normalized, ".")
-				for _, label := range labels {
-					if label == "" || len(label) > 63 || strings.HasPrefix(label, "-") || strings.HasSuffix(label, "-") {
-						return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
-					}
+		if net.ParseIP(normalized) != nil {
+			continue
+		}
+		if _, _, err := net.ParseCIDR(normalized); err == nil {
+			continue
+		}
+		if normalized == "" || strings.Contains(normalized, "*") || strings.Contains(normalized, "..") || !strings.Contains(normalized, ".") {
+			return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
+		}
 
-					for _, r := range label {
-						if r >= 'a' && r <= 'z' {
-							continue
-						}
-						if r >= '0' && r <= '9' {
-							continue
-						}
-						if r == '-' {
-							continue
-						}
-						return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
-					}
-				}
-
-				lastLabel := labels[len(labels)-1]
-				hasLetterInLastLabel := false
-				for _, r := range lastLabel {
-					if r >= 'a' && r <= 'z' {
-						hasLetterInLastLabel = true
-						break
-					}
-				}
-				if !hasLetterInLastLabel {
-					return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
-				}
+		labels := strings.Split(normalized, ".")
+		for _, label := range labels {
+			if label == "" || len(label) > 63 || strings.HasPrefix(label, "-") || strings.HasSuffix(label, "-") {
+				return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
 			}
+
+			for _, r := range label {
+				if r >= 'a' && r <= 'z' {
+					continue
+				}
+				if r >= '0' && r <= '9' {
+					continue
+				}
+				if r == '-' {
+					continue
+				}
+				return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
+			}
+		}
+
+		lastLabel := labels[len(labels)-1]
+		hasLetterInLastLabel := false
+		for _, r := range lastLabel {
+			if r >= 'a' && r <= 'z' {
+				hasLetterInLastLabel = true
+				break
+			}
+		}
+		if !hasLetterInLastLabel {
+			return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
 		}
 	}
 	return true, nil
