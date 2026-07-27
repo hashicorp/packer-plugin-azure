@@ -16,6 +16,9 @@ const defaultLookupTTL = 30 * time.Second
 
 type lookupIPAddrFunc func(ctx context.Context, host string) ([]net.IPAddr, error)
 
+// defaultAddressLookup is the production resolver used when no lookup is
+// explicitly provided. It is not mutated by tests; tests inject a fake
+// resolver via Config.addressLookup instead.
 var defaultAddressLookup lookupIPAddrFunc = net.DefaultResolver.LookupIPAddr
 
 func expandMixedAddressList(ctx context.Context, entries []string, lookup lookupIPAddrFunc) ([]string, error) {
@@ -96,7 +99,10 @@ func appendUniqueAddress(dst []string, seen map[string]struct{}, value string) [
 // template-construction failures at build time. Returns warning strings for
 // each hostname that could not be resolved; an empty slice means all
 // hostnames resolved successfully.
-func validateHostnamesResolve(entries []string) []string {
+func validateHostnamesResolve(entries []string, lookup lookupIPAddrFunc) []string {
+	if lookup == nil {
+		lookup = defaultAddressLookup
+	}
 	var warnings []string
 	for _, entry := range entries {
 		if net.ParseIP(entry) != nil {
@@ -107,7 +113,7 @@ func validateHostnamesResolve(entries []string) []string {
 		}
 		host := normalizeHostname(entry)
 		ctx, cancel := context.WithTimeout(context.Background(), defaultLookupTTL)
-		_, err := defaultAddressLookup(ctx, host)
+		_, err := lookup(ctx, host)
 		cancel()
 		if err != nil {
 			warnings = append(warnings, fmt.Sprintf("hostname %q could not be resolved: %v; build may fail if this hostname is still unresolvable at build time", host, err))

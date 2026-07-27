@@ -19,9 +19,9 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type templateFactoryFunc func(ctx context.Context, config *Config) (*deployments.Deployment, error)
+type templateFactoryFunc func(ctx context.Context, config *Config, lookup lookupIPAddrFunc) (*deployments.Deployment, error)
 
-func GetCommunicatorSpecificKeyVaultDeployment(ctx context.Context, config *Config) (*deployments.Deployment, error) {
+func GetCommunicatorSpecificKeyVaultDeployment(ctx context.Context, config *Config, lookup lookupIPAddrFunc) (*deployments.Deployment, error) {
 	if config.Comm.Type == "ssh" {
 		privateKey, err := ssh.ParseRawPrivateKey(config.Comm.SSHPrivateKey)
 		if err != nil {
@@ -40,17 +40,17 @@ func GetCommunicatorSpecificKeyVaultDeployment(ctx context.Context, config *Conf
 		// Hide the secret key pair blob from logs
 		packer.LogSecretFilter.Set(secret)
 
-		return GetKeyVaultDeployment(ctx, config, secret, nil)
+		return GetKeyVaultDeployment(ctx, config, secret, nil, lookup)
 	}
 	var exp *int64
 	if config.WinrmExpirationTime != 0 {
 		unixSeconds := time.Now().Add(config.WinrmExpirationTime).Unix()
 		exp = &unixSeconds
 	}
-	return GetKeyVaultDeployment(ctx, config, config.winrmCertificate, exp)
+	return GetKeyVaultDeployment(ctx, config, config.winrmCertificate, exp, lookup)
 }
 
-func GetKeyVaultDeployment(ctx context.Context, config *Config, secretValue string, exp *int64) (*deployments.Deployment, error) {
+func GetKeyVaultDeployment(ctx context.Context, config *Config, secretValue string, exp *int64, lookup lookupIPAddrFunc) (*deployments.Deployment, error) {
 	params := &template.TemplateParameters{
 		KeyVaultName:        &template.TemplateParameter{Value: config.tmpKeyVaultName},
 		KeyVaultSKU:         &template.TemplateParameter{Value: config.BuildKeyVaultSKU},
@@ -73,8 +73,8 @@ func GetKeyVaultDeployment(ctx context.Context, config *Config, secretValue stri
 	return createDeploymentParameters(*doc, params)
 }
 
-func GetSpecializedVirtualMachineDeployment(ctx context.Context, config *Config) (*deployments.Deployment, error) {
-	builder, err := GetVirtualMachineTemplateBuilder(ctx, config)
+func GetSpecializedVirtualMachineDeployment(ctx context.Context, config *Config, lookup lookupIPAddrFunc) (*deployments.Deployment, error) {
+	builder, err := GetVirtualMachineTemplateBuilder(ctx, config, lookup)
 	if err != nil {
 		return nil, err
 	}
@@ -103,8 +103,8 @@ func GetSpecializedVirtualMachineDeployment(ctx context.Context, config *Config)
 	return createDeploymentParameters(*doc, params)
 }
 
-func GetVirtualMachineDeployment(ctx context.Context, config *Config) (*deployments.Deployment, error) {
-	builder, err := GetVirtualMachineTemplateBuilder(ctx, config)
+func GetVirtualMachineDeployment(ctx context.Context, config *Config, lookup lookupIPAddrFunc) (*deployments.Deployment, error) {
+	builder, err := GetVirtualMachineTemplateBuilder(ctx, config, lookup)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func GetVirtualMachineDeployment(ctx context.Context, config *Config) (*deployme
 	return createDeploymentParameters(*doc, params)
 }
 
-func GetVirtualMachineTemplateBuilder(ctx context.Context, config *Config) (*template.TemplateBuilder, error) {
+func GetVirtualMachineTemplateBuilder(ctx context.Context, config *Config, lookup lookupIPAddrFunc) (*template.TemplateBuilder, error) {
 	builder, err := template.NewTemplateBuilder(template.BasicTemplate)
 	if err != nil {
 		return nil, err
@@ -137,14 +137,14 @@ func GetVirtualMachineTemplateBuilder(ctx context.Context, config *Config) (*tem
 
 	expandedAllowedInboundIpAddresses := config.AllowedInboundIpAddresses
 	if len(config.AllowedInboundIpAddresses) >= 1 {
-		expandedAllowedInboundIpAddresses, err = expandMixedAddressList(ctx, config.AllowedInboundIpAddresses, nil)
+		expandedAllowedInboundIpAddresses, err = expandMixedAddressList(ctx, config.AllowedInboundIpAddresses, lookup)
 		if err != nil {
 			return nil, err
 		}
 	}
 	expandedDeniedOutboundIpAddresses := config.DenyOutboundIpAddresses
 	if len(config.DenyOutboundIpAddresses) >= 1 {
-		expandedDeniedOutboundIpAddresses, err = expandMixedAddressList(ctx, config.DenyOutboundIpAddresses, nil)
+		expandedDeniedOutboundIpAddresses, err = expandMixedAddressList(ctx, config.DenyOutboundIpAddresses, lookup)
 		if err != nil {
 			return nil, err
 		}

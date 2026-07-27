@@ -939,10 +939,10 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	}
 
 	var warnings []string
-	if w := validateHostnamesResolve(c.AllowedInboundIpAddresses); len(w) > 0 {
+	if w := validateHostnamesResolve(c.AllowedInboundIpAddresses, nil); len(w) > 0 {
 		warnings = append(warnings, w...)
 	}
-	if w := validateHostnamesResolve(c.DenyOutboundIpAddresses); len(w) > 0 {
+	if w := validateHostnamesResolve(c.DenyOutboundIpAddresses, nil); len(w) > 0 {
 		warnings = append(warnings, w...)
 	}
 

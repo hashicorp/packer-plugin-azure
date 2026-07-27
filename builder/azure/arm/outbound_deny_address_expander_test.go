@@ -14,17 +14,6 @@ import (
 )
 
 func TestOutboundDenyAddressExpansion_ReusesSharedMixedAddressHelper(t *testing.T) {
-	defaultAddressLookup = fakeLookup(
-		map[string][]net.IPAddr{
-			"backend.example.com": {
-				{IP: net.ParseIP("198.51.100.11")},
-				{IP: net.ParseIP("198.51.100.10")},
-			},
-		},
-		nil,
-	)
-	defer func() { defaultAddressLookup = net.DefaultResolver.LookupIPAddr }()
-
 	config := map[string]interface{}{
 		"location":                          "ignore",
 		"subscription_id":                   "ignore",
@@ -49,8 +38,17 @@ func TestOutboundDenyAddressExpansion_ReusesSharedMixedAddressHelper(t *testing.
 		t.Fatal(err)
 	}
 	c.tmpKeyVaultName = "--keyvault-name--"
+	lookup := fakeLookup(
+		map[string][]net.IPAddr{
+			"backend.example.com": {
+				{IP: net.ParseIP("198.51.100.11")},
+				{IP: net.ParseIP("198.51.100.10")},
+			},
+		},
+		nil,
+	)
 
-	builder, err := GetVirtualMachineTemplateBuilder(context.Background(), &c)
+	builder, err := GetVirtualMachineTemplateBuilder(context.Background(), &c, lookup)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,16 +66,6 @@ func TestOutboundDenyAddressExpansion_ReusesSharedMixedAddressHelper(t *testing.
 }
 
 func TestOutboundDenyAddressExpansion_FailsWholeInputOnMixedGoodAndBadEntries(t *testing.T) {
-	defaultAddressLookup = fakeLookup(
-		map[string][]net.IPAddr{
-			"backend.example.com": {{IP: net.ParseIP("198.51.100.10")}},
-		},
-		map[string]error{
-			"bad-backend.example.com": errors.New("nxdomain"),
-		},
-	)
-	defer func() { defaultAddressLookup = net.DefaultResolver.LookupIPAddr }()
-
 	config := map[string]interface{}{
 		"location":                          "ignore",
 		"subscription_id":                   "ignore",
@@ -102,8 +90,16 @@ func TestOutboundDenyAddressExpansion_FailsWholeInputOnMixedGoodAndBadEntries(t 
 		t.Fatal(err)
 	}
 	c.tmpKeyVaultName = "--keyvault-name--"
+	lookup := fakeLookup(
+		map[string][]net.IPAddr{
+			"backend.example.com": {{IP: net.ParseIP("198.51.100.10")}},
+		},
+		map[string]error{
+			"bad-backend.example.com": errors.New("nxdomain"),
+		},
+	)
 
-	_, err = GetVirtualMachineTemplateBuilder(context.Background(), &c)
+	_, err = GetVirtualMachineTemplateBuilder(context.Background(), &c, lookup)
 	if err == nil {
 		t.Fatal("expected outbound deny expansion to fail whole input")
 	}
