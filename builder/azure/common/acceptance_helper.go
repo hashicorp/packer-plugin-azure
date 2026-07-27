@@ -69,36 +69,46 @@ func loggedIntoAzureCLI(t *testing.T) bool {
 func DetectPackerPublicIP(t *testing.T) string {
 	t.Helper()
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get("https://api.ipify.org")
-	if err != nil {
-		t.Fatalf("Failed to detect runner public IP from api.ipify.org: %v. "+
-			"NSG allowlist tests require the runner's public IP to permit SSH. "+
-			"Ensure outbound HTTP access to api.ipify.org is available.",
-			err)
-	}
-	defer func() { _ = resp.Body.Close() }()
+	var ipStr string
+	// Allow CI to inject the runner's public IP without an external HTTP
+	// dependency. Set PACKER_ACC_RUNNER_PUBLIC_IP to a literal IP or CIDR.
+	if override := os.Getenv("PACKER_ACC_RUNNER_PUBLIC_IP"); override != "" {
+		ipStr = strings.TrimSpace(override)
+		if net.ParseIP(ipStr) == nil {
+			t.Fatalf("PACKER_ACC_RUNNER_PUBLIC_IP %q is not a valid IP address.", ipStr)
+		}
+	} else {
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Get("https://api.ipify.org")
+		if err != nil {
+			t.Fatalf("Failed to detect runner public IP from api.ipify.org: %v. "+
+				"NSG allowlist tests require the runner's public IP to permit SSH. "+
+				"Ensure outbound HTTP access to api.ipify.org is available.",
+				err)
+		}
+		defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("api.ipify.org returned status %d. "+
-			"Cannot determine runner public IP for NSG allowlist tests.",
-			resp.StatusCode)
-	}
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("api.ipify.org returned status %d. "+
+				"Cannot determine runner public IP for NSG allowlist tests.",
+				resp.StatusCode)
+		}
 
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 64))
-	if err != nil {
-		t.Fatalf("Failed to read response from api.ipify.org: %v", err)
-	}
+		body, err := io.ReadAll(io.LimitReader(resp.Body, 64))
+		if err != nil {
+			t.Fatalf("Failed to read response from api.ipify.org: %v", err)
+		}
 
-	ipStr := strings.TrimSpace(string(body))
-	if ipStr == "" {
-		t.Fatal("api.ipify.org returned empty body. Cannot determine runner public IP.")
-	}
+		ipStr = strings.TrimSpace(string(body))
+		if ipStr == "" {
+			t.Fatal("api.ipify.org returned empty body. Cannot determine runner public IP.")
+		}
 
-	if net.ParseIP(ipStr) == nil {
-		t.Fatalf("api.ipify.org returned %q which is not a valid IP address.", ipStr)
-	}
+		if net.ParseIP(ipStr) == nil {
+			t.Fatalf("api.ipify.org returned %q which is not a valid IP address.", ipStr)
+		}
 
+	}
 	if strings.Contains(ipStr, ":") {
 		return ipStr + "/128"
 	}
