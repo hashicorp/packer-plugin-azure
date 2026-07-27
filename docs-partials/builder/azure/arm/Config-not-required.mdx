@@ -232,8 +232,8 @@
   set a virtual_network_name and obtain a public IP. If this value is not
   set and virtual_network_name is defined Packer is only allowed to be
   executed from a host on the same subnet / virtual network.
-
-  -> **Behavior change:** When using an existing VNet with a public IP
+  
+  **Behavior change:** When using an existing VNet with a public IP
   (`private_virtual_network_with_public_ip = true`) and no explicit
   `allowed_inbound_ip_addresses` or `deny_outbound_ip_addresses`, the
   plugin now creates an allow-all inbound NSG attached to the build NIC.

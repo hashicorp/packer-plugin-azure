@@ -454,6 +454,15 @@ type Config struct {
 	// set a virtual_network_name and obtain a public IP. If this value is not
 	// set and virtual_network_name is defined Packer is only allowed to be
 	// executed from a host on the same subnet / virtual network.
+	//
+	// **Behavior change:** When using an existing VNet with a public IP
+	// (`private_virtual_network_with_public_ip = true`) and no explicit
+	// `allowed_inbound_ip_addresses` or `deny_outbound_ip_addresses`, the
+	// plugin now creates an allow-all inbound NSG attached to the build NIC.
+	// Previously no NSG was created, which could break communicator
+	// connectivity with Standard SKU public IPs (the Azure default). Users
+	// who relied on the existing VNet's own NSG should be aware of this
+	// change.
 	PrivateVirtualNetworkWithPublicIp bool `mapstructure:"private_virtual_network_with_public_ip" required:"false"`
 	// Use a pre-existing virtual network for the
 	// VM. This option enables private communication with the VM, no public IP
