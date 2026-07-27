@@ -210,17 +210,17 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 	} else {
 		ui.Say(fmt.Sprintf("Skipping deletion -> %s : '%s' since 'keep_os_disk' is set to true", imageType, imageName))
 	}
-	var dataDisks []string
+	var dataDisks []DataDiskInfo
 	if disks := state.Get(constants.ArmAdditionalDiskVhds); disks != nil {
-		dataDisks = disks.([]string)
+		dataDisks = disks.([]DataDiskInfo)
 	}
-	for i, additionalDisk := range dataDisks {
-		err := s.deleteImage(ctx, additionalDisk, resourceGroupName, subscriptionId)
+	for i, disk := range dataDisks {
+		err := s.deleteImage(ctx, disk.ManagedDiskID, resourceGroupName, subscriptionId)
 		if err == nil {
-			s.say(fmt.Sprintf("Deleted Additional Disk -> %d: '%s'", i+1, additionalDisk))
+			s.say(fmt.Sprintf("Deleted Additional Disk -> %d: '%s'", i+1, disk.ManagedDiskID))
 
 		} else {
-			s.reportResourceDeletionFailure(err, additionalDisk)
+			s.reportResourceDeletionFailure(err, disk.ManagedDiskID)
 		}
 	}
 

@@ -20,6 +20,13 @@ type AdditionalDiskArtifact struct {
 	AdditionalDiskUri string
 }
 
+// DataDiskInfo holds information about a data disk attached to the VM,
+// including its LUN and managed disk resource ID.
+type DataDiskInfo struct {
+	Lun           int64
+	ManagedDiskID string
+}
+
 type ManagedImageArtifact struct {
 	// Managed Image
 	ManagedImageResourceGroupName      string
