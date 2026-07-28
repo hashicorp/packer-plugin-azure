@@ -3,6 +3,17 @@
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-azure/releases) for the latest CHANGELOG information.
 
 ---
+## Unreleased
+
+## What's Changed
+### Exciting New Features
+* Support `allowed_inbound_ip_addresses` when `virtual_network_name` targets an existing VNet by attaching the temporary NSG to the build NIC instead of requiring a builder-managed subnet [GH-622](https://github.com/hashicorp/packer-plugin-azure/issues/622), [GH-468](https://github.com/hashicorp/packer-plugin-azure/issues/468), [GH-625](https://github.com/hashicorp/packer-plugin-azure/pull/625)
+* Allow hostnames/FQDNs in `allowed_inbound_ip_addresses`, resolving them to literal IPs at build time [GH-623](https://github.com/hashicorp/packer-plugin-azure/issues/623), [GH-625](https://github.com/hashicorp/packer-plugin-azure/pull/625)
+* Add `deny_outbound_ip_addresses` support to the `azure-arm` builder, including hostname/FQDN expansion at build time [GH-624](https://github.com/hashicorp/packer-plugin-azure/issues/624), [GH-625](https://github.com/hashicorp/packer-plugin-azure/pull/625)
+
+### Bug Fixes
+* Improve temporary NSG handling for existing-VNet builds using public IPs, preserve mixed IPv4/IPv6 rule generation, and surface hostname resolution problems earlier through build-time validation warnings [GH-625](https://github.com/hashicorp/packer-plugin-azure/pull/625)
+
 ## 2.6.3
 
 ## What's Changed
@@ -199,4 +210,3 @@ HCP Packer private beta support requires Packer version 1.7.5 or 1.7.6 [GH-150]
 ## 0.0.1 (May 7, 2021)
 
 * Azure Plugin break out from Packer core. Changes prior to break out can be found in [Packer's CHANGELOG](https://github.com/hashicorp/packer/blob/master/CHANGELOG.md)
-
