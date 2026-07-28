@@ -634,46 +634,6 @@ const testBuilderAccManagedDiskLinuxAzureCLI = `
 }
 `
 
-const testBuilderAccExistingVNetAllowedInboundIP = `
-{
-	"variables": {
-	  "client_id": "{{env ` + "`ARM_CLIENT_ID`" + `}}",
-	  "client_secret": "{{env ` + "`ARM_CLIENT_SECRET`" + `}}",
-	  "subscription_id": "{{env ` + "`ARM_SUBSCRIPTION_ID`" + `}}",
-	  "resource_group_name": "{{env ` + "`ARM_RESOURCE_GROUP_NAME`" + `}}",
-	  "virtual_network_name": "{{env ` + "`ARM_VIRTUAL_NETWORK_NAME`" + `}}"
-	},
-	"builders": [{
-	  "type": "azure-arm",
-
-	  "client_id": "{{user ` + "`client_id`" + `}}",
-	  "client_secret": "{{user ` + "`client_secret`" + `}}",
-	  "subscription_id": "{{user ` + "`subscription_id`" + `}}",
-
-	  "managed_image_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
-	  "managed_image_name": "testBuilderAccExistingVNetAllowInboundIP-{{timestamp}}",
-
-	  "os_type": "Linux",
-	  "image_publisher": "Canonical",
-	  "image_offer": "UbuntuServer",
-	  "image_sku": "16.04-LTS",
-
-	  "virtual_network_resource_group_name": "{{user ` + "`resource_group_name`" + `}}",
-	  "virtual_network_name": "{{user ` + "`virtual_network_name`" + `}}",
-	  "virtual_network_subnet_name": "subnet",
-	  "private_virtual_network_with_public_ip": true,
-	  "allowed_inbound_ip_addresses": ["RUNNER_IP_PLACEHOLDER", "172.16.0.16/32"],
-
-	  "location": "South Central US",
-	  "vm_size": "Standard_DS2_v2",
-	  "azure_tags": {
-	    "env": "testing",
-	    "builder": "packer"
-	   }
-	}]
-}
-`
-
 const testBuilderAccAllowedInboundIpAddressesLiteral = `
 {
 	"variables": {
@@ -873,7 +833,7 @@ func TestBuilderAcc_ExistingVNet_AllowedInboundIpAddresses(t *testing.T) {
 	acctest.TestPlugin(t, &acctest.PluginTestCase{
 		Name:     "test-azure-existing-vnet-allowed-inbound-ip",
 		Type:     "azure-arm",
-		Template: injectRunnerIP(t, testBuilderAccExistingVNetAllowedInboundIP),
+		Template: injectRunnerIP(t, testBuilderAccAllowedInboundIpAddressesLiteral),
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
 			if buildCommand.ProcessState != nil {
 				if buildCommand.ProcessState.ExitCode() != 0 {
