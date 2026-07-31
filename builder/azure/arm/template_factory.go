@@ -4,6 +4,7 @@
 package arm
 
 import (
+	"context"
 	"crypto/rsa"
 	"encoding/json"
 	"errors"
@@ -18,9 +19,9 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type templateFactoryFunc func(*Config) (*deployments.Deployment, error)
+type templateFactoryFunc func(ctx context.Context, config *Config, lookup lookupIPAddrFunc) (*deployments.Deployment, error)
 
-func GetCommunicatorSpecificKeyVaultDeployment(config *Config) (*deployments.Deployment, error) {
+func GetCommunicatorSpecificKeyVaultDeployment(ctx context.Context, config *Config, lookup lookupIPAddrFunc) (*deployments.Deployment, error) {
 	if config.Comm.Type == "ssh" {
 		privateKey, err := ssh.ParseRawPrivateKey(config.Comm.SSHPrivateKey)
 		if err != nil {
@@ -39,17 +40,17 @@ func GetCommunicatorSpecificKeyVaultDeployment(config *Config) (*deployments.Dep
 		// Hide the secret key pair blob from logs
 		packer.LogSecretFilter.Set(secret)
 
-		return GetKeyVaultDeployment(config, secret, nil)
+		return GetKeyVaultDeployment(ctx, config, secret, nil, lookup)
 	}
 	var exp *int64
 	if config.WinrmExpirationTime != 0 {
 		unixSeconds := time.Now().Add(config.WinrmExpirationTime).Unix()
 		exp = &unixSeconds
 	}
-	return GetKeyVaultDeployment(config, config.winrmCertificate, exp)
+	return GetKeyVaultDeployment(ctx, config, config.winrmCertificate, exp, lookup)
 }
 
-func GetKeyVaultDeployment(config *Config, secretValue string, exp *int64) (*deployments.Deployment, error) {
+func GetKeyVaultDeployment(ctx context.Context, config *Config, secretValue string, exp *int64, lookup lookupIPAddrFunc) (*deployments.Deployment, error) {
 	params := &template.TemplateParameters{
 		KeyVaultName:        &template.TemplateParameter{Value: config.tmpKeyVaultName},
 		KeyVaultSKU:         &template.TemplateParameter{Value: config.BuildKeyVaultSKU},
@@ -72,8 +73,8 @@ func GetKeyVaultDeployment(config *Config, secretValue string, exp *int64) (*dep
 	return createDeploymentParameters(*doc, params)
 }
 
-func GetSpecializedVirtualMachineDeployment(config *Config) (*deployments.Deployment, error) {
-	builder, err := GetVirtualMachineTemplateBuilder(config)
+func GetSpecializedVirtualMachineDeployment(ctx context.Context, config *Config, lookup lookupIPAddrFunc) (*deployments.Deployment, error) {
+	builder, err := GetVirtualMachineTemplateBuilder(ctx, config, lookup)
 	if err != nil {
 		return nil, err
 	}
@@ -102,8 +103,8 @@ func GetSpecializedVirtualMachineDeployment(config *Config) (*deployments.Deploy
 	return createDeploymentParameters(*doc, params)
 }
 
-func GetVirtualMachineDeployment(config *Config) (*deployments.Deployment, error) {
-	builder, err := GetVirtualMachineTemplateBuilder(config)
+func GetVirtualMachineDeployment(ctx context.Context, config *Config, lookup lookupIPAddrFunc) (*deployments.Deployment, error) {
+	builder, err := GetVirtualMachineTemplateBuilder(ctx, config, lookup)
 	if err != nil {
 		return nil, err
 	}
@@ -128,10 +129,25 @@ func GetVirtualMachineDeployment(config *Config) (*deployments.Deployment, error
 	return createDeploymentParameters(*doc, params)
 }
 
-func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder, error) {
+func GetVirtualMachineTemplateBuilder(ctx context.Context, config *Config, lookup lookupIPAddrFunc) (*template.TemplateBuilder, error) {
 	builder, err := template.NewTemplateBuilder(template.BasicTemplate)
 	if err != nil {
 		return nil, err
+	}
+
+	expandedAllowedInboundIpAddresses := config.AllowedInboundIpAddresses
+	if len(config.AllowedInboundIpAddresses) >= 1 {
+		expandedAllowedInboundIpAddresses, err = expandMixedAddressList(ctx, config.AllowedInboundIpAddresses, lookup)
+		if err != nil {
+			return nil, err
+		}
+	}
+	expandedDeniedOutboundIpAddresses := config.DenyOutboundIpAddresses
+	if len(config.DenyOutboundIpAddresses) >= 1 {
+		expandedDeniedOutboundIpAddresses, err = expandMixedAddressList(ctx, config.DenyOutboundIpAddresses, lookup)
+		if err != nil {
+			return nil, err
+		}
 	}
 	osType := hashiVMSDK.OperatingSystemTypesLinux
 
@@ -339,9 +355,14 @@ func GetVirtualMachineTemplateBuilder(config *Config) (*template.TemplateBuilder
 	// They are required when specifying which inbound IPs are allowed to connect to the network
 	// They are also required when creating a standard sku public IP Address regardless of inbound IPs allowed.
 	// If a standard IP is set with no inbound addresses, we default to allowing all IP addresses
-	if (config.PublicIpSKU != "Basic") || (len(config.AllowedInboundIpAddresses) >= 1) {
+	if (config.PublicIpSKU != "Basic") || (len(config.AllowedInboundIpAddresses) >= 1) || (len(config.DenyOutboundIpAddresses) >= 1) {
 		if config.VirtualNetworkName == "" {
-			err = builder.SetNetworkSecurityGroup(config.AllowedInboundIpAddresses, config.Comm.Port())
+			err = builder.SetNetworkSecurityGroup(expandedAllowedInboundIpAddresses, expandedDeniedOutboundIpAddresses, config.Comm.Port(), false)
+			if err != nil {
+				return nil, err
+			}
+		} else if config.PrivateVirtualNetworkWithPublicIp || (len(config.AllowedInboundIpAddresses) >= 1) || (len(config.DenyOutboundIpAddresses) >= 1) {
+			err = builder.SetNetworkSecurityGroup(expandedAllowedInboundIpAddresses, expandedDeniedOutboundIpAddresses, config.Comm.Port(), true)
 			if err != nil {
 				return nil, err
 			}

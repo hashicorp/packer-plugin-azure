@@ -48,24 +48,7 @@
   "resources": [
     {
       "apiVersion": "[variables('networkApiVersion')]",
-      "location": "[variables('location')]",
-      "name": "[parameters('publicIPAddressName')]",
-      "properties": {
-        "dnsSettings": {
-          "domainNameLabel": "[parameters('dnsNameForPublicIP')]"
-        },
-        "publicIPAllocationMethod": "[variables('publicIPAddressType')]"
-      },
-      "sku": {
-        "name": "Standard",
-        "tier": "Regional"
-      },
-      "type": "Microsoft.Network/publicIPAddresses"
-    },
-    {
-      "apiVersion": "[variables('networkApiVersion')]",
       "dependsOn": [
-        "[concat('Microsoft.Network/publicIPAddresses/', parameters('publicIPAddressName'))]",
         "[concat('Microsoft.Network/networkSecurityGroups/', parameters('nsgName'))]"
       ],
       "location": "[variables('location')]",
@@ -76,9 +59,6 @@
             "name": "ipconfig",
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
-              "publicIPAddress": {
-                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddressName'))]"
-              },
               "subnet": {
                 "id": "[variables('subnetRef')]"
               }
@@ -115,14 +95,15 @@
           ]
         },
         "osProfile": {
+          "adminPassword": "[parameters('adminPassword')]",
           "adminUsername": "[parameters('adminUsername')]",
           "computerName": "[parameters('vmName')]",
           "linuxConfiguration": {
-            "disablePasswordAuthentication": true,
+            "disablePasswordAuthentication": false,
             "ssh": {
               "publicKeys": [
                 {
-                  "keyData": "",
+                  "keyData": "--test-ssh-authorized-key--",
                   "path": "[variables('sshKeyPath')]"
                 }
               ]
@@ -131,19 +112,15 @@
         },
         "storageProfile": {
           "imageReference": {
-            "offer": "--image-offer--",
-            "publisher": "--image-publisher--",
-            "sku": "--image-sku--",
-            "version": "--version--"
+            "offer": "UbuntuServer",
+            "publisher": "Canonical",
+            "sku": "16.04",
+            "version": "latest"
           },
           "osDisk": {
             "caching": "ReadWrite",
             "createOption": "FromImage",
-            "managedDisk": {
-              "storageAccountType": "Standard_LRS"
-            },
-            "name": "[parameters('osDiskName')]",
-            "osType": "Linux"
+            "name": "[parameters('osDiskName')]"
           }
         }
       },
@@ -180,11 +157,14 @@
               "access": "Allow",
               "description": "Allow inbound traffic from specified IP addresses",
               "destinationAddressPrefix": "VirtualNetwork",
-              "destinationPortRange": "0",
+              "destinationPortRange": "123",
               "direction": "Inbound",
               "priority": 100,
               "protocol": "Tcp",
-              "sourceAddressPrefix": "*",
+              "sourceAddressPrefixes": [
+                "127.0.0.1",
+                "192.168.100.0/24"
+              ],
               "sourcePortRange": "*"
             }
           }
@@ -198,13 +178,13 @@
     "computeApiVersion": "2023-03-01",
     "location": "[resourceGroup().location]",
     "networkApiVersion": "2023-04-01",
-    "publicIPAddressType": "Static",
+    "publicIPAddressType": "Dynamic",
     "sshKeyPath": "[concat('/home/',parameters('adminUsername'),'/.ssh/authorized_keys')]",
     "subnetAddressPrefix": "10.0.0.0/24",
-    "subnetName": "--virtual_network_subnet_name--",
+    "subnetName": "subnet",
     "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnetName'))]",
-    "virtualNetworkName": "--virtual_network_name--",
-    "virtualNetworkResourceGroup": "--virtual_network_resource_group_name--",
+    "virtualNetworkName": "vnet",
+    "virtualNetworkResourceGroup": "rg",
     "vmStorageAccountContainerName": "images",
     "vnetID": "[resourceId(variables('virtualNetworkResourceGroup'), 'Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
   }

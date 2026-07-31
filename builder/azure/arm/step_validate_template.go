@@ -38,7 +38,7 @@ func NewStepValidateTemplate(client *AzureClient, ui packersdk.Ui, config *Confi
 }
 
 func (s *StepValidateTemplate) validateTemplate(ctx context.Context, subscriptionId string, resourceGroupName string, deploymentName string) error {
-	deployment, err := s.factory(s.config)
+	deployment, err := s.factory(ctx, s.config, nil)
 	if err != nil {
 		return err
 	}

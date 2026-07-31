@@ -227,7 +227,7 @@ func (s *StepDeployTemplate) Cleanup(state multistep.StateBag) {
 }
 
 func (s *StepDeployTemplate) deployTemplate(ctx context.Context, subscriptionId string, resourceGroupName string, deploymentName string) error {
-	deployment, err := s.factory(s.config)
+	deployment, err := s.factory(ctx, s.config, nil)
 	if err != nil {
 		return err
 	}
