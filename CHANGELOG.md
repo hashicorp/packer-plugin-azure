@@ -3,16 +3,23 @@
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-azure/releases) for the latest CHANGELOG information.
 
 ---
-## Unreleased
+## 2.6.4 (September 18, 2026)
 
 ## What's Changed
 ### Exciting New Features
+* Add `lun` tags to snapshots created from data disks, preserving the source disk-to-LUN mapping [GH-636](https://github.com/hashicorp/packer-plugin-azure/pull/636)
 * Support `allowed_inbound_ip_addresses` when `virtual_network_name` targets an existing VNet by attaching the temporary NSG to the build NIC instead of requiring a builder-managed subnet [GH-622](https://github.com/hashicorp/packer-plugin-azure/issues/622), [GH-468](https://github.com/hashicorp/packer-plugin-azure/issues/468), [GH-625](https://github.com/hashicorp/packer-plugin-azure/pull/625)
 * Allow hostnames/FQDNs in `allowed_inbound_ip_addresses`, resolving them to literal IPs at build time [GH-623](https://github.com/hashicorp/packer-plugin-azure/issues/623), [GH-625](https://github.com/hashicorp/packer-plugin-azure/pull/625)
 * Add `deny_outbound_ip_addresses` support to the `azure-arm` builder, including hostname/FQDN expansion at build time [GH-624](https://github.com/hashicorp/packer-plugin-azure/issues/624), [GH-625](https://github.com/hashicorp/packer-plugin-azure/pull/625)
 
 ### Bug Fixes
 * Improve temporary NSG handling for existing-VNet builds using public IPs, preserve mixed IPv4/IPv6 rule generation, and surface hostname resolution problems earlier through build-time validation warnings [GH-625](https://github.com/hashicorp/packer-plugin-azure/pull/625)
+
+### Other Changes
+* Update Go to 1.26.8 and refresh dependencies, including `packer-plugin-sdk` to v0.6.11, `x/crypto` to v0.57.0, `go-getter` to v2.2.4, `grpc` to v1.83.2, and GitHub Actions dependencies [GH-648](https://github.com/hashicorp/packer-plugin-azure/pull/648)
+* Update AWS SDK for Go v2 dependencies [GH-649](https://github.com/hashicorp/packer-plugin-azure/pull/649)
+* Update `go-logr` and OpenTelemetry dependencies [GH-650](https://github.com/hashicorp/packer-plugin-azure/pull/650)
+* Update the OpenTelemetry SDK to v1.45.0 [GH-651](https://github.com/hashicorp/packer-plugin-azure/pull/651)
 
 ## 2.6.3
 
