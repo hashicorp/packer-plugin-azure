@@ -454,6 +454,15 @@ type Config struct {
 	// set a virtual_network_name and obtain a public IP. If this value is not
 	// set and virtual_network_name is defined Packer is only allowed to be
 	// executed from a host on the same subnet / virtual network.
+	//
+	// **Behavior change:** When using an existing VNet with a public IP
+	// (`private_virtual_network_with_public_ip = true`) and no explicit
+	// `allowed_inbound_ip_addresses` or `deny_outbound_ip_addresses`, the
+	// plugin now creates an allow-all inbound NSG attached to the build NIC.
+	// Previously no NSG was created, which could break communicator
+	// connectivity with Standard SKU public IPs (the Azure default). Users
+	// who relied on the existing VNet's own NSG should be aware of this
+	// change.
 	PrivateVirtualNetworkWithPublicIp bool `mapstructure:"private_virtual_network_with_public_ip" required:"false"`
 	// Use a pre-existing virtual network for the
 	// VM. This option enables private communication with the VM, no public IP
@@ -614,13 +623,17 @@ type Config struct {
 	// are None, ReadOnly, and ReadWrite. The default value is ReadWrite.
 	DiskCachingType string `mapstructure:"disk_caching_type" required:"false"`
 	diskCachingType virtualmachines.CachingTypes
-	// Specify the list of IP addresses and CIDR blocks that should be
-	// allowed access to the VM. If provided, an Azure Network Security
+	// Specify the list of IP addresses, CIDR blocks, and hostnames that should
+	// be allowed access to the VM. Hostnames are resolved to literal IP
+	// addresses at build time. If provided, an Azure Network Security
 	// Group will be created with corresponding rules and be bound to
-	// the subnet of the VM.
-	// Providing `allowed_inbound_ip_addresses` in combination with
-	// `virtual_network_name` is not allowed.
+	// the subnet (builder VNet) or NIC (existing VNet).
+	// Builder-managed VNet behavior is unchanged for backward compatibility.
+	// The temporary NSG is removed during cleanup.
 	AllowedInboundIpAddresses []string `mapstructure:"allowed_inbound_ip_addresses"`
+	// Specify list of IP addresses, CIDR blocks, and hostnames that the temporary
+	// build VM must not reach over outbound traffic during image creation.
+	DenyOutboundIpAddresses []string `mapstructure:"deny_outbound_ip_addresses"`
 
 	// Specify storage to store Boot Diagnostics -- Enabling this option
 	// will create 2 Files in the specified storage account. (serial console log & screenshot file)
@@ -934,7 +947,15 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		return nil, errs
 	}
 
-	return nil, nil
+	var warnings []string
+	if w := validateHostnamesResolve(c.AllowedInboundIpAddresses, nil); len(w) > 0 {
+		warnings = append(warnings, w...)
+	}
+	if w := validateHostnamesResolve(c.DenyOutboundIpAddresses, nil); len(w) > 0 {
+		warnings = append(warnings, w...)
+	}
+
+	return warnings, nil
 }
 
 func setSshValues(c *Config) error {
@@ -1502,12 +1523,13 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		}
 	}
 	if len(c.AllowedInboundIpAddresses) >= 1 {
-		if c.VirtualNetworkName != "" {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("If virtual_network_name is specified, allowed_inbound_ip_addresses cannot be specified"))
-		} else {
-			if ok, err := assertAllowedInboundIpAddresses(c.AllowedInboundIpAddresses, "allowed_inbound_ip_addresses"); !ok {
-				errs = packersdk.MultiErrorAppend(errs, err)
-			}
+		if ok, err := assertAddressList(c.AllowedInboundIpAddresses, "allowed_inbound_ip_addresses"); !ok {
+			errs = packersdk.MultiErrorAppend(errs, err)
+		}
+	}
+	if len(c.DenyOutboundIpAddresses) >= 1 {
+		if ok, err := assertAddressList(c.DenyOutboundIpAddresses, "deny_outbound_ip_addresses"); !ok {
+			errs = packersdk.MultiErrorAppend(errs, err)
 		}
 	}
 
@@ -1692,12 +1714,50 @@ func assertResourceNamePrefix(name, setting string) (bool, error) {
 	return true, nil
 }
 
-func assertAllowedInboundIpAddresses(ipAddresses []string, setting string) (bool, error) {
-	for _, ipAddress := range ipAddresses {
-		if net.ParseIP(ipAddress) == nil {
-			if _, _, err := net.ParseCIDR(ipAddress); err != nil {
-				return false, fmt.Errorf("The setting %s must only contain valid IP addresses or CIDR blocks", setting)
+func assertAddressList(addresses []string, setting string) (bool, error) {
+	for _, address := range addresses {
+		normalized := normalizeHostname(address)
+
+		if net.ParseIP(normalized) != nil {
+			continue
+		}
+		if _, _, err := net.ParseCIDR(normalized); err == nil {
+			continue
+		}
+		if normalized == "" || strings.Contains(normalized, "*") || strings.Contains(normalized, "..") || !strings.Contains(normalized, ".") {
+			return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
+		}
+
+		labels := strings.Split(normalized, ".")
+		for _, label := range labels {
+			if label == "" || len(label) > 63 || strings.HasPrefix(label, "-") || strings.HasSuffix(label, "-") {
+				return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
 			}
+
+			for _, r := range label {
+				if r >= 'a' && r <= 'z' {
+					continue
+				}
+				if r >= '0' && r <= '9' {
+					continue
+				}
+				if r == '-' {
+					continue
+				}
+				return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
+			}
+		}
+
+		lastLabel := labels[len(labels)-1]
+		hasLetterInLastLabel := false
+		for _, r := range lastLabel {
+			if r >= 'a' && r <= 'z' {
+				hasLetterInLastLabel = true
+				break
+			}
+		}
+		if !hasLetterInLastLabel {
+			return false, fmt.Errorf("The setting %s must only contain valid IP addresses, CIDR blocks, or hostnames", setting)
 		}
 	}
 	return true, nil

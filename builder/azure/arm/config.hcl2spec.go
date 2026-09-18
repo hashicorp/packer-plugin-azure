@@ -94,6 +94,7 @@ type FlatConfig struct {
 	AdditionalDiskSize                         []int32                            `mapstructure:"disk_additional_size" required:"false" cty:"disk_additional_size" hcl:"disk_additional_size"`
 	DiskCachingType                            *string                            `mapstructure:"disk_caching_type" required:"false" cty:"disk_caching_type" hcl:"disk_caching_type"`
 	AllowedInboundIpAddresses                  []string                           `mapstructure:"allowed_inbound_ip_addresses" cty:"allowed_inbound_ip_addresses" hcl:"allowed_inbound_ip_addresses"`
+	DenyOutboundIpAddresses                    []string                           `mapstructure:"deny_outbound_ip_addresses" cty:"deny_outbound_ip_addresses" hcl:"deny_outbound_ip_addresses"`
 	BootDiagSTGAccount                         *string                            `mapstructure:"boot_diag_storage_account" required:"false" cty:"boot_diag_storage_account" hcl:"boot_diag_storage_account"`
 	SASTokenDuration                           *string                            `mapstructure:"sas_token_duration" required:"false" cty:"sas_token_duration" hcl:"sas_token_duration"`
 	CustomResourcePrefix                       *string                            `mapstructure:"custom_resource_build_prefix" required:"false" cty:"custom_resource_build_prefix" hcl:"custom_resource_build_prefix"`
@@ -150,6 +151,8 @@ type FlatConfig struct {
 	WinRMNoProxy                               *bool                              `mapstructure:"winrm_no_proxy" cty:"winrm_no_proxy" hcl:"winrm_no_proxy"`
 	WinRMPort                                  *int                               `mapstructure:"winrm_port" cty:"winrm_port" hcl:"winrm_port"`
 	WinRMTimeout                               *string                            `mapstructure:"winrm_timeout" cty:"winrm_timeout" hcl:"winrm_timeout"`
+	WinRMRetryInterval                         *string                            `mapstructure:"winrm_retry_interval" cty:"winrm_retry_interval" hcl:"winrm_retry_interval"`
+	WinRMConnectTimeout                        *string                            `mapstructure:"winrm_connect_timeout" cty:"winrm_connect_timeout" hcl:"winrm_connect_timeout"`
 	WinRMUseSSL                                *bool                              `mapstructure:"winrm_use_ssl" cty:"winrm_use_ssl" hcl:"winrm_use_ssl"`
 	WinRMInsecure                              *bool                              `mapstructure:"winrm_insecure" cty:"winrm_insecure" hcl:"winrm_insecure"`
 	WinRMUseNTLM                               *bool                              `mapstructure:"winrm_use_ntlm" cty:"winrm_use_ntlm" hcl:"winrm_use_ntlm"`
@@ -250,6 +253,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"disk_additional_size":                     &hcldec.AttrSpec{Name: "disk_additional_size", Type: cty.List(cty.Number), Required: false},
 		"disk_caching_type":                        &hcldec.AttrSpec{Name: "disk_caching_type", Type: cty.String, Required: false},
 		"allowed_inbound_ip_addresses":             &hcldec.AttrSpec{Name: "allowed_inbound_ip_addresses", Type: cty.List(cty.String), Required: false},
+		"deny_outbound_ip_addresses":               &hcldec.AttrSpec{Name: "deny_outbound_ip_addresses", Type: cty.List(cty.String), Required: false},
 		"boot_diag_storage_account":                &hcldec.AttrSpec{Name: "boot_diag_storage_account", Type: cty.String, Required: false},
 		"sas_token_duration":                       &hcldec.AttrSpec{Name: "sas_token_duration", Type: cty.String, Required: false},
 		"custom_resource_build_prefix":             &hcldec.AttrSpec{Name: "custom_resource_build_prefix", Type: cty.String, Required: false},
@@ -306,6 +310,8 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"winrm_no_proxy":                           &hcldec.AttrSpec{Name: "winrm_no_proxy", Type: cty.Bool, Required: false},
 		"winrm_port":                               &hcldec.AttrSpec{Name: "winrm_port", Type: cty.Number, Required: false},
 		"winrm_timeout":                            &hcldec.AttrSpec{Name: "winrm_timeout", Type: cty.String, Required: false},
+		"winrm_retry_interval":                     &hcldec.AttrSpec{Name: "winrm_retry_interval", Type: cty.String, Required: false},
+		"winrm_connect_timeout":                    &hcldec.AttrSpec{Name: "winrm_connect_timeout", Type: cty.String, Required: false},
 		"winrm_use_ssl":                            &hcldec.AttrSpec{Name: "winrm_use_ssl", Type: cty.Bool, Required: false},
 		"winrm_insecure":                           &hcldec.AttrSpec{Name: "winrm_insecure", Type: cty.Bool, Required: false},
 		"winrm_use_ntlm":                           &hcldec.AttrSpec{Name: "winrm_use_ntlm", Type: cty.Bool, Required: false},

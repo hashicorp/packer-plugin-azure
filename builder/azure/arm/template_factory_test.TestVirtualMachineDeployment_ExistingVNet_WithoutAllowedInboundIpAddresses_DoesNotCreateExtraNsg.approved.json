@@ -48,26 +48,7 @@
   "resources": [
     {
       "apiVersion": "[variables('networkApiVersion')]",
-      "location": "[variables('location')]",
-      "name": "[parameters('publicIPAddressName')]",
-      "properties": {
-        "dnsSettings": {
-          "domainNameLabel": "[parameters('dnsNameForPublicIP')]"
-        },
-        "publicIPAllocationMethod": "[variables('publicIPAddressType')]"
-      },
-      "sku": {
-        "name": "Standard",
-        "tier": "Regional"
-      },
-      "type": "Microsoft.Network/publicIPAddresses"
-    },
-    {
-      "apiVersion": "[variables('networkApiVersion')]",
-      "dependsOn": [
-        "[concat('Microsoft.Network/publicIPAddresses/', parameters('publicIPAddressName'))]",
-        "[concat('Microsoft.Network/networkSecurityGroups/', parameters('nsgName'))]"
-      ],
+      "dependsOn": [],
       "location": "[variables('location')]",
       "name": "[parameters('nicName')]",
       "properties": {
@@ -76,18 +57,12 @@
             "name": "ipconfig",
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
-              "publicIPAddress": {
-                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddressName'))]"
-              },
               "subnet": {
                 "id": "[variables('subnetRef')]"
               }
             }
           }
-        ],
-        "networkSecurityGroup": {
-          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('nsgName'))]"
-        }
+        ]
       },
       "type": "Microsoft.Network/networkInterfaces"
     },
@@ -167,30 +142,6 @@
         "typeHandlerVersion": "1.10"
       },
       "type": "Microsoft.Compute/virtualMachines/extensions"
-    },
-    {
-      "apiVersion": "[variables('networkApiVersion')]",
-      "location": "[variables('location')]",
-      "name": "[parameters('nsgName')]",
-      "properties": {
-        "securityRules": [
-          {
-            "name": "AllowIPsToSshWinRMInbound",
-            "properties": {
-              "access": "Allow",
-              "description": "Allow inbound traffic from specified IP addresses",
-              "destinationAddressPrefix": "VirtualNetwork",
-              "destinationPortRange": "0",
-              "direction": "Inbound",
-              "priority": 100,
-              "protocol": "Tcp",
-              "sourceAddressPrefix": "*",
-              "sourcePortRange": "*"
-            }
-          }
-        ]
-      },
-      "type": "Microsoft.Network/networkSecurityGroups"
     }
   ],
   "variables": {

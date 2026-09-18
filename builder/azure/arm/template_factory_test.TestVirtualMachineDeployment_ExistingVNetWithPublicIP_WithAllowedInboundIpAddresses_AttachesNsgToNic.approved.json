@@ -184,7 +184,10 @@
               "direction": "Inbound",
               "priority": 100,
               "protocol": "Tcp",
-              "sourceAddressPrefix": "*",
+              "sourceAddressPrefixes": [
+                "127.0.0.1",
+                "192.168.100.0/24"
+              ],
               "sourcePortRange": "*"
             }
           }

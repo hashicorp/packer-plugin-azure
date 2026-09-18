@@ -370,6 +370,15 @@ Providing `temp_resource_group_name` or `location` in combination with
   set a virtual_network_name and obtain a public IP. If this value is not
   set and virtual_network_name is defined Packer is only allowed to be
   executed from a host on the same subnet / virtual network.
+  
+  **Behavior change:** When using an existing VNet with a public IP
+  (`private_virtual_network_with_public_ip = true`) and no explicit
+  `allowed_inbound_ip_addresses` or `deny_outbound_ip_addresses`, the
+  plugin now creates an allow-all inbound NSG attached to the build NIC.
+  Previously no NSG was created, which could break communicator
+  connectivity with Standard SKU public IPs (the Azure default). Users
+  who relied on the existing VNet's own NSG should be aware of this
+  change.
 
 - `virtual_network_name` (string) - Use a pre-existing virtual network for the
   VM. This option enables private communication with the VM, no public IP
@@ -522,12 +531,16 @@ Providing `temp_resource_group_name` or `location` in combination with
 - `disk_caching_type` (string) - Specify the disk caching type. Valid values
   are None, ReadOnly, and ReadWrite. The default value is ReadWrite.
 
-- `allowed_inbound_ip_addresses` ([]string) - Specify the list of IP addresses and CIDR blocks that should be
-  allowed access to the VM. If provided, an Azure Network Security
+- `allowed_inbound_ip_addresses` ([]string) - Specify the list of IP addresses, CIDR blocks, and hostnames that should
+  be allowed access to the VM. Hostnames are resolved to literal IP
+  addresses at build time. If provided, an Azure Network Security
   Group will be created with corresponding rules and be bound to
-  the subnet of the VM.
-  Providing `allowed_inbound_ip_addresses` in combination with
-  `virtual_network_name` is not allowed.
+  the subnet (builder VNet) or NIC (existing VNet).
+  Builder-managed VNet behavior is unchanged for backward compatibility.
+  The temporary NSG is removed during cleanup.
+
+- `deny_outbound_ip_addresses` ([]string) - Specify list of IP addresses, CIDR blocks, and hostnames that the temporary
+  build VM must not reach over outbound traffic during image creation.
 
 - `boot_diag_storage_account` (string) - Specify storage to store Boot Diagnostics -- Enabling this option
   will create 2 Files in the specified storage account. (serial console log & screenshot file)
