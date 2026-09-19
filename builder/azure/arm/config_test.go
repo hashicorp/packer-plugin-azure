@@ -2867,8 +2867,13 @@ func TestConfigShouldRejectUserDataAndUserDataFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed creating tempfile: %s", err)
 	}
-	//nolint:errcheck
-	defer os.Remove(tmpfile.Name())
+
+	defer func() {
+		err := os.Remove(tmpfile.Name())
+		if err != nil {
+			t.Fatal("")
+		}
+	}()
 
 	config := map[string]interface{}{
 		"capture_container_name": "ignore",
@@ -2900,8 +2905,13 @@ func TestConfigShouldRejectCustomDataAndCustomDataFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed creating tempfile: %s", err)
 	}
-	//nolint:errcheck
-	defer os.Remove(tmpfile.Name())
+
+	defer func() {
+		err := os.Remove(tmpfile.Name())
+		if err != nil {
+			t.Fatalf("failed deleting the temp file: %v", err)
+		}
+	}()
 
 	config := map[string]interface{}{
 		"capture_container_name": "ignore",

@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 )
 
 // allow override for unit tests
@@ -28,8 +30,12 @@ func _getSubscriptionFromIMDS() (string, error) {
 		return "", err
 	}
 
-	//nolint:errcheck
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			log.Printf("error closing the response body: %v", err)
+		}
+	}()
 	resp_body, _ := io.ReadAll(resp.Body)
 	result := map[string]string{}
 	err = json.Unmarshal(resp_body, &result)

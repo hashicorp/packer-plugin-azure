@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/log"
 )
 
 // DefaultMetadataClient is the default instance metadata client for Azure. Replace this variable for testing purposes only
@@ -59,8 +61,14 @@ func (client metadataClient) GetComputeInfo() (*ComputeInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	//nolint:errcheck
-	defer resp.Body.Close()
+
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			log.Printf("error closing the response body: %v", err)
+		}
+	}()
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
