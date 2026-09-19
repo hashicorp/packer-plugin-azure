@@ -139,7 +139,7 @@
             "ssh": {
               "publicKeys": [
                 {
-                  "keyData": "",
+                  "keyData": "--test-ssh-authorized-key--",
                   "path": "[variables('sshKeyPath')]"
                 }
               ]

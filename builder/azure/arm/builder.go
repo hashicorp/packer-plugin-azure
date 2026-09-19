@@ -403,11 +403,17 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			NewStepGetIPAddress(azureClient, ui, endpointConnectType),
 			NewStepGetOSDisk(azureClient, ui),
 			NewStepGetAdditionalDisks(azureClient, ui),
-			&communicator.StepConnectSSH{
-				Config:    &b.config.Comm,
-				Host:      communicator.CommHost(b.config.Comm.SSHHost, constants.SSHHost),
-				SSHConfig: b.config.Comm.SSHConfigFunc(),
-			},
+		}
+		if b.config.Comm.Type == "ssh" {
+			steps = append(steps,
+				&communicator.StepConnectSSH{
+					Config:    &b.config.Comm,
+					Host:      communicator.CommHost(b.config.Comm.SSHHost, constants.SSHHost),
+					SSHConfig: b.config.Comm.SSHConfigFunc(),
+				},
+			)
+		}
+		steps = append(steps,
 			&commonsteps.StepProvision{},
 			&commonsteps.StepCleanupTempKeys{
 				Comm: &b.config.Comm,
@@ -415,7 +421,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			NewStepPowerOffCompute(azureClient, ui),
 			NewStepSnapshotOSDisk(azureClient, ui, &b.config),
 			NewStepSnapshotDataDisks(azureClient, ui, &b.config),
-		}
+		)
 	case constants.Target_Windows:
 		steps = []multistep.Step{
 			NewStepGetSourceImageName(azureClient, ui, &b.config, generatedData),
