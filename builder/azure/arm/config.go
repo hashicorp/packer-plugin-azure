@@ -427,6 +427,12 @@ type Config struct {
 	BuildKeyVaultName string `mapstructure:"build_key_vault_name"`
 	// Specify the secret name to use for the certificate created in the key vault.
 	BuildKeyVaultSecretName string `mapstructure:"build_key_vault_secret_name"`
+	// If true, delete the certificate secret from the key vault when the build
+	// finishes. Only applies when `build_key_vault_name` is set (an externally
+	// supplied key vault). Defaults to false. Useful to avoid accumulating secret
+	// versions when the vault is reused across builds (Key Vault has limits on
+	// secret versions and backups).
+	BuildKeyVaultSecretDelete bool `mapstructure:"build_key_vault_secret_delete" required:"false"`
 	// Specify the KeyVault SKU to create during the build. Valid values are
 	// standard or premium. The default value is standard.
 	BuildKeyVaultSKU string `mapstructure:"build_key_vault_sku"`

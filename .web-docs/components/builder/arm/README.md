@@ -347,6 +347,12 @@ Providing `temp_resource_group_name` or `location` in combination with
 
 - `build_key_vault_secret_name` (string) - Specify the secret name to use for the certificate created in the key vault.
 
+- `build_key_vault_secret_delete` (bool) - If true, delete the certificate secret from the key vault when the build
+  finishes. Only applies when `build_key_vault_name` is set (an externally
+  supplied key vault). Defaults to false. Useful to avoid accumulating secret
+  versions when the vault is reused across builds (Key Vault has limits on
+  secret versions and backups).
+
 - `build_key_vault_sku` (string) - Specify the KeyVault SKU to create during the build. Valid values are
   standard or premium. The default value is standard.
 
