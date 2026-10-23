@@ -17,6 +17,15 @@ import (
 	sdkconfig "github.com/hashicorp/packer-plugin-sdk/template/config"
 )
 
+// TestMain pins SSH key generation to a fixed value so template approval tests
+// produce deterministic keyData (the real key is random and timestamped).
+func TestMain(m *testing.M) {
+	generateSSHKeyPair = func() (string, []byte, error) {
+		return "--test-ssh-authorized-key--", []byte("--test-ssh-private-key--"), nil
+	}
+	os.Exit(m.Run())
+}
+
 // List of configuration parameters that are required by the ARM builder.
 var requiredConfigValues = []string{
 	"capture_container_name",
