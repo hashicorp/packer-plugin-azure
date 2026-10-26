@@ -1,20 +1,20 @@
 module github.com/hashicorp/packer-plugin-azure
 
-go 1.26.8
+go 1.26.10
 
 require (
 	github.com/approvals/go-approval-tests v0.0.0-20210131072903-38d0b0ec12b1
 	github.com/google/go-cmp v0.7.0
 	github.com/hashicorp/go-azure-helpers v0.76.2
-	github.com/hashicorp/hcl/v2 v2.24.0
-	github.com/hashicorp/packer-plugin-sdk v0.6.11
+	github.com/hashicorp/hcl/v2 v2.25.0
+	github.com/hashicorp/packer-plugin-sdk v0.6.13
 	github.com/masterzen/winrm v0.0.0-20250927112105-5f8e6c707321
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mitchellh/reflectwalk v1.0.2
 	github.com/stretchr/testify v1.11.1
-	github.com/zclconf/go-cty v1.17.0
-	golang.org/x/crypto v0.57.0
-	golang.org/x/net v0.58.0 // indirect
+	github.com/zclconf/go-cty v1.19.0
+	golang.org/x/crypto v0.58.0
+	golang.org/x/net v0.61.0 // indirect
 )
 
 require (
@@ -31,7 +31,7 @@ require (
 
 require (
 	cel.dev/expr v0.25.2 // indirect
-	cloud.google.com/go v0.121.6 // indirect
+	cloud.google.com/go v0.123.0 // indirect
 	cloud.google.com/go/auth v0.18.2 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
@@ -50,6 +50,7 @@ require (
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
+	github.com/apparentlymart/go-textseg/v17 v17.0.1 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.41.5 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.8 // indirect
@@ -96,9 +97,9 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-cty v1.5.0 // indirect
-	github.com/hashicorp/go-getter/gcs/v2 v2.2.4 // indirect
-	github.com/hashicorp/go-getter/s3/v2 v2.2.4 // indirect
-	github.com/hashicorp/go-getter/v2 v2.2.4 // indirect
+	github.com/hashicorp/go-getter/gcs/v2 v2.2.6 // indirect
+	github.com/hashicorp/go-getter/s3/v2 v2.2.6 // indirect
+	github.com/hashicorp/go-getter/v2 v2.2.6 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -126,7 +127,7 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869 // indirect
-	github.com/klauspost/compress v1.11.2 // indirect
+	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/masterzen/simplexml v0.0.0-20190410153822-31eea3082786 // indirect
@@ -163,12 +164,12 @@ require (
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sync v0.23.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
-	golang.org/x/term v0.46.0 // indirect
-	golang.org/x/text v0.42.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/term v0.47.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
-	golang.org/x/tools v0.49.0 // indirect
+	golang.org/x/tools v0.51.0 // indirect
 	google.golang.org/api v0.264.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20260128011058-8636f8732409 // indirect
