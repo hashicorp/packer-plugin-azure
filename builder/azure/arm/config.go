@@ -602,7 +602,7 @@ type Config struct {
 	// (gigabytes). Values of zero or less than zero are ignored.
 	OSDiskSizeGB int32 `mapstructure:"os_disk_size_gb" required:"false"`
 	// Specify the storage account type for the temporary build VM's OS disk.
-	// Valid values are Standard_LRS and Premium_LRS. If unset, Azure chooses the type.
+	// Valid values are Standard_LRS, StandardSSD_LRS, and Premium_LRS. If unset, Azure chooses the type.
 	OSDiskStorageAccountType string `mapstructure:"os_disk_storage_account_type" required:"false"`
 	osDiskStorageAccountType virtualmachines.StorageAccountTypes
 	// The size(s) of any additional hard disks for the VM in gigabytes. If
@@ -1647,10 +1647,12 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 	case "":
 	case string(virtualmachines.StorageAccountTypesStandardLRS):
 		c.osDiskStorageAccountType = virtualmachines.StorageAccountTypesStandardLRS
+	case string(virtualmachines.StorageAccountTypesStandardSSDLRS):
+		c.osDiskStorageAccountType = virtualmachines.StorageAccountTypesStandardSSDLRS
 	case string(virtualmachines.StorageAccountTypesPremiumLRS):
 		c.osDiskStorageAccountType = virtualmachines.StorageAccountTypesPremiumLRS
 	default:
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The os_disk_storage_account_type %q is invalid, valid values are %q and %q", c.OSDiskStorageAccountType, virtualmachines.StorageAccountTypesStandardLRS, virtualmachines.StorageAccountTypesPremiumLRS))
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The os_disk_storage_account_type %q is invalid, valid values are %q, %q, and %q", c.OSDiskStorageAccountType, virtualmachines.StorageAccountTypesStandardLRS, virtualmachines.StorageAccountTypesStandardSSDLRS, virtualmachines.StorageAccountTypesPremiumLRS))
 	}
 
 	if c.OSDiskStorageAccountType != "" && c.ImageUrl != "" {

@@ -373,7 +373,7 @@
   (gigabytes). Values of zero or less than zero are ignored.
 
 - `os_disk_storage_account_type` (string) - Specify the storage account type for the temporary build VM's OS disk.
-  Valid values are Standard_LRS and Premium_LRS. If unset, Azure chooses the type.
+  Valid values are Standard_LRS, StandardSSD_LRS, and Premium_LRS. If unset, Azure chooses the type.
 
 - `disk_additional_size` ([]int32) - The size(s) of any additional hard disks for the VM in gigabytes. If
   this is not specified then the VM will only contain an OS disk. The

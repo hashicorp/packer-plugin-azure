@@ -1944,7 +1944,7 @@ func TestConfigShouldAcceptManagedImageStorageAccountTypes(t *testing.T) {
 }
 
 func TestConfigShouldAcceptOSDiskStorageAccountTypes(t *testing.T) {
-	for _, storageAccountType := range []string{"Standard_LRS", "Premium_LRS"} {
+	for _, storageAccountType := range []string{"Standard_LRS", "StandardSSD_LRS", "Premium_LRS"} {
 		config := getArmBuilderConfiguration()
 		config["os_disk_storage_account_type"] = storageAccountType
 
@@ -1961,7 +1961,7 @@ func TestConfigShouldAcceptOSDiskStorageAccountTypes(t *testing.T) {
 
 func TestConfigShouldRejectUnsupportedOSDiskStorageAccountType(t *testing.T) {
 	config := getArmBuilderConfiguration()
-	config["os_disk_storage_account_type"] = "StandardSSD_LRS"
+	config["os_disk_storage_account_type"] = "StandardSSD_ZRS"
 
 	var c Config
 	_, err := c.Prepare(config, getPackerConfiguration())
