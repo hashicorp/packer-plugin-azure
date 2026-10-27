@@ -16,7 +16,7 @@
   as the source for this build.
   *VHD targets are incompatible with this build type*
   When using shared_image_gallery as a source, image_publisher, image_offer, image_sku, image_version, and custom_managed_image_name should not be set.
-  
+
   In JSON
   ```json
   "shared_image_gallery": {
@@ -57,7 +57,7 @@
 
 - `shared_gallery_image_version_exclude_from_latest` (bool) - If set to true, Virtual Machines deployed from the latest version of the
   Image Definition won't use this Image Version.
-  
+
   In JSON
   ```json
   "shared_image_gallery_destination": {
@@ -74,7 +74,7 @@
   "shared_gallery_image_version_replica_count": 1,
   "shared_gallery_image_version_exclude_from_latest": true
   ```
-  
+
   In HCL2
   ```hcl
   shared_image_gallery_destination {
@@ -105,7 +105,7 @@
   across regions due to image synchronization latency. To ensure a consistent
   version across regions set this value to one that is available in all
   regions where you are deploying.
-  
+
   CLI example
   `az vm image list --location westus --publisher Canonical --offer UbuntuServer --sku 16.04.0-LTS --all`
 
@@ -118,24 +118,24 @@
   VM from your VHD. See
   [pricing](https://azure.microsoft.com/en-us/pricing/details/virtual-machines/)
   information. Defaults to `Standard_A1`.
-  
+
   CLI example `az vm list-sizes --location westus`
 
 - `spot` (Spot) - If set use a spot instance during build; spot configuration settings only apply to the virtual machine launched by Packer and will not be persisted on the resulting image artifact.
-  
+
   Following is an example.
-  
+
   In JSON
-  
+
   ```json
   "spot": {
       "eviction_policy": "Delete",
   	   "max_price": "0.4",
   }
   ```
-  
+
   In HCL2
-  
+
   ```hcl
   spot {
       eviction_policy = "Delete"
@@ -232,7 +232,7 @@
   set a virtual_network_name and obtain a public IP. If this value is not
   set and virtual_network_name is defined Packer is only allowed to be
   executed from a host on the same subnet / virtual network.
-  
+
   **Behavior change:** When using an existing VNet with a public IP
   (`private_virtual_network_with_public_ip = true`) and no explicit
   `allowed_inbound_ip_addresses` or `deny_outbound_ip_addresses`, the
@@ -318,9 +318,9 @@
   terms](https://aka.ms/azuremarketplaceapideployment) for more details.
   Not all Marketplace images support programmatic deployment, and support
   is controlled by the image publisher.
-  
+
   An example plan\_info object is defined below.
-  
+
   ```json
   {
     "plan_info": {
@@ -330,17 +330,17 @@
     }
   }
   ```
-  
+
   `plan_name` (string) - The plan name, required. `plan_product` (string) -
   The plan product, required. `plan_publisher` (string) - The plan publisher,
   required. `plan_promotion_code` (string) - Some images accept a promotion
   code, optional.
-  
+
   Images created from the Marketplace with `plan_info` **must** specify
   `plan_info` whenever the image is deployed. The builder automatically adds
   tags to the image to ensure this information is not lost. The following
   tags are added.
-  
+
   ```text
   1.  PlanName
   2.  PlanProduct
@@ -383,11 +383,11 @@
   or
   [Linux](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/about-disks-and-vhds)
   for more information.
-  
+
   For VHD builds the final artifacts will be named
   `<PREFIX><dataDisk>-<n>.vhd` and stored in the specified capture
   container along-side the OS disk.
-  
+
   For Managed build the final artifacts are included in the managed image.
   The additional disk will have the same storage account type as the OS
   disk, as specified with the `managed_image_storage_account_type`
@@ -420,21 +420,21 @@
 - `custom_resource_build_prefix` (string) - specify custom azure resource names during build limited to max 10 characters
   this will set the prefix for the resources. The actual resource names will be
   `custom_resource_build_prefix` + resourcetype + 5 character random alphanumeric string
-  
+
   You can also set this via the environment variable `PACKER_AZURE_CUSTOM_RESOURCE_BUILD_PREFIX`.
   If both the config field and the environment variable are present, the config field takes precedence.
 
 - `license_type` (string) - Specify a license type for the build VM to enable Azure Hybrid Benefit. If not set, Pay-As-You-Go license
   model (default) will be used. Valid values are:
-  
+
   For Windows:
   - `Windows_Client`
   - `Windows_Server`
-  
+
   For Linux:
   - `RHEL_BYOS`
   - `SLES_BYOS`
-  
+
   Refer to the following documentation for more information about Hybrid Benefit:
   [Windows](https://learn.microsoft.com/en-us/azure/virtual-machines/windows/hybrid-use-benefit-licensing)
   or
