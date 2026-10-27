@@ -601,6 +601,10 @@ type Config struct {
 	// Specify the size of the OS disk in GB
 	// (gigabytes). Values of zero or less than zero are ignored.
 	OSDiskSizeGB int32 `mapstructure:"os_disk_size_gb" required:"false"`
+	// Specify the storage account type for the temporary build VM's OS disk.
+	// Valid values are Standard_LRS and Premium_LRS. If unset, Azure chooses the type.
+	OSDiskStorageAccountType string `mapstructure:"os_disk_storage_account_type" required:"false"`
+	osDiskStorageAccountType virtualmachines.StorageAccountTypes
 	// The size(s) of any additional hard disks for the VM in gigabytes. If
 	// this is not specified then the VM will only contain an OS disk. The
 	// number of additional disks and maximum size of a disk depends on the
@@ -1637,6 +1641,20 @@ func assertRequiredParametersSet(c *Config, errs *packersdk.MultiError) {
 		c.managedImageStorageAccountType = virtualmachines.StorageAccountTypesPremiumLRS
 	default:
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The managed_image_storage_account_type %q is invalid", c.ManagedImageStorageAccountType))
+	}
+
+	switch c.OSDiskStorageAccountType {
+	case "":
+	case string(virtualmachines.StorageAccountTypesStandardLRS):
+		c.osDiskStorageAccountType = virtualmachines.StorageAccountTypesStandardLRS
+	case string(virtualmachines.StorageAccountTypesPremiumLRS):
+		c.osDiskStorageAccountType = virtualmachines.StorageAccountTypesPremiumLRS
+	default:
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The os_disk_storage_account_type %q is invalid, valid values are %q and %q", c.OSDiskStorageAccountType, virtualmachines.StorageAccountTypesStandardLRS, virtualmachines.StorageAccountTypesPremiumLRS))
+	}
+
+	if c.OSDiskStorageAccountType != "" && c.ImageUrl != "" {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("os_disk_storage_account_type cannot be used with image_url because it uses an unmanaged OS disk"))
 	}
 
 	if ok, err := assertSigAllowedStorageAccountType(c.SharedGalleryDestination.SigDestinationStorageAccountType); !ok {

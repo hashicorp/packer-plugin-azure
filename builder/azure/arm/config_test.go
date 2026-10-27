@@ -1943,6 +1943,33 @@ func TestConfigShouldAcceptManagedImageStorageAccountTypes(t *testing.T) {
 	}
 }
 
+func TestConfigShouldAcceptOSDiskStorageAccountTypes(t *testing.T) {
+	for _, storageAccountType := range []string{"Standard_LRS", "Premium_LRS"} {
+		config := getArmBuilderConfiguration()
+		config["os_disk_storage_account_type"] = storageAccountType
+
+		var c Config
+		_, err := c.Prepare(config, getPackerConfiguration())
+		if err != nil {
+			t.Fatalf("expected config to accept os_disk_storage_account_type %q: %v", storageAccountType, err)
+		}
+		if string(c.osDiskStorageAccountType) != storageAccountType {
+			t.Errorf("expected os_disk_storage_account_type %q, got %q", storageAccountType, c.osDiskStorageAccountType)
+		}
+	}
+}
+
+func TestConfigShouldRejectUnsupportedOSDiskStorageAccountType(t *testing.T) {
+	config := getArmBuilderConfiguration()
+	config["os_disk_storage_account_type"] = "StandardSSD_LRS"
+
+	var c Config
+	_, err := c.Prepare(config, getPackerConfiguration())
+	if err == nil {
+		t.Fatal("expected config to reject an unsupported os_disk_storage_account_type")
+	}
+}
+
 func TestConfigShouldAcceptDiskCachingTypes(t *testing.T) {
 	config := map[string]interface{}{
 		"custom_managed_image_resource_group_name": "ignore",

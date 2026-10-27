@@ -19,6 +19,52 @@ import (
 	"github.com/hashicorp/packer-plugin-azure/builder/azure/common/template"
 )
 
+func TestVirtualMachineTemplateAppliesOSDiskStorageAccountType(t *testing.T) {
+	configValues := getArmBuilderConfiguration()
+	delete(configValues, "image_publisher")
+	delete(configValues, "image_offer")
+	delete(configValues, "image_sku")
+	configValues["shared_image_gallery"] = map[string]interface{}{
+		"subscription":   "subscription",
+		"resource_group": "rg_name",
+		"gallery_name":   "gallery_name",
+		"image_name":     "image_name",
+		"image_version":  "2024.01.01",
+	}
+	configValues["os_disk_storage_account_type"] = "Premium_LRS"
+
+	var config Config
+	_, err := config.Prepare(configValues, getPackerConfiguration(), getPackerSSHPasswordCommunicatorConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	builder, err := GetVirtualMachineTemplateBuilder(context.Background(), &config, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc, err := builder.ToJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var rendered template.Template
+	if err := json.Unmarshal([]byte(*doc), &rendered); err != nil {
+		t.Fatal(err)
+	}
+	for _, resource := range rendered.Resources {
+		if resource.Type == nil || *resource.Type != "Microsoft.Compute/virtualMachines" {
+			continue
+		}
+		got := resource.Properties.StorageProfile.OsDisk.ManagedDisk.StorageAccountType
+		if string(got) != "Premium_LRS" {
+			t.Fatalf("expected OS disk storage account type Premium_LRS, got %q", got)
+		}
+		return
+	}
+	t.Fatal("virtual machine resource not found in rendered template")
+}
+
 // Ensure the link values are not set, and the concrete values are set.
 func TestVirtualMachineDeployment00(t *testing.T) {
 	var c Config
