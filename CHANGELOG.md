@@ -3,6 +3,16 @@
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-azure/releases) for the latest CHANGELOG information.
 
 ---
+## 2.6.5 (October 28, 2026)
+
+## What's Changed
+### Other Changes
+* Update Go to 1.26.10 and refresh dependencies, including `packer-plugin-sdk` to v0.6.13 and `hcl/v2` to v2.25.0 [GH-661](https://github.com/hashicorp/packer-plugin-azure/pull/661)
+* Update `actions/upload-artifact` to v7.0.2 [GH-656](https://github.com/hashicorp/packer-plugin-azure/pull/656)
+* Update copyright headers for 2026 compliance [GH-657](https://github.com/hashicorp/packer-plugin-azure/pull/657)
+
+**Full Changelog**: https://github.com/hashicorp/packer-plugin-azure/compare/v2.6.4...v2.6.5
+
 ## 2.6.4 (September 18, 2026)
 
 ## What's Changed
