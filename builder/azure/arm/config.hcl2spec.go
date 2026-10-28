@@ -91,6 +91,7 @@ type FlatConfig struct {
 	WinrmExpirationTime                        *string                            `mapstructure:"winrm_expiration_time" required:"false" cty:"winrm_expiration_time" hcl:"winrm_expiration_time"`
 	TempOSDiskName                             *string                            `mapstructure:"temp_os_disk_name" required:"false" cty:"temp_os_disk_name" hcl:"temp_os_disk_name"`
 	OSDiskSizeGB                               *int32                             `mapstructure:"os_disk_size_gb" required:"false" cty:"os_disk_size_gb" hcl:"os_disk_size_gb"`
+	OSDiskStorageAccountType                   *string                            `mapstructure:"os_disk_storage_account_type" required:"false" cty:"os_disk_storage_account_type" hcl:"os_disk_storage_account_type"`
 	AdditionalDiskSize                         []int32                            `mapstructure:"disk_additional_size" required:"false" cty:"disk_additional_size" hcl:"disk_additional_size"`
 	DiskCachingType                            *string                            `mapstructure:"disk_caching_type" required:"false" cty:"disk_caching_type" hcl:"disk_caching_type"`
 	AllowedInboundIpAddresses                  []string                           `mapstructure:"allowed_inbound_ip_addresses" cty:"allowed_inbound_ip_addresses" hcl:"allowed_inbound_ip_addresses"`
@@ -250,6 +251,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"winrm_expiration_time":                    &hcldec.AttrSpec{Name: "winrm_expiration_time", Type: cty.String, Required: false},
 		"temp_os_disk_name":                        &hcldec.AttrSpec{Name: "temp_os_disk_name", Type: cty.String, Required: false},
 		"os_disk_size_gb":                          &hcldec.AttrSpec{Name: "os_disk_size_gb", Type: cty.Number, Required: false},
+		"os_disk_storage_account_type":             &hcldec.AttrSpec{Name: "os_disk_storage_account_type", Type: cty.String, Required: false},
 		"disk_additional_size":                     &hcldec.AttrSpec{Name: "disk_additional_size", Type: cty.List(cty.Number), Required: false},
 		"disk_caching_type":                        &hcldec.AttrSpec{Name: "disk_caching_type", Type: cty.String, Required: false},
 		"allowed_inbound_ip_addresses":             &hcldec.AttrSpec{Name: "allowed_inbound_ip_addresses", Type: cty.List(cty.String), Required: false},
