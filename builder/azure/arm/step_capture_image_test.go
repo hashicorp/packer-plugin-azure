@@ -178,6 +178,58 @@ func TestStepCaptureImageShouldPassIfCapturePasses(t *testing.T) {
 	}
 }
 
+func TestStepCaptureImageUsesManagedImageStorageAccountType(t *testing.T) {
+	storageAccountTypes := []virtualmachines.StorageAccountTypes{
+		virtualmachines.StorageAccountTypesStandardLRS,
+		virtualmachines.StorageAccountTypesStandardSSDLRS,
+		virtualmachines.StorageAccountTypesPremiumLRS,
+	}
+
+	for _, osDiskStorageAccountType := range storageAccountTypes {
+		for _, managedImageStorageAccountType := range storageAccountTypes {
+			t.Run(fmt.Sprintf("OS disk %s, managed image %s", osDiskStorageAccountType, managedImageStorageAccountType), func(t *testing.T) {
+				var capturedStorageAccountType *images.StorageAccountTypes
+				testSubject := &StepCaptureImage{
+					config: &Config{
+						managedImageStorageAccountType: managedImageStorageAccountType,
+						osDiskStorageAccountType:      osDiskStorageAccountType,
+					},
+					generalizeVM: func(context.Context, virtualmachines.VirtualMachineId) error {
+						return nil
+					},
+					captureManagedImage: func(_ context.Context, _, _, _ string, parameters *images.Image) error {
+						capturedStorageAccountType = parameters.Properties.StorageProfile.OsDisk.StorageAccountType
+						return nil
+					},
+					say:   func(string) {},
+					error: func(error) {},
+				}
+
+				stateBag := createTestStateBagStepCaptureImage()
+				stateBag.Put(constants.ArmIsManagedImage, true)
+				stateBag.Put(constants.ArmIsVHDSaveToStorage, false)
+				stateBag.Put(constants.ArmManagedImageResourceGroupName, "image-resource-group")
+				stateBag.Put(constants.ArmManagedImageName, "image-name")
+				stateBag.Put(constants.ArmImageParameters, &images.Image{
+					Properties: &images.ImageProperties{
+						StorageProfile: &images.ImageStorageProfile{},
+					},
+				})
+
+				if result := testSubject.Run(context.Background(), stateBag); result != multistep.ActionContinue {
+					t.Fatalf("expected the step to return ActionContinue, got %d", result)
+				}
+			if capturedStorageAccountType == nil {
+				t.Fatal("expected managed image capture to set the OS disk storage account type")
+			}
+			if got := *capturedStorageAccountType; got != images.StorageAccountTypes(managedImageStorageAccountType) {
+				t.Fatalf("expected managed image storage account type %s, got %s", managedImageStorageAccountType, got)
+			}
+			})
+		}
+	}
+}
+
 func TestStepCaptureImageShouldCallGeneralizeIfSpecializedIsFalse(t *testing.T) {
 	generalizeCount := 0
 	var testSubject = &StepCaptureImage{

@@ -221,6 +221,13 @@ func GetVirtualMachineTemplateBuilder(ctx context.Context, config *Config, looku
 		}
 	}
 
+	if config.osDiskStorageAccountType != "" {
+		err = builder.SetOSDiskStorageAccountType(config.osDiskStorageAccountType)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	securityProfile := struct {
 		SecureBootEnabled      bool
 		VTpmEnabled            bool
