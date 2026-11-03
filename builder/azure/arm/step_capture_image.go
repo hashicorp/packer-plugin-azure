@@ -153,6 +153,10 @@ func (s *StepCaptureImage) Run(ctx context.Context, state multistep.StateBag) mu
 			s.say(fmt.Sprintf(" -> Image ResourceGroupName   : '%s'", targetManagedImageResourceGroupName))
 			s.say(fmt.Sprintf(" -> Image Name                : '%s'", targetManagedImageName))
 			s.say(fmt.Sprintf(" -> Image Location            : '%s'", targetManagedImageLocation))
+			imageStorageAccountType := images.StorageAccountTypes(s.config.managedImageStorageAccountType)
+			imageParameters.Properties.StorageProfile.OsDisk = &images.ImageOSDisk{
+				StorageAccountType: &imageStorageAccountType,
+			}
 			err = s.captureManagedImage(ctx, subscriptionId, targetManagedImageResourceGroupName, targetManagedImageName, imageParameters)
 			if err != nil {
 				state.Put(constants.Error, err)
